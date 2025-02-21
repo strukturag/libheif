@@ -52,6 +52,7 @@
 
 #include "benchmark.h"
 #include "common.h"
+#include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
 
 int master_alpha = 1;
@@ -64,6 +65,7 @@ int metadata_compression = 0;
 int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
+int cut_tiles = 0;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
 std::string tiling_method = "grid";
@@ -104,6 +106,7 @@ const int OPTION_TILED_IMAGE_WIDTH = 1011;
 const int OPTION_TILED_IMAGE_HEIGHT = 1012;
 const int OPTION_TILING_METHOD = 1013;
 const int OPTION_UNCI_COMPRESSION = 1014;
+const int OPTION_CUT_TILES = 1015;
 
 
 static struct option long_options[] = {
@@ -141,6 +144,9 @@ static struct option long_options[] = {
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
+#endif
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
     {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
     {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
@@ -202,6 +208,9 @@ void show_help(const char* argv0)
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "  --cut-tiles #             cuts the input image into tiles of the given width\n"
+#endif
             << "  -T,--tiled-input          input is a set of tile images (only provide one filename with two tile position numbers).\n"
             << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
             << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
@@ -641,6 +650,18 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
 
 struct input_tiles_generator
 {
+  virtual ~input_tiles_generator() = default;
+
+  virtual uint32_t nColumns() const = 0;
+  virtual uint32_t nRows() const = 0;
+
+  virtual uint32_t nTiles() const { return nColumns() * nRows(); }
+
+  virtual InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) = 0;
+};
+
+struct input_tiles_generator_separate_files : public input_tiles_generator
+{
   uint32_t first_start;
   uint32_t first_end;
   uint32_t first_digits;
@@ -655,10 +676,10 @@ struct input_tiles_generator
 
   bool first_is_x = false;
 
-  uint32_t nColumns() const { return first_is_x ? (first_end - first_start + 1) : (second_end - second_start + 1); }
-  uint32_t nRows() const { return first_is_x ? (second_end - second_start + 1) : (first_end - first_start + 1); }
+  uint32_t nColumns() const override { return first_is_x ? (first_end - first_start + 1) : (second_end - second_start + 1); }
+  uint32_t nRows() const override { return first_is_x ? (second_end - second_start + 1) : (first_end - first_start + 1); }
 
-  uint32_t nTiles() const { return (first_end - first_start + 1) * (second_end - second_start + 1); }
+  uint32_t nTiles() const override { return (first_end - first_start + 1) * (second_end - second_start + 1); }
 
   std::filesystem::path filename(uint32_t tx, uint32_t ty) const
   {
@@ -671,41 +692,48 @@ struct input_tiles_generator
     std::filesystem::path p = directory / sstr.str();
     return p;
   }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
+  {
+    std::string input_filename = filename(tx, ty).string();
+    InputImage image = load_image(input_filename, output_bit_depth);
+    return image;
+  }
 };
 
-std::optional<input_tiles_generator> determine_input_images_tiling(const std::string& filename)
+std::shared_ptr<input_tiles_generator> determine_input_images_tiling(const std::string& filename, bool first_is_x)
 {
   std::regex pattern(R"((.*\D)?(\d+)(\D+?)(\d+)(\..+)$)");
   std::smatch match;
 
-  input_tiles_generator generator;
+  auto generator = std::make_shared<input_tiles_generator_separate_files>();
 
   if (std::regex_match(filename, match, pattern)) {
     std::string prefix = match[1];
 
     auto p = std::filesystem::absolute(std::filesystem::path(prefix));
-    generator.directory = p.parent_path();
-    generator.prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
+    generator->directory = p.parent_path();
+    generator->prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
 
-    generator.separator = match[3];
-    generator.suffix = match[5];
+    generator->separator = match[3];
+    generator->suffix = match[5];
 
-    generator.first_start = 9999;
-    generator.first_end = 0;
-    generator.first_digits = 9;
+    generator->first_start = 9999;
+    generator->first_end = 0;
+    generator->first_digits = 9;
 
-    generator.second_start = 9999;
-    generator.second_end = 0;
-    generator.second_digits = 9;
+    generator->second_start = 9999;
+    generator->second_end = 0;
+    generator->second_digits = 9;
   }
   else {
-    return std::nullopt;
+    return nullptr;
   }
 
-  std::string patternString = generator.prefix + "(\\d+)" + generator.separator + "(\\d+)" + generator.suffix + "$";
+  std::string patternString = generator->prefix + "(\\d+)" + generator->separator + "(\\d+)" + generator->suffix + "$";
   pattern = patternString;
 
-  for (const auto& dirEntry : std::filesystem::directory_iterator(generator.directory))
+  for (const auto& dirEntry : std::filesystem::directory_iterator(generator->directory))
   {
     if (dirEntry.is_regular_file()) {
       std::string s{dirEntry.path().filename().string()};
@@ -714,24 +742,66 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
         uint32_t first = std::stoi(match[1]);
         uint32_t second = std::stoi(match[2]);
 
-        generator.first_digits = std::min(generator.first_digits, (uint32_t)match[1].length());
-        generator.second_digits = std::min(generator.second_digits, (uint32_t)match[2].length());
+        generator->first_digits = std::min(generator->first_digits, (uint32_t)match[1].length());
+        generator->second_digits = std::min(generator->second_digits, (uint32_t)match[2].length());
 
-        generator.first_start = std::min(generator.first_start, first);
-        generator.first_end = std::max(generator.first_end, first);
-        generator.second_start = std::min(generator.second_start, second);
-        generator.second_end = std::max(generator.second_end, second);
+        generator->first_start = std::min(generator->first_start, first);
+        generator->first_end = std::max(generator->first_end, first);
+        generator->second_start = std::min(generator->second_start, second);
+        generator->second_end = std::max(generator->second_end, second);
       }
     }
   }
 
+  generator->first_is_x = first_is_x;
+
   return generator;
 }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+class input_tiles_generator_cut_image : public input_tiles_generator
+{
+public:
+  input_tiles_generator_cut_image(const char* filename, int tile_size, int output_bit_depth)
+  {
+    mImage = load_image(filename, output_bit_depth);
 
+    mWidth = heif_image_get_width(mImage.image.get(), heif_channel_Y);
+    mHeight = heif_image_get_height(mImage.image.get(), heif_channel_Y);
+
+    mTileSize = tile_size;
+  }
+
+  uint32_t nColumns() const override { return (mWidth + mTileSize - 1)/mTileSize; }
+  uint32_t nRows() const override { return (mHeight + mTileSize - 1)/mTileSize; }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
+  {
+    heif_image* tileImage;
+    heif_error err = heif_image_extract_area(mImage.image.get(), tx * mTileSize, ty * mTileSize, mTileSize, mTileSize,
+                                             heif_get_global_security_limits(),
+                                             &tileImage);
+    InputImage tile;
+    tile.image = std::shared_ptr<heif_image>(tileImage,
+                                             [](heif_image* img) { heif_image_release(img); });
+    return tile;
+  }
+
+  uint32_t get_image_width() const { return heif_image_get_width(mImage.image.get(), heif_channel_Y); }
+  uint32_t get_image_height() const { return heif_image_get_height(mImage.image.get(), heif_channel_Y); }
+
+private:
+  InputImage mImage;
+  uint32_t mWidth, mHeight;
+  int mTileSize;
+};
+#endif
+
+
+// TODO: we have to attach the input image Exif and XMP to the tiled image
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
-                                const input_tiles_generator& tile_generator,
+                                const std::shared_ptr<input_tiles_generator>& tile_generator,
                                 const heif_image_tiling& tiling)
 {
   heif_image_handle* tiled_image = nullptr;
@@ -776,8 +846,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     params.tile_height = tiling.tile_height;
     params.compression = unci_compression;
 
-    std::string input_filename = tile_generator.filename(0, 0).string();
-    InputImage prototype_image = load_image(input_filename, output_bit_depth);
+    InputImage prototype_image = tile_generator->get_image(0,0, output_bit_depth);
 
     heif_error error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
     if (error.code != 0) {
@@ -799,11 +868,9 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 
   int tile_width = 0, tile_height = 0;
 
-  for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
-    for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
-      std::string input_filename = tile_generator.filename(tx,ty).string();
-
-      InputImage input_image = load_image(input_filename, output_bit_depth);
+  for (uint32_t ty = 0; ty < tile_generator->nRows(); ty++)
+    for (uint32_t tx = 0; tx < tile_generator->nColumns(); tx++) {
+      InputImage input_image = tile_generator->get_image(tx,ty, output_bit_depth);
 
       if (tile_width == 0) {
         tile_width = heif_image_get_primary_width(input_image.image.get());
@@ -822,7 +889,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       }
 
       std::cout << "encoding tile " << ty+1 << " " << tx+1
-                << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
+                << " (of " << tile_generator->nRows() << "x" << tile_generator->nColumns() << ")  \r";
       std::cout.flush();
 
       error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
@@ -981,6 +1048,9 @@ int main(int argc, char** argv)
           std::cerr << "Invalid tiling method '" << tiling_method << "'\n";
           exit(5);
         }
+        break;
+      case OPTION_CUT_TILES:
+        cut_tiles = atoi(optarg);
         break;
       case OPTION_UNCI_COMPRESSION: {
         std::string option(optarg);
@@ -1193,13 +1263,11 @@ int main(int argc, char** argv)
     std::shared_ptr<heif_image> image = input_image.image;
 
     heif_image_tiling tiling{};
-    std::optional<input_tiles_generator> tile_generator;
+    std::shared_ptr<input_tiles_generator> tile_generator;
     if (use_tiling) {
-      tile_generator = determine_input_images_tiling(input_filename);
+      tile_generator = determine_input_images_tiling(input_filename, tiled_input_x_y);
       if (tile_generator) {
         tiling.version = 1;
-
-        if (tiled_input_x_y) tile_generator->first_is_x = true;
 
         tiling.num_columns = tile_generator->nColumns();
         tiling.num_rows = tile_generator->nRows();
@@ -1218,6 +1286,21 @@ int main(int argc, char** argv)
         return 5;
       }
     }
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    else if (cut_tiles != 0) {
+      auto cutting_tile_generator = std::make_shared<input_tiles_generator_cut_image>(input_filename.c_str(),
+                                                                         cut_tiles, output_bit_depth);
+      tile_generator = cutting_tile_generator;
+
+      tiling.num_columns = tile_generator->nColumns();
+      tiling.num_rows = tile_generator->nRows();
+      tiling.tile_width = cut_tiles;
+      tiling.tile_height = cut_tiles;
+      tiling.image_width = cutting_tile_generator->get_image_width();
+      tiling.image_height = cutting_tile_generator->get_image_height();
+      tiling.number_of_extra_dimensions = 0;
+    }
+#endif
 
     if (!primary_image) {
       primary_image = image;
@@ -1268,8 +1351,8 @@ int main(int argc, char** argv)
 
     struct heif_image_handle* handle;
 
-    if (use_tiling) {
-      handle = encode_tiled(context.get(), encoder, options, output_bit_depth, *tile_generator, tiling);
+    if (use_tiling || cut_tiles > 0) {
+      handle = encode_tiled(context.get(), encoder, options, output_bit_depth, tile_generator, tiling);
     }
     else {
       error = heif_context_encode_image(context.get(),

@@ -422,17 +422,22 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
 
     // extend plane size
 
+    uint8_t fill = 0;
+    if (bytes_per_pixel == 1 && (planeIter.first == heif_channel_Cb || planeIter.first == heif_channel_Cr)) {
+      fill = 128;
+    }
+
     if (old_width != subsampled_width) {
       for (uint32_t y = 0; y < old_height; y++) {
         memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride + old_width * bytes_per_pixel,
-               0,
+               fill,
                bytes_per_pixel * (subsampled_width - old_width));
       }
     }
 
     for (uint32_t y = old_height; y < subsampled_height; y++) {
       memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-             0,
+             fill,
              subsampled_width * bytes_per_pixel);
     }
 
@@ -1527,4 +1532,60 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
   }
 
   return Error::Ok;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                   const heif_security_limits* limits) const
+{
+  uint32_t minW = std::min(w, get_width() - x0);
+  uint32_t minH = std::min(h, get_height() - y0);
+
+  auto areaImg = std::make_shared<HeifPixelImage>();
+  Error err = areaImg->create_clone_image_at_new_size(shared_from_this(), minW, minH, limits);
+  if (err) {
+    return err;
+  }
+
+  std::set<enum heif_channel> channels = get_channel_set();
+  heif_chroma chroma = get_chroma_format();
+
+  for (heif_channel channel : channels) {
+
+    uint32_t src_stride;
+    const uint8_t* src_data = get_plane(channel, &src_stride);
+
+    uint32_t out_stride;
+    uint8_t* out_data = areaImg->get_plane(channel, &out_stride);
+
+    if (areaImg->get_bits_per_pixel(channel) != get_bits_per_pixel(channel)) {
+      return Error{
+        heif_error_Invalid_input,
+        heif_suberror_Wrong_tile_image_pixel_depth
+      };
+    }
+
+    uint32_t copy_width = channel_width(minW, chroma, channel);
+    uint32_t copy_height = channel_height(minH, chroma, channel);
+
+    copy_width *= get_storage_bits_per_pixel(channel) / 8;
+
+    uint32_t xs = channel_width(x0, chroma, channel);
+    uint32_t ys = channel_height(y0, chroma, channel);
+    xs *= get_storage_bits_per_pixel(channel) / 8;
+
+    for (uint32_t py = 0; py < copy_height; py++) {
+      memcpy(out_data + py * out_stride,
+             src_data + xs + (ys + py) * src_stride,
+             copy_width);
+    }
+  }
+
+  err = areaImg->extend_to_size_with_zero(w,h,limits);
+  if (err) {
+    return err;
+  }
+
+  return areaImg;
 }

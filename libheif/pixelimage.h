@@ -202,6 +202,10 @@ public:
 
   Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
 
+  Result<std::shared_ptr<HeifPixelImage>> extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                                             const heif_security_limits* limits) const;
+
+
   // --- pixel aspect ratio
 
   bool has_nonsquare_pixel_ratio() const { return m_PixelAspectRatio_h != m_PixelAspectRatio_v; }

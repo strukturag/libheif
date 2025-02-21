@@ -422,6 +422,11 @@ struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx
                                                   heif_item_id itemId,
                                                   struct heif_tai_timestamp_packet* out_timestamp);
 
+LIBHEIF_API
+heif_error heif_image_extract_area(const heif_image*,
+                                   uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                   const heif_security_limits* limits,
+                                   struct heif_image** out_image);
 #endif
 
 #ifdef __cplusplus
