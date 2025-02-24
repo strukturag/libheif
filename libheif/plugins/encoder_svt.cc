@@ -41,6 +41,9 @@ struct encoder_struct_svt
   int max_q = 63;
   int qp = -1;
   bool qp_set = false;
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  bool lossless = false;
+#endif
 
   int threads = 4;
 
@@ -192,7 +195,7 @@ static void svt_init_parameters()
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
-  /*
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = heif_encoder_parameter_name_lossless;
@@ -200,7 +203,7 @@ static void svt_init_parameters()
   p->boolean.default_value = false;
   p->has_default = true;
   d[i++] = p++;
-*/
+#endif
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
@@ -326,6 +329,9 @@ struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  encoder->lossless = enable;
+#else
   if (enable) {
     encoder->min_q = 0;
     encoder->max_q = 0;
@@ -333,6 +339,7 @@ struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
     encoder->qp_set = true;
     encoder->quality = 100; // not really required, but to be consistent
   }
+#endif
 
   return heif_error_ok;
 }
@@ -341,8 +348,12 @@ struct heif_error svt_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  *enable = encoder->lossless;
+#else
   *enable = (encoder->min_q == 0 && encoder->max_q == 0 &&
              ((encoder->qp_set && encoder->qp == 0) || encoder->quality == 100));
+#endif
 
   return heif_error_ok;
 }
@@ -692,6 +703,10 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.encoder_bit_depth = (uint8_t) bitdepth_y;
   //svt_config.is_16bit_pipeline = bitdepth_y > 8;
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  svt_config.lossless = encoder->lossless;
+#endif
+
   struct heif_color_profile_nclx* nclx = nullptr;
   err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
@@ -929,7 +944,11 @@ static const struct heif_encoder_plugin encoder_plugin_svt
         /* id_name */ "svt",
         /* priority */ SVT_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+        /* supports_lossless_compression */ true,
+#else
         /* supports_lossless_compression */ false,
+#endif
         /* get_plugin_name */ svt_plugin_name,
         /* init_plugin */ svt_init_plugin,
         /* cleanup_plugin */ svt_cleanup_plugin,
