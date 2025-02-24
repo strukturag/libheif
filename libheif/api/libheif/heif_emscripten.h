@@ -274,6 +274,8 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
       val_channel_info.set("width", heif_image_get_width(image, channel));
       val_channel_info.set("height", heif_image_get_height(image, channel));
 
+      val_channel_info.set("bits_per_pixel", heif_image_get_bits_per_pixel_range(image, channel));
+
       val_channels.call<void>("push", val_channel_info);
     }
   }
