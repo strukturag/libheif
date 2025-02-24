@@ -815,11 +815,39 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto* input_picture_buffer = (EbSvtIOFormat*) input_buffer.p_buffer;
 
   int bytesPerPixel = bitdepth_y > 8 ? 2 : 1;
+  std::vector<uint8_t> dummy_color_plane;
   if (input_class == heif_image_input_class_alpha) {
     int stride;
     input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
     input_picture_buffer->y_stride = stride / bytesPerPixel;
     input_buffer.n_filled_len = stride * encoded_height;
+
+    uint32_t uvWidth = get_subsampled_size_h(encoded_width, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
+    uint32_t uvHeight = get_subsampled_size_v(encoded_height, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
+    dummy_color_plane.resize(uvWidth * uvHeight);
+
+    if (bitdepth_y <= 8) {
+      uint8_t val = 1 << (bitdepth_y - 1);
+      memset(dummy_color_plane.data(), val, uvWidth * uvHeight * bytesPerPixel);
+    }
+    else {
+      assert(bitdepth_y > 8 && bitdepth_y <= 16);
+      uint16_t val = 1 << (bitdepth_y - 1);
+      uint8_t high = static_cast<uint8_t>((val >> 8) & 0xFF);
+      uint8_t low  = static_cast<uint8_t>(val & 0xFF);
+
+      for (uint32_t i=0;i<uvWidth*uvHeight;i++) {
+        dummy_color_plane[2*i  ] = low;
+        dummy_color_plane[2*i+1] = high;
+      }
+    }
+
+    input_buffer.n_filled_len += 2* uvWidth * uvHeight;
+    input_picture_buffer->cb_stride = uvWidth;
+    input_picture_buffer->cr_stride = uvWidth;
+
+    input_picture_buffer->cb = dummy_color_plane.data();
+    input_picture_buffer->cr = dummy_color_plane.data();
   }
   else {
     int stride;
@@ -851,7 +879,6 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
-
 
 
   // --- flush encoder
