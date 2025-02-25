@@ -57,7 +57,7 @@ struct encoder_struct_svt
   };
   uint8_t tune = Tune_PSNR;
 
-  heif_chroma chroma = heif_chroma_420;
+  heif_chroma chroma = heif_chroma_420;  // SVT-AV1 only supports 4:2:0 as of v3.0.0
 
   // --- output
 
@@ -205,6 +205,7 @@ static void svt_init_parameters()
   d[i++] = p++;
 #endif
 
+#if 0
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_chroma;
@@ -213,6 +214,7 @@ static void svt_init_parameters()
   p->has_default = true;
   p->string.valid_values = kParam_chroma_valid_values;
   d[i++] = p++;
+#endif
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
@@ -470,6 +472,7 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if 0
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
       encoder->chroma = heif_chroma_420;
@@ -487,6 +490,7 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
       return heif_error_invalid_parameter_value;
     }
   }
+#endif
 
   if (strcmp(name, kParam_tune) == 0) {
     if (strcmp(value, "vq") == 0) {
@@ -519,6 +523,7 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if 0
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
       case heif_chroma_420:
@@ -536,6 +541,7 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
     }
     return heif_error_ok;
   }
+#endif
 
   if (strcmp(name, kParam_tune) == 0) {
     switch (encoder->tune) {
@@ -592,10 +598,10 @@ void svt_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma
 
 void svt_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  //auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
   *colorspace = heif_colorspace_YCbCr;
-  *chroma = encoder->chroma;
+  *chroma = heif_chroma_420;
 }
 
 
