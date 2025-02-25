@@ -855,7 +855,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     input_picture_buffer->y_stride = stride / bytesPerPixel;
     input_buffer.n_filled_len = stride * encoded_height;
 
-    uint32_t uvHeight = (h + yShift) >> yShift;
+    uint32_t uvHeight = (encoded_height + yShift) >> yShift;
     input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
     input_buffer.n_filled_len += stride * uvHeight;
     input_picture_buffer->cb_stride = stride / bytesPerPixel;
