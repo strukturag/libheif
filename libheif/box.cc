@@ -391,7 +391,15 @@ Error Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit)
 std::string BoxHeader::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << indent << "Box: " << get_type_string() << " -----\n";
+  sstr << indent << "Box: " << get_type_string();
+  const char* debug_name = debug_box_name();
+  if (debug_name) {
+    sstr << " ----- (" << debug_name << ")\n";
+  }
+  else {
+    sstr << " -----\n";
+  }
+
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
   return sstr.str();

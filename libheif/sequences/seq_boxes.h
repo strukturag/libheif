@@ -41,6 +41,8 @@ protected:
 class Box_moov : public Box_container {
 public:
   Box_moov() : Box_container("moov") {}
+
+  const char* debug_box_name() const override { return "Movie"; }
 };
 
 
@@ -53,6 +55,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Movie Header"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -95,6 +99,8 @@ private:
 class Box_trak : public Box_container {
 public:
   Box_trak() : Box_container("trak") {}
+
+  const char* debug_box_name() const override { return "Track"; }
 };
 
 
@@ -107,6 +113,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Track Header"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -158,6 +166,8 @@ private:
 class Box_mdia : public Box_container {
 public:
   Box_mdia() : Box_container("mdia") {}
+
+  const char* debug_box_name() const override { return "Media"; }
 };
 
 
@@ -170,6 +180,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Media Header"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -202,6 +214,8 @@ private:
 class Box_minf : public Box_container {
 public:
   Box_minf() : Box_container("minf") {}
+
+  const char* debug_box_name() const override { return "Media Information"; }
 };
 
 
@@ -215,6 +229,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Video Media Header"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -238,6 +254,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Null Media Header"; }
+
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -249,6 +267,8 @@ protected:
 class Box_stbl : public Box_container {
 public:
   Box_stbl() : Box_container("stbl") {}
+
+  const char* debug_box_name() const override { return "Sample Table"; }
 };
 
 
@@ -261,6 +281,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Sample Description"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -298,6 +320,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Decoding Time to Sample"; }
+
   Error write(StreamWriter& writer) const override;
 
   struct TimeToSample {
@@ -328,6 +352,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Sample to Chunk"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -370,6 +396,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Sample Offset"; }
+
   Error write(StreamWriter& writer) const override;
 
   void add_chunk_offset(uint32_t offset) { m_offsets.push_back(offset); }
@@ -397,6 +425,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Sample Size"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -428,6 +458,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Sync Sample"; }
+
   Error write(StreamWriter& writer) const override;
 
   void add_sync_sample(uint32_t sample_idx) { m_sync_samples.push_back(sample_idx); }
@@ -456,6 +488,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Coding Constraints"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -535,6 +569,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "URI Meta Sample Entry"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
@@ -560,6 +596,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "URI"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
@@ -579,6 +617,8 @@ public:
   void derive_box_version() override;
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Sample to Group"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -638,6 +678,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Sample Group Description"; }
+
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -665,6 +707,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Bitrate"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -700,6 +744,8 @@ public:
   uint32_t get_num_samples() const { return m_num_samples; }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Sample Auxiliary Information Sizes"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -738,6 +784,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Sample Auxiliary Information Offsets"; }
+
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -771,6 +819,8 @@ public:
   };
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Track Reference"; }
 
   std::vector<uint32_t> get_references(uint32_t ref_type) const;
 

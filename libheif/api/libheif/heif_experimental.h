@@ -491,6 +491,11 @@ struct heif_track_info
 
   uint32_t timescale;
 
+  // If 'true', the aux_info data blocks will be interleaved with the compressed image.
+  // This has the advantage that the aux_info is localized near the image data.
+  //
+  // If 'false', all aux_info will be written as one block after the compressed image data.
+  // This has the advantage that no aux_info offsets have to be written.
   uint8_t write_aux_info_interleaved; // bool
 
   enum heif_sample_aux_info_presence with_tai_timestamps;

@@ -127,6 +127,8 @@ public:
 
   std::string get_type_string() const;
 
+  virtual const char* debug_box_name() const { return nullptr; }
+
   void set_short_type(uint32_t type) { m_type = type; }
 
 
