@@ -55,6 +55,8 @@
 #include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
 
+// --- command line parameters
+
 int master_alpha = 1;
 int thumb_alpha = 1;
 int list_encoders = 0;
@@ -80,6 +82,22 @@ int nclx_full_range = true;
 // default to 30 fps
 uint32_t sequence_timebase = 30;
 uint32_t sequence_durations = 1;
+
+int quality = 50;
+bool lossless = false;
+std::string output_filename;
+int logging_level = 0;
+bool option_show_parameters = false;
+int thumbnail_bbox_size = 0;
+int output_bit_depth = 10;
+bool force_enc_av1f = false;
+bool force_enc_vvc = false;
+bool force_enc_uncompressed = false;
+bool force_enc_jpeg = false;
+bool force_enc_jpeg2000 = false;
+bool force_enc_htj2k = false;
+bool use_tiling = false;
+bool encode_sequence = false;
 
 std::string property_pitm_description;
 
@@ -942,22 +960,6 @@ int main(int argc, char** argv)
   // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
   LibHeifInitializer initializer;
 
-  int quality = 50;
-  bool lossless = false;
-  std::string output_filename;
-  int logging_level = 0;
-  bool option_show_parameters = false;
-  int thumbnail_bbox_size = 0;
-  int output_bit_depth = 10;
-  bool force_enc_av1f = false;
-  bool force_enc_vvc = false;
-  bool force_enc_uncompressed = false;
-  bool force_enc_jpeg = false;
-  bool force_enc_jpeg2000 = false;
-  bool force_enc_htj2k = false;
-  bool use_tiling = false;
-  bool encode_sequence = false;
-
   std::vector<std::string> raw_params;
 
 
@@ -1285,8 +1287,12 @@ int main(int argc, char** argv)
 
   std::vector<heif_item_id> encoded_image_ids;
 
+  std::vector<const char*> args;
   for (; optind < argc; optind++) {
-    std::string input_filename = argv[optind];
+    args.push_back(argv[optind]);
+  }
+
+  for (std::string input_filename : args) {
 
     if (output_filename.empty()) {
       std::string filename_without_suffix;
