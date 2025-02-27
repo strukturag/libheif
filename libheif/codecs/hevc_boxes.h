@@ -89,6 +89,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "HEVC Configuration Item"; }
+
   bool get_headers(std::vector<uint8_t>* dest) const;
 
   void set_configuration(const HEVCDecoderConfigurationRecord& config) { m_configuration = config; }
