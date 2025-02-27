@@ -1618,16 +1618,9 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     }
 
     if (first_image) {
-      heif_track_info track_info;
-      track_info.version = 1;
-      track_info.timescale = sequence_timebase;
+      heif_track_info* track_info = heif_track_info_alloc();
 
-      track_info.write_aux_info_interleaved = true;
-      track_info.with_tai_timestamps = heif_sample_aux_info_presence_none;
-      track_info.tai_clock_info = nullptr;
-
-      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
-      track_info.with_gimi_track_contentID = false;
+      track_info->timescale = sequence_timebase;
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
 
@@ -1636,9 +1629,11 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
       heif_context_add_visual_sequence_track(context,
                                              image_width, image_height,
-                                             &track_info,
+                                             track_info,
                                              heif_track_type_video,
                                              &track);
+
+      heif_track_info_release(track_info);
 
       first_image = false;
     }
