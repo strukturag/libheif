@@ -1332,11 +1332,28 @@ int main(int argc, char** argv)
   }
 
 
+  int ret;
+
   if (!encode_sequence) {
-    do_encode_images(context.get(), encoder, options, args);
+    ret = do_encode_images(context.get(), encoder, options, args);
   }
   else {
-    do_encode_sequence(context.get(), encoder, options, args);
+    ret = do_encode_sequence(context.get(), encoder, options, args);
+  }
+
+  if (ret != 0) {
+    heif_encoding_options_free(options);
+    heif_encoder_release(encoder);
+    return ret;
+  }
+
+
+  // --- write HEIF file
+
+  heif_error error = heif_context_write_to_file(context.get(), output_filename.c_str());
+  if (error.code) {
+    std::cerr << error.message << "\n";
+    return 5;
   }
 
   heif_encoding_options_free(options);
@@ -1553,12 +1570,6 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
   }
 #endif
 
-  error = heif_context_write_to_file(context, output_filename.c_str());
-  if (error.code) {
-    std::cerr << error.message << "\n";
-    return 5;
-  }
-
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
     std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
@@ -1580,5 +1591,63 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
 int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
 {
+  struct heif_error error;
+
+  bool first_image = true;
+
+  heif_track* track = nullptr;
+
+  for (std::string input_filename : args) {
+
+    InputImage input_image = load_image(input_filename, output_bit_depth);
+
+    std::shared_ptr<heif_image> image = input_image.image;
+
+    if (first_image) {
+      heif_track_info track_info;
+      track_info.version = 1;
+      track_info.timescale = sequence_timebase;
+      track_info.write_aux_info_interleaved = true;
+      track_info.with_tai_timestamps = heif_sample_aux_info_presence_none;
+      track_info.tai_clock_info = nullptr;
+      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
+
+      track_info.with_gimi_track_contentID = true;
+      std::string track_id{"track-ContentID-test"};
+      track_info.gimi_track_contentID = track_id.c_str();
+
+      heif_context_set_sequence_timescale(context, sequence_timebase);
+
+      heif_context_add_visual_sequence_track(context,
+                                             heif_image_get_primary_width(image.get()),
+                                             heif_image_get_primary_height(image.get()),
+                                             &track_info,
+                                             heif_track_type_video,
+                                             &track);
+
+      first_image = false;
+    }
+
+    heif_color_profile_nclx* nclx;
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless);
+    if (error.code) {
+      std::cerr << error.message << "\n";
+      return 5;
+    }
+
+    options->save_alpha_channel = false; // TODO: sequences with alpha ?
+    options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
+
+    heif_image_set_duration(image.get(), sequence_durations);
+
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
+    if (error.code) {
+      std::cerr << "Cannot encode sequence image: " << error.message << "\n";
+      return 5;
+    }
+
+    heif_nclx_color_profile_free(nclx);
+  }
+
   return 0;
 }
