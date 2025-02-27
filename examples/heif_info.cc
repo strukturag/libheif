@@ -756,6 +756,8 @@ int main(int argc, char** argv)
   uint32_t nTracks = heif_context_number_of_sequence_tracks(context);
 
   if (nTracks > 0) {
+    std::cout << "\n";
+
     uint64_t timescale = heif_context_get_sequence_timescale(context);
     std::cout << "sequence time scale: " << timescale << " Hz\n";
 

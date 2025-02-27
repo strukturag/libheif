@@ -4773,29 +4773,38 @@ Error Box_cmex::write(StreamWriter& writer) const
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-std::string Box_taic::dump(Indent& indent) const {
+std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
+{
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
-  sstr << indent << "clock_resolution: " << m_clock_resolution << "\n";
+  sstr << indent << "time_uncertainty: " << info.time_uncertainty << "\n";
+  sstr << indent << "clock_resolution: " << info.clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
-  if (heif_is_tai_clock_info_drift_rate_undefined(m_clock_drift_rate)) {
+  if (heif_is_tai_clock_info_drift_rate_undefined(info.clock_drift_rate)) {
     sstr << "undefined\n";
   }
   else {
-    sstr << m_clock_drift_rate << "\n";
+    sstr << info.clock_drift_rate << "\n";
   }
 
-  sstr << indent << "clock_type: " << static_cast<int>(m_clock_type) << "\n";
+  sstr << indent << "clock_type: " << static_cast<int>(info.clock_type) << "\n";
+  return sstr.str();
+}
+
+
+std::string Box_taic::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << dump(m_info, indent);
+
   return sstr.str();
 }
 
 Error Box_taic::write(StreamWriter& writer) const {
   size_t box_start = reserve_box_header_space(writer);
-  writer.write64(m_time_uncertainty);
-  writer.write32(m_clock_resolution);
-  writer.write32(m_clock_drift_rate);
-  writer.write8(m_clock_type);
+  writer.write64(m_info.time_uncertainty);
+  writer.write32(m_info.clock_resolution);
+  writer.write32(m_info.clock_drift_rate);
+  writer.write8(m_info.clock_type);
 
   prepend_header(writer, box_start);
 
@@ -4805,11 +4814,11 @@ Error Box_taic::write(StreamWriter& writer) const {
 Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
-  m_time_uncertainty = range.read64();
-  m_clock_resolution = range.read32();
+  m_info.time_uncertainty = range.read64();
+  m_info.clock_resolution = range.read32();
 
-  m_clock_drift_rate = range.read32s();
-  m_clock_type = range.read8();
+  m_info.clock_drift_rate = range.read32s();
+  m_info.clock_type = range.read8();
   return range.get_error();
 }
 

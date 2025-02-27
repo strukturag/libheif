@@ -1655,13 +1655,23 @@ private:
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src); // TODO: move this from track.cc to a special TAI file
+
 class Box_taic : public FullBox
 {
 public:
   Box_taic()
   {
     set_short_type(fourcc("taic"));
+
+    m_info.version = 1;
+    m_info.time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
+    m_info.clock_resolution = 0;
+    m_info.clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
+    m_info.clock_type = 0;
   }
+
+  static std::string dump(const heif_tai_clock_info& info, Indent&);
 
   std::string dump(Indent&) const override;
 
@@ -1675,7 +1685,7 @@ public:
    * The standard deviation measurement uncertainty in nanoseconds
    * for the timestamp generation process. 
    */
-  void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
+  void set_time_uncertainty(uint64_t time_uncertainty) { m_info.time_uncertainty = time_uncertainty;}
   
   /**
    * clock_resolution.
@@ -1683,7 +1693,7 @@ public:
    * Specifies the resolution of the receptor clock in nanoseconds.
    * For example, a microsecond clock has a clock_resolution of 1000.
    */
-  void set_clock_resolution(uint32_t clock_resolution) { m_clock_resolution = clock_resolution; }
+  void set_clock_resolution(uint32_t clock_resolution) { m_info.clock_resolution = clock_resolution; }
   
   /**
    * clock_drift_rate.
@@ -1691,7 +1701,7 @@ public:
    * The difference between the synchronized and unsynchronized
    * time, over a period of one second. 
    */
-  void set_clock_drift_rate(int32_t clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  void set_clock_drift_rate(int32_t clock_drift_rate) { m_info.clock_drift_rate = clock_drift_rate; }
   
   /**
    * clock_type.
@@ -1700,41 +1710,30 @@ public:
    * 1 = The clock does not synchronize to an atomic source of absolute TAI time
    * 2 = The clock can synchronize to an atomic source of absolute TAI time
    */
-  void set_clock_type(uint8_t clock_type) { m_clock_type = clock_type; }
+  void set_clock_type(uint8_t clock_type) { m_info.clock_type = clock_type; }
 
-  uint64_t get_time_uncertainty() const { return m_time_uncertainty; }
+  uint64_t get_time_uncertainty() const { return m_info.time_uncertainty; }
   
-  uint32_t get_clock_resolution() const { return m_clock_resolution; }
+  uint32_t get_clock_resolution() const { return m_info.clock_resolution; }
   
-  int32_t get_clock_drift_rate() const { return m_clock_drift_rate; }
+  int32_t get_clock_drift_rate() const { return m_info.clock_drift_rate; }
   
-  uint8_t get_clock_type() const { return m_clock_type; }
+  uint8_t get_clock_type() const { return m_info.clock_type; }
 
   void set_from_tai_clock_info(const heif_tai_clock_info* info) {
-    m_time_uncertainty = info->time_uncertainty;
-    m_clock_resolution = info->clock_resolution;
-    m_clock_drift_rate = info->clock_drift_rate;
-    m_clock_type = info->clock_type;
+    heif_tai_clock_info_copy(&m_info, info);
   }
 
   void get_tai_clock_info(heif_tai_clock_info* out_clock)
   {
-    if (out_clock->version >= 1) {
-      out_clock->time_uncertainty = get_time_uncertainty();
-      out_clock->clock_resolution = get_clock_resolution();
-      out_clock->clock_drift_rate = get_clock_drift_rate();
-      out_clock->clock_type = get_clock_type();
-    }
+    heif_tai_clock_info_copy(out_clock, &m_info);
   }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
-  uint32_t m_clock_resolution = 0;
-  int32_t m_clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
-  uint8_t m_clock_type = 0;
+  heif_tai_clock_info m_info;
 };
 
 
