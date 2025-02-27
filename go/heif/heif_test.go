@@ -24,7 +24,6 @@
  * SOFTWARE.
  */
 
-
 package heif
 
 import (
