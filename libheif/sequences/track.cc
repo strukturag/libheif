@@ -565,8 +565,8 @@ bool Track::end_of_sequence_reached() const
 
 void Track::finalize_track()
 {
-  m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
-  m_aux_helper_content_ids->write_all(m_stbl, get_file());
+  if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
+  if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
   uint64_t duration = m_stts->get_total_duration(false);
   m_mdhd->set_duration(duration);
@@ -623,8 +623,8 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
 
   if (m_stsc->last_chunk_empty()) {
     // if auxiliary data is interleaved, write it between the chunks
-    m_aux_helper_tai_timestamps->write_interleaved(get_file());
-    m_aux_helper_content_ids->write_interleaved(get_file());
+    if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_interleaved(get_file());
 
     // TODO
     assert(data_start < 0xFF000000); // add some headroom for header data
