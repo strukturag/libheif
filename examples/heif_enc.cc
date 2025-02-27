@@ -955,6 +955,10 @@ public:
 };
 
 
+int do_encode_images(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<const char*>& args);
+int do_encode_sequence(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<const char*>& args);
+
+
 int main(int argc, char** argv)
 {
   // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
@@ -1279,6 +1283,71 @@ int main(int argc, char** argv)
     }
   }
 
+  std::vector<const char*> args;
+  for (; optind < argc; optind++) {
+    args.push_back(argv[optind]);
+  }
+
+
+  if (!lossless) {
+    heif_encoder_set_lossy_quality(encoder, quality);
+  }
+
+  heif_encoder_set_logging_level(encoder, logging_level);
+
+  set_params(encoder, raw_params);
+  struct heif_encoding_options* options = heif_encoding_options_alloc();
+  options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
+
+  if (chroma_downsampling == "average") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+  else if (chroma_downsampling == "sharp-yuv") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+  else if (chroma_downsampling == "nearest-neighbor") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+
+
+  // --- if no output filename was given, synthesize one from the first input image filename
+
+  if (output_filename.empty()) {
+    std::string first_input_filename = args[0];
+
+    std::string filename_without_suffix;
+    std::string::size_type dot_position = first_input_filename.find_last_of('.');
+    if (dot_position != std::string::npos) {
+      filename_without_suffix = first_input_filename.substr(0, dot_position);
+    }
+    else {
+      filename_without_suffix = first_input_filename;
+    }
+
+    std::string suffix = suffix_for_compression_format(compressionFormat);
+    output_filename = filename_without_suffix + '.' + suffix;
+  }
+
+
+  if (!encode_sequence) {
+    do_encode_images(context.get(), encoder, options, args);
+  }
+  else {
+    do_encode_sequence(context.get(), encoder, options, args);
+  }
+
+  heif_encoding_options_free(options);
+  heif_encoder_release(encoder);
+
+  return 0;
+}
+
+
+int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
+{
   struct heif_error error;
 
   std::shared_ptr<heif_image> primary_image;
@@ -1287,29 +1356,7 @@ int main(int argc, char** argv)
 
   std::vector<heif_item_id> encoded_image_ids;
 
-  std::vector<const char*> args;
-  for (; optind < argc; optind++) {
-    args.push_back(argv[optind]);
-  }
-
   for (std::string input_filename : args) {
-
-    if (output_filename.empty()) {
-      std::string filename_without_suffix;
-      std::string::size_type dot_position = input_filename.find_last_of('.');
-      if (dot_position != std::string::npos) {
-        filename_without_suffix = input_filename.substr(0, dot_position);
-      }
-      else {
-        filename_without_suffix = input_filename;
-      }
-
-      std::string suffix = suffix_for_compression_format(compressionFormat);
-      output_filename = filename_without_suffix + '.' + suffix;
-    }
-
-
-    // ==============================================================================
 
     InputImage input_image = load_image(input_filename, output_bit_depth);
 
@@ -1372,31 +1419,9 @@ int main(int argc, char** argv)
       return 5;
     }
 
-    if (!lossless) {
-      heif_encoder_set_lossy_quality(encoder, quality);
-    }
-
-    heif_encoder_set_logging_level(encoder, logging_level);
-
-    set_params(encoder, raw_params);
-    struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
-    options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
     options->output_nclx_profile = nclx;
     options->image_orientation = input_image.orientation;
-
-    if (chroma_downsampling == "average") {
-      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
-      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
-    }
-    else if (chroma_downsampling == "sharp-yuv") {
-      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
-      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
-    }
-    else if (chroma_downsampling == "nearest-neighbor") {
-      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
-      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
-    }
 
     if (premultiplied_alpha) {
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
@@ -1405,18 +1430,16 @@ int main(int argc, char** argv)
     struct heif_image_handle* handle;
 
     if (use_tiling || cut_tiles > 0) {
-      handle = encode_tiled(context.get(), encoder, options, output_bit_depth, tile_generator, tiling);
+      handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling);
     }
     else {
-      error = heif_context_encode_image(context.get(),
+      error = heif_context_encode_image(context,
                                         image.get(),
                                         encoder,
                                         options,
                                         &handle);
       if (error.code != 0) {
-        heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
-        heif_encoder_release(encoder);
         std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
         return 1;
       }
@@ -1428,7 +1451,7 @@ int main(int argc, char** argv)
     }
 
     if (is_primary_image) {
-      heif_context_set_primary_image(context.get(), handle);
+      heif_context_set_primary_image(context, handle);
     }
 
     encoded_image_ids.push_back(heif_image_handle_get_item_id(handle));
@@ -1438,12 +1461,10 @@ int main(int argc, char** argv)
       // Note: we do not modify the EXIF Orientation here because we want it to match the HEIF transforms.
       // TODO: is this a good choice? Or should we set it to 1 (normal) so that other, faulty software will not transform it once more?
 
-      error = heif_context_add_exif_metadata(context.get(), handle,
+      error = heif_context_add_exif_metadata(context, handle,
                                              input_image.exif.data(), (int) input_image.exif.size());
       if (error.code != 0) {
-        heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
-        heif_encoder_release(encoder);
         std::cerr << "Could not write EXIF metadata: " << error.message << "\n";
         return 1;
       }
@@ -1451,13 +1472,11 @@ int main(int argc, char** argv)
 
     // write XMP to HEIC
     if (!input_image.xmp.empty()) {
-      error = heif_context_add_XMP_metadata2(context.get(), handle,
+      error = heif_context_add_XMP_metadata2(context, handle,
                                              input_image.xmp.data(), (int) input_image.xmp.size(),
                                              metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
       if (error.code != 0) {
-        heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
-        heif_encoder_release(encoder);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
         return 1;
       }
@@ -1470,7 +1489,7 @@ int main(int argc, char** argv)
 
       options->save_alpha_channel = master_alpha && thumb_alpha;
 
-      error = heif_context_encode_thumbnail(context.get(),
+      error = heif_context_encode_thumbnail(context,
                                             image.get(),
                                             handle,
                                             encoder,
@@ -1478,9 +1497,7 @@ int main(int argc, char** argv)
                                             thumbnail_bbox_size,
                                             &thumbnail_handle);
       if (error.code) {
-        heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
-        heif_encoder_release(encoder);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -1497,17 +1514,14 @@ int main(int argc, char** argv)
 #endif
 
     heif_image_handle_release(handle);
-    heif_encoding_options_free(options);
     heif_nclx_color_profile_free(nclx);
 
     is_primary_image = false;
   }
 
-  heif_encoder_release(encoder);
-
   if (!property_pitm_description.empty()) {
     heif_image_handle* primary_image_handle;
-    struct heif_error err = heif_context_get_primary_image_handle(context.get(), &primary_image_handle);
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
     if (err.code) {
       std::cerr << "No primary image set, cannot set user description\n";
       return 5;
@@ -1520,7 +1534,7 @@ int main(int argc, char** argv)
     udes.name = nullptr;
     udes.tags = nullptr;
     udes.description = property_pitm_description.c_str();
-    err = heif_item_add_property_user_description(context.get(), pitm_id, &udes, nullptr);
+    err = heif_item_add_property_user_description(context, pitm_id, &udes, nullptr);
     if (err.code) {
       std::cerr << "Cannot set user description\n";
       return 5;
@@ -1531,7 +1545,7 @@ int main(int argc, char** argv)
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   if (add_pyramid_group && encoded_image_ids.size() > 1) {
-    error = heif_context_add_pyramid_entity_group(context.get(), encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
+    error = heif_context_add_pyramid_entity_group(context, encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
     if (error.code) {
       std::cerr << "Cannot set multi-resolution pyramid: " << error.message << "\n";
       return 5;
@@ -1539,7 +1553,7 @@ int main(int argc, char** argv)
   }
 #endif
 
-  error = heif_context_write_to_file(context.get(), output_filename.c_str());
+  error = heif_context_write_to_file(context, output_filename.c_str());
   if (error.code) {
     std::cerr << error.message << "\n";
     return 5;
@@ -1560,5 +1574,11 @@ int main(int argc, char** argv)
     std::cout << "size: " << size << "\n";
   }
 
+  return 0;
+}
+
+
+int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
+{
   return 0;
 }
