@@ -955,8 +955,8 @@ public:
 };
 
 
-int do_encode_images(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<const char*>& args);
-int do_encode_sequence(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<const char*>& args);
+int do_encode_images(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<std::string>& args);
+int do_encode_sequence(heif_context*, heif_encoder*, heif_encoding_options* options, std::vector<std::string> args);
 
 
 int main(int argc, char** argv)
@@ -1283,9 +1283,9 @@ int main(int argc, char** argv)
     }
   }
 
-  std::vector<const char*> args;
+  std::vector<std::string> args;
   for (; optind < argc; optind++) {
-    args.push_back(argv[optind]);
+    args.emplace_back(argv[optind]);
   }
 
 
@@ -1316,7 +1316,7 @@ int main(int argc, char** argv)
   // --- if no output filename was given, synthesize one from the first input image filename
 
   if (output_filename.empty()) {
-    std::string first_input_filename = args[0];
+    const std::string& first_input_filename = args[0];
 
     std::string filename_without_suffix;
     std::string::size_type dot_position = first_input_filename.find_last_of('.');
@@ -1363,7 +1363,7 @@ int main(int argc, char** argv)
 }
 
 
-int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
+int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<std::string>& args)
 {
   struct heif_error error;
 
@@ -1589,16 +1589,79 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 }
 
 
-int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
-{
-  bool first_image = true;
 
-  heif_track* track = nullptr;
+
+std::vector<std::string> deflate_input_filenames(const std::string& filename_example)
+{
+  std::regex pattern(R"((.*\D)?(\d+)(\..+)$)");
+  std::smatch match;
+
+  if (!std::regex_match(filename_example, match, pattern)) {
+    return {filename_example};
+  }
+
+  std::string prefix = match[1];
+
+  auto p = std::filesystem::absolute(std::filesystem::path(prefix));
+  std::filesystem::path directory = p.parent_path();
+  std::string filename_prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
+  std::string number = match[2];
+  std::string suffix = match[3];
+
+
+  std::string patternString = prefix + "(\\d+)" + suffix + "$";
+  pattern = patternString;
+
+  uint32_t digits = std::numeric_limits<uint32_t>::max();
+  uint32_t start = std::numeric_limits<uint32_t>::max();
+  uint32_t end = 0;
+
+  for (const auto& dirEntry : std::filesystem::directory_iterator(directory))
+  {
+    if (dirEntry.is_regular_file()) {
+      std::string s{dirEntry.path().filename().string()};
+
+      if (std::regex_match(s, match, pattern)) {
+        digits = std::min(digits, (uint32_t)match[1].length());
+
+        uint32_t number = std::stoi(match[1]);
+        start = std::min(start, number);
+        end = std::max(end, number);
+      }
+    }
+  }
+
+
+  std::vector<std::string> files;
+
+  for (uint32_t i=start;i<=end;i++)
+  {
+    std::stringstream sstr;
+
+    sstr << prefix << std::setw(digits) << std::setfill('0') << i << suffix;
+
+    std::filesystem::path p = directory / sstr.str();
+    files.emplace_back(p.string());
+  }
+
+  return files;
+}
+
+
+int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, std::vector<std::string> args)
+{
+  if (args.size() == 1) {
+    args = deflate_input_filenames(args[0]);
+  }
 
   size_t nImages = args.size();
   size_t currImage = 0;
 
   uint16_t image_width=0, image_height=0;
+
+  bool first_image = true;
+
+  heif_track* track = nullptr;
 
   for (std::string input_filename : args) {
     currImage++;
