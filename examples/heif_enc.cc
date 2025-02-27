@@ -1621,14 +1621,13 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       heif_track_info track_info;
       track_info.version = 1;
       track_info.timescale = sequence_timebase;
+
       track_info.write_aux_info_interleaved = true;
       track_info.with_tai_timestamps = heif_sample_aux_info_presence_none;
       track_info.tai_clock_info = nullptr;
-      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
 
-      track_info.with_gimi_track_contentID = true;
-      std::string track_id{"track-ContentID-test"};
-      track_info.gimi_track_contentID = track_id.c_str();
+      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
+      track_info.with_gimi_track_contentID = false;
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
 
@@ -1645,7 +1644,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     }
 
     if (image_width != static_cast<uint16_t>(w) ||
-      image_height != static_cast<uint16_t>(h)) {
+        image_height != static_cast<uint16_t>(h)) {
       std::cerr << "image '" << input_filename << "' has size " << w << "x" << h
                 << " which is different from the first image size " << image_width << "x" << image_height << "\n";
       return 5;
