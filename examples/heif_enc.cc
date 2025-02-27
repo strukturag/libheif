@@ -77,6 +77,10 @@ uint16_t nclx_transfer_characteristic = 13;
 uint16_t nclx_matrix_coefficients = 6;
 int nclx_full_range = true;
 
+// default to 30 fps
+uint32_t sequence_timebase = 30;
+uint32_t sequence_durations = 1;
+
 std::string property_pitm_description;
 
 // for benchmarking
@@ -107,6 +111,8 @@ const int OPTION_TILED_IMAGE_HEIGHT = 1012;
 const int OPTION_TILING_METHOD = 1013;
 const int OPTION_UNCI_COMPRESSION = 1014;
 const int OPTION_CUT_TILES = 1015;
+const int OPTION_SEQUENCES_TIMEBASE = 1016;
+const int OPTION_SEQUENCES_DURATIONS = 1017;
 
 
 static struct option long_options[] = {
@@ -153,7 +159,10 @@ static struct option long_options[] = {
     {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
     {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
     {(char* const) "add-pyramid-group",           no_argument,       &add_pyramid_group, 1},
-    {0, 0,                                                           0,  0},
+    {(char* const) "sequence",                    no_argument, 0, 'S'},
+    {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
+    {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
+    {0, 0,                                                           0,  0}
 };
 
 
@@ -208,6 +217,8 @@ void show_help(const char* argv0)
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
+            << "\n"
+            << "tiling:\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "  --cut-tiles #             cuts the input image into tiles of the given width\n"
 #endif
@@ -222,6 +233,11 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
             << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
+            << "\n"
+            << "sequences:\n"
+            << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
+            << "      --timebase #          set clock ticks/second for sequence\n"
+            << "      --duration #          set frame duration (default: 1)\n"
 #endif
             ;
 }
@@ -940,13 +956,14 @@ int main(int argc, char** argv)
   bool force_enc_jpeg2000 = false;
   bool force_enc_htj2k = false;
   bool use_tiling = false;
+  bool encode_sequence = false;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:T"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:TS"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
@@ -1099,6 +1116,15 @@ int main(int argc, char** argv)
       case 'T':
         use_tiling = true;
         break;
+      case 'S':
+        encode_sequence = true;
+        break;
+      case OPTION_SEQUENCES_TIMEBASE:
+        sequence_timebase = atoi(optarg);
+        break;
+      case OPTION_SEQUENCES_DURATIONS:
+        sequence_durations = atoi(optarg);
+        break;
     }
   }
 
@@ -1110,6 +1136,22 @@ int main(int argc, char** argv)
   if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
       (force_enc_jpeg2000 ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
+    return 5;
+  }
+
+  if (encode_sequence && (use_tiling || cut_tiles)) {
+    std::cerr << "Image sequences cannot be used together with tiling.\n";
+    return 5;
+  }
+
+  if (sequence_timebase <= 0) {
+    std::cerr << "Sequence clock tick rate cannot be zero.\n";
+    return 5;
+  }
+
+  if (sequence_durations <= 0) {
+    std::cerr << "Sequence frame durations cannot be zero.\n";
+    return 5;
   }
 
   if (logging_level > 0) {
