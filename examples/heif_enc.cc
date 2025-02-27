@@ -1591,17 +1591,31 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
 int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<const char*>& args)
 {
-  struct heif_error error;
-
   bool first_image = true;
 
   heif_track* track = nullptr;
 
+  size_t nImages = args.size();
+  size_t currImage = 0;
+
+  uint16_t image_width=0, image_height=0;
+
   for (std::string input_filename : args) {
+    currImage++;
+    std::cout << "\rencoding sequence image " << currImage << "/" << nImages;
+    std::cout.flush();
 
     InputImage input_image = load_image(input_filename, output_bit_depth);
 
     std::shared_ptr<heif_image> image = input_image.image;
+
+    int w = heif_image_get_primary_width(image.get());
+    int h = heif_image_get_primary_height(image.get());
+
+    if (w > 0xFFFF || h > 0xFFFF) {
+      std::cerr << "maximum image size of 65535x65535 exceeded\n";
+      return 5;
+    }
 
     if (first_image) {
       heif_track_info track_info;
@@ -1618,14 +1632,23 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
 
+      image_width = static_cast<uint16_t>(w);
+      image_height = static_cast<uint16_t>(h);
+
       heif_context_add_visual_sequence_track(context,
-                                             heif_image_get_primary_width(image.get()),
-                                             heif_image_get_primary_height(image.get()),
+                                             image_width, image_height,
                                              &track_info,
                                              heif_track_type_video,
                                              &track);
 
       first_image = false;
+    }
+
+    if (image_width != static_cast<uint16_t>(w) ||
+      image_height != static_cast<uint16_t>(h)) {
+      std::cerr << "image '" << input_filename << "' has size " << w << "x" << h
+                << " which is different from the first image size " << image_width << "x" << image_height << "\n";
+      return 5;
     }
 
     heif_color_profile_nclx* nclx;
@@ -1648,6 +1671,8 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     heif_nclx_color_profile_free(nclx);
   }
+
+  std::cout << "\n";
 
   return 0;
 }
