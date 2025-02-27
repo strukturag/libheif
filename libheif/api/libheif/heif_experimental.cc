@@ -747,3 +747,23 @@ int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, str
   first_taic->get_tai_clock_info(taic);
   return 1;
 }
+
+
+struct heif_error heif_image_extract_area(const heif_image* srcimg,
+                                          uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                          const heif_security_limits* limits,
+                                          struct heif_image** out_image)
+{
+  auto extractResult = srcimg->image->extract_image_area(x0,y0,w,h, limits);
+  if (extractResult.error) {
+    return extractResult.error.error_struct(srcimg->image.get());
+  }
+
+  heif_image* area = new heif_image;
+  area->image = extractResult.value;
+
+  *out_image = area;
+
+  return heif_error_success;
+}
+

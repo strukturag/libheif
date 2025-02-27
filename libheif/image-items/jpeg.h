@@ -43,7 +43,7 @@ public:
   Error on_load_file() override;
 
 protected:
-  std::shared_ptr<Decoder> get_decoder() const override;
+  Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
   std::shared_ptr<Encoder> get_encoder() const override;
 

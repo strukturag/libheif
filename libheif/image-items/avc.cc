@@ -120,9 +120,9 @@ Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<Heif
 }
 
 
-std::shared_ptr<Decoder> ImageItem_AVC::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_AVC::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 

@@ -131,7 +131,7 @@ public:
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
 protected:
-  std::shared_ptr<Decoder> get_decoder() const override;
+  Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
 public:
 

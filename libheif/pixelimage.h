@@ -193,12 +193,18 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+  void forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image);
+
   void debug_dump() const;
 
   Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
                                const heif_security_limits* limits);
 
   Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
+
+  Result<std::shared_ptr<HeifPixelImage>> extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                                             const heif_security_limits* limits) const;
+
 
   // --- pixel aspect ratio
 

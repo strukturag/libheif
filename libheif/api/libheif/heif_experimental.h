@@ -447,6 +447,13 @@ void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
 // version field has to be set in both structs
 LIBHEIF_API
 void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
+
+LIBHEIF_API
+heif_error heif_image_extract_area(const heif_image*,
+                                   uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                   const heif_security_limits* limits,
+                                   struct heif_image** out_image);
+
 #endif
 
 // --- sequences

@@ -46,7 +46,7 @@ public:
   std::shared_ptr<class Encoder> get_encoder() const override;
 
 protected:
-  std::shared_ptr<Decoder> get_decoder() const override;
+  Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 

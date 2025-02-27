@@ -480,8 +480,12 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
-  auto decoder = get_decoder();
-  assert(decoder);
+  auto decoderResult = get_decoder();
+  if (decoderResult.error) {
+    return decoderResult.error;
+  }
+
+  auto decoder = decoderResult.value;
 
   Error err = decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
@@ -496,8 +500,12 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
 
 int ImageItem::get_luma_bits_per_pixel() const
 {
-  auto decoder = get_decoder();
-  assert(decoder);
+  auto decoderResult = get_decoder();
+  if (decoderResult.error) {
+    return decoderResult.error;
+  }
+
+  auto decoder = decoderResult.value;
 
   return decoder->get_luma_bits_per_pixel();
 }
@@ -505,8 +513,12 @@ int ImageItem::get_luma_bits_per_pixel() const
 
 int ImageItem::get_chroma_bits_per_pixel() const
 {
-  auto decoder = get_decoder();
-  assert(decoder);
+  auto decoderResult = get_decoder();
+  if (decoderResult.error) {
+    return decoderResult.error;
+  }
+
+  auto decoder = decoderResult.value;
 
   return decoder->get_chroma_bits_per_pixel();
 }
@@ -855,8 +867,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
   DataExtent extent;
   extent.set_from_image_item(get_file(), get_id());
 
-  auto decoder = get_decoder();
-  assert(decoder);
+  auto decoderResult = get_decoder();
+  if (decoderResult.error) {
+    return decoderResult.error;
+  }
+
+  auto decoder = decoderResult.value;
 
   decoder->set_data_extent(std::move(extent));
 

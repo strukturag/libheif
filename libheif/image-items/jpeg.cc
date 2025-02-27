@@ -48,9 +48,9 @@ Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data()
 }
 
 
-std::shared_ptr<Decoder> ImageItem_JPEG::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_JPEG::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 
