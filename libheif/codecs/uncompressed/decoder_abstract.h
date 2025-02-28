@@ -161,8 +161,8 @@ protected:
     heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane = nullptr;
     uint8_t* other_chroma_dst_plane = nullptr;
-    uint32_t dst_plane_stride;
-    uint32_t other_chroma_dst_plane_stride;
+    size_t dst_plane_stride;
+    size_t other_chroma_dst_plane_stride;
     uint32_t tile_width;
     uint32_t tile_height;
     uint32_t bytes_per_component_sample;

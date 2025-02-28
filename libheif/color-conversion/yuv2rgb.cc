@@ -149,10 +149,10 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   }
 
   const Pixel* in_y, * in_cb, * in_cr;
-  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  size_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   Pixel* out_r, * out_g, * out_b;
-  uint32_t out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
+  size_t out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
 
   in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -349,10 +349,10 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   int b_cb = static_cast<int>(std::lround(256 * coeffs.b_cb));
 
   const uint8_t* in_y, * in_cb, * in_cr;
-  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0;
+  size_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0;
 
   uint8_t* out_p;
-  uint32_t out_p_stride = 0;
+  size_t out_p_stride = 0;
 
   in_y = input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -466,10 +466,10 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   const bool with_alpha = input->has_channel(heif_channel_Alpha);
 
   const uint8_t* in_y, * in_cb, * in_cr, * in_a = nullptr;
-  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  size_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   uint8_t* out_p;
-  uint32_t out_p_stride = 0;
+  size_t out_p_stride = 0;
 
   in_y = input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -590,10 +590,10 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   }
 
   uint8_t* out_p;
-  uint32_t out_p_stride = 0;
+  size_t out_p_stride = 0;
 
   const uint16_t* in_y, * in_cb, * in_cr, * in_a = nullptr;
-  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  size_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
   in_y = (uint16_t*) input->get_plane(heif_channel_Y, &in_y_stride);

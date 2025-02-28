@@ -539,7 +539,7 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
   if (!tile_ids.empty() && tile_ids[0] != 0) {
     heif_item_id tile0_id = tile_ids[0];
     auto tile0 = get_context()->get_image(tile0_id, true);
-    if (tile0->get_item_error()) {
+    if (tile0 == nullptr || tile0->get_item_error()) {
       return tiling;
     }
 

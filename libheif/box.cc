@@ -3298,6 +3298,27 @@ void Box_ipma::insert_entries_from_other_ipma_box(const Box_ipma& b)
 }
 
 
+void Box_ipma::sort_properties(const std::shared_ptr<Box_ipco>& ipco)
+{
+  auto properties = ipco->get_all_child_boxes();
+
+  for (auto& item : m_entries) {
+    size_t nAssoc = item.associations.size();
+
+    // simple Bubble sort as a stable sorting algorithm
+
+    for (size_t n = 0; n < nAssoc - 1; n++)
+      for (size_t i = 0; i < nAssoc - 1 - n; i++) {
+        // If transformative property preceds descriptive property, swap them.
+        if (properties[item.associations[i].property_index - 1]->is_transformative_property() &&
+            !properties[item.associations[i + 1].property_index - 1]->is_transformative_property()) {
+          std::swap(item.associations[i], item.associations[i+1]);
+        }
+      }
+  }
+}
+
+
 Error Box_auxC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

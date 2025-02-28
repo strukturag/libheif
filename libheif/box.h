@@ -266,6 +266,8 @@ public:
 
   void set_is_essential(bool flag) { m_is_essential = flag; }
 
+  virtual bool is_transformative_property() const { return false; } // only used for properties
+
 protected:
   virtual Error parse(BitstreamRange& range, const heif_security_limits* limits);
 
@@ -832,6 +834,9 @@ public:
 
   void insert_entries_from_other_ipma_box(const Box_ipma& b);
 
+  // sorts properties such that descriptive properties precede the transformative properties
+  void sort_properties(const std::shared_ptr<Box_ipco>&);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -886,6 +891,8 @@ public:
 
   bool is_essential() const override { return true; }
 
+  bool is_transformative_property() const override { return true; }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Image Rotation"; }
@@ -917,6 +924,8 @@ public:
 
   bool is_essential() const override { return true; }
 
+  bool is_transformative_property() const override { return true; }
+
   heif_transform_mirror_direction get_mirror_direction() const { return m_axis; }
 
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
@@ -946,6 +955,8 @@ public:
   }
 
   bool is_essential() const override { return true; }
+
+  bool is_transformative_property() const override { return true; }
 
   std::string dump(Indent&) const override;
 

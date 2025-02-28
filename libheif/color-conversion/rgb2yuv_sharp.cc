@@ -176,12 +176,12 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
       : 2;
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  uint32_t in_stride = 0;
-  uint32_t in_a_stride = 0;
+  size_t in_stride = 0;
+  size_t in_a_stride = 0;
   bool planar_input = input_chroma == heif_chroma_444;
   int input_bits = 0;
   if (planar_input) {
-    uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
+    size_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
     in_r = input->get_plane(heif_channel_R, &in_r_stride);
     in_g = input->get_plane(heif_channel_G, &in_g_stride);
     in_b = input->get_plane(heif_channel_B, &in_b_stride);
@@ -212,7 +212,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     }
   }
 
-  uint32_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
+  size_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
   uint8_t* out_y = outimg->get_plane(heif_channel_Y, &out_y_stride);
   uint8_t* out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   uint8_t* out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
@@ -249,7 +249,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
               (planar_input && !PlatformIsBigEndian()))
              ? 1
              : 0;
-    uint32_t out_a_stride;
+    size_t out_a_stride;
 
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
     uint16_t alpha_max = static_cast<uint16_t>((1 << input_bits) - 1);

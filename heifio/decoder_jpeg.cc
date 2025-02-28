@@ -422,7 +422,7 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
           int linesRead = std::min(targetRead[i] - alreadyRead[i], linesPerCall[i]);
           int targetChannel = i; // Note: might have to be remapped when we want support other colorspaces
           for (int j = 0; j < linesRead; ++j) {
-            memcpy(p[targetChannel] + stride[targetChannel] * (alreadyRead[i] + j),
+            memcpy(p[targetChannel] + ((size_t)stride[targetChannel]) * (alreadyRead[i] + j),
                    buffer[i][j],
                    width[targetChannel]);
           }
@@ -442,7 +442,7 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
         bufp = buffer[0];
 
-        int y = cinfo.output_scanline - 1;
+        size_t y = cinfo.output_scanline - 1;
 
         for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
           p[0][y * stride[0] + x] = *bufp++;

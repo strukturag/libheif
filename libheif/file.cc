@@ -1151,8 +1151,10 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
   else {
     // uncompressed data, plain copy
 
-    data_array.resize(size);
-    memcpy(data_array.data(), data, size);
+    if (size > 0) { // Note: this 'if' is not necessary, but a workaround to a compiler bug (https://github.com/strukturag/libheif/issues/1421)
+      data_array.resize(size);
+      memcpy(data_array.data(), data, size);
+    }
   }
 
   // copy the data into the file, store the pointer to it in an iloc box entry
