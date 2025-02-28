@@ -71,7 +71,7 @@ TEST_CASE("mini")
   REQUIRE(ftyp->list_brands().size() == 0);
   Indent indent;
   std::string dumpResult = box->dump(indent);
-  REQUIRE(dumpResult == "Box: ftyp -----\n"
+  REQUIRE(dumpResult == "Box: ftyp ----- (File Type)\n"
                         "size: 16   (header size: 8)\n"
                         "major brand: mif3\n"
                         "minor version: avif\n"
