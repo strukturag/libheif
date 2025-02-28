@@ -233,14 +233,14 @@ int main(int argc, char** argv)
   struct heif_error err;
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
-  if (err.code != 0) {
-    std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
-    return 1;
-  }
-
   if (dump_boxes) {
     heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
     return 0;
+  }
+
+  if (err.code != 0) {
+    std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
+    return 1;
   }
 
 
