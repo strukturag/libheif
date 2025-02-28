@@ -807,7 +807,7 @@ int main(int argc, char** argv)
       if (sampleEntryType == heif_fourcc('u', 'r', 'i', 'm')) {
         const char* uri = heif_track_get_urim_sample_entry_uri_of_first_cluster(track);
         std::cout << "  uri: " << uri << "\n";
-        heif_release_string(uri);
+        heif_string_release(uri);
       }
 
       std::cout << "  sample auxiliary information: ";

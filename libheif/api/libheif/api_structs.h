@@ -55,7 +55,7 @@ struct heif_raw_sequence_sample
   uint32_t duration = 0;
 
   heif_tai_timestamp_packet* timestamp = nullptr;
-  std::string gimi_contentId;
+  std::string gimi_sample_content_id;
 };
 
 

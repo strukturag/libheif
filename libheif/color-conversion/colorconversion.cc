@@ -471,8 +471,8 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
       out->set_pixel_ratio(h, v);
     }
 
-    if (in->has_gimi_content_id()) {
-      out->set_gimi_content_id(in->get_gimi_content_id());
+    if (in->has_gimi_sample_content_id()) {
+      out->set_gimi_sample_content_id(in->get_gimi_sample_content_id());
     }
 
     if (auto* tai = in->get_tai_timestamp()) {

@@ -120,7 +120,7 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
       return convResult.error;
     }
 
-    image->set_gimi_content_id(convResult.value);
+    image->set_gimi_sample_content_id(convResult.value);
   }
 
   if (m_aux_reader_tai_timestamps) {
@@ -218,7 +218,7 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
                     colorConvertedImage->get_sample_duration(),
                     data.is_sync_frame,
                     image->get_tai_timestamp(),
-                    image->has_gimi_content_id() ? image->get_gimi_content_id() : std::string{});
+                    image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 
   return Error::Ok;
 }

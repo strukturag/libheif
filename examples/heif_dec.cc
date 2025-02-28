@@ -857,7 +857,7 @@ int main(int argc, char** argv)
         if (sample_entry_type == heif_fourcc('u', 'r', 'i', 'm')) {
           const char* uri = heif_track_get_urim_sample_entry_uri_of_first_cluster(track);
           std::cout << "\n  URI: " << uri;
-          heif_release_string(uri);
+          heif_string_release(uri);
         }
 
         // get metadata track samples
@@ -889,10 +889,10 @@ int main(int argc, char** argv)
 
     struct heif_track* track = heif_context_get_track(ctx, 0);
 
-    const char* track_contentId = heif_track_get_gimi_content_id(track);
+    const char* track_contentId = heif_track_get_gimi_track_content_id(track);
     if (track_contentId) {
       std::cout << "track content ID: " << track_contentId << "\n";
-      heif_gimi_content_id_release(track_contentId);
+      heif_string_release(track_contentId);
     }
 
     heif_tai_clock_info taic;
@@ -921,10 +921,10 @@ int main(int argc, char** argv)
 
       std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
 
-      const char* contentID = heif_image_get_gimi_content_id(out_image);
+      const char* contentID = heif_image_get_gimi_sample_content_id(out_image);
       if (contentID) {
         std::cout << "content ID " << contentID << "\n";
-        heif_gimi_content_id_release(contentID);
+        heif_string_release(contentID);
       }
 
       if (heif_image_has_tai_timestamp(out_image)) {

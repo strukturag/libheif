@@ -398,10 +398,10 @@ uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample* s
   return sample->duration;
 }
 
-const char* heif_raw_sequence_sample_get_gimi_content_id(const heif_raw_sequence_sample* sample)
+const char* heif_raw_sequence_sample_get_gimi_sample_content_id(const heif_raw_sequence_sample* sample)
 {
-  char* s = new char[sample->gimi_contentId.size() + 1];
-  strcpy(s, sample->gimi_contentId.c_str());
+  char* s = new char[sample->gimi_sample_content_id.size() + 1];
+  strcpy(s, sample->gimi_sample_content_id.c_str());
   return s;
 }
 
@@ -545,19 +545,19 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 }
 
 
-void heif_image_set_gimi_content_id(heif_image* img, const char* contentID)
+void heif_image_set_gimi_sample_content_id(heif_image* img, const char* contentID)
 {
-  img->image->set_gimi_content_id(contentID);
+  img->image->set_gimi_sample_content_id(contentID);
 }
 
 
-const char* heif_image_get_gimi_content_id(const heif_image* img)
+const char* heif_image_get_gimi_sample_content_id(const heif_image* img)
 {
-  if (!img->image->has_gimi_content_id()) {
+  if (!img->image->has_gimi_sample_content_id()) {
     return nullptr;
   }
 
-  auto id_string = img->image->get_gimi_content_id();
+  auto id_string = img->image->get_gimi_sample_content_id();
   char* id = new char[id_string.length() + 1];
   strcpy(id, id_string.c_str());
 
@@ -565,9 +565,9 @@ const char* heif_image_get_gimi_content_id(const heif_image* img)
 }
 
 
-const char* heif_track_get_gimi_content_id(const heif_track* track)
+const char* heif_track_get_gimi_track_content_id(const heif_track* track)
 {
-  const char* contentId = track->track->get_track_info()->gimi_track_contentID;
+  const char* contentId = track->track->get_track_info()->gimi_track_content_id;
   if (!contentId) {
     return nullptr;
   }
@@ -578,12 +578,12 @@ const char* heif_track_get_gimi_content_id(const heif_track* track)
   return id;
 }
 
-
+/*
 void heif_gimi_content_id_release(const char* id)
 {
   delete[] id;
 }
-
+*/
 
 extern void set_default_encoding_options(heif_encoding_options& options);
 extern void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options);
@@ -636,7 +636,7 @@ struct heif_error heif_track_add_metadata(struct heif_track* track,
                                           const uint8_t* data, uint32_t length,
                                           uint32_t duration,
                                           const heif_tai_timestamp_packet* timestamp,
-                                          const char* gimi_contentID)
+                                          const char* gimi_track_content_id)
 {
   auto metadata_track = std::dynamic_pointer_cast<Track_Metadata>(track->track);
   if (!metadata_track) {
@@ -650,8 +650,8 @@ struct heif_error heif_track_add_metadata(struct heif_track* track,
   memcpy(metadata.raw_metadata.data(), data, length);
   metadata.duration = duration;
   metadata.timestamp = timestamp;
-  if (gimi_contentID) {
-    metadata.gimi_contentID = gimi_contentID;
+  if (gimi_track_content_id) {
+    metadata.gimi_contentID = gimi_track_content_id;
   }
 
   auto error = metadata_track->write_raw_metadata(metadata);
@@ -731,7 +731,7 @@ const char* heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_tr
   return s;
 }
 
-void heif_release_string(const char* str)
+void heif_string_release(const char* str)
 {
   delete[] str;
 }

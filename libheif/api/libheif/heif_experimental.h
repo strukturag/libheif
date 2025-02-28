@@ -502,11 +502,11 @@ struct heif_track_info
   struct heif_tai_clock_info* tai_clock_info;
 
   // TODO: should this be in an extension API as it is not in the HEIF standard?
-  enum heif_sample_aux_info_presence with_sample_contentid_uuids;
+  enum heif_sample_aux_info_presence with_sample_content_ids;
 
   // TODO: should this be in an extension API as it is not in the HEIF standard?
-  uint8_t with_gimi_track_contentID;
-  const char* gimi_track_contentID;
+  uint8_t with_gimi_track_content_id;
+  const char* gimi_track_content_id;
 };
 
 LIBHEIF_API
@@ -554,18 +554,20 @@ LIBHEIF_API
 void heif_image_set_duration(heif_image*, uint32_t duration);
 
 LIBHEIF_API
-void heif_image_set_gimi_content_id(heif_image*, const char* contentID);
+void heif_image_set_gimi_sample_content_id(heif_image*, const char* contentID);
 
-// Free returned content id with heif_gimi_content_id_release();
+// Free returned content id with heif_string_release();
 // If there is no content ID, nullptr is returned.
 LIBHEIF_API
-const char* heif_image_get_gimi_content_id(const heif_image*);
+const char* heif_image_get_gimi_sample_content_id(const heif_image*);
 
+// Free returned content id with heif_string_release();
+// If there is no content ID, nullptr is returned.
 LIBHEIF_API
-const char* heif_track_get_gimi_content_id(const struct heif_track*);
+const char* heif_track_get_gimi_track_content_id(const struct heif_track*);
 
-LIBHEIF_API
-void heif_gimi_content_id_release(const char*);
+//LIBHEIF_API
+//void heif_gimi_content_id_release(const char*);
 
 LIBHEIF_API
 struct heif_error heif_track_decode_next_image(struct heif_track*,
@@ -594,7 +596,7 @@ LIBHEIF_API
 uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample*);
 
 LIBHEIF_API
-const char* heif_raw_sequence_sample_get_gimi_content_id(const heif_raw_sequence_sample*);
+const char* heif_raw_sequence_sample_get_gimi_sample_content_id(const heif_raw_sequence_sample*);
 
 LIBHEIF_API
 int heif_raw_sequence_sample_has_tai_timestamp(const struct heif_raw_sequence_sample*);
@@ -615,7 +617,7 @@ struct heif_error heif_track_add_metadata(struct heif_track*,
                                           const uint8_t* data, uint32_t length,
                                           uint32_t duration,
                                           const heif_tai_timestamp_packet* timestamp,
-                                          const char* gimi_contentID);
+                                          const char* gimi_track_content_id);
 
 LIBHEIF_API
 int heif_context_number_of_sequence_tracks(const struct heif_context*);
@@ -640,12 +642,12 @@ enum heif_track_type heif_track_get_track_type(struct heif_track*);
 LIBHEIF_API
 uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
 
-// Free the returned string with 'heif_release_string()'
+// Free the returned string with 'heif_string_release()'
 LIBHEIF_API
 const char* heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track*);
 
 LIBHEIF_API
-void heif_release_string(const char*);
+void heif_string_release(const char*);
 
 // The passed taic structure will be filled by this function. The version field has to be set before this.
 // The function returns 0 if there is no taic.
