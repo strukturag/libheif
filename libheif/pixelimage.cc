@@ -586,10 +586,10 @@ Error HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelI
   }
 
   uint8_t* dst;
-  uint32_t dst_stride = 0;
+  size_t dst_stride = 0;
 
   const uint8_t* src;
-  uint32_t src_stride = 0;
+  size_t src_stride = 0;
 
   src = src_image->get_plane(src_channel, &src_stride);
   dst = get_plane(dst_channel, &dst_stride);
@@ -615,10 +615,10 @@ Error HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPi
   }
 
   uint8_t* dst;
-  uint32_t dst_stride = 0;
+  size_t dst_stride = 0;
 
   const uint8_t* src;
-  uint32_t src_stride = 0;
+  size_t src_stride = 0;
 
   src = src_image->get_plane(heif_channel_interleaved, &src_stride);
   dst = get_plane(heif_channel_Y, &dst_stride);
@@ -658,7 +658,7 @@ void HeifPixelImage::fill_plane(heif_channel dst_channel, uint16_t value)
 
   if (bpp <= 8) {
     uint8_t* dst;
-    uint32_t dst_stride = 0;
+    size_t dst_stride = 0;
     dst = get_plane(dst_channel, &dst_stride);
     uint32_t width_bytes = width * num_interleaved;
 
@@ -668,7 +668,7 @@ void HeifPixelImage::fill_plane(heif_channel dst_channel, uint16_t value)
   }
   else {
     uint16_t* dst;
-    uint32_t dst_stride = 0;
+    size_t dst_stride = 0;
     dst = (uint16_t*) get_plane(dst_channel, &dst_stride);
 
     dst_stride /= 2;
@@ -730,10 +730,10 @@ Error HeifPixelImage::copy_image_to(const std::shared_ptr<const HeifPixelImage>&
 
   for (heif_channel channel : channels) {
 
-    uint32_t tile_stride;
+    size_t tile_stride;
     const uint8_t* tile_data = source->get_plane(channel, &tile_stride);
 
-    uint32_t out_stride;
+    size_t out_stride;
     uint8_t* out_data = get_plane(channel, &out_stride);
 
     if (w <= x0 || h <= y0) {
@@ -1199,7 +1199,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
   bool has_alpha = overlay->has_channel(heif_channel_Alpha);
   //bool has_alpha_me = has_channel(heif_channel_Alpha);
 
-  uint32_t alpha_stride = 0;
+  size_t alpha_stride = 0;
   uint8_t* alpha_p;
   alpha_p = overlay->get_plane(heif_channel_Alpha, &alpha_stride);
 
@@ -1208,10 +1208,10 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       continue;
     }
 
-    uint32_t in_stride = 0;
+    size_t in_stride = 0;
     const uint8_t* in_p;
 
-    uint32_t out_stride = 0;
+    size_t out_stride = 0;
     uint8_t* out_p;
 
     in_p = overlay->get_plane(channel, &in_stride);
@@ -1408,10 +1408,10 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     uint32_t out_w = out_img->get_width(channel);
     uint32_t out_h = out_img->get_height(channel);
 
-    uint32_t in_stride = plane.stride;
+    size_t in_stride = plane.stride;
     const auto* in_data = static_cast<const uint8_t*>(plane.mem);
 
-    uint32_t out_stride = 0;
+    size_t out_stride = 0;
     auto* out_data = static_cast<uint8_t*>(out_img->get_plane(channel, &out_stride));
 
 
@@ -1472,7 +1472,7 @@ void HeifPixelImage::debug_dump() const
 {
   auto channels = get_channel_set();
   for (auto c : channels) {
-    uint32_t stride = 0;
+    size_t stride = 0;
     const uint8_t* p = get_plane(c, &stride);
 
     for (int y = 0; y < 8; y++) {
@@ -1553,10 +1553,10 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
 
   for (heif_channel channel : channels) {
 
-    uint32_t src_stride;
+    size_t src_stride;
     const uint8_t* src_data = get_plane(channel, &src_stride);
 
-    uint32_t out_stride;
+    size_t out_stride;
     uint8_t* out_data = areaImg->get_plane(channel, &out_stride);
 
     if (areaImg->get_bits_per_pixel(channel) != get_bits_per_pixel(channel)) {

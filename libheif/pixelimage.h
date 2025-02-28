@@ -124,12 +124,15 @@ public:
 
   int get_number_of_interleaved_components(heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+  // Note: we are using size_t as stride type since the stride is usually involved in a multiplication with the line number.
+  //       For very large images (e.g. >2 GB), this can result in an integer overflow and corresponding illegal memory access.
+  //       (see https://github.com/strukturag/libheif/issues/1419)
+  uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
 
-  const uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+  const uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
 
   template <typename T>
-  T* get_channel(enum heif_channel channel, uint32_t* out_stride)
+  T* get_channel(enum heif_channel channel, size_t* out_stride)
   {
     auto iter = m_planes.find(channel);
     if (iter == m_planes.end()) {
@@ -149,7 +152,7 @@ public:
   }
 
   template <typename T>
-  const T* get_channel(enum heif_channel channel, uint32_t* out_stride) const
+  const T* get_channel(enum heif_channel channel, size_t* out_stride) const
   {
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
   }

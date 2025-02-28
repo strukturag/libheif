@@ -111,7 +111,7 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
     return err;
   }
 
-  uint32_t stride;
+  size_t stride;
   uint8_t* dst = img->get_plane(heif_channel_Y, &stride);
   if (((uint32_t)stride) == width) {
     memcpy(dst, data.data(), data.size());
@@ -177,7 +177,7 @@ Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<H
 
   // TODO: we could add an option to lossless-compress this data
   std::vector<uint8_t> data;
-  uint32_t src_stride;
+  size_t src_stride;
   uint8_t* src_data = image->get_plane(heif_channel_Y, &src_stride);
 
   uint32_t w = image->get_width();

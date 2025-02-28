@@ -1843,7 +1843,7 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
     return nullptr;
   }
 
-  uint32_t stride;
+  size_t stride;
   const auto* p = image->image->get_plane(channel, &stride);
 
   // TODO: use C++20 std::cmp_greater()
@@ -1869,7 +1869,7 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
     return nullptr;
   }
 
-  uint32_t stride;
+  size_t stride;
   uint8_t* p = image->image->get_plane(channel, &stride);
 
   // TODO: use C++20 std::cmp_greater()
@@ -1923,7 +1923,7 @@ void heif_channel_release_list(enum heif_channel** channels)
 #define heif_image_get_channel_X(name, type, datatype, bits) \
 const type* heif_image_get_channel_ ## name ## _readonly(const struct heif_image* image, \
                                                          enum heif_channel channel, \
-                                                         uint32_t* out_stride) \
+                                                         size_t* out_stride) \
 {                                                            \
   if (!image || !image->image) {                             \
     *out_stride = 0;                                         \
@@ -1936,12 +1936,12 @@ const type* heif_image_get_channel_ ## name ## _readonly(const struct heif_image
   if (image->image->get_storage_bits_per_pixel(channel) != bits) {     \
     return nullptr;                                          \
   }                                                          \
-  return image->image->get_channel<type>(channel, out_stride); \
+  return  image->image->get_channel<type>(channel, out_stride);                      \
 }                                                            \
                                                              \
 type* heif_image_get_channel_ ## name (struct heif_image* image, \
                                        enum heif_channel channel, \
-                                       uint32_t* out_stride)      \
+                                       size_t* out_stride)      \
 {                                                            \
   if (!image || !image->image) {                             \
     *out_stride = 0;                                         \

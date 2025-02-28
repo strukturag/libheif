@@ -1897,6 +1897,7 @@ int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
 // The 'out_stride' is returned as "bytes per line".
 // When out_stride is NULL, no value will be written.
 // Returns NULL if a non-existing channel was given.
+// TODO: it would be better if the 'stride' parameter would be size_t to prevent integer overflows when this value is multiplicated with large y coordinates.
 LIBHEIF_API
 const uint8_t* heif_image_get_plane_readonly(const struct heif_image*,
                                              enum heif_channel channel,
