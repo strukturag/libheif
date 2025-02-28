@@ -1831,6 +1831,40 @@ struct heif_error heif_image_add_channel(struct heif_image* image,
 }
 
 
+const uint8_t* heif_image_get_plane_readonly2(const struct heif_image* image,
+                                             enum heif_channel channel,
+                                             size_t* out_stride)
+{
+  if (!out_stride) {
+    return nullptr;
+  }
+
+  if (!image || !image->image) {
+    *out_stride = 0;
+    return nullptr;
+  }
+
+  return image->image->get_plane(channel, out_stride);
+}
+
+
+uint8_t* heif_image_get_plane2(struct heif_image* image,
+                              enum heif_channel channel,
+                              size_t* out_stride)
+{
+  if (!out_stride) {
+    return nullptr;
+  }
+
+  if (!image || !image->image) {
+    *out_stride = 0;
+    return nullptr;
+  }
+
+  return image->image->get_plane(channel, out_stride);
+}
+
+
 const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
                                              enum heif_channel channel,
                                              int* out_stride)

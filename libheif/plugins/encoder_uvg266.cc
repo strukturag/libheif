@@ -355,7 +355,7 @@ static void append_chunk_data(uvg_data_chunk* data, std::vector<uint8_t>& out)
 }
 
 
-static void copy_plane(uvg_pixel* out_p, uint32_t out_stride, const uint8_t* in_p, uint32_t in_stride, int w, int h, int padded_width, int padded_height)
+static void copy_plane(uvg_pixel* out_p, size_t out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
 {
   for (int y = 0; y < padded_height; y++) {
     int sy = std::min(y, h - 1); // source y
@@ -573,23 +573,23 @@ static struct heif_error uvg266_encode_image(void* encoder_raw, const struct hei
   }
 
   if (isGreyscale) {
-    int stride;
-    const uint8_t* data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    size_t stride;
+    const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
     copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height);
   }
   else {
-    int stride;
+    size_t stride;
     const uint8_t* data;
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
     copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
     copy_plane(pic->u, pic->stride >> chroma_stride_shift, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
     copy_plane(pic->v, pic->stride >> chroma_stride_shift, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
   }

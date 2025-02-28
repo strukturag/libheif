@@ -75,7 +75,7 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
   uint32_t max_rows = 10;
   uint32_t width = std::min(image.get_width(channel), max_cols);
   uint32_t height = std::min(image.get_height(channel), max_rows);
-  uint32_t stride;
+  size_t stride;
   const T* p = (T*)image.get_plane(channel, &stride);
   stride /= (int)sizeof(T);
   int bpp = image.get_bits_per_pixel(channel);
@@ -127,8 +127,8 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
     return 0;
   }
 
-  uint32_t orig_stride;
-  uint32_t compressed_stride;
+  size_t orig_stride;
+  size_t compressed_stride;
   const T* orig_p = (T*)original.get_plane(channel, &orig_stride);
   const T* compressed_p = (T*)compressed.get_plane(channel, &compressed_stride);
   orig_stride /= (int)sizeof(T);
@@ -301,7 +301,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   CHECK(out_image->has_alpha() == target_state.has_alpha);
   for (const Plane& plane : GetPlanes(target_state, width, height)) {
     INFO("Channel: " << plane.channel);
-    uint32_t stride;
+    size_t stride;
     CHECK(out_image->get_plane(plane.channel, &stride) != nullptr);
     CHECK(out_image->get_bits_per_pixel(plane.channel) ==
           target_state.bits_per_pixel);
@@ -612,7 +612,7 @@ static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channe
   auto error = img->add_plane(channel, w, h, 8, nullptr);
   REQUIRE(!error);
 
-  uint32_t stride;
+  size_t stride;
   uint8_t* p = img->get_plane(channel, &stride);
 
   for (int y = 0; y < h; y++) {
@@ -629,7 +629,7 @@ static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel chan
   uint32_t w = img->get_width(channel);
   uint32_t h = img->get_height(channel);
 
-  uint32_t stride;
+  size_t stride;
   uint8_t* p = img->get_plane(channel, &stride);
 
   for (uint32_t y = 0; y < h; y++) {
@@ -704,7 +704,7 @@ TEST_CASE("RGB 5-6-5 to RGB")
 
   uint8_t v = 1;
   for (heif_channel plane: {heif_channel_R, heif_channel_G, heif_channel_B}) {
-    uint32_t dst_stride = 0;
+    size_t dst_stride = 0;
     uint8_t *dst = img->get_plane(plane, &dst_stride);
     for (uint32_t y = 0; y < height; y++) {
       for (uint32_t x = 0; x < width; x++) {

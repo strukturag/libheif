@@ -336,8 +336,8 @@ struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_ite
 
   uint32_t mask_height = mask_image->image->get_height();
   uint32_t mask_width = mask_image->image->get_width();
-  int stride;
-  uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
+  size_t stride;
+  uint8_t* p = heif_image_get_plane2(mask_image, heif_channel_Y, &stride);
   uint64_t pixel_index = 0;
 
   for (uint32_t y = 0; y < mask_height; y++) {
@@ -673,8 +673,8 @@ static struct heif_error heif_region_get_inline_mask_image(const struct heif_reg
       heif_image_release(*out_mask_image);
       return err;
     }
-    int stride;
-    uint8_t* p = heif_image_get_plane(*out_mask_image, heif_channel_Y, &stride);
+    size_t stride;
+    uint8_t* p = heif_image_get_plane2(*out_mask_image, heif_channel_Y, &stride);
     uint64_t pixel_index = 0;
 
     for (uint32_t y = 0; y < height; y++)

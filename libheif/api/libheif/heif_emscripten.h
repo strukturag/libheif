@@ -144,15 +144,15 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("colorspace", heif_image_get_colorspace(image));
   switch (heif_image_get_colorspace(image)) {
     case heif_colorspace_YCbCr: {
-      int stride_y;
-      const uint8_t* plane_y = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Y, &stride_y);
-      int stride_u;
-      const uint8_t* plane_u = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Cb, &stride_u);
-      int stride_v;
-      const uint8_t* plane_v = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Cr, &stride_v);
+      size_t stride_y;
+      const uint8_t* plane_y = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Y, &stride_y);
+      size_t stride_u;
+      const uint8_t* plane_u = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Cb, &stride_u);
+      size_t stride_v;
+      const uint8_t* plane_v = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Cr, &stride_v);
       data.resize((width * height) + (2 * round_odd(width) * round_odd(height)));
       unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_y, width, height, stride_y);
@@ -164,17 +164,17 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       break;
     case heif_colorspace_RGB: {
       if(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGB) {
-        int stride_rgb;
-        const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
-                                                                 heif_channel_interleaved, &stride_rgb);
+        size_t stride_rgb;
+        const uint8_t* plane_rgb = heif_image_get_plane_readonly2(image,
+                                                                  heif_channel_interleaved, &stride_rgb);
         data.resize(width * height * 3);
         unsigned char* dest = const_cast<unsigned char*>(data.data());
         strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
       }
       else if (heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA) {
-        int stride_rgba;
-        const uint8_t* plane_rgba = heif_image_get_plane_readonly(image,
-                                                                 heif_channel_interleaved, &stride_rgba);
+        size_t stride_rgba;
+        const uint8_t* plane_rgba = heif_image_get_plane_readonly2(image,
+                                                                   heif_channel_interleaved, &stride_rgba);
         data.resize(width * height * 4);
         unsigned char* dest = const_cast<unsigned char*>(data.data());
         strided_copy(dest, plane_rgba, width * 4, height, stride_rgba);
@@ -187,9 +187,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
     case heif_colorspace_monochrome: {
       assert(heif_image_get_chroma_format(image) ==
              heif_chroma_monochrome);
-      int stride_grey;
-      const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
-                                                                heif_channel_Y, &stride_grey);
+      size_t stride_grey;
+      const uint8_t* plane_grey = heif_image_get_plane_readonly2(image,
+                                                                 heif_channel_Y, &stride_grey);
       data.resize(width * height);
       unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_grey, width, height, stride_grey);
@@ -203,9 +203,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
 
   if (heif_image_has_channel(image, heif_channel_Alpha)) {
     std::basic_string<unsigned char> alpha;
-    int stride_alpha;
-    const uint8_t* plane_alpha = heif_image_get_plane_readonly(image,
-							       heif_channel_Alpha, &stride_alpha);
+    size_t stride_alpha;
+    const uint8_t* plane_alpha = heif_image_get_plane_readonly2(image, heif_channel_Alpha, &stride_alpha);
     alpha.resize(width * height);
     unsigned char* dest = const_cast<unsigned char*>(alpha.data());
     strided_copy(dest, plane_alpha, width, height, stride_alpha);
@@ -265,8 +264,8 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
       emscripten::val val_channel_info = emscripten::val::object();
       val_channel_info.set("id", channel);
 
-      int stride;
-      const uint8_t* plane = heif_image_get_plane_readonly(image, channel, &stride);
+      size_t stride;
+      const uint8_t* plane = heif_image_get_plane_readonly2(image, channel, &stride);
 
       val_channel_info.set("stride", stride);
       val_channel_info.set("data", emscripten::val(emscripten::typed_memory_view(stride * height, plane)));

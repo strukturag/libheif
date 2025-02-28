@@ -525,8 +525,8 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   opj_image->y1 = height;
 
   for (int comp = 0; comp < band_count; comp++) {
-    int stride;
-    const uint8_t* p = heif_image_get_plane_readonly(image, channels[comp], &stride);
+    size_t stride;
+    const uint8_t* p = heif_image_get_plane_readonly2(image, channels[comp], &stride);
 
     int cwidth = component_params[comp].w;
     int cheight = component_params[comp].h;

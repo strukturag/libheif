@@ -369,14 +369,14 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 
     error = heif_image_add_plane(*out_img, channels[c], cwidth, cheight, bit_depth);
 
-    int stride = -1;
-    uint8_t* p = heif_image_get_plane(*out_img, channels[c], &stride);
+    size_t stride = 0;
+    uint8_t* p = heif_image_get_plane2(*out_img, channels[c], &stride);
 
 
     // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
     // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
 
-    if (stride == cwidth) {
+    if (stride == (size_t)cwidth) {
       for (int i = 0; i < cwidth * cheight; i++) {
         p[i] = (uint8_t) opj_comp.data[i];
       }

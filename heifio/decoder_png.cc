@@ -255,15 +255,15 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 
     heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, 8);
 
-    int y_stride;
-    int a_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    size_t y_stride;
+    size_t a_stride;
+    uint8_t* py = heif_image_get_plane2(image, heif_channel_Y, &y_stride);
     uint8_t* pa = nullptr;
 
     if (has_alpha) {
       heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, 8);
 
-      pa = heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
+      pa = heif_image_get_plane2(image, heif_channel_Alpha, &a_stride);
     }
 
 
@@ -294,15 +294,15 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 
     heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, output_bit_depth);
 
-    int y_stride;
-    int a_stride = 0;
-    uint16_t* py = (uint16_t*) heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    size_t y_stride;
+    size_t a_stride = 0;
+    uint16_t* py = (uint16_t*) heif_image_get_plane2(image, heif_channel_Y, &y_stride);
     uint16_t* pa = nullptr;
 
     if (has_alpha) {
       heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, output_bit_depth);
 
-      pa = (uint16_t*) heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
+      pa = (uint16_t*) heif_image_get_plane2(image, heif_channel_Alpha, &a_stride);
     }
 
     y_stride /= 2;
@@ -343,11 +343,11 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
     heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, 8);
     heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, 8);
 
-    int stride;
-    uint8_t* p = heif_image_get_plane(image, heif_channel_Y, &stride);
+    size_t stride;
+    uint8_t* p = heif_image_get_plane2(image, heif_channel_Y, &stride);
 
-    int strideA;
-    uint8_t* pA = heif_image_get_plane(image, heif_channel_Alpha, &strideA);
+    size_t strideA;
+    uint8_t* pA = heif_image_get_plane2(image, heif_channel_Alpha, &strideA);
 
     for (uint32_t y = 0; y < height; y++) {
       for (uint32_t x = 0; x < width; x++) {
@@ -366,8 +366,8 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
     heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height,
                          has_alpha ? 32 : 24);
 
-    int stride;
-    uint8_t* p = heif_image_get_plane(image, heif_channel_interleaved, &stride);
+    size_t stride;
+    uint8_t* p = heif_image_get_plane2(image, heif_channel_interleaved, &stride);
 
     for (uint32_t y = 0; y < height; y++) {
       if (has_alpha) {
@@ -401,8 +401,8 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 
     heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height, output_bit_depth);
 
-    int stride;
-    uint8_t* p_out = (uint8_t*) heif_image_get_plane(image, heif_channel_interleaved, &stride);
+    size_t stride;
+    uint8_t* p_out = (uint8_t*) heif_image_get_plane2(image, heif_channel_interleaved, &stride);
 
     if (output_bit_depth==8) {
       // convert HDR to SDR

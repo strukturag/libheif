@@ -300,8 +300,8 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
     heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
 
-    int y_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    size_t y_stride;
+    uint8_t* py = heif_image_get_plane2(image, heif_channel_Y, &y_stride);
 
 
     // read the image
@@ -377,11 +377,11 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
     heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
     heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
 
-    int stride[3];
+    size_t stride[3];
     uint8_t* p[3];
-    p[0] = heif_image_get_plane(image, heif_channel_Y, &stride[0]);
-    p[1] = heif_image_get_plane(image, heif_channel_Cb, &stride[1]);
-    p[2] = heif_image_get_plane(image, heif_channel_Cr, &stride[2]);
+    p[0] = heif_image_get_plane2(image, heif_channel_Y, &stride[0]);
+    p[1] = heif_image_get_plane2(image, heif_channel_Cb, &stride[1]);
+    p[2] = heif_image_get_plane2(image, heif_channel_Cr, &stride[2]);
 
     // read the image
 
@@ -422,7 +422,7 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
           int linesRead = std::min(targetRead[i] - alreadyRead[i], linesPerCall[i]);
           int targetChannel = i; // Note: might have to be remapped when we want support other colorspaces
           for (int j = 0; j < linesRead; ++j) {
-            memcpy(p[targetChannel] + ((size_t)stride[targetChannel]) * (alreadyRead[i] + j),
+            memcpy(p[targetChannel] + stride[targetChannel] * (alreadyRead[i] + j),
                    buffer[i][j],
                    width[targetChannel]);
           }

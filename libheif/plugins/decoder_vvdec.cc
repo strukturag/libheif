@@ -302,8 +302,8 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
       return err;
     }
 
-    int dst_stride;
-    uint8_t* dst_mem = heif_image_get_plane(heif_img, channel2plane[c], &dst_stride);
+    size_t dst_stride;
+    uint8_t* dst_mem = heif_image_get_plane2(heif_img, channel2plane[c], &dst_stride);
 
     int bytes_per_pixel = (bpp + 7) / 8;
 

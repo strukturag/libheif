@@ -170,9 +170,9 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   uint8_t** row_pointers = new uint8_t* [height];
 
-  int stride_rgb;
-  const uint8_t* row_rgb = heif_image_get_plane_readonly(image,
-                                                         heif_channel_interleaved, &stride_rgb);
+  size_t stride_rgb;
+  const uint8_t* row_rgb = heif_image_get_plane_readonly2(image,
+                                                          heif_channel_interleaved, &stride_rgb);
 
   for (int y = 0; y < height; ++y) {
     row_pointers[y] = const_cast<uint8_t*>(&row_rgb[y * stride_rgb]);
@@ -184,7 +184,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
     int shift = 16 - input_bpp;
     if (shift > 0) {
       for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < stride_rgb; x += 2) {
+        for (size_t x = 0; x < stride_rgb; x += 2) {
           uint8_t* p = (&row_pointers[y][x]);
           int v = (p[0] << 8) | p[1];
           v = (v << shift) | (v >> (16 - shift));

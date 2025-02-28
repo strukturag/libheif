@@ -797,8 +797,8 @@ struct heif_error ojph_encode_image(void *encoder_raw, const struct heif_image *
   ojph::line_buf* cur_line = encoder->codestream.exchange(NULL, next_comp);
 
   for (const auto& sourceChannel : sourceChannels) {
-    int stride;
-    const uint8_t *data = heif_image_get_plane_readonly(image, sourceChannel, &stride);
+    size_t stride;
+    const uint8_t *data = heif_image_get_plane_readonly2(image, sourceChannel, &stride);
     uint32_t component_height = heif_image_get_height(image, sourceChannel);
     for (uint32_t y = 0; y < component_height; y++) {
       const uint8_t *sourceLine = data + y * stride;

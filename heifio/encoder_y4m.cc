@@ -50,10 +50,10 @@ bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
     return false;
   }
 
-  int y_stride, cb_stride, cr_stride;
-  const uint8_t* yp = heif_image_get_plane_readonly(image, heif_channel_Y, &y_stride);
-  const uint8_t* cbp = heif_image_get_plane_readonly(image, heif_channel_Cb, &cb_stride);
-  const uint8_t* crp = heif_image_get_plane_readonly(image, heif_channel_Cr, &cr_stride);
+  size_t y_stride, cb_stride, cr_stride;
+  const uint8_t* yp = heif_image_get_plane_readonly2(image, heif_channel_Y, &y_stride);
+  const uint8_t* cbp = heif_image_get_plane_readonly2(image, heif_channel_Cb, &cb_stride);
+  const uint8_t* crp = heif_image_get_plane_readonly2(image, heif_channel_Cr, &cr_stride);
 
   assert(y_stride > 0);
   assert(cb_stride > 0);

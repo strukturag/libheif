@@ -1901,16 +1901,31 @@ int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
 // The 'out_stride' is returned as "bytes per line".
 // When out_stride is NULL, no value will be written.
 // Returns NULL if a non-existing channel was given.
-// TODO: it would be better if the 'stride' parameter would be size_t to prevent integer overflows when this value is multiplicated with large y coordinates.
+// Deprecated, use the safer version heif_image_get_plane_readonly2() instead.
 LIBHEIF_API
 const uint8_t* heif_image_get_plane_readonly(const struct heif_image*,
                                              enum heif_channel channel,
                                              int* out_stride);
 
+// Deprecated, use the safer version heif_image_get_plane2() instead.
 LIBHEIF_API
 uint8_t* heif_image_get_plane(struct heif_image*,
                               enum heif_channel channel,
                               int* out_stride);
+
+// These are safer variants of the two functions above.
+// The 'stride' parameter is often multiplied by the image height in the client application.
+// For very large images, this can lead to integer overflows and, consequently, illegal memory accesses.
+// The changed 'stride' parameter types eliminates this common error.
+LIBHEIF_API
+const uint8_t* heif_image_get_plane_readonly2(const struct heif_image*,
+                                              enum heif_channel channel,
+                                              size_t* out_stride);
+
+LIBHEIF_API
+uint8_t* heif_image_get_plane2(struct heif_image*,
+                               enum heif_channel channel,
+                               size_t* out_stride);
 
 
 

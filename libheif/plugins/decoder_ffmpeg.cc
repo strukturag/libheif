@@ -238,8 +238,8 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
                 return err;
             }
 
-            int dst_stride;
-            uint8_t* dst_mem = heif_image_get_plane(*image, channel2plane[channel], &dst_stride);
+            size_t dst_stride;
+            uint8_t* dst_mem = heif_image_get_plane2(*image, channel2plane[channel], &dst_stride);
 
             int bytes_per_pixel = (bpp + 7) / 8;
 

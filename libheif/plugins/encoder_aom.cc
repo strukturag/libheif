@@ -897,8 +897,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     const int h = aom_img_plane_height(img, plane);
     */
 
-    int in_stride = 0;
-    const uint8_t* in_p = heif_image_get_plane_readonly(image, (heif_channel) plane, &in_stride);
+    size_t in_stride = 0;
+    const uint8_t* in_p = heif_image_get_plane_readonly2(image, (heif_channel) plane, &in_stride);
 
     int w = source_width;
     int h = source_height;

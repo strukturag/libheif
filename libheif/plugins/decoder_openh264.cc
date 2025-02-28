@@ -267,12 +267,12 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
     heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
     heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
 
-    int y_stride;
-    int cb_stride;
-    int cr_stride;
-    uint8_t* py = heif_image_get_plane(heif_img, heif_channel_Y, &y_stride);
-    uint8_t* pcb = heif_image_get_plane(heif_img, heif_channel_Cb, &cb_stride);
-    uint8_t* pcr = heif_image_get_plane(heif_img, heif_channel_Cr, &cr_stride);
+    size_t y_stride;
+    size_t cb_stride;
+    size_t cr_stride;
+    uint8_t* py = heif_image_get_plane2(heif_img, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane2(heif_img, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane2(heif_img, heif_channel_Cr, &cr_stride);
 
     int ystride = sDstBufInfo.UsrData.sSystemBuffer.iStride[0];
     int cstride = sDstBufInfo.UsrData.sSystemBuffer.iStride[1];

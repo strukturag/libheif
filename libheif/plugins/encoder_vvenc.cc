@@ -339,7 +339,7 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
 }
 
 
-static void copy_plane(int16_t*& out_p, int& out_stride, const uint8_t* in_p, uint32_t in_stride, int w, int h, int padded_width, int padded_height)
+static void copy_plane(int16_t*& out_p, size_t& out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
 {
   out_stride = padded_width;
   out_p = new int16_t[out_stride * w * h];
@@ -530,50 +530,50 @@ static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif
   int16_t* yptr = nullptr;
   int16_t* cbptr = nullptr;
   int16_t* crptr = nullptr;
-  int ystride = 0;
-  int cbstride = 0;
-  int crstride = 0;
+  size_t ystride = 0;
+  size_t cbstride = 0;
+  size_t crstride = 0;
 
   if (isGreyscale) {
-    int stride;
-    const uint8_t* data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    size_t stride;
+    const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
     copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
     yuvbuf->planes[0].ptr = yptr;
     yuvbuf->planes[0].width = encoded_width;
     yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = ystride;
+    yuvbuf->planes[0].stride = (int)ystride;
   }
   else {
-    int stride;
+    size_t stride;
     const uint8_t* data;
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
     copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
     copy_plane(cbptr, cbstride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
     copy_plane(crptr, crstride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
     yuvbuf->planes[0].ptr = yptr;
     yuvbuf->planes[0].width = encoded_width;
     yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = ystride;
+    yuvbuf->planes[0].stride = (int)ystride;
 
     yuvbuf->planes[1].ptr = cbptr;
     yuvbuf->planes[1].width = encoded_width >> chroma_stride_shift;
     yuvbuf->planes[1].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[1].stride = cbstride;
+    yuvbuf->planes[1].stride = (int)cbstride;
 
     yuvbuf->planes[2].ptr = crptr;
     yuvbuf->planes[2].width = encoded_width >> chroma_stride_shift;
     yuvbuf->planes[2].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[2].stride = crstride;
+    yuvbuf->planes[2].stride = (int)crstride;
   }
 
   //yuvbuf->cts     = frame->pts;
