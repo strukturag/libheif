@@ -227,7 +227,7 @@ bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
 heif_error loadJPEG(const char *filename, InputImage *input_image)
 {
   struct heif_image* image = nullptr;
-
+  struct heif_error err = heif_error_ok;
 
   // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
 
@@ -291,14 +291,16 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
     // create destination image
 
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_monochrome,
-                                              heif_chroma_monochrome,
-                                              &image);
-    (void) err;
-    // TODO: handle error
+    err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                            heif_colorspace_monochrome,
+                            heif_chroma_monochrome,
+                            &image);
+    if (err.code) {
+      goto cleanup;
+    }
 
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    err = heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) { goto cleanup; }
 
     size_t y_stride;
     uint8_t* py = heif_image_get_plane2(image, heif_channel_Y, &y_stride);
@@ -371,11 +373,16 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
                                               heif_colorspace_YCbCr,
                                               output_chroma,
                                               &image);
-    (void) err;
+    if (err.code) { goto cleanup; }
 
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-    heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
-    heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
+    err = heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) { goto cleanup; }
+
+    err = heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
+    if (err.code) { goto cleanup; }
+
+    err = heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
+    if (err.code) { goto cleanup; }
 
     size_t stride[3];
     uint8_t* p[3];
@@ -480,15 +487,16 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
     heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
   }
 
+  input_image->image = std::shared_ptr<heif_image>(image,
+                                                   [](heif_image* img) { heif_image_release(img); });
+
   // cleanup
+cleanup:
   free(iccBuffer);
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
 
   fclose(infile);
 
-  input_image->image = std::shared_ptr<heif_image>(image,
-                                          [](heif_image* img) { heif_image_release(img); });
-
-  return heif_error_ok;
+  return err;
 }
