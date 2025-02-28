@@ -652,6 +652,18 @@ void heif_release_string(const char*);
 LIBHEIF_API
 int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track*, struct heif_tai_clock_info*);
 
+struct heif_sample_aux_info_type
+{
+  uint32_t type;
+  uint32_t parameter;
+};
+
+LIBHEIF_API
+int heif_track_get_number_of_sample_aux_infos(struct heif_track*);
+
+LIBHEIF_API
+void heif_track_get_sample_aux_info_types(struct heif_track*, struct heif_sample_aux_info_type* out_types);
+
 #ifdef __cplusplus
 }
 #endif

@@ -66,6 +66,8 @@ public:
   SampleAuxInfoReader(std::shared_ptr<Box_saiz>,
                       std::shared_ptr<Box_saio>);
 
+  heif_sample_aux_info_type get_type() const;
+
   Result<std::vector<uint8_t>> get_sample_info(const HeifFile* file, uint32_t idx);
 
 private:
@@ -121,6 +123,8 @@ public:
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
   Result<heif_raw_sequence_sample*> get_next_sample_raw_data();
+
+  std::vector<heif_sample_aux_info_type> get_sample_aux_info_types() const;
 
 protected:
   HeifContext* m_heif_context = nullptr;

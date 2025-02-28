@@ -192,6 +192,15 @@ SampleAuxInfoReader::SampleAuxInfoReader(std::shared_ptr<Box_saiz> saiz,
 }
 
 
+heif_sample_aux_info_type SampleAuxInfoReader::get_type() const
+{
+  heif_sample_aux_info_type type;
+  type.type = m_saiz->get_aux_info_type();
+  type.parameter = m_saiz->get_aux_info_type_parameter();
+  return type;
+}
+
+
 Result<std::vector<uint8_t>> SampleAuxInfoReader::get_sample_info(const HeifFile* file, uint32_t idx)
 {
   uint64_t offset;
@@ -766,4 +775,15 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
   m_next_sample_to_be_processed++;
 
   return sample;
+}
+
+
+std::vector<heif_sample_aux_info_type> Track::get_sample_aux_info_types() const
+{
+  std::vector<heif_sample_aux_info_type> types;
+
+  if (m_aux_reader_tai_timestamps) types.emplace_back(m_aux_reader_tai_timestamps->get_type());
+  if (m_aux_reader_content_ids) types.emplace_back(m_aux_reader_content_ids->get_type());
+
+  return types;
 }

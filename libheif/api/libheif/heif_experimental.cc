@@ -749,6 +749,22 @@ int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, str
 }
 
 
+int heif_track_get_number_of_sample_aux_infos(struct heif_track* track)
+{
+  std::vector<heif_sample_aux_info_type> aux_info_types = track->track->get_sample_aux_info_types();
+  return (int)aux_info_types.size();
+}
+
+
+void heif_track_get_sample_aux_info_types(struct heif_track* track, struct heif_sample_aux_info_type* out_types)
+{
+  std::vector<heif_sample_aux_info_type> aux_info_types = track->track->get_sample_aux_info_types();
+  for (size_t i=0;i<aux_info_types.size();i++) {
+    out_types[i] = aux_info_types[i];
+  }
+}
+
+
 struct heif_error heif_image_extract_area(const heif_image* srcimg,
                                           uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
                                           const heif_security_limits* limits,

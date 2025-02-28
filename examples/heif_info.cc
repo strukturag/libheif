@@ -810,6 +810,21 @@ int main(int argc, char** argv)
         heif_release_string(uri);
       }
 
+      std::cout << "  sample auxiliary information: ";
+      int nSampleAuxTypes = heif_track_get_number_of_sample_aux_infos(track);
+
+      std::vector<heif_sample_aux_info_type> aux_types(nSampleAuxTypes);
+      heif_track_get_sample_aux_info_types(track, aux_types.data());
+
+      for (size_t i=0;i<aux_types.size();i++) {
+        if (i) { std::cout << ", "; }
+        std::cout << fourcc_to_string(aux_types[i].type);
+      }
+
+      if (nSampleAuxTypes==0) {
+        std::cout << "---";
+      }
+      std::cout << "\n";
 
       heif_track_release(track);
     }
