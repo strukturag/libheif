@@ -90,6 +90,11 @@ Error ImageItem_iden::get_coded_image_colorspace(heif_colorspace* out_colorspace
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Nonexisting_item_referenced};
+  }
+
   return image->get_coded_image_colorspace(out_colorspace, out_chroma);
 }
 
@@ -103,6 +108,10 @@ int ImageItem_iden::get_luma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_luma_bits_per_pixel();
 }
 
@@ -116,5 +125,9 @@ int ImageItem_iden::get_chroma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_chroma_bits_per_pixel();
 }
