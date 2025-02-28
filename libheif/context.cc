@@ -276,6 +276,10 @@ void HeifContext::write(StreamWriter& writer)
     img.second->process_before_write();
   }
 
+  // --- sort item properties
+
+  m_heif_file->get_ipma_box()->sort_properties(m_heif_file->get_ipco_box());
+
   // --- write to file
 
   m_heif_file->write(writer);
