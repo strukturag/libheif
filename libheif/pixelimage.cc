@@ -267,7 +267,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
       (limits->max_memory_block_size < alignment - 1U ||
        (limits->max_memory_block_size - (alignment - 1U)) / stride < m_mem_height)) {
     std::stringstream sstr;
-    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " exceeds the security limit of "
+    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes exceeds the security limit of "
          << limits->max_memory_block_size << " bytes";
 
     return {heif_error_Memory_allocation_error,
