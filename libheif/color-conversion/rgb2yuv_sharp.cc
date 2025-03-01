@@ -233,9 +233,9 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   int rgb_step = planar_input ? input_bytes_per_sample : input_bytes_per_pixel;
 
   int sharpyuv_ok =
-      SharpYuvConvert(in_r, in_g, in_b, rgb_step, in_stride,
-                      input_bits, out_y, out_y_stride, out_cb, out_cb_stride,
-                      out_cr, out_cr_stride, output_bits,
+      SharpYuvConvert(in_r, in_g, in_b, rgb_step, (int)in_stride,
+                      input_bits, out_y, (int)out_y_stride, out_cb, (int)out_cb_stride,
+                      out_cr, (int)out_cr_stride, output_bits,
                       input->get_width(), input->get_height(), &yuv_matrix);
   if (!sharpyuv_ok) {
     return Error{heif_error_Unsupported_feature,
