@@ -123,7 +123,7 @@ if [ "$MINGW" == "32" ]; then
     # https://github.com/actions/runner-images/issues/4589
     sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
     sudo apt-get update
-    sudo apt-get install -y --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+    sudo apt-get install -y --allow-downgrades libgd3:i386/focal libpcre2-8-0:i386/focal libpcre2-16-0:i386/focal libpcre2-32-0:i386/focal libpcre2-posix3/focal
     sudo apt-get purge -y libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-i686 \
