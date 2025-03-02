@@ -32,6 +32,7 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <array>
 #include "decoder_jpeg.h"
 #include "exif.h"
 
@@ -420,6 +421,21 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
       int alreadyRead[3] = { 0, 0, 0 };
       int width[3] = { (int)cinfo.output_width, cw, cw};
 
+      std::array<int,3> targetChannel{0,1,2};
+
+      if (cinfo.jpeg_color_space == JCS_RGB) {
+        targetChannel = {2, 0, 1};
+      }
+      else if (cinfo.jpeg_color_space == JCS_YCbCr ||
+               cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+        targetChannel = {0, 1, 2};
+      }
+      else {
+        return heif_error{heif_error_Unsupported_filetype,
+                          heif_suberror_Unsupported_image_type,
+                          "JPEG with unsupported colorspace"};
+      }
+
       while (cinfo.output_scanline < cinfo.output_height) {
         jpeg_read_raw_data(&cinfo, buffer, readLines);
 
@@ -427,11 +443,11 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
         for (int i = 0; i < workComponents; ++i) {
           int linesRead = std::min(targetRead[i] - alreadyRead[i], linesPerCall[i]);
-          int targetChannel = i; // Note: might have to be remapped when we want support other colorspaces
+
           for (int j = 0; j < linesRead; ++j) {
-            memcpy(p[targetChannel] + stride[targetChannel] * (alreadyRead[i] + j),
+            memcpy(p[targetChannel[i]] + ((size_t)stride[targetChannel[i]]) * (alreadyRead[i] + j),
                    buffer[i][j],
-                   width[targetChannel]);
+                   width[targetChannel[i]]);
           }
           alreadyRead[i] += linesPerCall[i];
         }

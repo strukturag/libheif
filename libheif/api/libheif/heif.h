@@ -2403,6 +2403,11 @@ struct heif_encoding_options
 
   // Set this to true to use compressed form of uncC where possible.
   uint8_t prefer_uncC_short_form;
+
+  // TODO: we should add a flag to force MIAF compatible outputs. E.g. this will put restrictions on grid tile sizes and
+  //       might add a clap box when the grid output size does not match the color subsampling factors.
+  //       Since some of these constraints have to be known before actually encoding the image, "forcing MIAF compatibility"
+  //       could also be a flag in the heif_context.
 };
 
 LIBHEIF_API

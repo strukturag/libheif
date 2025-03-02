@@ -392,5 +392,5 @@ The sample applications are distributed under the terms of the MIT License.
 See COPYING for more details.
 
 Copyright (c) 2017-2020 Struktur AG</br>
-Copyright (c) 2017-2024 Dirk Farin</br>
+Copyright (c) 2017-2025 Dirk Farin</br>
 Contact: Dirk Farin <dirk.farin@gmail.com>

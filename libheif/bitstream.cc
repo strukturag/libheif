@@ -32,8 +32,6 @@
 
 #define MAX_UVLC_LEADING_ZEROS 20
 
-#define AVOID_FUZZER_FALSE_POSITIVE 0
-
 
 StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
     : m_istr(std::move(istr))
@@ -547,7 +545,10 @@ uint32_t BitReader::get_bits(int n)
   uint64_t val = nextbits;
   val >>= 64 - n;
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  // Shifting an unsigned integer left such that some MSBs fall out is well defined in C++ despite the fuzzer claiming otherwise.
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
 
   nextbits <<= n;
   nextbits_cnt -= n;
@@ -635,14 +636,20 @@ void BitReader::skip_bits(int n)
     refill();
   }
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
+
   nextbits <<= n;
   nextbits_cnt -= n;
 }
 
 void BitReader::skip_bits_fast(int n)
 {
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
+
   nextbits <<= n;
   nextbits_cnt -= n;
 }
@@ -651,7 +658,10 @@ void BitReader::skip_to_byte_boundary()
 {
   int nskip = (nextbits_cnt & 7);
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> nskip);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> nskip);
+#endif
+
   nextbits <<= nskip;
   nextbits_cnt -= nskip;
 }

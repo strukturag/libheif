@@ -24,7 +24,7 @@ jobs:
           - { NAME: "libde265 (1) / x265 / dav1d / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_DAV1D: 1, WITH_LIBDE265: 1 }
           - { NAME: "libde265 (1) / x265 / aom / rav1e / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_RAV1E: 1, WITH_LIBDE265: 1 }
     env: ${{ matrix.env }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
 

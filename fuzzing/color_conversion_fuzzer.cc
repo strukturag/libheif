@@ -73,7 +73,7 @@ static bool read_plane(BitstreamRange* range,
   if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
-  uint32_t stride;
+  size_t stride;
   uint8_t* plane = image->get_plane(channel, &stride);
   assert(stride >= width);
   auto stream = range->get_istream();
@@ -99,7 +99,7 @@ static bool read_plane_interleaved(BitstreamRange* range,
   if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
-  uint32_t stride;
+  size_t stride;
   uint8_t* plane = image->get_plane(channel, &stride);
   assert(stride >= width * comps);
   auto stream = range->get_istream();
