@@ -584,6 +584,7 @@ if (WITH_FUZZERS)
     separate_arguments(FUZZING_COMPILE_OPTIONS UNIX_COMMAND "${FUZZING_COMPILE_OPTIONS}")
     separate_arguments(FUZZING_LINKER UNIX_COMMAND "${FUZZING_LINKER_OPTIONS}")
     add_compile_options(${FUZZING_COMPILE_OPTIONS})
+    add_definitions(-DAVOID_FUZZER_FALSE_POSITIVE=1)
     add_link_options(${FUZZING_COMPILE_OPTIONS} ${FUZZING_LINKER_OPTIONS})
 
     add_subdirectory(fuzzing)
