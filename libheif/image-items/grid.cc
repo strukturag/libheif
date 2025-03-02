@@ -637,7 +637,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
   ImageGrid grid;
   grid.set_num_tiles(tile_columns, tile_rows);
-  grid.set_output_size(output_width, output_height);
+  grid.set_output_size(output_width, output_height); // TODO: MIAF restricts the output size to be a multiple of the chroma subsampling (7.3.11.4.2)
   std::vector<uint8_t> grid_data = grid.write();
 
   // Create Grid Item
