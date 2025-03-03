@@ -120,11 +120,7 @@ fi
 
 if [ "$MINGW" == "32" ]; then
     sudo dpkg --add-architecture i386
-    # https://github.com/actions/runner-images/issues/4589
-    sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
     sudo apt-get update
-    sudo apt-get install -y --allow-downgrades libgd3:i386/jammy libpcre2-8-0:i386/jammy libpcre2-16-0:i386/jammy libpcre2-32-0:i386/jammy libpcre2-posix3/jammy
-    sudo apt-get purge -y libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-i686 \
         g++-mingw-w64-i686 \
