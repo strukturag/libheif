@@ -71,14 +71,16 @@ if [ "$MINGW" == "32" ]; then
     export CXX=i686-w64-mingw32-g++
     BIN_SUFFIX=.exe
     BIN_WRAPPER=/usr/lib/wine/wine
-    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));/usr/i686-w64-mingw32/lib"
+    MINGW_SYSROOT="/usr/i686-w64-mingw32"
+    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));$MINGW_SYSROOT/lib"
 elif [ "$MINGW" == "64" ]; then
     # Make sure the correct compiler will be used.
     export CC=x86_64-w64-mingw32-gcc
     export CXX=x86_64-w64-mingw32-g++
     BIN_SUFFIX=.exe
     BIN_WRAPPER=/usr/lib/wine/wine64
-    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));/usr/x86_64-w64-mingw32/lib"
+    MINGW_SYSROOT="/usr/x86_64-w64-mingw32"
+    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));$MINGW_SYSROOT/lib"
 fi
 
 PKG_CONFIG_PATH=
@@ -138,7 +140,7 @@ if [ "$CURRENT_OS" = "osx" ] ; then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
 fi
 if [ -n "$MINGW" ]; then
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_SYSTEM_NAME=Windows"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_FIND_ROOT_PATH=$MINGW_SYSROOT"
 fi
 if [ "$CLANG_TIDY" = "1" ]; then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
