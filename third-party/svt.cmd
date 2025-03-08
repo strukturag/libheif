@@ -10,7 +10,7 @@ git clone -b v3.0.0 --depth 1 https://gitlab.com/AOMediaCodec/SVT-AV1.git
 cd SVT-AV1
 cd Build/linux
 
-./build.sh release static no-apps prefix=$(pwd)/install install
+./build.sh release static no-apps disable-lto prefix=$(pwd)/install install
 cd ../../..
 
 echo ""

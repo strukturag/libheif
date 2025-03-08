@@ -98,7 +98,15 @@ struct heif_error heif_encoder::alloc()
 
 HeifContext::HeifContext()
 {
-  m_limits = global_security_limits;
+  const char* security_limits_variable = getenv("LIBHEIF_SECURITY_LIMITS");
+
+  if (security_limits_variable && (strcmp(security_limits_variable, "off") == 0 ||
+                                   strcmp(security_limits_variable, "OFF") == 0)) {
+    m_limits = disabled_security_limits;
+  }
+  else {
+    m_limits = global_security_limits;
+  }
 
   reset_to_empty_heif();
 }

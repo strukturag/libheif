@@ -113,7 +113,6 @@ There is also a C++ API which is a header-only wrapper to the C API.
 Hence, you can use the C++ API and still be binary compatible.
 Code using the C++ API is much less verbose than using the C API directly.
 
-There is also an experimental Go API, but this is not stable yet.
 
 ### Reading and Writing Tiled Images
 
@@ -288,7 +287,7 @@ A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the
 
 * .NET Platform (C#, F#, and other languages): [libheif-sharp](https://github.com/0xC0000054/libheif-sharp)
 * C++: part of libheif
-* Go: part of libheif
+* Go: [libheif-go](https://github.com/strukturag/libheif-go), the wrapper distributed with libheif is deprecated
 * JavaScript: by compilation with emscripten (see below)
 * NodeJS module: [libheif-js](https://www.npmjs.com/package/libheif-js)
 * Python: [pyheif](https://pypi.org/project/pyheif/), [pillow_heif](https://pypi.org/project/pillow-heif/)

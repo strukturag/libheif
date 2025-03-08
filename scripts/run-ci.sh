@@ -67,18 +67,20 @@ BIN_SUFFIX=
 BIN_WRAPPER=
 if [ "$MINGW" == "32" ]; then
     # Make sure the correct compiler will be used.
-    unset CC
-    unset CXX
+    export CC=i686-w64-mingw32-gcc
+    export CXX=i686-w64-mingw32-g++
     BIN_SUFFIX=.exe
-    BIN_WRAPPER=wine
-    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/9.3-posix/;/usr/i686-w64-mingw32/lib"
+    BIN_WRAPPER=/usr/lib/wine/wine
+    MINGW_SYSROOT="/usr/i686-w64-mingw32"
+    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));$MINGW_SYSROOT/lib"
 elif [ "$MINGW" == "64" ]; then
     # Make sure the correct compiler will be used.
-    unset CC
-    unset CXX
+    export CC=x86_64-w64-mingw32-gcc
+    export CXX=x86_64-w64-mingw32-g++
     BIN_SUFFIX=.exe
-    BIN_WRAPPER=wine64
-    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/;/usr/x86_64-w64-mingw32/lib"
+    BIN_WRAPPER=/usr/lib/wine/wine64
+    MINGW_SYSROOT="/usr/x86_64-w64-mingw32"
+    export WINEPATH="$(dirname $($CXX --print-file-name=libstdc++.a));$MINGW_SYSROOT/lib"
 fi
 
 PKG_CONFIG_PATH=
@@ -136,6 +138,9 @@ if [ "$CURRENT_OS" = "osx" ] ; then
     # Make sure the homebrew installed libraries are used when building instead
     # of the libraries provided by Apple.
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+fi
+if [ -n "$MINGW" ]; then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_FIND_ROOT_PATH=$MINGW_SYSROOT"
 fi
 if [ "$CLANG_TIDY" = "1" ]; then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
