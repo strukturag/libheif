@@ -562,6 +562,7 @@ uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
       break;
     default:
       assert(false);
+      return 0;
       break;
   }
 }
