@@ -120,6 +120,9 @@ public:
 
   uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
+  // Get the maximum bit depth of a visual channel (YCbCr or RGB).
+  uint8_t get_visual_image_bits_per_pixel() const;
+
   heif_channel_datatype get_datatype(enum heif_channel channel) const;
 
   int get_number_of_interleaved_components(heif_channel channel) const;
