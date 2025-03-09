@@ -527,14 +527,27 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   for (int comp = 0; comp < band_count; comp++) {
     int stride;
     const uint8_t* p = heif_image_get_plane_readonly(image, channels[comp], &stride);
+    int bpp = heif_image_get_bits_per_pixel(image, channels[comp]);
 
     int cwidth = component_params[comp].w;
     int cheight = component_params[comp].h;
 
     // Note: obj_image data is 32bit integer
-    for (int y = 0; y < cheight; y++) {
-      for (int x = 0; x < cwidth; x++) {
-        opj_image->comps[comp].data[y * cwidth + x] = p[y * stride + x];
+
+    if (bpp <= 8) {
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          opj_image->comps[comp].data[y * cwidth + x] = p[y * stride + x];
+        }
+      }
+    }
+    else {
+      const uint16_t* p16 = (const uint16_t*)p;
+
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          opj_image->comps[comp].data[y * cwidth + x] = p16[y * stride/2 + x];
+        }
       }
     }
   }
