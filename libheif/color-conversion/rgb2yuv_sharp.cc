@@ -240,7 +240,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   if (!sharpyuv_ok) {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_color_conversion,
-                 "SharpYuv color convertion failed"};
+                 "SharpYuv color conversion failed"};
   }
 
   if (want_alpha) {
