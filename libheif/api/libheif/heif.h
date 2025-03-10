@@ -1160,6 +1160,14 @@ struct heif_security_limits {
   uint32_t max_size_entity_group;
 
   uint32_t max_children_per_box; // for all boxes that are not covered by other limits
+
+  // --- version 2
+
+  // When memory is allocated, libheif takes care that some system memory stays free.
+  // The margin amount is computed dynamically based on the amount of requested memory, but it will be adjusted to fit into the bounds configured here.
+  // Setting max_memory_margin to zero switches off checking the available RAM. Libheif will try to get all memory it needs.
+  size_t  min_memory_margin;
+  size_t  max_memory_margin; // must be >= min_memory_margin
 };
 
 // The global security limits are the default for new heif_contexts.

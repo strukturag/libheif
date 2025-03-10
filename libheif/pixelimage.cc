@@ -30,6 +30,10 @@
 #include <algorithm>
 #include <color-conversion/colorconversion.h>
 
+#if __linux__
+#include <sys/mman.h>
+#include <sys/sysinfo.h>
+#endif
 
 heif_chroma chroma_from_subsampling(int h, int v)
 {
@@ -93,6 +97,11 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
+
+#if __linux__
+    munlock(iter.second.allocated_mem, iter.second.allocation_size);
+#endif
+
     delete[] iter.second.allocated_mem;
   }
 
@@ -277,9 +286,78 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
             sstr.str()};
   }
 
+  allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
+
   try {
-    allocated_mem = new uint8_t[static_cast<size_t>(m_mem_height) * stride + alignment - 1];
+#if __linux__
+    // 50% of the allocated memory size should remain as free memory (allocation of 1 GB fails if there is not at least 1.5 GB free).
+    size_t memory_margin = allocation_size / 2;
+
+    // limit the memory margin to an upper limit
+
+    uint64_t max_memory_margin = limits ? limits->max_memory_margin : heif_get_global_security_limits()->max_memory_margin;
+    uint64_t min_memory_margin = limits ? limits->min_memory_margin : heif_get_global_security_limits()->min_memory_margin;
+    assert(max_memory_margin >= min_memory_margin);
+
+    if (memory_margin > max_memory_margin) {
+      memory_margin = max_memory_margin;
+    }
+
+    if (memory_margin < min_memory_margin) {
+      memory_margin = min_memory_margin;
+    }
+
+    if (std::numeric_limits<size_t>::max() - memory_margin > allocation_size) {
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Unspecified,
+              "memory size integer overflow"};
+    }
+
+    if (max_memory_margin > 0) {
+      // query free memory
+
+      struct sysinfo info;
+      int err = sysinfo(&info);
+      if (err != 0) {
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Unspecified,
+                "sysinfo() failed"};
+      }
+
+      uint64_t free_memory = info.freeram + info.bufferram;
+
+      // requested memory exceeds safe size
+
+      if (allocation_size + memory_margin > free_memory) {
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Unspecified,
+                "free memory margin exceeded"};
+      }
+    }
+#endif
+
+    // --- allocate memory
+
+    allocated_mem = new uint8_t[allocation_size];
     uint8_t* mem_8 = allocated_mem;
+
+#if __linux__
+    // --- lock memory (allocate physical memory to fail fast if not enough physical memory is available)
+
+    int ret = mlock(allocated_mem, allocation_size);
+    if (ret != 0) {
+      delete[] allocated_mem;
+      allocated_mem = nullptr;
+      allocation_size = 0;
+
+      std::stringstream sstr;
+      sstr << "Cannot lock memory, OS error: " << strerror(errno);
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Unspecified,
+              sstr.str()};
+    }
+#endif
+
 
     // shift beginning of image data to aligned memory position
 

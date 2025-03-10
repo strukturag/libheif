@@ -124,7 +124,6 @@ HeifContext::~HeifContext()
 
 static void copy_security_limits(heif_security_limits* dst, const heif_security_limits* src)
 {
-  dst->version = 1;
   dst->max_image_size_pixels = src->max_image_size_pixels;
   dst->max_number_of_tiles = src->max_number_of_tiles;
   dst->max_bayer_pattern_pixels = src->max_bayer_pattern_pixels;
@@ -139,11 +138,21 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   dst->max_size_entity_group = src->max_size_entity_group;
 
   dst->max_children_per_box = src->max_children_per_box;
+
+  if (src->version >= 2) {
+    dst->max_memory_margin = src->max_memory_margin;
+  }
 }
 
 
 void HeifContext::set_security_limits(const heif_security_limits* limits)
 {
+  // copy default limits
+  if (limits->version < global_security_limits.version) {
+    copy_security_limits(&m_limits, &global_security_limits);
+  }
+
+  // overwrite with input limits
   copy_security_limits(&m_limits, limits);
 }
 

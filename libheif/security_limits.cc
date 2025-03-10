@@ -23,7 +23,7 @@
 
 
 struct heif_security_limits global_security_limits {
-    .version = 1,
+    .version = 2,
 
     // --- version 1
 
@@ -35,18 +35,23 @@ struct heif_security_limits global_security_limits {
     .max_items = 1000,
 
     .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
-    .max_memory_block_size = 512 * 1024 * 1024,  // 512 MB
+    .max_memory_block_size = uint64_t(4) * 1024 * 1024 * 1024,  // 4 GB
 
     .max_components = 256,
     .max_iloc_extents_per_item = 32,
     .max_size_entity_group = 64,
 
-    .max_children_per_box = 100
+    .max_children_per_box = 100,
+
+    // --- version 2
+
+    .min_memory_margin = 100 * 1024*1024, // 100 MB
+    .max_memory_margin = 1 * 1024*1024*1024 // 1 GB
 };
 
 
 struct heif_security_limits disabled_security_limits{
-        .version = 1
+        .version = 2
 };
 
 
