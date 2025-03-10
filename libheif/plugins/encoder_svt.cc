@@ -50,12 +50,14 @@ struct encoder_struct_svt
   int tile_rows = 1; // 1,2,4,8,16,32,64
   int tile_cols = 1; // 1,2,4,8,16,32,64
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
   enum Tune {
     Tune_VQ = 0,
     Tune_PSNR = 1,
     Tune_SSIM = 2
   };
   uint8_t tune = Tune_PSNR;
+#endif
 
   heif_chroma chroma = heif_chroma_420;  // SVT-AV1 only supports 4:2:0 as of v3.0.0
 
@@ -73,8 +75,10 @@ static const char* kParam_qp = "qp";
 static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
 static const char* kParam_tune = "tune";
 static const char* const kParam_tune_valid_values[] = {"vq","psnr","ssim", nullptr};
+#endif
 
 /*
 static const char* kParam_chroma = "chroma";
@@ -257,6 +261,7 @@ static void svt_init_parameters()
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_tune;
@@ -265,6 +270,7 @@ static void svt_init_parameters()
   p->has_default = true;
   p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
+#endif
 
   d[i++] = nullptr;
 }
@@ -473,6 +479,7 @@ struct heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name,
 struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  (void)encoder;
 
 #if 0
   if (strcmp(name, kParam_chroma) == 0) {
@@ -494,6 +501,7 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
   }
 #endif
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
   if (strcmp(name, kParam_tune) == 0) {
     if (strcmp(value, "vq") == 0) {
       encoder->tune = encoder_struct_svt::Tune_VQ;
@@ -508,22 +516,26 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
       return heif_error_ok;
     }
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
 static void save_strcpy(char* dst, int dst_size, const char* src)
 {
   strncpy(dst, src, dst_size - 1);
   dst[dst_size - 1] = 0;
 }
+#endif
 
 
 struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
                                            char* value, int value_size)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  (void)encoder;
 
 #if 0
   if (strcmp(name, kParam_chroma) == 0) {
@@ -545,6 +557,7 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
   }
 #endif
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
   if (strcmp(name, kParam_tune) == 0) {
     switch (encoder->tune) {
       case encoder_struct_svt::Tune_VQ:
@@ -563,6 +576,7 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
     }
     return heif_error_ok;
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
@@ -783,7 +797,9 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.tile_rows = int_log2(encoder->tile_rows);
   svt_config.tile_columns = int_log2(encoder->tile_cols);
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
   svt_config.tune = encoder->tune;
+#endif
 
   svt_config.enc_mode = (int8_t) encoder->speed;
 
