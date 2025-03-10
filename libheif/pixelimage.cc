@@ -307,7 +307,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
       memory_margin = min_memory_margin;
     }
 
-    if (std::numeric_limits<size_t>::max() - memory_margin > allocation_size) {
+    if (std::numeric_limits<size_t>::max() - memory_margin < allocation_size) {
       return {heif_error_Memory_allocation_error,
               heif_suberror_Unspecified,
               "memory size integer overflow"};
@@ -346,12 +346,13 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
 
     int ret = mlock(allocated_mem, allocation_size);
     if (ret != 0) {
+      std::stringstream sstr;
+      sstr << "Cannot lock " << allocation_size << " bytes of memory, OS error: " << strerror(errno);
+
       delete[] allocated_mem;
       allocated_mem = nullptr;
       allocation_size = 0;
 
-      std::stringstream sstr;
-      sstr << "Cannot lock memory, OS error: " << strerror(errno);
       return {heif_error_Memory_allocation_error,
               heif_suberror_Unspecified,
               sstr.str()};

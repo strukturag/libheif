@@ -140,6 +140,7 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   dst->max_children_per_box = src->max_children_per_box;
 
   if (src->version >= 2) {
+    dst->min_memory_margin = src->min_memory_margin;
     dst->max_memory_margin = src->max_memory_margin;
   }
 }
