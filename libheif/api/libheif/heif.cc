@@ -536,7 +536,7 @@ struct heif_error heif_context_set_security_limits(struct heif_context* ctx, con
             heif_suberror_Null_pointer_argument};
   }
 
-  if (limits->min_memory_margin > limits->max_memory_margin) {
+  if (limits->version >= 2 && limits->min_memory_margin > limits->max_memory_margin) {
     return {heif_error_Usage_error,
             heif_suberror_Invalid_parameter_value,
             "max_memory_margin must be >= min_memory_margin"};
