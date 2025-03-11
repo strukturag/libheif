@@ -282,6 +282,28 @@ int main(int argc, char** argv)
     }
 
 
+    // --- wait for image presentation time
+
+    uint32_t duration = heif_image_get_sample_duration(out_image);
+    uint64_t timescale = heif_track_get_timescale(track);
+    uint64_t duration_ms = duration * 1000 / timescale;
+
+    if (option_show_frame_duration) {
+      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
+    }
+
+    static const uint64_t start_time = SDL_GetTicks64();
+    static uint64_t next_frame_pts = 0;
+
+    uint64_t now_time = SDL_GetTicks64();
+    uint64_t elapsed_time = (now_time - start_time);
+    if (elapsed_time < next_frame_pts) {
+      SDL_Delay(next_frame_pts - elapsed_time);
+    }
+
+    next_frame_pts += duration_ms / option_speedup;
+
+
     // --- display image
 
     size_t stride_Y, stride_Cb, stride_Cr;
@@ -308,27 +330,6 @@ int main(int argc, char** argv)
         heif_image_get_tai_timestamp(out_image, &timestamp);
         std::cout << "TAI timestamp: " << timestamp.tai_timestamp << "\n";
       }
-    }
-
-    // --- wait for image duration
-
-    uint32_t duration = heif_image_get_sample_duration(out_image);
-    uint64_t timescale = heif_track_get_timescale(track);
-    uint64_t duration_ms = duration * 1000 / timescale;
-
-    if (option_show_frame_duration) {
-      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
-    }
-
-    static const uint64_t start_time = SDL_GetTicks64();
-    static uint64_t frame_end_time = 0;
-
-    frame_end_time += duration_ms / option_speedup;
-
-    uint64_t now_time = SDL_GetTicks64();
-    uint64_t elapsed_time = (now_time - start_time);
-    if (elapsed_time < frame_end_time) {
-      SDL_Delay(frame_end_time - elapsed_time);
     }
 
     heif_image_release(out_image);
