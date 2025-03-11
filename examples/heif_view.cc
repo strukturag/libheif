@@ -332,6 +332,10 @@ int main(int argc, char** argv)
     }
 
     heif_image_release(out_image);
+
+    if (sdlWindow.doQuit()) {
+      break;
+    }
   }
 
   sdlWindow.close();
