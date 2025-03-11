@@ -67,7 +67,8 @@ static void show_help(const char* argv0)
                "  -h, --help                     show help\n"
                "  -v, --version                  show version\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
-               "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n";
+               "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n"
+               "      --speedup FACTOR           increase playback speed by FACTOR\n";
 }
 
 
@@ -85,29 +86,17 @@ private:
 };
 
 
-int option_quiet = 0;
-int option_aux = 0;
-int option_no_colons = 0;
-int option_with_xmp = 0;
-int option_with_exif = 0;
-int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
-int option_png_compression_level = -1; // use zlib default
-int option_output_tiles = 0;
-int option_disable_limits = 0;
-int option_sequence = 0;
-std::string output_filename;
+double option_speedup = 1.0;
 
-std::string chroma_upsampling;
-
-#define OPTION_PNG_COMPRESSION_LEVEL 1000
-
+const int OPTION_SPEEDUP = 1000;
 
 static struct option long_options[] = {
     {(char* const) "decoder",       required_argument, 0,                     'd'},
     {(char* const) "list-decoders", no_argument,       &option_list_decoders, 1},
     {(char* const) "help",          no_argument,       0,                     'h'},
     {(char* const) "version",       no_argument,       0,                     'v'},
+    {(char* const) "speedup",       required_argument, 0,                     OPTION_SPEEDUP},
     {nullptr,                       no_argument,       nullptr,               0}
 };
 
@@ -144,6 +133,13 @@ int main(int argc, char** argv)
       case 'v':
         show_version();
         return 0;
+      case OPTION_SPEEDUP:
+        option_speedup = atof(optarg);
+        if (option_speedup <= 0) {
+          std::cerr << "Speedup must be positive.\n";
+          return 5;
+        }
+        break;
     }
   }
 
@@ -203,7 +199,7 @@ int main(int argc, char** argv)
   // --- open output window
 
   SDL_YUV_Display sdlWindow;
-  bool success = sdlWindow.init(w,h, SDL_YUV_Display::SDL_CHROMA_420);
+  bool success = sdlWindow.init(w, h, SDL_YUV_Display::SDL_CHROMA_420);
   if (!success) {
     std::cerr << "Cannot open output window\n";
     return 10;
@@ -248,15 +244,18 @@ int main(int argc, char** argv)
 
     uint32_t duration = heif_image_get_sample_duration(out_image);
     uint64_t timescale = heif_context_get_sequence_timescale(ctx);
-    uint64_t duration_ms = duration*1000/timescale;
+    uint64_t duration_ms = duration * 1000 / timescale;
 
     static const uint64_t start_time = SDL_GetTicks64();
     static uint64_t frame_end_time = 0;
 
-    frame_end_time += duration_ms;
+    frame_end_time += duration_ms / option_speedup;
 
     uint64_t now_time = SDL_GetTicks64();
-    SDL_Delay(frame_end_time - (now_time - start_time));
+    uint64_t elapsed_time = (now_time - start_time);
+    if (elapsed_time < frame_end_time) {
+      SDL_Delay(frame_end_time - elapsed_time);
+    }
 
     heif_image_release(out_image);
   }
