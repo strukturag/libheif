@@ -71,7 +71,8 @@ static void show_help(const char* argv0)
                "      --speedup FACTOR           increase playback speed by FACTOR\n"
                "      --show-sai                 show sample auxiliary information\n"
                "      --show-frame-duration      show each frame duration in milliseconds\n"
-               "      --show-all                 show all extra information";
+               "      --show-track-metadata      show metadata attached to the track (e.g. TAI config)\n"
+               "      --show-all                 show all extra information\n";
 }
 
 
@@ -93,11 +94,13 @@ int option_list_decoders = 0;
 double option_speedup = 1.0;
 bool option_show_sai = false;
 bool option_show_frame_duration = false;
+bool option_show_track_metadata = false;
 
 const int OPTION_SPEEDUP = 1000;
 const int OPTION_SHOW_SAI = 1001;
 const int OPTION_SHOW_FRAME_DURATION = 1002;
-const int OPTION_SHOW_ALL = 1003;
+const int OPTION_SHOW_TRACK_METADATA = 1003;
+const int OPTION_SHOW_ALL = 1004;
 
 static struct option long_options[] = {
     {(char* const) "decoder",             required_argument, 0,                     'd'},
@@ -107,6 +110,7 @@ static struct option long_options[] = {
     {(char* const) "speedup",             required_argument, 0,                     OPTION_SPEEDUP},
     {(char* const) "show-sai",            no_argument,       0,                     OPTION_SHOW_SAI},
     {(char* const) "show-frame-duration", no_argument,       0,                     OPTION_SHOW_FRAME_DURATION},
+    {(char* const) "show-track-metadata", no_argument,       0,                     OPTION_SHOW_TRACK_METADATA},
     {(char* const) "show-all",            no_argument,       0,                     OPTION_SHOW_ALL},
     {nullptr,                             no_argument,       nullptr,               0}
 };
@@ -160,9 +164,14 @@ int main(int argc, char** argv)
         option_show_frame_duration = true;
         show_frame_number = true;
         break;
+      case OPTION_SHOW_TRACK_METADATA:
+        option_show_track_metadata = true;
+        show_frame_number = true;
+        break;
       case OPTION_SHOW_ALL:
         option_show_sai = true;
         option_show_frame_duration = true;
+        option_show_track_metadata = true;
         show_frame_number = true;
         break;
     }
@@ -220,6 +229,24 @@ int main(int argc, char** argv)
   uint16_t w, h;
   heif_track_get_image_resolution(track, &w, &h);
 
+
+  // --- show track properties
+
+  if (option_show_track_metadata) {
+    const char* track_contentId = heif_track_get_gimi_track_content_id(track);
+    if (track_contentId) {
+      std::cout << "track content ID: " << track_contentId << "\n";
+      heif_string_release(track_contentId);
+    }
+
+    heif_tai_clock_info taic;
+    taic.version = 1;
+    int have_taic = heif_track_get_tai_clock_info_of_first_cluster(track, &taic);
+    if (have_taic) {
+      std::cout << "track taic: " << taic.time_uncertainty << " / " << taic.clock_resolution << " / "
+                << taic.clock_drift_rate << " / " << int(taic.clock_type) << "\n";
+    }
+  }
 
   // --- open output window
 
