@@ -300,7 +300,7 @@ void HeifContext::write(StreamWriter& writer)
       uint32_t media_timescale = track.second->get_timescale();
 
       uint32_t mvhd_timescale = m_heif_file->get_mvhd_box()->get_time_scale();
-      if (mvhd_timescale==0) {
+      if (mvhd_timescale == 0) {
         mvhd_timescale = track.second->get_timescale();
         m_heif_file->get_mvhd_box()->set_time_scale(mvhd_timescale);
       }
@@ -339,7 +339,9 @@ void HeifContext::write(StreamWriter& writer)
 
   // --- sort item properties
 
-  m_heif_file->get_ipma_box()->sort_properties(m_heif_file->get_ipco_box());
+  if (auto ipma = m_heif_file->get_ipma_box()) {
+    ipma->sort_properties(m_heif_file->get_ipco_box());
+  }
 
   // --- write to file
 
