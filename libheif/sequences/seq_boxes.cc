@@ -1436,8 +1436,9 @@ void Box_saiz::add_sample_size(uint8_t s)
   if (m_default_sample_info_size != 0) {
     for (uint32_t i = 0; i < m_num_samples; i++) {
       m_sample_sizes.push_back(m_default_sample_info_size);
-      m_default_sample_info_size = 0;
     }
+
+    m_default_sample_info_size = 0;
   }
 
   // add the new sample size
