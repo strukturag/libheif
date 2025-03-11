@@ -243,8 +243,10 @@ int main(int argc, char** argv)
     // --- wait for image duration
 
     uint32_t duration = heif_image_get_sample_duration(out_image);
-    uint64_t timescale = heif_context_get_sequence_timescale(ctx);
+    uint64_t timescale = heif_track_get_timescale(track);
     uint64_t duration_ms = duration * 1000 / timescale;
+
+    std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
 
     static const uint64_t start_time = SDL_GetTicks64();
     static uint64_t frame_end_time = 0;

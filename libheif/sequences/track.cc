@@ -259,6 +259,11 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
+  m_mdhd = mdia->get_child_box<Box_mdhd>();
+  if (!m_mdhd) {
+    return;
+  }
+
   auto stbl = m_minf->get_child_box<Box_stbl>();
   if (!stbl) {
     return;

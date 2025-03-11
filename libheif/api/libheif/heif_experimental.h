@@ -640,6 +640,9 @@ LIBHEIF_API
 enum heif_track_type heif_track_get_track_type(struct heif_track*);
 
 LIBHEIF_API
+uint32_t heif_track_get_timescale(struct heif_track*);
+
+LIBHEIF_API
 uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
 
 // Free the returned string with 'heif_string_release()'

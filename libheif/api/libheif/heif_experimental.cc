@@ -714,6 +714,12 @@ enum heif_track_type heif_track_get_track_type(struct heif_track* track)
 }
 
 
+uint32_t heif_track_get_timescale(struct heif_track* track)
+{
+  return track->track->get_timescale();
+}
+
+
 uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track* track)
 {
   return track->track->get_first_cluster_sample_entry_type();
