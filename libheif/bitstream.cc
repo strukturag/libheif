@@ -360,7 +360,7 @@ float BitstreamRange::read_float32()
   // TODO: I am not sure this works everywhere as there seem to be systems where
   //       the float byte order is different from the integer endianness
   //       https://en.wikipedia.org/wiki/Endianness#Floating_point
-  int i = read32();
+  uint32_t i = read32();
   float f;
   memcpy(&f, &i, sizeof(float));
   return f;
