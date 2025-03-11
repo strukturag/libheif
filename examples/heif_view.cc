@@ -68,7 +68,10 @@ static void show_help(const char* argv0)
                "  -v, --version                  show version\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n"
-               "      --speedup FACTOR           increase playback speed by FACTOR\n";
+               "      --speedup FACTOR           increase playback speed by FACTOR\n"
+               "      --show-sai                 show sample auxiliary information\n"
+               "      --show-frame-duration      show each frame duration in milliseconds\n"
+               "      --show-all                 show all extra information";
 }
 
 
@@ -88,16 +91,24 @@ private:
 
 int option_list_decoders = 0;
 double option_speedup = 1.0;
+bool option_show_sai = false;
+bool option_show_frame_duration = false;
 
 const int OPTION_SPEEDUP = 1000;
+const int OPTION_SHOW_SAI = 1001;
+const int OPTION_SHOW_FRAME_DURATION = 1002;
+const int OPTION_SHOW_ALL = 1003;
 
 static struct option long_options[] = {
-    {(char* const) "decoder",       required_argument, 0,                     'd'},
-    {(char* const) "list-decoders", no_argument,       &option_list_decoders, 1},
-    {(char* const) "help",          no_argument,       0,                     'h'},
-    {(char* const) "version",       no_argument,       0,                     'v'},
-    {(char* const) "speedup",       required_argument, 0,                     OPTION_SPEEDUP},
-    {nullptr,                       no_argument,       nullptr,               0}
+    {(char* const) "decoder",             required_argument, 0,                     'd'},
+    {(char* const) "list-decoders",       no_argument,       &option_list_decoders, 1},
+    {(char* const) "help",                no_argument,       0,                     'h'},
+    {(char* const) "version",             no_argument,       0,                     'v'},
+    {(char* const) "speedup",             required_argument, 0,                     OPTION_SPEEDUP},
+    {(char* const) "show-sai",            no_argument,       0,                     OPTION_SHOW_SAI},
+    {(char* const) "show-frame-duration", no_argument,       0,                     OPTION_SHOW_FRAME_DURATION},
+    {(char* const) "show-all",            no_argument,       0,                     OPTION_SHOW_ALL},
+    {nullptr,                             no_argument,       nullptr,               0}
 };
 
 
@@ -115,6 +126,7 @@ int main(int argc, char** argv)
   LibHeifInitializer initializer;
 
   const char* decoder_id = nullptr;
+  bool show_frame_number = false;
 
   while (true) {
     int option_index = 0;
@@ -139,6 +151,19 @@ int main(int argc, char** argv)
           std::cerr << "Speedup must be positive.\n";
           return 5;
         }
+        break;
+      case OPTION_SHOW_SAI:
+        option_show_sai = true;
+        show_frame_number = true;
+        break;
+      case OPTION_SHOW_FRAME_DURATION:
+        option_show_frame_duration = true;
+        show_frame_number = true;
+        break;
+      case OPTION_SHOW_ALL:
+        option_show_sai = true;
+        option_show_frame_duration = true;
+        show_frame_number = true;
         break;
     }
   }
@@ -212,7 +237,7 @@ int main(int argc, char** argv)
 
   // --- decoding loop
 
-  for (;;) {
+  for (int frameNr = 1;; frameNr++) {
     heif_image* out_image = nullptr;
 
     // --- decode next sequence image
@@ -239,6 +264,24 @@ int main(int argc, char** argv)
 
     sdlWindow.display(p_Y, p_Cb, p_Cr, stride_Y, stride_Cb);
 
+    if (show_frame_number) {
+      std::cout << "--- frame " << frameNr << "\n";
+    }
+
+    if (option_show_sai) {
+      const char* contentID = heif_image_get_gimi_sample_content_id(out_image);
+      if (contentID) {
+        std::cout << "GIMI content id: " << contentID << "\n";
+        heif_string_release(contentID);
+      }
+
+      if (heif_image_has_tai_timestamp(out_image)) {
+        struct heif_tai_timestamp_packet timestamp;
+        timestamp.version = 1;
+        heif_image_get_tai_timestamp(out_image, &timestamp);
+        std::cout << "TAI timestamp: " << timestamp.tai_timestamp << "\n";
+      }
+    }
 
     // --- wait for image duration
 
@@ -246,7 +289,9 @@ int main(int argc, char** argv)
     uint64_t timescale = heif_track_get_timescale(track);
     uint64_t duration_ms = duration * 1000 / timescale;
 
-    std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
+    if (option_show_frame_duration) {
+      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
+    }
 
     static const uint64_t start_time = SDL_GetTicks64();
     static uint64_t frame_end_time = 0;
