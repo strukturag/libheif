@@ -54,10 +54,6 @@
 #include "getopt.h"
 #endif
 
-#if _WIN32
-#include "Windows.h"
-#endif
-
 #define UNUSED(x) (void)x
 
 
@@ -257,14 +253,7 @@ int main(int argc, char** argv)
 
     uint64_t duration_ms = duration*1000/timescale;
 
-#if _WIN32
-    Sleep(duration_ms);
-#else
-    timespec ts;
-    ts.tv_sec = duration_ms / 1000;
-    ts.tv_nsec = (duration_ms % 1000) * 1000000;
-    nanosleep(&ts, nullptr);
-#endif
+    SDL_Delay(duration_ms);
 
     heif_image_release(out_image);
   }
