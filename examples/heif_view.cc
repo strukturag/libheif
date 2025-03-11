@@ -225,16 +225,14 @@ int main(int argc, char** argv)
                                        heif_colorspace_YCbCr, // TODO: find best format
                                        heif_chroma_420,
                                        decode_options.get());
-    if (err.code) {
+    if (err.code == heif_error_End_of_sequence) {
+      break;
+    }
+    else if (err.code) {
       std::cerr << err.message << "\n";
       return 1;
     }
 
-    // end of sequence
-
-    if (out_image == nullptr) {
-      break;
-    }
 
     // --- display image
 

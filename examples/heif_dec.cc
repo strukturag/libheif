@@ -827,13 +827,12 @@ int main(int argc, char** argv)
                                          encoder->colorspace(false),
                                          encoder->chroma(false, bit_depth),
                                          decode_options.get());
-      if (err.code) {
+      if (err.code == heif_error_End_of_sequence) {
+        break;
+      }
+      else if (err.code) {
         std::cerr << err.message << "\n";
         return 1;
-      }
-
-      if (out_image == nullptr) {
-        break;
       }
 
       std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
