@@ -78,17 +78,6 @@ static struct option long_options[] = {
     {0, 0,                                    0, 0}
 };
 
-// Note: the same function is also exists in common_utils.h, but is not in the public API.
-static const char* fourcc_to_string(uint32_t fourcc)
-{
-  static char fcc[5];
-  fcc[0] = (char) ((fourcc >> 24) & 0xFF);
-  fcc[1] = (char) ((fourcc >> 16) & 0xFF);
-  fcc[2] = (char) ((fourcc >> 8) & 0xFF);
-  fcc[3] = (char) ((fourcc >> 0) & 0xFF);
-  fcc[4] = 0;
-  return fcc;
-}
 
 void show_help(const char* argv0)
 {
@@ -366,7 +355,7 @@ int main(int argc, char** argv)
     // --- color profile
 
     uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
-    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType) : "no");
+    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType).c_str() : "no");
 
 
     // --- depth information
