@@ -558,7 +558,7 @@ size_t heif_track_get_number_of_track_reference_types(heif_track* track)
 }
 
 
-void heif_track_get_track_reference_types(heif_track* track, uint32_t reference_types[])
+void heif_track_get_track_reference_types(heif_track* track, uint32_t out_reference_types[])
 {
   auto tref = track->track->get_tref_box();
   if (!tref) {
@@ -567,7 +567,7 @@ void heif_track_get_track_reference_types(heif_track* track, uint32_t reference_
 
   auto refTypes = tref->get_reference_types();
   for (size_t i = 0; i < refTypes.size(); i++) {
-    reference_types[i] = refTypes[i];
+    out_reference_types[i] = refTypes[i];
   }
 }
 

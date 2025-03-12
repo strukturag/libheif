@@ -933,15 +933,29 @@ enum heif_track_reference_type {
 LIBHEIF_API
 void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, heif_track* to_track);
 
+/**
+ * Return the number of different reference types used in this track's tref box.
+ */
 LIBHEIF_API
 size_t heif_track_get_number_of_track_reference_types(heif_track*);
 
+/**
+ * List the reference types used in this track.
+ * The passed array must have heif_track_get_number_of_track_reference_types() entries.
+ */
 LIBHEIF_API
-void heif_track_get_track_reference_types(heif_track*, uint32_t reference_types[]);
+void heif_track_get_track_reference_types(heif_track*, uint32_t out_reference_types[]);
 
+/**
+ * Get the number of references of the passed type.
+ */
 LIBHEIF_API
 size_t heif_track_get_number_of_track_reference_of_type(heif_track*, uint32_t reference_type);
 
+/**
+ * List the track ids this track points to with the passed reference type.
+ * The passed array must have heif_track_get_number_of_track_reference_of_type() entries.
+ */
 LIBHEIF_API
 size_t heif_track_get_references_from_track(heif_track*, uint32_t reference_type, uint32_t out_to_track_id[]);
 
