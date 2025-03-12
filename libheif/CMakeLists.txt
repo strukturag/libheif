@@ -153,9 +153,9 @@ endif ()
 
 option(ENABLE_EXPERIMENTAL_FEATURES "Compile experimental features and install headers with unstable API" OFF)
 if (ENABLE_EXPERIMENTAL_FEATURES)
-    target_sources(heif PRIVATE api/libheif/heif_experimental.h api/libheif/heif_experimental.cc)
+    target_sources(heif PRIVATE api/libheif/heif_experimental.h api/libheif/heif_experimental.cc api/libheif/heif_sequences.h api/libheif/heif_sequences.cc)
 
-    list(APPEND libheif_headers api/libheif/heif_experimental.h)
+    list(APPEND libheif_headers api/libheif/heif_experimental.h api/libheif/heif_sequences.h)
 
     target_compile_definitions(heif PUBLIC HEIF_ENABLE_EXPERIMENTAL_FEATURES)
 endif()

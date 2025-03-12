@@ -27,6 +27,7 @@
 #include <cstring>
 #include <getopt.h>
 #include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
 
 #if defined(HAVE_UNISTD_H)
 

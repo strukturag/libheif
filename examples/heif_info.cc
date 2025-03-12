@@ -41,6 +41,7 @@
 #include <libheif/heif_regions.h>
 #include <libheif/heif_properties.h>
 #include <libheif/heif_experimental.h>
+#include "libheif/heif_sequences.h"
 
 #include <fstream>
 #include <iostream>

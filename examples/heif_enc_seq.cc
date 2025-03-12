@@ -53,6 +53,7 @@
 #include "benchmark.h"
 #include "common.h"
 #include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
 
 int master_alpha = 1;
 int thumb_alpha = 1;

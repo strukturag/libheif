@@ -54,6 +54,7 @@
 #include "common.h"
 #include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
 
 // --- command line parameters
 

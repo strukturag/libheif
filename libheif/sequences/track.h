@@ -24,7 +24,7 @@
 #include "error.h"
 #include "libheif/api_structs.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
 
 class HeifContext;
 

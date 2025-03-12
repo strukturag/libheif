@@ -35,6 +35,7 @@
 #include "sequences/track.h"
 #include "sequences/track_visual.h"
 #include "sequences/track_metadata.h"
+#include "libheif/heif_sequences.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
