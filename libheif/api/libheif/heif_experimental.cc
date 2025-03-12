@@ -354,8 +354,8 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
 }
 
 
-struct heif_error heif_track_get_raw_sequence_sample(struct heif_track* track_ptr,
-                                                     heif_raw_sequence_sample** out_sample)
+struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* track_ptr,
+                                                          heif_raw_sequence_sample** out_sample)
 {
   auto track = track_ptr->track;
 
@@ -383,8 +383,10 @@ void heif_raw_sequence_sample_release(const heif_raw_sequence_sample* sample)
   delete sample;
 }
 
-const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample* sample)
+const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample* sample, size_t* out_array_size)
 {
+  if (out_array_size) { *out_array_size = sample->data.size(); }
+
   return sample->data.data();
 }
 
@@ -410,32 +412,17 @@ int heif_raw_sequence_sample_has_tai_timestamp(const struct heif_raw_sequence_sa
   return sample->timestamp ? 1 : 0;
 }
 
-struct heif_error heif_raw_sequence_sample_get_tai_timestamp(const struct heif_raw_sequence_sample* sample,
-                                                             struct heif_tai_timestamp_packet* out_timestamp)
+const struct heif_tai_timestamp_packet* heif_raw_sequence_sample_get_tai_timestamp(const struct heif_raw_sequence_sample* sample)
 {
   if (!sample->timestamp) {
-    return {
-      heif_error_Usage_error,
-      heif_suberror_Unspecified,
-      "sample has no TAI timestamp"
-    };
+    return nullptr;
   }
 
-  if (out_timestamp) {
-    heif_tai_timestamp_packet_copy(out_timestamp, sample->timestamp);
-  }
-
-  return heif_error_ok;
+  return sample->timestamp;
 }
 
 
-uint32_t heif_image_get_sample_duration(heif_image* img)
-{
-  return img->image->get_sample_duration();
-}
-
-
-uint64_t heif_context_get_sequence_timescale(heif_context* ctx)
+uint32_t heif_context_get_sequence_timescale(heif_context* ctx)
 {
   return ctx->context->get_sequence_timescale();
 }
@@ -471,7 +458,7 @@ struct heif_error heif_track_get_image_resolution(heif_track* track_ptr, uint16_
 
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
                                                          struct heif_track_info* info,
-                                                         enum heif_track_type track_type,
+                                                         heif_track_type track_type,
                                                          heif_track** out_track)
 {
   if (track_type != heif_track_type_video &&
@@ -481,9 +468,7 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint
             "visual track has to be of type video or image sequence"};
   }
 
-  uint32_t handler_type = static_cast<uint32_t>(track_type);
-
-  Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(info, handler_type, width,height);
+  Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(info, track_type, width,height);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }
@@ -547,7 +532,23 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 
 void heif_image_set_gimi_sample_content_id(heif_image* img, const char* contentID)
 {
-  img->image->set_gimi_sample_content_id(contentID);
+  if (contentID) {
+    img->image->set_gimi_sample_content_id(contentID);
+  }
+  else {
+    img->image->set_gimi_sample_content_id({});
+  }
+}
+
+
+void heif_raw_sequence_sample_set_gimi_sample_content_id(heif_raw_sequence_sample* sample, const char* contentID)
+{
+  if (contentID) {
+    sample->gimi_sample_content_id = contentID;
+  }
+  else {
+    sample->gimi_sample_content_id.clear();
+  }
 }
 
 
@@ -632,11 +633,11 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 }
 
 
-struct heif_error heif_track_add_metadata(struct heif_track* track,
-                                          const uint8_t* data, uint32_t length,
-                                          uint32_t duration,
-                                          const heif_tai_timestamp_packet* timestamp,
-                                          const char* gimi_track_content_id)
+struct heif_error heif_track_add_raw_sequence_sample(struct heif_track* track,
+                                                     const uint8_t* data, uint32_t length,
+                                                     uint32_t duration,
+                                                     const heif_tai_timestamp_packet* timestamp,
+                                                     const char* gimi_track_content_id)
 {
   auto metadata_track = std::dynamic_pointer_cast<Track_Metadata>(track->track);
   if (!metadata_track) {
@@ -668,7 +669,7 @@ int heif_context_number_of_sequence_tracks(const struct heif_context* ctx)
   return ctx->context->get_number_of_tracks();
 }
 
-void heif_context_get_track_ids(const struct heif_context* ctx, uint32_t* out_track_id_array)
+void heif_context_get_track_ids(const struct heif_context* ctx, uint32_t out_track_id_array[])
 {
   std::vector<uint32_t> IDs;
   IDs = ctx->context->get_track_IDs();
@@ -678,8 +679,14 @@ void heif_context_get_track_ids(const struct heif_context* ctx, uint32_t* out_tr
   }
 }
 
+uint32_t heif_track_get_id(const struct heif_track* track)
+{
+  return track->track->get_id();
+}
+
+
 // Use id=0 for the first visual track.
-struct heif_track* heif_context_get_track(const struct heif_context* ctx, int32_t track_id)
+struct heif_track* heif_context_get_track(const struct heif_context* ctx, uint32_t track_id)
 {
   auto trackResult = ctx->context->get_track(track_id);
   if (trackResult.error) {
@@ -693,24 +700,9 @@ struct heif_track* heif_context_get_track(const struct heif_context* ctx, int32_
   return track;
 }
 
-uint32_t heif_track_get_handler_type(struct heif_track* track)
+uint32_t heif_track_get_track_handler_type(struct heif_track* track)
 {
   return track->track->get_handler();
-}
-
-enum heif_track_type heif_track_get_track_type(struct heif_track* track)
-{
-  uint32_t handler_type = track->track->get_handler();
-
-  switch (handler_type) {
-    case heif_track_type_video:
-    case heif_track_type_image_sequence:
-    case heif_track_type_metadata:
-      return static_cast<heif_track_type>(handler_type);
-
-    default:
-      return heif_track_type_unknown;
-  }
 }
 
 
@@ -726,16 +718,27 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track* tr
 }
 
 
-const char* heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track)
+heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track, const char** out_uri)
 {
-  std::string uri = track->track->get_first_cluster_urim_uri();
+  Result<std::string> uriResult = track->track->get_first_cluster_urim_uri();
 
-  char* s = new char[uri.size() + 1];
-  strncpy(s, uri.c_str(), uri.size());
-  s[uri.size()] = '\0';
+  if (uriResult.error.error_code) {
+    return uriResult.error.error_struct(track->context.get());
+  }
 
-  return s;
+  if (out_uri) {
+    const std::string& uri = uriResult.value;
+
+    char* s = new char[uri.size() + 1];
+    strncpy(s, uri.c_str(), uri.size());
+    s[uri.size()] = '\0';
+
+    *out_uri = s;
+  }
+
+  return heif_error_ok;
 }
+
 
 void heif_string_release(const char* str)
 {
@@ -743,15 +746,14 @@ void heif_string_release(const char* str)
 }
 
 
-int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, struct heif_tai_clock_info* taic)
+const struct heif_tai_clock_info* heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track)
 {
   auto first_taic = track->track->get_first_cluster_taic();
   if (!first_taic) {
-    return 0;
+    return nullptr;
   }
 
-  first_taic->get_tai_clock_info(taic);
-  return 1;
+  return first_taic->get_tai_clock_info();
 }
 
 
@@ -762,7 +764,7 @@ int heif_track_get_number_of_sample_aux_infos(struct heif_track* track)
 }
 
 
-void heif_track_get_sample_aux_info_types(struct heif_track* track, struct heif_sample_aux_info_type* out_types)
+void heif_track_get_sample_aux_info_types(struct heif_track* track, struct heif_sample_aux_info_type out_types[])
 {
   std::vector<heif_sample_aux_info_type> aux_info_types = track->track->get_sample_aux_info_types();
   for (size_t i=0;i<aux_info_types.size();i++) {

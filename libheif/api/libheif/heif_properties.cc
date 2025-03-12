@@ -434,7 +434,8 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
   }
 
-  taic->get_tai_clock_info(out_clock);
+  const auto* taic_data = taic->get_tai_clock_info();
+  heif_tai_clock_info_copy(out_clock, taic_data);
 
   return heif_error_success;
 }

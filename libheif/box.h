@@ -1735,9 +1735,9 @@ public:
     heif_tai_clock_info_copy(&m_info, info);
   }
 
-  void get_tai_clock_info(heif_tai_clock_info* out_clock)
+  const heif_tai_clock_info* get_tai_clock_info() const
   {
-    heif_tai_clock_info_copy(out_clock, &m_info);
+    return &m_info;
   }
 
 protected:

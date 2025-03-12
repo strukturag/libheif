@@ -62,7 +62,7 @@ void heif_tai_clock_info_release(heif_tai_clock_info* info)
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 {
   if (src->version >= 1 && dst->version >= 1) {
-    dst->timescale = src->timescale;
+    dst->track_timescale = src->track_timescale;
     dst->write_aux_info_interleaved = src->write_aux_info_interleaved;
     dst->with_tai_timestamps = src->with_tai_timestamps;
 
@@ -91,7 +91,7 @@ heif_track_info* heif_track_info_alloc()
   auto* info = new heif_track_info;
   info->version = 1;
 
-  info->timescale = 90000;
+  info->track_timescale = 90000;
   info->write_aux_info_interleaved = false;
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
@@ -434,7 +434,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
   m_trak->append_child_box(mdia);
 
   m_mdhd = std::make_shared<Box_mdhd>();
-  m_mdhd->set_timescale(info->timescale);
+  m_mdhd->set_timescale(info->track_timescale);
   mdia->append_child_box(m_mdhd);
 
   m_hdlr = std::make_shared<Box_hdlr>();
@@ -550,21 +550,27 @@ uint32_t Track::get_first_cluster_sample_entry_type() const
 }
 
 
-std::string Track::get_first_cluster_urim_uri() const
+Result<std::string> Track::get_first_cluster_urim_uri() const
 {
   if (m_stsd->get_num_sample_entries() == 0) {
-    return {};
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "This track has no sample entries."};
   }
 
   std::shared_ptr<const Box> sampleEntry = m_stsd->get_sample_entry(0);
   auto urim = std::dynamic_pointer_cast<const Box_URIMetaSampleEntry>(sampleEntry);
   if (!urim) {
-    return {};
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "This cluster is no 'urim' sample entry."};
   }
 
   std::shared_ptr<const Box_uri> uri = urim->get_child_box<const Box_uri>();
   if (!uri) {
-    return {};
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "The 'urim' box has no 'uri' child box."};
   }
 
   return uri->get_uri();

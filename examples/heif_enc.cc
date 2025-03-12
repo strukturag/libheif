@@ -1683,7 +1683,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     if (first_image) {
       heif_track_info* track_info = heif_track_info_alloc();
 
-      track_info->timescale = sequence_timebase;
+      track_info->track_timescale = sequence_timebase;
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
 

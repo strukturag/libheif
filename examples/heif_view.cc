@@ -239,12 +239,10 @@ int main(int argc, char** argv)
       heif_string_release(track_contentId);
     }
 
-    heif_tai_clock_info taic;
-    taic.version = 1;
-    int have_taic = heif_track_get_tai_clock_info_of_first_cluster(track, &taic);
-    if (have_taic) {
-      std::cout << "track taic: " << taic.time_uncertainty << " / " << taic.clock_resolution << " / "
-                << taic.clock_drift_rate << " / " << int(taic.clock_type) << "\n";
+    const heif_tai_clock_info* taic = heif_track_get_tai_clock_info_of_first_cluster(track);
+    if (taic) {
+      std::cout << "track taic: " << taic->time_uncertainty << " / " << taic->clock_resolution << " / "
+                << taic->clock_drift_rate << " / " << int(taic->clock_type) << "\n";
     }
   }
 
@@ -284,12 +282,12 @@ int main(int argc, char** argv)
 
     // --- wait for image presentation time
 
-    uint32_t duration = heif_image_get_sample_duration(out_image);
+    uint32_t duration = heif_image_get_duration(out_image);
     uint64_t timescale = heif_track_get_timescale(track);
     uint64_t duration_ms = duration * 1000 / timescale;
 
     if (option_show_frame_duration) {
-      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << " = " << duration_ms << " ms\n";
+      std::cout << "sample duration " << heif_image_get_duration(out_image) << " = " << duration_ms << " ms\n";
     }
 
     static const uint64_t start_time = SDL_GetTicks64();

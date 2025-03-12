@@ -1720,7 +1720,7 @@ Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
 }
 
 
-uint64_t HeifContext::get_sequence_timescale() const
+uint32_t HeifContext::get_sequence_timescale() const
 {
   auto mvhd = m_heif_file->get_mvhd_box();
   if (!mvhd) {

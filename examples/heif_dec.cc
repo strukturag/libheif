@@ -760,10 +760,10 @@ int main(int argc, char** argv)
 
     for (uint32_t id : track_ids) {
       heif_track* track = heif_context_get_track(ctx, id);
-      std::cout << "#" << id << " : " << fourcc_to_string(heif_track_get_handler_type(track));
+      std::cout << "#" << id << " : " << fourcc_to_string(heif_track_get_track_handler_type(track));
 
-      if (heif_track_get_track_type(track) == heif_track_type_image_sequence ||
-          heif_track_get_track_type(track) == heif_track_type_video) {
+      if (heif_track_get_track_handler_type(track) == heif_track_type_image_sequence ||
+          heif_track_get_track_handler_type(track) == heif_track_type_video) {
         uint16_t w,h;
         heif_track_get_image_resolution(track, &w, &h);
         std::cout << " " << w << "x" << h;
@@ -772,7 +772,11 @@ int main(int argc, char** argv)
         uint32_t sample_entry_type = heif_track_get_sample_entry_type_of_first_cluster(track);
         std::cout << "\n  sample entry type: " << fourcc_to_string(sample_entry_type);
         if (sample_entry_type == heif_fourcc('u', 'r', 'i', 'm')) {
-          const char* uri = heif_track_get_urim_sample_entry_uri_of_first_cluster(track);
+          const char* uri;
+          err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
+          if (err.code) {
+            std::cerr << "Cannot read 'urim'-track URI: " << err.message << "\n";
+          }
           std::cout << "\n  URI: " << uri;
           heif_string_release(uri);
         }
@@ -781,13 +785,13 @@ int main(int argc, char** argv)
 
         for (;;) {
           struct heif_raw_sequence_sample* sample;
-          err = heif_track_get_raw_sequence_sample(track, &sample);
+          err = heif_track_get_next_raw_sequence_sample(track, &sample);
           if (err.code != 0) {
             break;
           }
 
-          const uint8_t* data = heif_raw_sequence_sample_get_data(sample);
-          size_t dataSize = heif_raw_sequence_sample_get_data_size(sample);
+          size_t dataSize;
+          const uint8_t* data = heif_raw_sequence_sample_get_data(sample, &dataSize);
 
           std::cout << "\n  raw sample: ";
           for (uint32_t i = 0; i < dataSize; i++) {
@@ -812,12 +816,10 @@ int main(int argc, char** argv)
       heif_string_release(track_contentId);
     }
 
-    heif_tai_clock_info taic;
-    taic.version=1;
-    int have_taic = heif_track_get_tai_clock_info_of_first_cluster(track, &taic);
-    if (have_taic) {
-      std::cout << "taic: " << taic.time_uncertainty << " / " << taic.clock_resolution << " / "
-                << taic.clock_drift_rate << " / " << int(taic.clock_type) << "\n";
+    const heif_tai_clock_info* taic = heif_track_get_tai_clock_info_of_first_cluster(track);
+    if (taic) {
+      std::cout << "taic: " << taic->time_uncertainty << " / " << taic->clock_resolution << " / "
+                << taic->clock_drift_rate << " / " << int(taic->clock_type) << "\n";
     }
 
     for (int i=0; ;i++) {
@@ -835,7 +837,7 @@ int main(int argc, char** argv)
         return 1;
       }
 
-      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
+      std::cout << "sample duration " << heif_image_get_duration(out_image) << "\n";
 
       const char* contentID = heif_image_get_gimi_sample_content_id(out_image);
       if (contentID) {

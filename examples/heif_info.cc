@@ -762,12 +762,11 @@ int main(int argc, char** argv)
     for (uint32_t id : track_ids) {
       heif_track* track = heif_context_get_track(context, id);
 
-      uint32_t handler = heif_track_get_handler_type(track);
+      heif_track_type handler = heif_track_get_track_handler_type(track);
       std::cout << "track " << id << "\n";
       std::cout << "  handler: '" << fourcc_to_string(handler) << "' = ";
 
-      heif_track_type type = heif_track_get_track_type(track);
-      switch (type) {
+      switch (handler) {
         case heif_track_type_image_sequence:
           std::cout << "image sequence\n";
           break;
@@ -777,14 +776,13 @@ int main(int argc, char** argv)
         case heif_track_type_metadata:
           std::cout << "metadata\n";
           break;
-        case heif_track_type_unknown:
         default:
           std::cout << "unknown\n";
           break;
       }
 
-      if (type == heif_track_type_video ||
-          type == heif_track_type_image_sequence) {
+      if (handler == heif_track_type_video ||
+          handler == heif_track_type_image_sequence) {
         uint16_t w, h;
         heif_track_get_image_resolution(track, &w, &h);
         std::cout << "  resolution: " << w << "x" << h << "\n";
@@ -794,7 +792,11 @@ int main(int argc, char** argv)
       std::cout << "  sample entry type: " << fourcc_to_string(sampleEntryType) << "\n";
 
       if (sampleEntryType == heif_fourcc('u', 'r', 'i', 'm')) {
-        const char* uri = heif_track_get_urim_sample_entry_uri_of_first_cluster(track);
+        const char* uri;
+        err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
+        if (err.code) {
+          std::cerr << "error reading urim-track uri: " << err.message << "\n";
+        }
         std::cout << "  uri: " << uri << "\n";
         heif_string_release(uri);
       }
