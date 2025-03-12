@@ -9,6 +9,7 @@ set(libheif_headers
         api/libheif/heif_properties.h
         api/libheif/heif_regions.h
         api/libheif/heif_items.h
+        api/libheif/heif_sequences.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
@@ -49,6 +50,7 @@ set(libheif_sources
         api/libheif/heif_plugin.cc
         api/libheif/heif_properties.cc
         api/libheif/heif_items.cc
+        api/libheif/heif_sequences.cc
         codecs/decoder.h
         codecs/decoder.cc
         codecs/encoder.h
@@ -153,9 +155,9 @@ endif ()
 
 option(ENABLE_EXPERIMENTAL_FEATURES "Compile experimental features and install headers with unstable API" OFF)
 if (ENABLE_EXPERIMENTAL_FEATURES)
-    target_sources(heif PRIVATE api/libheif/heif_experimental.h api/libheif/heif_experimental.cc api/libheif/heif_sequences.h api/libheif/heif_sequences.cc)
+    target_sources(heif PRIVATE api/libheif/heif_experimental.h api/libheif/heif_experimental.cc)
 
-    list(APPEND libheif_headers api/libheif/heif_experimental.h api/libheif/heif_sequences.h)
+    list(APPEND libheif_headers api/libheif/heif_experimental.h)
 
     target_compile_definitions(heif PUBLIC HEIF_ENABLE_EXPERIMENTAL_FEATURES)
 endif()

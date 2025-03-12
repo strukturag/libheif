@@ -1252,11 +1252,13 @@ int main(int argc, char** argv)
       first_image = false;
     }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     // add a dummy timestamp
     heif_tai_timestamp_packet* tai = heif_tai_timestamp_packet_alloc();
     tai->tai_timestamp = optind; // just some increasing dummy number
     heif_image_set_tai_timestamp(image.get(), tai);
     heif_tai_timestamp_packet_release(tai);
+#endif
 
     // add a dummy sample ContentID
     std::string contentId = input_filename;
