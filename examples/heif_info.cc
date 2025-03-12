@@ -817,6 +817,28 @@ int main(int argc, char** argv)
       }
       std::cout << "\n";
 
+
+      size_t nRefTypes = heif_track_get_number_of_track_reference_types(track);
+
+      if (nRefTypes > 0) {
+        std::cout << "  references:\n";
+        std::vector<uint32_t> refTypes(nRefTypes);
+        heif_track_get_track_reference_types(track, refTypes.data());
+
+        for (uint32_t refType : refTypes) {
+          std::cout << "    " << fourcc_to_string(refType) << ": ";
+
+          size_t n = heif_track_get_number_of_track_reference_of_type(track, refType);
+          std::vector<uint32_t> track_ids(n);
+          heif_track_get_references_from_track(track, refType, track_ids.data());
+          for (size_t i=0;i<n;i++) {
+            if (i>0) std::cout << ", ";
+            std::cout << "track#" << track_ids[i];
+          }
+          std::cout << "\n";
+        }
+      }
+
       heif_track_release(track);
     }
   }

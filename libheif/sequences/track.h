@@ -122,6 +122,8 @@ public:
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
+  std::shared_ptr<const class Box_tref> get_tref_box() const { return m_tref; }
+
   Result<heif_raw_sequence_sample*> get_next_sample_raw_data();
 
   std::vector<heif_sample_aux_info_type> get_sample_aux_info_types() const;

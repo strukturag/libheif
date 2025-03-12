@@ -547,6 +547,58 @@ void heif_track_add_reference_to_track(heif_track* track, uint32_t reference_typ
 }
 
 
+size_t heif_track_get_number_of_track_reference_types(heif_track* track)
+{
+  auto tref = track->track->get_tref_box();
+  if (!tref) {
+    return 0;
+  }
+
+  return tref->get_number_of_reference_types();
+}
+
+
+void heif_track_get_track_reference_types(heif_track* track, uint32_t reference_types[])
+{
+  auto tref = track->track->get_tref_box();
+  if (!tref) {
+    return;
+  }
+
+  auto refTypes = tref->get_reference_types();
+  for (size_t i = 0; i < refTypes.size(); i++) {
+    reference_types[i] = refTypes[i];
+  }
+}
+
+
+size_t heif_track_get_number_of_track_reference_of_type(heif_track* track, uint32_t reference_type)
+{
+  auto tref = track->track->get_tref_box();
+  if (!tref) {
+    return 0;
+  }
+
+  return tref->get_number_of_references_of_type(reference_type);
+}
+
+
+size_t heif_track_get_references_from_track(heif_track* track, uint32_t reference_type, uint32_t out_to_track_id[])
+{
+  auto tref = track->track->get_tref_box();
+  if (!tref) {
+    return 0;
+  }
+
+  auto refs = tref->get_references(reference_type);
+  for (size_t i = 0; i < refs.size(); i++) {
+    out_to_track_id[i] = refs[i];
+  }
+
+  return refs.size();
+}
+
+
 void heif_track_release(heif_track* track)
 {
   delete track;

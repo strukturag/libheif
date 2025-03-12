@@ -468,7 +468,6 @@ heif_error heif_image_extract_area(const heif_image*,
 LIBHEIF_API
 int heif_context_has_sequence(heif_context*);
 
-
 /**
  * Get the timescale (clock ticks per second) for timing values in the sequence.
  *
@@ -815,11 +814,6 @@ LIBHEIF_API
 struct heif_error heif_track_add_raw_sequence_sample(struct heif_track*,
                                                      const heif_raw_sequence_sample*);
 
-//LIBHEIF_API
-//struct heif_error heif_track_add_raw_sequence_sample_easy(struct heif_track*,
-//                                                          const uint8_t* data, uint32_t length,
-//                                                          uint32_t duration);
-
 
 // --- sample auxiliary data
 
@@ -939,7 +933,17 @@ enum heif_track_reference_type {
 LIBHEIF_API
 void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, heif_track* to_track);
 
-// TODO: read track references
+LIBHEIF_API
+size_t heif_track_get_number_of_track_reference_types(heif_track*);
+
+LIBHEIF_API
+void heif_track_get_track_reference_types(heif_track*, uint32_t reference_types[]);
+
+LIBHEIF_API
+size_t heif_track_get_number_of_track_reference_of_type(heif_track*, uint32_t reference_type);
+
+LIBHEIF_API
+size_t heif_track_get_references_from_track(heif_track*, uint32_t reference_type, uint32_t out_to_track_id[]);
 
 
 #ifdef __cplusplus

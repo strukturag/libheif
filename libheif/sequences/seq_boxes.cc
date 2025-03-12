@@ -1824,6 +1824,30 @@ std::vector<uint32_t> Box_tref::get_references(uint32_t ref_type) const
 }
 
 
+size_t Box_tref::get_number_of_references_of_type(uint32_t ref_type) const
+{
+  for (const Reference& ref : m_references) {
+    if (ref.reference_type == ref_type) {
+      return ref.to_track_id.size();
+    }
+  }
+
+  return 0;
+}
+
+
+std::vector<uint32_t> Box_tref::get_reference_types() const
+{
+  std::vector<uint32_t> types;
+  types.reserve(m_references.size());
+  for (const auto& ref : m_references) {
+    types.push_back(ref.reference_type);
+  }
+
+  return types;
+}
+
+
 void Box_tref::add_references(uint32_t to_track_id, uint32_t type)
 {
   for (auto& ref : m_references) {

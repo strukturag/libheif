@@ -247,6 +247,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
+  m_tref = trak_box->get_child_box<Box_tref>();
+
   auto hdlr = mdia->get_child_box<Box_hdlr>();
   if (!hdlr) {
     return;

@@ -824,6 +824,12 @@ public:
 
   std::vector<uint32_t> get_references(uint32_t ref_type) const;
 
+  size_t get_number_of_references_of_type(uint32_t ref_type) const;
+
+  size_t get_number_of_reference_types() const { return m_references.size(); }
+
+  std::vector<uint32_t> get_reference_types() const;
+
   void add_references(uint32_t to_track_id, uint32_t type);
 
 protected:
