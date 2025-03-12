@@ -789,16 +789,36 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,
                                                                const char* uri,
                                                                heif_track** out_track);
 
-// TODO: pass a heif_raw_sequence_sample instead and remove the SAI/duration parameters.
+/**
+ * Allocate a new heif_raw_sequence_sample object.
+ * Free with heif_raw_sequence_sample_release().
+ */
+LIBHEIF_API
+heif_raw_sequence_sample* heif_raw_sequence_sample_alloc();
+
+/**
+ * Set the raw sequence sample data.
+ */
+LIBHEIF_API
+heif_error heif_raw_sequence_sample_set_data(heif_raw_sequence_sample*, const uint8_t* data, size_t size);
+
+/**
+ * Set the sample duration in track timescale units.
+ */
+LIBHEIF_API
+void heif_raw_sequence_sample_set_duration(heif_raw_sequence_sample*, uint32_t duration);
+
 /**
  * Add a raw sequence sample (usually a metadata sample) to the (metadata) track.
  */
 LIBHEIF_API
 struct heif_error heif_track_add_raw_sequence_sample(struct heif_track*,
-                                                     const uint8_t* data, uint32_t length,
-                                                     uint32_t duration,
-                                                     const heif_tai_timestamp_packet* timestamp,
-                                                     const char* gimi_track_content_id);
+                                                     const heif_raw_sequence_sample*);
+
+//LIBHEIF_API
+//struct heif_error heif_track_add_raw_sequence_sample_easy(struct heif_track*,
+//                                                          const uint8_t* data, uint32_t length,
+//                                                          uint32_t duration);
 
 
 // --- sample auxiliary data
@@ -887,6 +907,14 @@ int heif_raw_sequence_sample_has_tai_timestamp(const struct heif_raw_sequence_sa
  */
 LIBHEIF_API
 const struct heif_tai_timestamp_packet* heif_raw_sequence_sample_get_tai_timestamp(const struct heif_raw_sequence_sample*);
+
+/**
+ * Set the TAI timestamp for a raw sequence sample.
+ * The timestamp will be copied, you can release it after calling this function.
+ */
+LIBHEIF_API
+void heif_raw_sequence_sample_set_tai_timestamp(struct heif_raw_sequence_sample* sample,
+                                                const struct heif_tai_timestamp_packet* timestamp);
 
 /**
  * Returns the TAI clock info of the track.

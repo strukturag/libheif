@@ -1235,8 +1235,10 @@ int main(int argc, char** argv)
 
       for (int i=0;i<5;i++) {
         uint8_t data[] = {0x10, 0x20, 0x02, 0x01};
-        heif_error err = heif_track_add_raw_sequence_sample(metadata_track, data, 4,
-                                                            10, nullptr, nullptr);
+        auto* sample = heif_raw_sequence_sample_alloc();
+        heif_raw_sequence_sample_set_data(sample, data, 4);
+        heif_raw_sequence_sample_set_duration(sample, 10);
+        heif_error err = heif_track_add_raw_sequence_sample(metadata_track, sample);
         if (err.code) {
           std::cerr << "error: " << err.message << "\n";
           exit(1);

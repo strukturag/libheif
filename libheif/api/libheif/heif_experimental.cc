@@ -378,10 +378,34 @@ struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* tra
 }
 
 
+heif_raw_sequence_sample* heif_raw_sequence_sample_alloc()
+{
+  return new heif_raw_sequence_sample();
+}
+
+
+heif_error heif_raw_sequence_sample_set_data(heif_raw_sequence_sample* sample, const uint8_t* data, size_t size)
+{
+  // TODO: do we have to check the vector memory allocation?
+
+  sample->data.clear();
+  sample->data.insert(sample->data.begin(), data, data + size);
+
+  return heif_error_ok;
+}
+
+
+void heif_raw_sequence_sample_set_duration(heif_raw_sequence_sample* sample, uint32_t duration)
+{
+  sample->duration = duration;
+}
+
+
 void heif_raw_sequence_sample_release(const heif_raw_sequence_sample* sample)
 {
   delete sample;
 }
+
 
 const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample* sample, size_t* out_array_size)
 {
@@ -419,6 +443,17 @@ const struct heif_tai_timestamp_packet* heif_raw_sequence_sample_get_tai_timesta
   }
 
   return sample->timestamp;
+}
+
+
+void heif_raw_sequence_sample_set_tai_timestamp(struct heif_raw_sequence_sample* sample,
+                                                const struct heif_tai_timestamp_packet* timestamp)
+{
+  // release of timestamp in case we overwrite it
+  heif_tai_timestamp_packet_release(sample->timestamp);
+
+  sample->timestamp = heif_tai_timestamp_packet_alloc();
+  heif_tai_timestamp_packet_copy(sample->timestamp, timestamp);
 }
 
 
@@ -634,10 +669,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
 
 struct heif_error heif_track_add_raw_sequence_sample(struct heif_track* track,
-                                                     const uint8_t* data, uint32_t length,
-                                                     uint32_t duration,
-                                                     const heif_tai_timestamp_packet* timestamp,
-                                                     const char* gimi_track_content_id)
+                                                     const struct heif_raw_sequence_sample* sample)
 {
   auto metadata_track = std::dynamic_pointer_cast<Track_Metadata>(track->track);
   if (!metadata_track) {
@@ -647,13 +679,10 @@ struct heif_error heif_track_add_raw_sequence_sample(struct heif_track* track,
   }
 
   Track_Metadata::Metadata metadata;
-  metadata.raw_metadata.resize(length);
-  memcpy(metadata.raw_metadata.data(), data, length);
-  metadata.duration = duration;
-  metadata.timestamp = timestamp;
-  if (gimi_track_content_id) {
-    metadata.gimi_contentID = gimi_track_content_id;
-  }
+  metadata.raw_metadata = sample->data;
+  metadata.duration = sample->duration;
+  metadata.timestamp = sample->timestamp;
+  metadata.gimi_contentID = sample->gimi_sample_content_id;
 
   auto error = metadata_track->write_raw_metadata(metadata);
   if (error.error_code) {
