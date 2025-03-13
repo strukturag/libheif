@@ -756,6 +756,12 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
   heif_raw_sequence_sample* sample = new heif_raw_sequence_sample();
   sample->data = *readResult.value;
 
+  // read sample duration
+
+  if (m_stts) {
+    sample->duration = m_stts->get_sample_duration(m_next_sample_to_be_processed);
+  }
+
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {

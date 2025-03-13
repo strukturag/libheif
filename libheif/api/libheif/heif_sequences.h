@@ -529,6 +529,14 @@ size_t heif_track_get_number_of_track_reference_of_type(heif_track*, uint32_t re
 LIBHEIF_API
 size_t heif_track_get_references_from_track(heif_track*, uint32_t reference_type, uint32_t out_to_track_id[]);
 
+/**
+ * Find tracks that are referring to the current track through the passed reference_type.
+ * The found track IDs will be filled into the passed array, but no more than `array_size` entries will be filled.
+ *
+ * @return number of tracks found. If this is equal to 'array_size', you should ask again with a larger array size to be sure you got all tracks.
+ */
+LIBHEIF_API
+size_t heif_track_find_referring_tracks(heif_track*, uint32_t reference_type, uint32_t out_track_id[], size_t array_size);
 
 #ifdef __cplusplus
 }

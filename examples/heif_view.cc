@@ -73,6 +73,8 @@ static void show_help(const char* argv0)
                "      --show-sai                 show sample auxiliary information\n"
                "      --show-frame-duration      show each frame duration in milliseconds\n"
                "      --show-track-metadata      show metadata attached to the track (e.g. TAI config)\n"
+               "      --show-metadata-text       show data in metadata track as text\n"
+               "      --show-metadata-hex        show data in metadata track as hex bytes\n"
                "      --show-all                 show all extra information\n";
 }
 
@@ -96,12 +98,19 @@ double option_speedup = 1.0;
 bool option_show_sai = false;
 bool option_show_frame_duration = false;
 bool option_show_track_metadata = false;
+enum {
+  metadata_output_none,
+  metadata_output_text,
+  metadata_output_hex
+} option_metadata_output = metadata_output_none;
 
 const int OPTION_SPEEDUP = 1000;
 const int OPTION_SHOW_SAI = 1001;
 const int OPTION_SHOW_FRAME_DURATION = 1002;
 const int OPTION_SHOW_TRACK_METADATA = 1003;
 const int OPTION_SHOW_ALL = 1004;
+const int OPTION_SHOW_METADATA_TEXT = 1005;
+const int OPTION_SHOW_METADATA_HEX = 1006;
 
 static struct option long_options[] = {
     {(char* const) "decoder",             required_argument, 0,                     'd'},
@@ -112,9 +121,37 @@ static struct option long_options[] = {
     {(char* const) "show-sai",            no_argument,       0,                     OPTION_SHOW_SAI},
     {(char* const) "show-frame-duration", no_argument,       0,                     OPTION_SHOW_FRAME_DURATION},
     {(char* const) "show-track-metadata", no_argument,       0,                     OPTION_SHOW_TRACK_METADATA},
+    {(char* const) "show-metadata-text",  no_argument,       0,                     OPTION_SHOW_METADATA_TEXT},
+    {(char* const) "show-metadata-hex",   no_argument,       0,                     OPTION_SHOW_METADATA_HEX},
     {(char* const) "show-all",            no_argument,       0,                     OPTION_SHOW_ALL},
     {nullptr,                             no_argument,       nullptr,               0}
 };
+
+
+void output_hex(const uint8_t* data, size_t size)
+{
+  std::cout << std::hex << std::setfill('0');
+
+  for (size_t i=0;i<size;i++) {
+    if (i%16==0) {
+      std::cout << std::setw(4) << i << " : ";
+    }
+
+    std::cout << std::setw(2) << (uint16_t)data[i];
+    if (i%16==7)
+      std::cout << "  ";
+    else if (i%16==15)
+      std::cout << '\n';
+    else
+      std::cout << ' ';
+  }
+
+  if (size%16 != 15) {
+    std::cout << '\n';
+  }
+
+  std::cout << std::dec << std::setfill(' ');
+}
 
 
 class LibHeifInitializer {
@@ -174,6 +211,12 @@ int main(int argc, char** argv)
         option_show_frame_duration = true;
         option_show_track_metadata = true;
         show_frame_number = true;
+        break;
+      case OPTION_SHOW_METADATA_TEXT:
+        option_metadata_output = metadata_output_text;
+        break;
+      case OPTION_SHOW_METADATA_HEX:
+        option_metadata_output = metadata_output_hex;
         break;
     }
   }
@@ -247,6 +290,20 @@ int main(int argc, char** argv)
     }
   }
 
+
+  // --- find metadata track
+
+  heif_track* metadata_track = nullptr;
+  if (option_metadata_output != metadata_output_none) {
+    uint32_t metadata_track_id;
+    size_t nMetadataTracks = heif_track_find_referring_tracks(track, heif_track_reference_type_description_of, &metadata_track_id, 1);
+
+    if (nMetadataTracks == 1) {
+      metadata_track = heif_context_get_track(ctx, metadata_track_id);
+    }
+  }
+
+
   // --- open output window
 
   SDL_YUV_Display sdlWindow;
@@ -279,7 +336,6 @@ int main(int argc, char** argv)
       std::cerr << err.message << "\n";
       return 1;
     }
-
 
     // --- wait for image presentation time
 
@@ -333,6 +389,51 @@ int main(int argc, char** argv)
 #endif
     }
 
+    // --- get metadata sample
+
+    static heif_raw_sequence_sample* metadata_sample = nullptr;
+    static uint64_t metadata_sample_display_time = 0;
+
+    if (metadata_track && metadata_sample == nullptr) {
+      err = heif_track_get_next_raw_sequence_sample(metadata_track, &metadata_sample);
+      if (err.code != heif_error_Ok && err.code != heif_error_End_of_sequence) {
+        std::cerr << err.message << "\n";
+        return 10;
+      }
+    }
+
+    // --- show metadata
+
+    while (metadata_sample && metadata_sample_display_time <= elapsed_time) {
+      size_t size;
+      const uint8_t* data = heif_raw_sequence_sample_get_data(metadata_sample, &size);
+
+      std::cout << "timestamp: " << metadata_sample_display_time/1000.0f << "sec\n";
+
+      if (option_metadata_output == metadata_output_text) {
+        std::cout << ((const char*) data) << "\n";
+      }
+      else if (option_metadata_output == metadata_output_hex) {
+        output_hex(data, size);
+        std::cout << '\n';
+      }
+
+      uint64_t timescale = heif_track_get_timescale(metadata_track);
+      uint32_t duration = heif_raw_sequence_sample_get_duration(metadata_sample);
+      metadata_sample_display_time += duration * 1000 / timescale;
+
+      heif_raw_sequence_sample_release(metadata_sample);
+      metadata_sample = nullptr;
+
+      // get next metadata sample
+
+      err = heif_track_get_next_raw_sequence_sample(metadata_track, &metadata_sample);
+      if (err.code != heif_error_Ok && err.code != heif_error_End_of_sequence) {
+        std::cerr << err.message << "\n";
+        return 10;
+      }
+    }
+
     heif_image_release(out_image);
 
     if (sdlWindow.doQuit()) {
@@ -343,6 +444,7 @@ int main(int argc, char** argv)
   sdlWindow.close();
 
   heif_track_release(track);
+  heif_track_release(metadata_track);
 
   return 0;
 }

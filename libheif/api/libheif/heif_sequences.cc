@@ -352,6 +352,54 @@ size_t heif_track_get_references_from_track(heif_track* track, uint32_t referenc
 }
 
 
+size_t heif_track_find_referring_tracks(heif_track* track, uint32_t reference_type, uint32_t out_track_id[], size_t array_size)
+{
+  size_t nFound = 0;
+
+  // iterate through all tracks
+
+  auto trackIDs = track->context->get_track_IDs();
+  for (auto id : trackIDs) {
+    // a track should never reference itself
+    if (id == track->track->get_id()) {
+      continue;
+    }
+
+    // get the other track object
+
+    auto other_trackResult = track->context->get_track(id);
+    if (other_trackResult.error) {
+      continue; // TODO: should we return an error in this case?
+    }
+
+    auto other_track = other_trackResult.value;
+
+    // get the references of the other track
+
+    auto tref = other_track->get_tref_box();
+    if (!tref) {
+      continue;
+    }
+
+    // if the other track has a reference that points to the current track, add the other track to the list
+
+    std::vector<uint32_t> refs = tref->get_references(reference_type);
+    for (uint32_t to_track : refs) {
+      if (to_track == track->track->get_id() && nFound < array_size) {
+        out_track_id[nFound++] = other_track->get_id();
+        break;
+      }
+    }
+
+    // quick exit path
+    if (nFound == array_size)
+      break;
+  }
+
+  return nFound;
+}
+
+
 void heif_track_release(heif_track* track)
 {
   delete track;
