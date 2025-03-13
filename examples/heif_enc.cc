@@ -83,6 +83,7 @@ int nclx_full_range = true;
 // default to 30 fps
 uint32_t sequence_timebase = 30;
 uint32_t sequence_durations = 1;
+std::string vmt_metadata_file;
 
 int quality = 50;
 bool lossless = false;
@@ -132,6 +133,7 @@ const int OPTION_UNCI_COMPRESSION = 1014;
 const int OPTION_CUT_TILES = 1015;
 const int OPTION_SEQUENCES_TIMEBASE = 1016;
 const int OPTION_SEQUENCES_DURATIONS = 1017;
+const int OPTION_VMT_METADATA_FILE = 1018;
 
 
 static struct option long_options[] = {
@@ -181,6 +183,9 @@ static struct option long_options[] = {
     {(char* const) "sequence",                    no_argument, 0, 'S'},
     {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
+#endif
     {0, 0,                                                           0,  0}
 };
 
@@ -257,6 +262,9 @@ void show_help(const char* argv0)
             << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
             << "      --timebase #          set clock ticks/second for sequence\n"
             << "      --duration #          set frame duration (default: 1)\n"
+#endif
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
 #endif
             ;
 }
@@ -1132,6 +1140,9 @@ int main(int argc, char** argv)
       case OPTION_SEQUENCES_DURATIONS:
         sequence_durations = atoi(optarg);
         break;
+      case OPTION_VMT_METADATA_FILE:
+        vmt_metadata_file = optarg;
+        break;
     }
   }
 
@@ -1649,6 +1660,85 @@ std::vector<std::string> deflate_input_filenames(const std::string& filename_exa
 }
 
 
+int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
+{
+  // --- add metadata track
+
+  heif_track* track = nullptr;
+
+  heif_track_info* track_info = heif_track_info_alloc();
+  track_info->track_timescale = 1000;
+
+  heif_context_add_uri_metadata_sequence_track(context, track_info, "vmt:metadata",&track);
+  heif_raw_sequence_sample* sample = heif_raw_sequence_sample_alloc();
+
+
+  std::ifstream istr(vmt_metadata_file.c_str());
+
+  std::regex pattern(R"((\d\d):(\d\d):(\d\d).(\d\d\d) -->$)");
+
+  static std::string prev_metadata;
+  static uint32_t prev_ts = 0;
+
+  std::string line;
+  while (std::getline(istr, line))
+  {
+    std::smatch match;
+
+    if (!std::regex_match(line, match, pattern)) {
+      continue;
+    }
+
+    std::string hh = match[1];
+    std::string mm = match[2];
+    std::string ss = match[3];
+    std::string mil = match[4];
+
+    uint32_t ts = (std::stoi(hh) * 3600 * 1000 +
+                   std::stoi(mm) * 60 * 1000 +
+                   std::stoi(ss) * 1000 +
+                   std::stoi(mil));
+
+    std::string concat;
+
+    while (std::getline(istr, line)) {
+      if (line.empty()) {
+        break;
+      }
+
+      concat += line + '\n';
+    }
+
+    if (prev_ts > 0) {
+      heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.c_str(), prev_metadata.length()+1);
+      heif_raw_sequence_sample_set_duration(sample, ts - prev_ts);
+      heif_track_add_raw_sequence_sample(track, sample);
+    }
+
+    prev_ts = ts;
+    prev_metadata = concat;
+  }
+
+  // --- flush last metadata packet
+
+  heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.c_str(), prev_metadata.length()+1);
+  heif_raw_sequence_sample_set_duration(sample, 1);
+  heif_track_add_raw_sequence_sample(track, sample);
+
+  // --- add track reference
+
+  heif_track_add_reference_to_track(track, heif_track_reference_type_description_of, visual_track);
+
+  // --- release all objects
+
+  heif_raw_sequence_sample_release(sample);
+  heif_track_info_release(track_info);
+  heif_track_release(track);
+
+  return 0;
+}
+
+
 int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, std::vector<std::string> args)
 {
   if (args.size() == 1) {
@@ -1731,6 +1821,15 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   }
 
   std::cout << "\n";
+
+  if (!vmt_metadata_file.empty()) {
+    int ret = encode_vmt_metadata_track(context, track);
+    if (ret) {
+      return ret;
+    }
+  }
+
+  heif_track_release(track);
 
   return 0;
 }
