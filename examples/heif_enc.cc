@@ -133,7 +133,8 @@ const int OPTION_UNCI_COMPRESSION = 1014;
 const int OPTION_CUT_TILES = 1015;
 const int OPTION_SEQUENCES_TIMEBASE = 1016;
 const int OPTION_SEQUENCES_DURATIONS = 1017;
-const int OPTION_VMT_METADATA_FILE = 1018;
+const int OPTION_SEQUENCES_FPS = 1018;
+const int OPTION_VMT_METADATA_FILE = 1019;
 
 
 static struct option long_options[] = {
@@ -183,6 +184,7 @@ static struct option long_options[] = {
     {(char* const) "sequence",                    no_argument, 0, 'S'},
     {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
+    {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
 #endif
@@ -262,6 +264,7 @@ void show_help(const char* argv0)
             << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
             << "      --timebase #          set clock ticks/second for sequence\n"
             << "      --duration #          set frame duration (default: 1)\n"
+            << "      --fps #               set timebase and duration based on fps\n"
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
@@ -1139,6 +1142,17 @@ int main(int argc, char** argv)
         break;
       case OPTION_SEQUENCES_DURATIONS:
         sequence_durations = atoi(optarg);
+        break;
+      case OPTION_SEQUENCES_FPS:
+        if (strcmp(optarg,"29.97")==0) {
+          sequence_durations = 1001;
+          sequence_timebase = 30000;
+        }
+        else {
+          double fps = std::atof(optarg);
+          sequence_timebase = 90000;
+          sequence_durations = (uint32_t)(90000 / fps + 0.5);
+        }
         break;
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
