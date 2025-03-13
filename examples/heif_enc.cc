@@ -1610,7 +1610,7 @@ std::vector<std::string> deflate_input_filenames(const std::string& filename_exa
   std::string suffix = match[3];
 
 
-  std::string patternString = prefix + "(\\d+)" + suffix + "$";
+  std::string patternString = filename_prefix + "(\\d+)" + suffix + "$";
   pattern = patternString;
 
   uint32_t digits = std::numeric_limits<uint32_t>::max();
