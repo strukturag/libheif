@@ -1232,7 +1232,7 @@ int main(int argc, char** argv)
                                                    "urn:smpte:ul:0123456789abcdef",
                                                    &metadata_track);
 
-      heif_track_add_reference_to_track(metadata_track, heif_track_reference_type_description_of, track);
+      heif_track_add_reference_to_track(metadata_track, heif_track_reference_type_description, track);
 
       for (int i=0;i<5;i++) {
         std::stringstream testdata_str;

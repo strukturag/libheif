@@ -1741,7 +1741,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
 
   // --- add track reference
 
-  heif_track_add_reference_to_track(track, heif_track_reference_type_description_of, visual_track);
+  heif_track_add_reference_to_track(track, heif_track_reference_type_description, visual_track);
 
   // --- release all objects
 

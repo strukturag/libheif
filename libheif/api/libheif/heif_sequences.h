@@ -493,7 +493,9 @@ const struct heif_tai_clock_info* heif_track_get_tai_clock_info_of_first_cluster
 // --- track references
 
 enum heif_track_reference_type {
-  heif_track_reference_type_description_of = heif_fourcc('c','d','s','c') // track_description
+  heif_track_reference_type_description = heif_fourcc('c','d','s','c'), // track_description
+  heif_track_reference_type_thumbnails = heif_fourcc('t','h','m','b'), // thumbnails
+  heif_track_reference_type_auxiliary = heif_fourcc('a','u','x','l') // auxiliary data (e.g. depth maps or alpha channel)
 };
 
 /**

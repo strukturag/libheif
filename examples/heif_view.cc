@@ -296,7 +296,7 @@ int main(int argc, char** argv)
   heif_track* metadata_track = nullptr;
   if (option_metadata_output != metadata_output_none) {
     uint32_t metadata_track_id;
-    size_t nMetadataTracks = heif_track_find_referring_tracks(track, heif_track_reference_type_description_of, &metadata_track_id, 1);
+    size_t nMetadataTracks = heif_track_find_referring_tracks(track, heif_track_reference_type_description, &metadata_track_id, 1);
 
     if (nMetadataTracks == 1) {
       metadata_track = heif_context_get_track(ctx, metadata_track_id);
@@ -404,7 +404,7 @@ int main(int argc, char** argv)
 
     // --- show metadata
 
-    while (metadata_sample && metadata_sample_display_time <= elapsed_time) {
+    while (metadata_sample && metadata_sample_display_time / option_speedup <= elapsed_time) {
       size_t size;
       const uint8_t* data = heif_raw_sequence_sample_get_data(metadata_sample, &size);
 
