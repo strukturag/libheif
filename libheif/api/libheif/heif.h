@@ -2086,6 +2086,8 @@ struct heif_writer
   int writer_api_version;
 
   // --- version 1 functions ---
+
+  // On success, the returned heif_error may have a NULL message. It will automatically be replaced with a "Success" string.
   struct heif_error (* write)(struct heif_context* ctx, // TODO: why do we need this parameter?
                               const void* data,
                               size_t size,

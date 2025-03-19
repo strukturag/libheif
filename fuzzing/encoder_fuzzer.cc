@@ -128,7 +128,7 @@ static struct heif_error writer_write(struct heif_context* ctx, const void* data
 {
   MemoryWriter* writer = static_cast<MemoryWriter*>(userdata);
   writer->write(data, size);
-  struct heif_error err{heif_error_Ok, heif_suberror_Unspecified, "Ok"};
+  struct heif_error err{heif_error_Ok, heif_suberror_Unspecified, nullptr};
   return err;
 }
 
