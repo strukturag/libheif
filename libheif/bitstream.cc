@@ -166,7 +166,6 @@ BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
   : m_istr(std::move(istr)), m_remaining(end)
 {
   bool success = m_istr->seek(start);
-  assert(success);
   (void)success; // TODO
 }
 
