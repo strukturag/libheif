@@ -8,7 +8,7 @@ There is partial support for ISO/IEC 23008-12:2022 (2nd Edition) capabilities.
 HEIF and AVIF are new image file formats employing HEVC (H.265) or AV1 image coding, respectively, for the
 best compression ratios currently possible.
 
-libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
+libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIC image decoding and x265 for encoding.
 For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 ## Supported features
