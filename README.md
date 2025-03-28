@@ -42,7 +42,7 @@ Supported codecs:
 
 The library has a C API for easy integration and wide language support.
 
-The decoder automatically supports both HEIF and AVIF (and the other compression formats) through the same API. The same code decoding code can be used to decode any of them.
+The decoder automatically supports both HEIF and AVIF (and the other compression formats) through the same API. The same decoding code can be used to decode any of them.
 The encoder can be switched between HEIF and AVIF simply by setting `heif_compression_HEVC` or `heif_compression_AV1`
 to `heif_context_get_encoder_for_format()`, or using any of the other compression formats.
 
