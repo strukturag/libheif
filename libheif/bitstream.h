@@ -103,7 +103,7 @@ public:
 
   uint64_t request_range(uint64_t start, uint64_t end_pos) override {
     // std::cout << "[istream] request_range " << start << " - " << end_pos << "\n";
-    return end_pos;
+    return std::min(end_pos, m_length);
   }
 
   void release_range(uint64_t start, uint64_t end_pos) override {
