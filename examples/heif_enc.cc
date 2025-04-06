@@ -1263,6 +1263,49 @@ int main(int argc, char** argv)
 
     // ==============================================================================
 
+/*#if (defined(KVZ_BIT_DEPTH) && KVZ_BIT_DEPTH == 8) || (defined(UVG_BIT_DEPTH) && UVG_BIT_DEPTH == 8) || \
+    HAVE_VVENC
+  if ((output_bit_depth == 8) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
+     (encoderId[0] == 'u' && encoderId[1] == 'v'))) {
+     output_bit_depth = 8;
+     heif_encoder_set_parameter(encoder, "chroma", "420");
+     printf("Warming: For kvazaar, uvg266 is always output yuv420p\n");
+  } else {
+     std::cerr << "Output bitdepth doesn't 8bit.\n";
+  }
+#endif*/
+/*#if (defined(KVZ_BIT_DEPTH) && KVZ_BIT_DEPTH == 10) || (defined(UVG_BIT_DEPTH) && UVG_BIT_DEPTH == 10) || \
+    HAVE_VVENC*/
+  if ((output_bit_depth == 10) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
+     (encoderId[0] == 'u' && encoderId[1] == 'v') ||
+     (encoderId[0] == 'v' && encoderId[1] == 'v'))) {
+     output_bit_depth = 10;
+     heif_encoder_set_parameter(encoder, "chroma", "420");
+     printf("Warming: For kvazaar, uvg266, vvenc is always output yuv420p10le\n");
+  } else {
+     std::cerr << "Output bitdepth doesn't 10bit.\n";
+  }
+//#endif
+//#if HAVE_OPENJPEG_ENCODER || HAVE_OPENJPH_ENCODER
+  if ((output_bit_depth == 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
+     (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
+     output_bit_depth = 8;
+     heif_encoder_set_parameter(encoder, "chroma", "444");
+     printf("Warming: Use image rgb24(a). openjpeg is always output rgb24(a)\n"
+            "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
+  }
+  if ((output_bit_depth > 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
+     (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
+     output_bit_depth = 16;
+     heif_encoder_set_parameter(encoder, "chroma", "444");
+     printf("Warming: Don't use jpeg image 8bit only image rgb48(a). openjpeg is always output rgb48(a)\n"
+            "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
+  }
+//#endif
+#if !HAVE_LIBDE265 && !HAVE_OpenH264_DECODER && !HAVE_AOM_DECODER && !HAVE_DAV1D && \
+    !HAVE_JPEG_DECODER && !HAVE_OPENJPEG_DECODER && !HAVE_VVDEC
+  printf("Warming: Don't use heif{avif}. libheif has no decoders installed.\n");
+#endif
     InputImage input_image = load_image(input_filename, output_bit_depth);
 
     std::shared_ptr<heif_image> image = input_image.image;
