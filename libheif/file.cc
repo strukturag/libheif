@@ -891,7 +891,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
     uint32_t index = m_ipco_box->find_or_append_child_box(irot);
 
-    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
 
   if (has_mirror) {
@@ -900,7 +900,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
     uint32_t index = m_ipco_box->find_or_append_child_box(imir);
 
-    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
 }
 
