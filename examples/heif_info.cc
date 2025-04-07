@@ -43,10 +43,11 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <getopt.h>
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
 #include <filesystem>
 #include "common.h"
 
