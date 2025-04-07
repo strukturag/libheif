@@ -172,6 +172,12 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == fourcc("j2k1")) {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
+  else if (item_type == fourcc("lhv1")) {
+    return std::make_shared<ImageItem_Error>(item_type, id,
+                                             Error{heif_error_Unsupported_feature,
+                                                   heif_suberror_Unsupported_image_type,
+                                                   "Layered HEVC images (lhv1) are not supported yet"});
+  }
   else if (item_type == fourcc("mski")) {
     return std::make_shared<ImageItem_mask>(ctx, id);
   }
