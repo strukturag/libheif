@@ -47,6 +47,7 @@
 #include <getopt.h>
 #include <assert.h>
 #include <stdio.h>
+#include <filesystem>
 #include "common.h"
 
 
@@ -91,17 +92,25 @@ static const char* fourcc_to_string(uint32_t fourcc)
 
 void show_help(const char* argv0)
 {
-  fprintf(stderr, " heif-info  libheif version: %s\n", heif_get_version());
-  fprintf(stderr, "------------------------------------\n");
-  fprintf(stderr, "usage: heif-info [options] image.heic\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "options:\n");
-  //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
-  //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
-  fprintf(stderr, "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
-  fprintf(stderr, "      --disable-limits disable all security limits (do not use in production environment)\n");
-  fprintf(stderr, "  -h, --help           show help\n");
-  fprintf(stderr, "  -v, --version        show version\n");
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options] <HEIF-image>\n"
+            << "\n"
+               "options:\n"
+               //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
+               //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
+               "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n"
+               "      --disable-limits disable all security limits (do not use in production environment)\n"
+               "  -h, --help           show help\n"
+               "  -v, --version        show version\n";
 }
 
 

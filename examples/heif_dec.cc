@@ -27,6 +27,7 @@
 
 #include <cstring>
 #include <getopt.h>
+#include <filesystem>
 #include "libheif/heif_items.h"
 
 #if defined(HAVE_UNISTD_H)
@@ -72,10 +73,18 @@
 
 static void show_help(const char* argv0)
 {
-  std::cerr << " " << argv0 << "  libheif version: " << heif_get_version() << "\n"
-            << "---------------------------------------\n"
-               "Usage: " << argv0 << " [options]  <input-image> [output-image]\n"
-               "\n"
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options]  <input-image> [output-image]\n"
+            << "\n"
                "The program determines the output file format from the output filename suffix.\n"
                "These suffixes are recognized: jpg, jpeg, png, tif, tiff, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"

@@ -159,9 +159,17 @@ static struct option long_options[] = {
 
 void show_help(const char* argv0)
 {
-  std::cerr << " heif-enc  libheif version: " << heif_get_version() << "\n"
-            << "----------------------------------------\n"
-            << "Usage: heif-enc [options] image.jpeg ...\n"
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options] <input-image> ...\n"
             << "\n"
             << "When specifying multiple source images, they will all be saved into the same HEIF/AVIF file.\n"
             << "\n"
