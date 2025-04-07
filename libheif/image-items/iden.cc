@@ -77,7 +77,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
+  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0);
 }
 
 
