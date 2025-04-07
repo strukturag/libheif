@@ -48,6 +48,10 @@ if(NOT MSVC)
   endif ()
 endif()
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -386,20 +390,6 @@ format_compilation_info("Uncompressed" SUPPORTS_UNCOMPRESSED_DECODING SUPPORTS_U
 format_compilation_info("VVC"  SUPPORTS_VVC_DECODING SUPPORTS_VVC_ENCODING)
 
 message("")
-
-
-# --- C++ standard
-
-if (WITH_UNCOMPRESSED_CODEC)
-    set(CMAKE_CXX_STANDARD 20)
-else()
-    set(CMAKE_CXX_STANDARD 17)
-endif()
-
-message("compiling with C++ standard: C++${CMAKE_CXX_STANDARD}")
-
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 # --- Libsharpyuv color space transforms
 
