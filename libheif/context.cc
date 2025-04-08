@@ -337,10 +337,12 @@ Error HeifContext::interpret_heif_file()
   m_top_level_images.clear();
   m_primary_image.reset();
 
-
   // --- reference all non-hidden images
 
   std::vector<heif_item_id> image_IDs = m_heif_file->get_item_IDs();
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  bool check_tmap_item = m_heif_file->get_ftyp_box()->has_compatible_brand(heif_brand2_tmap);
+#endif
 
   for (heif_item_id id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
@@ -807,6 +809,12 @@ Error HeifContext::interpret_heif_file()
         // these item types should have data
         return err;
       }
+#if WITH_EXPERIMENTAL_GAIN_MAP
+      else if (check_tmap_item && item_type == fourcc("tmap")) {
+        // this also should have data
+        return err;
+      }
+#endif
       else {
         // anything else is probably something that we don't understand yet
         continue;
@@ -831,6 +839,41 @@ Error HeifContext::interpret_heif_file()
         }
         img_iter->second->add_metadata(metadata);
       }
+#if WITH_EXPERIMENTAL_GAIN_MAP
+      if (check_tmap_item && item_type == fourcc("tmap")) {
+        std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
+        // "'tmap' item MUST be associated with 2 references to images"
+        // "'tmap' item first entry is expected to be referencing primary image"
+        // "'tmap' item reference entries MUST not be duplicate"
+        // "'tmap' item references MUST be pointing to valid image items"
+        if ((int)image_references.size() == 2 &&
+            image_references[0] == m_heif_file->get_primary_image_ID() &&
+            image_references[1] != image_references[0] &&
+            m_all_images.find(image_references[0]) != m_all_images.end() &&
+            m_all_images.find(image_references[1]) != m_all_images.end()) {
+          std::shared_ptr<ImageItem> baseItem = m_all_images.find(image_references[0])->second;
+          std::shared_ptr<ImageItem> gainmapItem = m_all_images.find(image_references[1])->second;
+
+          baseItem->set_gain_map(gainmapItem);
+
+          baseItem->add_metadata(metadata);  // gain map metadata
+
+          auto ipma = m_heif_file->get_ipma_box();
+          auto ipco = m_heif_file->get_ipco_box();
+          auto derived_image_colr = ipco->get_property_for_item_ID(id, ipma, fourcc("colr"));
+          auto colr = std::dynamic_pointer_cast<Box_colr>(derived_image_colr);
+          auto nclx =
+              std::dynamic_pointer_cast<const color_profile_nclx>(colr->get_color_profile());
+          if (nclx) {
+            baseItem->set_derived_img_color_profile(nclx);
+          }
+          auto raw = std::dynamic_pointer_cast<const color_profile_raw>(colr->get_color_profile());
+          if (raw) {
+            baseItem->set_derived_img_color_profile(raw);
+          }
+        }
+      }
+#endif
     }
   }
 
@@ -1168,6 +1211,29 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
   return alpha_image;
 }
+
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+Error HeifContext::add_tmap_item(const std::vector<uint8_t>& data, heif_item_id& item_id) {
+  auto tmap_infe = m_heif_file->add_new_infe_box(fourcc("tmap"));  // gain map metadata
+  tmap_infe->set_item_name("GMap");
+  item_id = tmap_infe->get_item_ID();
+
+  m_heif_file->append_iloc_data(item_id, data, 0);
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::link_gain_map(const std::shared_ptr<ImageItem>& primary_image,
+                                 const std::shared_ptr<ImageItem>& gain_map_image,
+                                 const heif_item_id tmap_id) {
+  m_heif_file->add_iref_reference(tmap_id, fourcc("dimg"),
+                                  {primary_image->get_id(), gain_map_image->get_id()});
+
+  return Error::Ok;
+}
+#endif
 
 
 Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,

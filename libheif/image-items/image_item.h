@@ -82,12 +82,14 @@ public:
 
   virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const { return std::vector<uint8_t>{}; }
 
-  void clear()
-  {
+  void clear() {
     m_thumbnails.clear();
     m_alpha_channel.reset();
     m_depth_channel.reset();
     m_aux_images.clear();
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    m_gain_map_image.reset();
+#endif
   }
 
   HeifContext* get_context() { return m_heif_context; }
@@ -264,6 +266,44 @@ public:
     }
   }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  // --- gain map
+
+  const std::shared_ptr<ImageItem>& get_gain_map() const { return m_gain_map_image; }
+
+  std::shared_ptr<ImageMetadata> get_gain_map_metadata() {
+    if (m_gain_map_image != nullptr) {
+      for (auto it : m_metadata) {
+        if (it->item_type == "tmap") {
+          return it;
+        }
+      }
+    }
+    return nullptr;
+  }
+
+  const std::shared_ptr<const color_profile_nclx>& get_derived_img_color_profile_nclx() const {
+    return m_derived_img_color_profile_nclx;
+  }
+
+  const std::shared_ptr<const color_profile_raw>& get_derived_img_color_profile_icc() const {
+    return m_derived_img_color_profile_icc;
+  }
+
+  void set_gain_map(std::shared_ptr<ImageItem> img) { m_gain_map_image = std::move(img); }
+
+  void set_derived_img_color_profile(const std::shared_ptr<const color_profile>& profile) {
+    auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+    if (icc) {
+      m_derived_img_color_profile_icc = std::move(icc);
+    }
+
+    auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+    if (nclx) {
+      m_derived_img_color_profile_nclx = std::move(nclx);
+    }
+  };
+#endif
 
   // --- metadata
 
@@ -417,10 +457,18 @@ private:
   std::string m_aux_image_type;
   std::vector<std::shared_ptr<ImageItem>> m_aux_images;
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::shared_ptr<ImageItem> m_gain_map_image;
+#endif
+
   std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
   std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::shared_ptr<const color_profile_nclx> m_derived_img_color_profile_nclx;
+  std::shared_ptr<const color_profile_raw> m_derived_img_color_profile_icc;
+#endif
 
   bool m_miaf_compatible = true;
 

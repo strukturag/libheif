@@ -550,7 +550,12 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
+#if WITH_EXPERIMENTAL_GAIN_MAP
+       input_class == heif_image_input_class_thumbnail ||
+       input_class == heif_image_input_class_gain_map)) {
+#else
        input_class == heif_image_input_class_thumbnail)) {
+#endif
     if (rav1e_config_set_color_description(rav1eConfig.get(),
                                            (RaMatrixCoefficients) nclx->matrix_coefficients,
                                            (RaColorPrimaries) nclx->color_primaries,

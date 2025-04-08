@@ -884,6 +884,13 @@ typedef uint32_t heif_brand2;
 */
 #define heif_brand2_1pic   heif_fourcc('1','p','i','c')
 
+/**
+ * HEIF tone map brand (`tmap`).
+ *
+ * This is a compatible brand indicating the file contains a gainmap image.
+ */
+#define heif_brand2_tmap heif_fourcc('t', 'm', 'a', 'p')
+
 // input data should be at least 12 bytes
 LIBHEIF_API
 heif_brand2 heif_read_main_brand(const uint8_t* data, int len);
@@ -1453,6 +1460,42 @@ struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif
                                                                heif_item_id auxiliary_id,
                                                                struct heif_image_handle** out_auxiliary_handle);
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+
+// ------------------------- gain map images -------------------------
+
+// Get the gain map image associated with the main image. If no gain map image is available, this
+// method will return error.
+LIBHEIF_API
+struct heif_error heif_image_handle_get_gain_map_image_handle(
+    const struct heif_image_handle* handle, struct heif_image_handle** gain_map_handle);
+
+// Get the gain map metadata size associated with the main image. If no gain map image is available,
+// this method will return 0
+LIBHEIF_API
+size_t heif_image_handle_get_gain_map_metadata_size(const struct heif_image_handle* handle);
+
+// Get the gain map metadata associated with the main image. if no gain map image is available, this
+// method will return error
+LIBHEIF_API
+struct heif_error heif_image_handle_get_gain_map_metadata(const struct heif_image_handle* handle,
+                                                          void* out_data);
+
+// Get nclx color profile for derived image
+LIBHEIF_API
+struct heif_error heif_image_handle_get_derived_image_nclx_color_profile(
+    const struct heif_image_handle* handle, struct heif_color_profile_nclx** out_data);
+
+// Get raw color profile for derived image
+LIBHEIF_API
+size_t heif_image_handle_get_derived_image_raw_color_profile_size(
+    const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_derived_image_raw_color_profile(
+    const struct heif_image_handle* handle, void* out_data);
+
+#endif
 
 // ------------------------- metadata (Exif / XMP) -------------------------
 
@@ -2619,6 +2662,22 @@ int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encode
 // DEPRECATED, typo in function name
 LIBHEIF_API
 int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
+
+
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+
+// Compress the gain map image and write metadata.
+// Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
+LIBHEIF_API
+struct heif_error heif_context_encode_gain_map_image(
+    struct heif_context* ctx, const struct heif_image_handle* base_image_handle,
+    struct heif_encoder* encoder, const struct heif_image* gain_map_image,
+    const struct heif_encoding_options* input_options, const uint8_t* gain_map_metadata,
+    int gain_map_metadata_len, const struct heif_color_profile_nclx* derived_image_nclx,
+    struct heif_image_handle** out_image_handle);
+
+#endif
 
 
 #ifdef __cplusplus
