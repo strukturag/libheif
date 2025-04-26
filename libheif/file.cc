@@ -336,14 +336,14 @@ Error HeifFile::parse_heif_file()
 #endif
 
   m_ftyp_box = m_file_layout->get_ftyp_box();
-  m_top_level_boxes.push_back(m_ftyp_box);
-
-  // --- check whether this is a HEIF file and its structural format
-
   if (!m_ftyp_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ftyp_box);
   }
+
+  m_top_level_boxes.push_back(m_ftyp_box);
+
+  // --- check whether this is a HEIF file and its structural format
 
   if (!m_ftyp_box->has_compatible_brand(heif_brand2_heic) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_heix) &&
