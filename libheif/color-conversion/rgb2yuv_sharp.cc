@@ -55,7 +55,8 @@ static uint16_t Shift(uint16_t v, int input_bits, int output_bits)
 std::vector<ColorStateWithCost>
 Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     const ColorState& input_state, const ColorState& target_state,
-    const heif_color_conversion_options& options) const
+    const heif_color_conversion_options& options,
+    const heif_color_conversion_options_ext& options_ext) const
 {
 #ifdef HAVE_LIBSHARPYUV
   // this Op only implements the sharp_yuv algorithm
@@ -127,6 +128,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const ColorState& input_state,
     const ColorState& target_state,
     const heif_color_conversion_options& options,
+    const heif_color_conversion_options_ext& options_ext,
     const heif_security_limits* limits) const
 {
 #ifdef HAVE_LIBSHARPYUV

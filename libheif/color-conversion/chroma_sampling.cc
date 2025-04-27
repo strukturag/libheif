@@ -26,7 +26,8 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState& input_state,
                                                                const ColorState& target_state,
-                                                               const heif_color_conversion_options& options) const
+                                                               const heif_color_conversion_options& options,
+                                                               const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -80,6 +81,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
                                                            const ColorState& input_state,
                                                            const ColorState& target_state,
                                                            const heif_color_conversion_options& options,
+                                                           const heif_color_conversion_options_ext& options_ext,
                                                            const heif_security_limits* limits) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
@@ -249,7 +251,8 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState& input_state,
                                                                const ColorState& target_state,
-                                                               const heif_color_conversion_options& options) const
+                                                               const heif_color_conversion_options& options,
+                                                               const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -303,6 +306,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
                                                            const ColorState& input_state,
                                                            const ColorState& target_state,
                                                            const heif_color_conversion_options& options,
+                                                           const heif_color_conversion_options_ext& options_ext,
                                                            const heif_security_limits* limits) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
@@ -450,7 +454,8 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState& input_state,
                                                                 const ColorState& target_state,
-                                                                const heif_color_conversion_options& options) const
+                                                                const heif_color_conversion_options& options,
+                                                                const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -500,6 +505,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
                                                             const ColorState& input_state,
                                                             const ColorState& target_state,
                                                             const heif_color_conversion_options& options,
+                                                            const heif_color_conversion_options_ext& options_ext,
                                                             const heif_security_limits* limits) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
@@ -730,7 +736,8 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState& input_state,
                                                                 const ColorState& target_state,
-                                                                const heif_color_conversion_options& options) const
+                                                                const heif_color_conversion_options& options,
+                                                                const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -780,6 +787,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
                                                             const ColorState& input_state,
                                                             const ColorState& target_state,
                                                             const heif_color_conversion_options& options,
+                                                            const heif_color_conversion_options_ext& options_ext,
                                                             const heif_security_limits* limits) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;

@@ -29,7 +29,8 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
-                                               const heif_color_conversion_options& options) const
+                                               const heif_color_conversion_options& options,
+                                               const heif_color_conversion_options_ext& options_ext) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -87,6 +88,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
                                            const ColorState& input_state,
                                            const ColorState& target_state,
                                            const heif_color_conversion_options& options,
+                                           const heif_color_conversion_options_ext& options_ext,
                                            const heif_security_limits* limits) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
@@ -269,7 +271,8 @@ template class Op_YCbCr_to_RGB<uint16_t>;
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const heif_color_conversion_options& options) const
+                                             const heif_color_conversion_options& options,
+                                             const heif_color_conversion_options_ext& options_ext) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -317,6 +320,7 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
                                          const ColorState& input_state,
                                          const ColorState& target_state,
                                          const heif_color_conversion_options& options,
+                                         const heif_color_conversion_options_ext& options_ext,
                                          const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
@@ -379,7 +383,8 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const heif_color_conversion_options& options) const
+                                             const heif_color_conversion_options& options,
+                                             const heif_color_conversion_options_ext& options_ext) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -428,6 +433,7 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
                                          const ColorState& input_state,
                                          const ColorState& target_state,
                                          const heif_color_conversion_options& options,
+                                         const heif_color_conversion_options_ext& options_ext,
                                          const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
@@ -509,7 +515,8 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
                                                 const ColorState& target_state,
-                                                const heif_color_conversion_options& options) const
+                                                const heif_color_conversion_options& options,
+                                                const heif_color_conversion_options_ext& options_ext) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -563,6 +570,7 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
                                             const ColorState& input_state,
                                             const ColorState& target_state,
                                             const heif_color_conversion_options& options,
+                                            const heif_color_conversion_options_ext& options_ext,
                                             const heif_security_limits* limits) const
 {
   uint32_t width = input->get_width();

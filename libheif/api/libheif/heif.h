@@ -1756,6 +1756,30 @@ struct heif_color_conversion_options
   //     other structs (heif_decoding_options and heif_encoding_options).
 };
 
+
+enum heif_alpha_composition_mode
+{
+  heif_alpha_composition_mode_none,
+  heif_alpha_composition_mode_solid_color,
+  heif_alpha_composition_mode_checkerboard,
+};
+
+
+struct heif_color_conversion_options_ext
+{
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_alpha_composition_mode alpha_composition_mode;
+
+  // color values should be specified in the range [0, 65535]
+  uint16_t background_red, background_green, background_blue;
+  uint16_t secondary_background_red, secondary_background_green, secondary_background_blue;
+  uint16_t checkerboard_square_size;
+};
+
+
 // Assumes that it is a version=1 struct.
 LIBHEIF_API
 void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*);
@@ -1804,6 +1828,11 @@ struct heif_decoding_options
   // version 6 options
 
   int (* cancel_decoding)(void* progress_user_data);
+
+  // version 7 options
+
+  // When set to NULL, default options will be used
+  struct heif_color_conversion_options_ext* color_conversion_options_ext;
 };
 
 
@@ -1815,6 +1844,12 @@ struct heif_decoding_options* heif_decoding_options_alloc(void);
 
 LIBHEIF_API
 void heif_decoding_options_free(struct heif_decoding_options*);
+
+LIBHEIF_API
+struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc(void);
+
+LIBHEIF_API
+void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext*);
 
 // Decode an heif_image_handle into the actual pixel image and also carry out
 // all geometric transformations specified in the HEIF file (rotation, cropping, mirroring).

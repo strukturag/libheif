@@ -238,6 +238,8 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   ops.emplace_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
   ops.emplace_back(std::make_shared<Op_drop_alpha_plane>());
+  ops.emplace_back(std::make_shared<Op_flatten_alpha_plane<uint8_t>>());
+  ops.emplace_back(std::make_shared<Op_flatten_alpha_plane<uint16_t>>());
   ops.emplace_back(std::make_shared<Op_to_hdr_planes>());
   ops.emplace_back(std::make_shared<Op_to_sdr_planes>());
   ops.emplace_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>>());
@@ -260,11 +262,13 @@ void ColorConversionPipeline::release_ops()
 
 bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
                                                  const ColorState& target_state,
-                                                 const heif_color_conversion_options& options)
+                                                 const heif_color_conversion_options& options,
+                                                 const heif_color_conversion_options_ext& options_ext)
 {
   m_conversion_steps.clear();
 
   m_options = options;
+  m_options_ext = options_ext;
 
   if (input_state == target_state) {
     return true;
@@ -360,7 +364,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
       auto out_states = op_ptr->state_after_conversion(processed_states.back().output_state,
                                                        target_state,
-                                                       options);
+                                                       options, options_ext);
       for (const auto& out_state : out_states) {
         int new_op_costs = out_state.speed_costs + processed_states.back().speed_costs;
 #if DEBUG_PIPELINE_CREATION
@@ -440,7 +444,7 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
     print_spec(std::cerr, in);
 #endif
 
-    auto outResult = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options, limits);
+    auto outResult = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options, m_options_ext, limits);
     if (outResult.error) {
       return outResult.error;
     }
@@ -495,14 +499,20 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 }
 
 
+extern heif_color_conversion_options_ext normalize_options(const heif_color_conversion_options_ext* input_options);
+
 Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                            heif_colorspace target_colorspace,
                                                            heif_chroma target_chroma,
                                                            const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                            int output_bpp,
                                                            const heif_color_conversion_options& options,
+                                                           const heif_color_conversion_options_ext* options_ext_optional,
                                                            const heif_security_limits* limits)
 {
+  heif_color_conversion_options_ext options_ext = normalize_options(options_ext_optional);;
+
+
   // --- check that input image is valid
 
   uint32_t width = input->get_width();
@@ -572,7 +582,12 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {
-    output_state.has_alpha = input_state.has_alpha;
+    if (options_ext.alpha_composition_mode != heif_alpha_composition_mode_none) {
+      output_state.has_alpha = false;
+    }
+    else {
+      output_state.has_alpha = input_state.has_alpha;
+    }
   }
 
   if (output_bpp) {
@@ -599,7 +614,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   }
 
   ColorConversionPipeline pipeline;
-  bool success = pipeline.construct_pipeline(input_state, output_state, options);
+  bool success = pipeline.construct_pipeline(input_state, output_state, options, options_ext);
   if (!success) {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_color_conversion};
@@ -620,11 +635,12 @@ Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shar
                                                                  const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                                  int output_bpp,
                                                                  const heif_color_conversion_options& options,
+                                                                 const heif_color_conversion_options_ext* options_ext,
                                                                  const heif_security_limits* limits)
 {
   std::shared_ptr<HeifPixelImage> non_const_input = std::const_pointer_cast<HeifPixelImage>(input);
 
-  auto result = convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options, limits);
+  auto result = convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options, options_ext, limits);
   if (result.error) {
     return result.error;
   }

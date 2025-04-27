@@ -25,7 +25,8 @@
 std::vector<ColorStateWithCost>
 Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const heif_color_conversion_options& options) const
+                                            const heif_color_conversion_options& options,
+                                            const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_monochrome ||
       input_state.chroma != heif_chroma_monochrome) {
@@ -54,6 +55,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
                                         const ColorState& input_state,
                                         const ColorState& target_state,
                                         const heif_color_conversion_options& options,
+                                        const heif_color_conversion_options_ext& options_ext,
                                         const heif_security_limits* limits) const
 {
   auto outimg = std::make_shared<HeifPixelImage>();
@@ -162,7 +164,8 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
 std::vector<ColorStateWithCost>
 Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const heif_color_conversion_options& options) const
+                                            const heif_color_conversion_options& options,
+                                            const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -206,6 +209,7 @@ Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelIma
                                         const ColorState& input_state,
                                         const ColorState& target_state,
                                         const heif_color_conversion_options& options,
+                                        const heif_color_conversion_options_ext& options_ext,
                                         const heif_security_limits* limits) const
 {
   uint32_t width = input->get_width();

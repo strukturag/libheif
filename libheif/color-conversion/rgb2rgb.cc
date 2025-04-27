@@ -28,7 +28,8 @@
 std::vector<ColorStateWithCost>
 Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
                                            const ColorState& target_state,
-                                           const heif_color_conversion_options& options) const
+                                           const heif_color_conversion_options& options,
+                                           const heif_color_conversion_options_ext& options_ext) const
 {
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
@@ -68,6 +69,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
                                        const ColorState& input_state,
                                        const ColorState& target_state,
                                        const heif_color_conversion_options& options,
+                                       const heif_color_conversion_options_ext& options_ext,
                                        const heif_security_limits* limits) const
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
@@ -147,7 +149,8 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 std::vector<ColorStateWithCost>
 Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
                                                   const ColorState& target_state,
-                                                  const heif_color_conversion_options& options) const
+                                                  const heif_color_conversion_options& options,
+                                                  const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -192,6 +195,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
                                               const ColorState& input_state,
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options,
+                                              const heif_color_conversion_options_ext& options_ext,
                                               const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_R) <= 8 ||
@@ -283,7 +287,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 std::vector<ColorStateWithCost>
 Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
                                               const ColorState& target_state,
-                                              const heif_color_conversion_options& options) const
+                                              const heif_color_conversion_options& options,
+                                              const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -327,6 +332,7 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
                                           const ColorState& input_state,
                                           const ColorState& target_state,
                                           const heif_color_conversion_options& options,
+                                          const heif_color_conversion_options_ext& options_ext,
                                           const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
@@ -412,7 +418,8 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
 std::vector<ColorStateWithCost>
 Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
                                                   const ColorState& target_state,
-                                                  const heif_color_conversion_options& options) const
+                                                  const heif_color_conversion_options& options,
+                                                  const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -445,6 +452,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
                                               const ColorState& input_state,
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options,
+                                              const heif_color_conversion_options_ext& options_ext,
                                               const heif_security_limits* limits) const
 {
   bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
@@ -525,8 +533,9 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
 
 std::vector<ColorStateWithCost>
 Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
-                                                  const ColorState& target_state,
-                                                  const heif_color_conversion_options& options) const
+                                           const ColorState& target_state,
+                                           const heif_color_conversion_options& options,
+                                           const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -559,6 +568,7 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
                                        const ColorState& input_state,
                                        const ColorState& target_state,
                                        const heif_color_conversion_options& options,
+                                       const heif_color_conversion_options_ext& options_ext,
                                        const heif_security_limits* limits) const
 {
   bool has_alpha = input->get_chroma_format() == heif_chroma_interleaved_RGBA;
@@ -622,7 +632,8 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 std::vector<ColorStateWithCost>
 Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_state,
                                                     const ColorState& target_state,
-                                                    const heif_color_conversion_options& options) const
+                                                    const heif_color_conversion_options& options,
+                                                    const heif_color_conversion_options_ext& options_ext) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -686,6 +697,7 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
                                                 const ColorState& input_state,
                                                 const ColorState& target_state,
                                                 const heif_color_conversion_options& options,
+                                                const heif_color_conversion_options_ext& options_ext,
                                                 const heif_security_limits* limits) const
 {
   auto outimg = std::make_shared<HeifPixelImage>();

@@ -945,12 +945,22 @@ int main(int argc, char** argv)
 
     int ret;
 
+    auto* color_conversion_options_ext = heif_color_conversion_options_ext_alloc();
+    decode_options->color_conversion_options_ext = color_conversion_options_ext;
+
+    if (!encoder->supports_alpha()) {
+      color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+    }
+
     if (option_output_tiles) {
       ret = decode_image_tiles(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
     else {
       ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
+
+    heif_color_conversion_options_ext_free(color_conversion_options_ext);
+
     if (ret) {
       heif_image_handle_release(handle);
       return ret;

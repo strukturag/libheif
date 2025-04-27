@@ -1322,7 +1322,7 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 
 void fill_default_decoding_options(heif_decoding_options& options)
 {
-  options.version = 6;
+  options.version = 7;
 
   options.ignore_transformations = false;
 
@@ -1353,6 +1353,10 @@ void fill_default_decoding_options(heif_decoding_options& options)
   // version 6
 
   options.cancel_decoding = nullptr;
+
+  // version 7
+
+  options.color_conversion_options_ext = nullptr;
 }
 
 
@@ -1364,6 +1368,9 @@ static heif_decoding_options normalize_options(const heif_decoding_options* inpu
 
   if (input_options) {
     switch (input_options->version) {
+      case 7:
+        options.color_conversion_options_ext = input_options->color_conversion_options_ext;
+        // fallthrough
       case 6:
         options.cancel_decoding = input_options->cancel_decoding;
         // fallthrough
@@ -1418,6 +1425,58 @@ heif_decoding_options* heif_decoding_options_alloc()
 
 
 void heif_decoding_options_free(heif_decoding_options* options)
+{
+  delete options;
+}
+
+
+void fill_default_color_conversion_options_ext(heif_color_conversion_options_ext& options)
+{
+  options.version = 1;
+  options.alpha_composition_mode = heif_alpha_composition_mode_none;
+  options.background_red = options.background_green = options.background_blue = 0xFFFF;
+  options.secondary_background_red = options.secondary_background_green = options.secondary_background_blue = 0xCCCC;
+  options.checkerboard_square_size = 16;
+}
+
+
+// overwrite the (possibly lower version) input options over the default options
+heif_color_conversion_options_ext normalize_options(const heif_color_conversion_options_ext* input_options)
+{
+  heif_color_conversion_options_ext options{};
+  fill_default_color_conversion_options_ext(options);
+
+  if (input_options) {
+    switch (input_options->version) {
+      case 1:
+        options.alpha_composition_mode = input_options->alpha_composition_mode;
+        options.background_red = input_options->background_red;
+        options.background_green = input_options->background_green;
+        options.background_blue = input_options->background_blue;
+        options.secondary_background_red = input_options->secondary_background_red;
+        options.secondary_background_green = input_options->secondary_background_green;
+        options.secondary_background_blue = input_options->secondary_background_blue;
+        options.checkerboard_square_size = input_options->checkerboard_square_size;
+    }
+  }
+
+  return options;
+}
+
+
+
+
+struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc()
+{
+  auto options = new heif_color_conversion_options_ext;
+
+  fill_default_color_conversion_options_ext(*options);
+
+  return options;
+}
+
+
+void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext* options)
 {
   delete options;
 }

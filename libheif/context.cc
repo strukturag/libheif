@@ -1196,6 +1196,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 }
 
 
+
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                                   heif_colorspace out_colorspace,
                                                                                   heif_chroma out_chroma,
@@ -1212,11 +1213,13 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
   int bpp = options.convert_hdr_to_8bit ? 8 : 0;
-// TODO: check BPP changed
-  if (different_chroma || different_colorspace) {
+  // TODO: check BPP changed
+  if (different_chroma || different_colorspace ||
+      (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
 
     return convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp,
-                              options.color_conversion_options, get_security_limits());
+                              options.color_conversion_options, options.color_conversion_options_ext,
+                              get_security_limits());
   }
   else {
     return img;

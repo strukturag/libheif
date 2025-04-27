@@ -83,13 +83,15 @@ public:
   virtual std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) const = 0;
+                         const heif_color_conversion_options& options,
+                         const heif_color_conversion_options_ext& options_ext) const = 0;
 
   virtual Result<std::shared_ptr<HeifPixelImage>>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
                      const heif_color_conversion_options& options,
+                     const heif_color_conversion_options_ext& options_ext,
                      const heif_security_limits* limits) const = 0;
 };
 
@@ -104,7 +106,8 @@ public:
 
   bool construct_pipeline(const ColorState& input_state,
                           const ColorState& target_state,
-                          const heif_color_conversion_options& options);
+                          const heif_color_conversion_options& options,
+                          const heif_color_conversion_options_ext& options_ext);
 
   Result<std::shared_ptr<HeifPixelImage>> convert_image(const std::shared_ptr<HeifPixelImage>& input,
                                                         const heif_security_limits* limits);
@@ -123,6 +126,7 @@ private:
   std::vector<ConversionStep> m_conversion_steps;
 
   heif_color_conversion_options m_options;
+  heif_color_conversion_options_ext m_options_ext;
 };
 
 
@@ -134,6 +138,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
                                                            const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                            int output_bpp,
                                                            const heif_color_conversion_options& options,
+                                                           const heif_color_conversion_options_ext* options_ext,
                                                            const heif_security_limits* limits);
 
 Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
@@ -142,6 +147,7 @@ Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shar
                                                                  const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                                  int output_bpp,
                                                                  const heif_color_conversion_options& options,
+                                                                 const heif_color_conversion_options_ext* options_ext,
                                                                  const heif_security_limits* limits);
 
 #endif
