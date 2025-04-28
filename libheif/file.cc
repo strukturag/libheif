@@ -192,6 +192,9 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
       m_ftyp_box->add_compatible_brand(heif_brand2_heic);
+#if WITH_EXPERIMENTAL_GAIN_MAP
+      m_ftyp_box->add_compatible_brand(heif_brand2_tmap);
+#endif
       break;
 
     case heif_compression_AV1:
@@ -199,6 +202,9 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(heif_brand2_avif);
       m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
+#if WITH_EXPERIMENTAL_GAIN_MAP
+      m_ftyp_box->add_compatible_brand(heif_brand2_tmap);
+#endif
       break;
 
     case heif_compression_VVC:
@@ -352,6 +358,9 @@ Error HeifFile::parse_heif_file()
       !m_ftyp_box->has_compatible_brand(heif_brand2_1pic) &&
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
+#endif
+#if WITH_EXPERIMENTAL_GAIN_MAP
+      !(m_ftyp_box->get_major_brand() == heif_brand2_tmap) &&
 #endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg)) {
     std::stringstream sstr;
