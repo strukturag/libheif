@@ -1212,14 +1212,17 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   bool different_chroma = (target_chroma != img->get_chroma_format());
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
-  int bpp = options.convert_hdr_to_8bit ? 8 : 0;
-  // TODO: check BPP changed
-  if (different_chroma || different_colorspace ||
+  uint8_t img_bpp = img->get_visual_image_bits_per_pixel();
+  uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
+
+  if (different_chroma ||
+      different_colorspace ||
+      converted_output_bpp ||
       (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
 
-    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp,
-                              options.color_conversion_options, options.color_conversion_options_ext,
-                              get_security_limits());
+    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, converted_output_bpp,
+                                         options.color_conversion_options, options.color_conversion_options_ext,
+                                         get_security_limits());
   }
   else {
     return img;

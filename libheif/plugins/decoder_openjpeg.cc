@@ -376,15 +376,18 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
     // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
 
-    if (stride == (size_t)cwidth) {
-      for (int i = 0; i < cwidth * cheight; i++) {
-        p[i] = (uint8_t) opj_comp.data[i];
-      }
-    }
-    else {
+    if (bit_depth <= 8) {
       for (int y = 0; y < cheight; y++) {
         for (int x = 0; x < cwidth; x++) {
           p[y * stride + x] = (uint8_t) opj_comp.data[y * cwidth + x];
+        }
+      }
+    }
+    else {
+      uint16_t* p16 = (uint16_t*)p;
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          p16[y * stride/2 + x] = (uint16_t) opj_comp.data[y * cwidth + x];
         }
       }
     }

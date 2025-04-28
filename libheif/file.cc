@@ -399,16 +399,16 @@ Error HeifFile::parse_heif_file()
 #endif
 
   m_ftyp_box = m_file_layout->get_ftyp_box();
-  m_top_level_boxes.push_back(m_ftyp_box);
-
-  // --- check whether this is a HEIF file and its structural format
-
   if (!m_ftyp_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ftyp_box);
   }
 
+  m_top_level_boxes.push_back(m_ftyp_box);
+
   bool is_brand_msf1 = m_ftyp_box->has_compatible_brand(heif_brand2_msf1);
+
+  // --- check whether this is a HEIF file and its structural format
 
   if (!m_ftyp_box->has_compatible_brand(heif_brand2_heic) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_heix) &&
@@ -1018,7 +1018,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
     uint32_t index = m_ipco_box->find_or_append_child_box(irot);
 
-    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
 
   if (has_mirror) {
@@ -1027,7 +1027,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
     uint32_t index = m_ipco_box->find_or_append_child_box(imir);
 
-    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
 }
 

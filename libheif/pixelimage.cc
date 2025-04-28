@@ -624,6 +624,33 @@ uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 }
 
 
+uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
+{
+  switch (m_colorspace) {
+    case heif_colorspace_monochrome:
+      return get_bits_per_pixel(heif_channel_Y);
+      break;
+    case heif_colorspace_YCbCr:
+      return std::max(get_bits_per_pixel(heif_channel_Y),
+                      std::max(get_bits_per_pixel(heif_channel_Cb),
+                               get_bits_per_pixel(heif_channel_Cr)));
+      break;
+    case heif_colorspace_RGB:
+      return std::max(get_bits_per_pixel(heif_channel_R),
+                      std::max(get_bits_per_pixel(heif_channel_G),
+                               get_bits_per_pixel(heif_channel_B)));
+      break;
+    case heif_colorspace_nonvisual:
+      return 0;
+      break;
+    default:
+      assert(false);
+      return 0;
+      break;
+  }
+}
+
+
 heif_channel_datatype HeifPixelImage::get_datatype(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
