@@ -200,13 +200,11 @@ const struct heif_tai_timestamp_packet* heif_raw_sequence_sample_get_tai_timesta
 void heif_raw_sequence_sample_set_tai_timestamp(struct heif_raw_sequence_sample* sample,
                                                 const struct heif_tai_timestamp_packet* timestamp)
 {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   // release of timestamp in case we overwrite it
   heif_tai_timestamp_packet_release(sample->timestamp);
 
   sample->timestamp = heif_tai_timestamp_packet_alloc();
   heif_tai_timestamp_packet_copy(sample->timestamp, timestamp);
-#endif
 }
 
 
@@ -638,16 +636,12 @@ void heif_string_release(const char* str)
 
 const struct heif_tai_clock_info* heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track)
 {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   auto first_taic = track->track->get_first_cluster_taic();
   if (!first_taic) {
     return nullptr;
   }
 
   return first_taic->get_tai_clock_info();
-#else
-  return nullptr;
-#endif
 }
 
 

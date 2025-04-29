@@ -125,7 +125,6 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
   }
 #endif
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   if (m_aux_reader_tai_timestamps) {
     auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
     if (readResult.error) {
@@ -139,7 +138,6 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
     image->set_tai_timestamp(&resultTai.value);
   }
-#endif
 
   m_next_sample_to_be_processed++;
 
@@ -221,11 +219,11 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   write_sample_data(data.bitstream,
                     colorConvertedImage->get_sample_duration(),
                     data.is_sync_frame,
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
                     image->get_tai_timestamp(),
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
                     image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 #else
-  nullptr, std::string{});
+  std::string{});
 #endif
 
   return Error::Ok;

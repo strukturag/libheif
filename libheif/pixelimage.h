@@ -250,7 +250,6 @@ public:
 
   void unset_mdcv() { m_mdcv_set = false; }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
     delete m_tai_timestamp;
 
@@ -263,6 +262,7 @@ public:
     return m_tai_timestamp;
   }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   void set_gimi_sample_content_id(std::string id) { m_gimi_sample_content_id = id; }
 
   bool has_gimi_sample_content_id() const { return m_gimi_sample_content_id.has_value(); }

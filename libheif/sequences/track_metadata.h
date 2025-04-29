@@ -36,9 +36,7 @@ public:
   ~Track_Metadata() override = default;
 
   struct Metadata {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     ~Metadata() { heif_tai_timestamp_packet_release(timestamp); }
-#endif
 
     std::vector<uint8_t> raw_metadata;
     uint32_t duration = 0;

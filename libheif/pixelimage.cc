@@ -105,9 +105,7 @@ HeifPixelImage::~HeifPixelImage()
     delete[] iter.second.allocated_mem;
   }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   heif_tai_timestamp_packet_release(m_tai_timestamp);
-#endif
 }
 
 

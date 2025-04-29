@@ -48,9 +48,7 @@ struct heif_raw_sequence_sample
 {
   ~heif_raw_sequence_sample()
   {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     heif_tai_timestamp_packet_release(timestamp);
-#endif
   }
 
   std::vector<uint8_t> data;

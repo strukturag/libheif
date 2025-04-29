@@ -280,14 +280,12 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       return;
     }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (m_first_taic == nullptr) {
       auto taic = sample_description->get_child_box<Box_taic>();
       if (taic) {
         m_first_taic = taic;
       }
     }
-#endif
 
     auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
@@ -595,7 +593,6 @@ void Track::add_chunk(heif_compression_format format)
 
 void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_box)
 {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   // --- add 'taic' when we store timestamps as sample auxiliary information
 
   if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
@@ -603,7 +600,6 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
     taic->set_from_tai_clock_info(m_track_info->tai_clock_info);
     sample_description_box->append_child_box(taic);
   }
-#endif
 
   m_stsd->add_sample_entry(sample_description_box);
 }
@@ -640,7 +636,6 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   // --- sample timestamp
 
   if (m_track_info) {
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
       if (tai) {
         std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
@@ -657,6 +652,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
       }
     }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (m_track_info->with_sample_content_ids != heif_sample_aux_info_presence_none) {
       if (!gimi_contentID.empty()) {
         auto id = gimi_contentID;
@@ -749,7 +745,6 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
     }
   }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   if (m_aux_reader_tai_timestamps) {
     auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
     if (readResult.error) {
@@ -766,7 +761,6 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
       heif_tai_timestamp_packet_copy(sample->timestamp, &resultTai.value);
     }
   }
-#endif
 
   m_next_sample_to_be_processed++;
 

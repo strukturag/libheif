@@ -479,11 +479,11 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
     if (in->has_gimi_sample_content_id()) {
       out->set_gimi_sample_content_id(in->get_gimi_sample_content_id());
     }
+#endif
 
     if (auto* tai = in->get_tai_timestamp()) {
       out->set_tai_timestamp(tai);
     }
-#endif
 
     out->set_sample_duration(in->get_sample_duration());
 

@@ -705,8 +705,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_mskC>();
       break;
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-      // --- TAI timestamps
+    // --- TAI timestamps
 
     case fourcc("itai"):
       box = std::make_shared<Box_itai>();
@@ -715,7 +714,6 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
     case fourcc("taic"):
       box = std::make_shared<Box_taic>();
       break;
-#endif
 
     // --- AVC (H.264)
 
@@ -4793,7 +4791,6 @@ Error Box_cmex::write(StreamWriter& writer) const
 }
 
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
 {
   std::ostringstream sstr;
@@ -4974,4 +4971,4 @@ Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
 
   return range.get_error();
 }
-#endif
+
