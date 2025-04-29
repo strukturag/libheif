@@ -23,12 +23,9 @@
 
 #include <libheif/heif.h>
 
-LIBHEIF_API extern const uint64_t heif_tai_clock_info_time_uncertainty_unknown;
-LIBHEIF_API extern const int32_t heif_tai_clock_info_clock_drift_rate_unknown;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_unknown;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source;
-
+/*
+ *
+ */
 struct heif_tai_clock_info
 {
   uint8_t version;
@@ -48,8 +45,12 @@ struct heif_tai_clock_info
   uint8_t clock_type;
 };
 
+LIBHEIF_API extern const uint64_t heif_tai_clock_info_time_uncertainty_unknown;
+LIBHEIF_API extern const int32_t heif_tai_clock_info_clock_drift_rate_unknown;
+LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_unknown;
+LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source;
+LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source;
 
-LIBHEIF_API extern const uint64_t heif_tai_timestamp_unknown;
 
 struct heif_tai_timestamp_packet
 {
@@ -57,12 +58,39 @@ struct heif_tai_timestamp_packet
 
   // version 1
 
+  // number of nanoseconds since TAI epoch (1958-01-01T00:00:00.0)
   uint64_t tai_timestamp;
+
+  // whether the remote and receiptor clocks are in sync
   uint8_t synchronization_state;         // bool
+
+  // whether the receptor clock failed to generate a timestamp
   uint8_t timestamp_generation_failure;  // bool
+
+  // whether the original clock value has been modified
   uint8_t timestamp_is_modified;         // bool
 };
 
+LIBHEIF_API extern const uint64_t heif_tai_timestamp_unknown;
+
+
+
+/**
+ * Creates a new clock info property if it doesn't already exist.
+ */
+//
+// out_propertyId can be NULL
+LIBHEIF_API
+struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
+                                                        heif_item_id itemId,
+                                                        const struct heif_tai_clock_info* clock,
+                                                        heif_property_id* out_propertyId);
+
+// This function allocates a new heif_tai_clock_info and returns it through out_clock.
+LIBHEIF_API
+struct heif_error heif_item_get_property_tai_clock_info(const struct heif_context* ctx,
+                                                        heif_item_id itemId,
+                                                        struct heif_tai_clock_info** out_clock);
 
 
 #endif //LIBHEIF_HEIF_TAI_TIMESTAMPS_H

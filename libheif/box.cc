@@ -4843,6 +4843,28 @@ Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
   return range.get_error();
 }
 
+
+bool operator==(const heif_tai_clock_info& a,
+                const heif_tai_clock_info& b)
+{
+  return a.version == b.version &&
+         a.time_uncertainty == b.time_uncertainty &&
+         a.clock_resolution == b.clock_resolution &&
+         a.clock_drift_rate == b.clock_drift_rate &&
+         a.clock_type == b.clock_type;
+}
+
+bool Box_taic::operator==(const Box& other) const
+{
+  const auto* other_ispe = dynamic_cast<const Box_taic*>(&other);
+  if (other_ispe == nullptr) {
+    return false;
+  }
+
+  return m_info == other_ispe->m_info;
+}
+
+
 std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);

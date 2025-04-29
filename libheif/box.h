@@ -1740,12 +1740,17 @@ public:
     return &m_info;
   }
 
+  bool operator==(const Box& other) const override;
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   heif_tai_clock_info m_info;
 };
+
+bool operator==(const heif_tai_clock_info& a,
+                const heif_tai_clock_info& b);
 
 
 class Box_itai : public FullBox

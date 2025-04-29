@@ -360,21 +360,6 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
 #include <libheif/heif_tai_timestamps.h>
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-
-// Creates a new clock info property if it doesn't already exist.
-LIBHEIF_API
-struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
-                                               heif_item_id itemId,
-                                               const struct heif_tai_clock_info* clock,
-                                               heif_property_id* out_propertyId);
-
-// The `out_clock` struct passed in needs to have the `version` field set so that this
-// function knows which fields it is safe to fill.
-// When the read property is a lower version, the version variable of out_clock will be reduced.
-LIBHEIF_API
-struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
-                                               heif_item_id itemId,
-                                               struct heif_tai_clock_info* out_clock);
 #endif
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
