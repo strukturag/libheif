@@ -1494,8 +1494,13 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
             "NULL out_img passed to heif_decode_image()"};
   }
 
-  *out_img = nullptr;
+  if (in_handle == nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL heif_image_handle passed to heif_decode_image()"};
+  }
 
+  *out_img = nullptr;
   heif_item_id id = in_handle->image->get_id();
 
   heif_decoding_options dec_options = normalize_options(input_options);
