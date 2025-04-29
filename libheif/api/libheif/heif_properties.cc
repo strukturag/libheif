@@ -361,19 +361,6 @@ struct heif_error find_property(const struct heif_context* context,
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 
 
-struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
-                                               const struct heif_tai_timestamp_packet* timestamp)
-{
-  Error err = img->image->set_tai_timestamp(timestamp);
-  if (err) {
-    return err.error_struct(img->image.get());
-  }
-  else {
-    return heif_error_success;
-  }
-}
-
-
 void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src)
 {
   if (dst->version >= 1 && src->version >= 1) {
@@ -394,20 +381,6 @@ int heif_image_has_tai_timestamp(const struct heif_image* img)
 }
 
 
-struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
-                                               struct heif_tai_timestamp_packet* timestamp)
-{
-  auto* tai = img->image->get_tai_timestamp();
-  if (!tai) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "No timestamp attached to image"};
-  }
-
-  heif_tai_timestamp_packet_copy(timestamp, tai);
-  return heif_error_success;
-}
-
 heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
 {
   auto* tai = new heif_tai_timestamp_packet;
@@ -418,11 +391,6 @@ heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
   tai->timestamp_is_modified = false;
 
   return tai;
-}
-
-void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet* tai)
-{
-  delete tai;
 }
 
 #endif

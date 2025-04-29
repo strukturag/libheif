@@ -53,11 +53,6 @@ void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_inf
   // the remaining dst fields have to be filled with defaults
 }
 
-void heif_tai_clock_info_release(heif_tai_clock_info* info)
-{
-  delete info;
-}
-
 
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 {

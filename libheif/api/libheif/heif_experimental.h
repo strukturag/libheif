@@ -362,21 +362,10 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 
 LIBHEIF_API
-struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
-                                               const struct heif_tai_timestamp_packet* timestamp);
-
-LIBHEIF_API
 int heif_image_has_tai_timestamp(const struct heif_image* img);
 
 LIBHEIF_API
-struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
-                                               struct heif_tai_timestamp_packet* timestamp);
-
-LIBHEIF_API
 heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
-
-LIBHEIF_API
-void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
 
 // version field has to be set in both structs
 LIBHEIF_API

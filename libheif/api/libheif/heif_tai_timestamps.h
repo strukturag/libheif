@@ -23,10 +23,12 @@
 
 #include <libheif/heif.h>
 
-/*
- *
- */
-struct heif_tai_clock_info {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+  struct heif_tai_clock_info {
   uint8_t version;
 
   // version 1
@@ -50,6 +52,10 @@ LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_unknown;
 LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source;
 LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source;
 
+LIBHEIF_API
+void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
+
+
 
 struct heif_tai_timestamp_packet {
   uint8_t version;
@@ -70,7 +76,8 @@ struct heif_tai_timestamp_packet {
 };
 
 LIBHEIF_API
-void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
+void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
+
 
 
 /**
@@ -84,10 +91,14 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
                                                         const struct heif_tai_clock_info* clock,
                                                         heif_property_id* out_optional_propertyId);
 
-/** This function allocates a new heif_tai_clock_info and returns it through out_clock.
+/**
+ * Get the heif_tai_clock_info attached to the item.
+ * This function allocates a new heif_tai_clock_info and returns it through out_clock.
  *
  * @param out_clock This parameter must not be nullptr. The object returned through this parameter must
  *                  be released with heif_tai_clock_info_release().
+ *                  If no tai_clock_info property exists for the item, out_clock is set to nullptr and
+ *                  no error is returned.
  */
 LIBHEIF_API
 struct heif_error heif_item_get_property_tai_clock_info(const struct heif_context* ctx,
@@ -106,10 +117,30 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
                                                        struct heif_tai_timestamp_packet* timestamp,
                                                        heif_property_id* out_optional_propertyId);
 
+/**
+ * Get the heif_tai_timestamp_packet attached to the item.
+ * This function allocates a new heif_tai_timestamp_packet and returns it through out_timestamp.
+ *
+ * @param out_timestamp This parameter must not be nullptr. The object returned through this parameter must
+ *                  be released with heif_tai_timestamp_packet_release().
+ *                  If no tai_timestamp_packet property exists for the item, out_timestamp is set to nullptr and
+ *                  no error is returned.
+ */
 LIBHEIF_API
 struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context* ctx,
                                                        heif_item_id itemId,
                                                        struct heif_tai_timestamp_packet** out_timestamp);
 
+LIBHEIF_API
+struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
+                                               const struct heif_tai_timestamp_packet* timestamp);
+
+LIBHEIF_API
+struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
+                                               struct heif_tai_timestamp_packet** out_timestamp);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LIBHEIF_HEIF_TAI_TIMESTAMPS_H

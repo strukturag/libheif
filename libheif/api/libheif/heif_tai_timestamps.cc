@@ -84,7 +84,8 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
   // Check if taic exists for itemId
   auto taic = file->get_property_for_item<Box_taic>(itemId);
   if (!taic) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "TAI clock info property not found for item"};
+    // return NULL heif_tai_clock_info
+    return heif_error_success;
   }
 
   *out_clock = new heif_tai_clock_info;
@@ -97,6 +98,12 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info)
 {
   delete clock_info;
+}
+
+
+void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet* tai)
+{
+  delete tai;
 }
 
 
@@ -141,6 +148,8 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_timestamp_packet passed in"};
   }
 
+  *out_timestamp = nullptr;
+
   // Check if itemId exists
   auto file = ctx->context->get_heif_file();
   if (!file->item_exists(itemId)) {
@@ -150,12 +159,48 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
   // Check if itai exists for itemId
   auto itai = file->get_property_for_item<Box_itai>(itemId);
   if (!itai) {
-    out_timestamp = nullptr;
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "Timestamp property not found for itemId"};
+    // return NULL heif_tai_timestamp_packet;
+    return heif_error_success;
   }
 
   *out_timestamp = new heif_tai_timestamp_packet;
   **out_timestamp = *itai->get_tai_timestamp_packet();
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
+                                               const struct heif_tai_timestamp_packet* timestamp)
+{
+  Error err = img->image->set_tai_timestamp(timestamp);
+  if (err) {
+    return err.error_struct(img->image.get());
+  }
+  else {
+    return heif_error_success;
+  }
+}
+
+
+struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
+                                               struct heif_tai_timestamp_packet** out_timestamp)
+{
+  if (!out_timestamp) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_timestamp_packet passed in"};
+  }
+
+  *out_timestamp = nullptr;
+
+  auto* tai = img->image->get_tai_timestamp();
+  if (!tai) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "No timestamp attached to image"};
+  }
+
+  *out_timestamp = new heif_tai_timestamp_packet;
+  **out_timestamp = *tai;
 
   return heif_error_success;
 }
