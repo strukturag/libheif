@@ -358,44 +358,6 @@ struct heif_error find_property(const struct heif_context* context,
 }
 
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-
-
-void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src)
-{
-  if (dst->version >= 1 && src->version >= 1) {
-    dst->tai_timestamp = src->tai_timestamp;
-    dst->synchronization_state = src->synchronization_state;
-    dst->timestamp_is_modified = src->timestamp_is_modified;
-    dst->timestamp_generation_failure = src->timestamp_generation_failure;
-  }
-
-  // in the future when copying with "src->version > dst->version",
-  // the remaining dst fields have to be filled with defaults
-}
-
-
-int heif_image_has_tai_timestamp(const struct heif_image* img)
-{
-  return img->image->get_tai_timestamp() != nullptr;
-}
-
-
-heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
-{
-  auto* tai = new heif_tai_timestamp_packet;
-  tai->version = 1;
-  tai->tai_timestamp = 0;
-  tai->synchronization_state = false; // TODO: or true ?
-  tai->timestamp_generation_failure = false;
-  tai->timestamp_is_modified = false;
-
-  return tai;
-}
-
-#endif
-
-
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
                                                   heif_item_id itemId,
                                                   heif_property_id propertyId,

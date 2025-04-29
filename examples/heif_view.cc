@@ -28,6 +28,7 @@
 #include <getopt.h>
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_sequences.h"
+#include <libheif/heif_tai_timestamps.h>
 
 #if defined(HAVE_UNISTD_H)
 

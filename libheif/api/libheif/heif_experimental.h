@@ -355,21 +355,7 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         size_t* out_stride);
 #endif
 
-// ========================= Timestamps =========================
-
-#include <libheif/heif_tai_timestamps.h>
-
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-
-LIBHEIF_API
-int heif_image_has_tai_timestamp(const struct heif_image* img);
-
-LIBHEIF_API
-heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
-
-// version field has to be set in both structs
-LIBHEIF_API
-void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
 
 LIBHEIF_API
 heif_error heif_image_extract_area(const heif_image*,

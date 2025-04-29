@@ -26,6 +26,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_properties.h"
+#include "libheif/heif_tai_timestamps.h"
 #include <cinttypes>
 #include <cstddef>
 
@@ -1665,9 +1666,6 @@ private:
 };
 
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src); // TODO: move this from track.cc to a special TAI file
-
 class Box_taic : public FullBox
 {
 public:
@@ -1819,7 +1817,5 @@ private:
 
 bool operator==(const heif_tai_timestamp_packet& a,
                 const heif_tai_timestamp_packet& b);
-
-#endif
 
 #endif

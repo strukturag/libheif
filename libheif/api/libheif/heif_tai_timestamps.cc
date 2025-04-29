@@ -32,6 +32,60 @@ const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source = 
 const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source = 2;
 
 
+heif_tai_clock_info* heif_tai_clock_info_alloc()
+{
+  auto* taic = new heif_tai_clock_info;
+  taic->version = 1;
+  taic->time_uncertainty = heif_tai_clock_info_time_uncertainty_unknown;
+  taic->clock_resolution = 0;
+  taic->clock_drift_rate = heif_tai_clock_info_clock_drift_rate_unknown;
+  taic->clock_type = heif_tai_clock_info_clock_type_unknown;
+
+  return taic;
+}
+
+
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
+{
+  auto* tai = new heif_tai_timestamp_packet;
+  tai->version = 1;
+  tai->tai_timestamp = 0;
+  tai->synchronization_state = false;
+  tai->timestamp_generation_failure = false;
+  tai->timestamp_is_modified = false;
+
+  return tai;
+}
+
+
+
+void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src)
+{
+  if (dst->version >= 1 && src->version >= 1) {
+    dst->tai_timestamp = src->tai_timestamp;
+    dst->synchronization_state = src->synchronization_state;
+    dst->timestamp_is_modified = src->timestamp_is_modified;
+    dst->timestamp_generation_failure = src->timestamp_generation_failure;
+  }
+
+  // in the future when copying with "src->version > dst->version",
+  // the remaining dst fields have to be filled with defaults
+}
+
+void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src)
+{
+  if (dst->version >= 1 && src->version >= 1) {
+    dst->time_uncertainty = src->time_uncertainty;
+    dst->clock_resolution = src->clock_resolution;
+    dst->clock_drift_rate = src->clock_drift_rate;
+    dst->clock_type = src->clock_type;
+  }
+
+  // in the future when copying with "src->version > dst->version",
+  // the remaining dst fields have to be filled with defaults
+}
+
+
 struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
                                                         heif_item_id itemId,
                                                         const heif_tai_clock_info* clock,

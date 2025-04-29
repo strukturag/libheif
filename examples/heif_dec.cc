@@ -49,6 +49,7 @@
 #include <cctype>
 
 #include <libheif/heif.h>
+#include <libheif/heif_tai_timestamps.h>
 
 #include "heifio/encoder.h"
 

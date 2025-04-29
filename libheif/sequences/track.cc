@@ -27,32 +27,6 @@
 #include "sequences/track_metadata.h"
 #include "libheif/api_structs.h"
 
-heif_tai_clock_info* heif_tai_clock_info_alloc()
-{
-  auto* taic = new heif_tai_clock_info;
-  taic->version = 1;
-
-  taic->time_uncertainty = 0; // TODO
-  taic->clock_resolution = 0; // TODO
-  taic->clock_drift_rate = 0; // TODO
-  taic->clock_type = 0; // TODO
-
-  return taic;
-}
-
-void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src)
-{
-  if (dst->version >= 1 && src->version >= 1) {
-    dst->time_uncertainty = src->time_uncertainty;
-    dst->clock_resolution = src->clock_resolution;
-    dst->clock_drift_rate = src->clock_drift_rate;
-    dst->clock_type = src->clock_type;
-  }
-
-  // in the future when copying with "src->version > dst->version",
-  // the remaining dst fields have to be filled with defaults
-}
-
 
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 {

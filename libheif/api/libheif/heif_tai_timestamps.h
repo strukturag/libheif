@@ -27,8 +27,7 @@
 extern "C" {
 #endif
 
-
-  struct heif_tai_clock_info {
+struct heif_tai_clock_info {
   uint8_t version;
 
   // version 1
@@ -53,8 +52,14 @@ LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_not_synchronized_
 LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source;
 
 LIBHEIF_API
-void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
+heif_tai_clock_info* heif_tai_clock_info_alloc();
 
+// version field has to be set in both structs
+LIBHEIF_API
+void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src);
+
+LIBHEIF_API
+void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
 
 
 struct heif_tai_timestamp_packet {
@@ -74,6 +79,13 @@ struct heif_tai_timestamp_packet {
   // whether the original clock value has been modified
   uint8_t timestamp_is_modified;         // bool
 };
+
+LIBHEIF_API
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
+
+// version field has to be set in both structs
+LIBHEIF_API
+void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
 
 LIBHEIF_API
 void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
