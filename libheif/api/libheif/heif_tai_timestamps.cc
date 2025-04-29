@@ -31,8 +31,6 @@ const int8_t heif_tai_clock_info_clock_type_unknown = 0;
 const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source = 1;
 const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source = 2;
 
-const uint64_t heif_tai_timestamp_unknown = 0xFFFFFFFFFFFFFFFF;
-
 
 struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
                                                         heif_item_id itemId,

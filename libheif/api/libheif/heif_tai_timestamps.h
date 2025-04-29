@@ -71,8 +71,6 @@ struct heif_tai_timestamp_packet
   uint8_t timestamp_is_modified;         // bool
 };
 
-LIBHEIF_API extern const uint64_t heif_tai_timestamp_unknown;
-
 
 
 /**
