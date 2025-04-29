@@ -609,7 +609,7 @@ Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
 }
 
 
-bool HeifFile::image_exists(heif_item_id ID) const
+bool HeifFile::item_exists(heif_item_id ID) const
 {
   auto image_iter = m_infe_boxes.find(ID);
   return image_iter != m_infe_boxes.end();
@@ -679,7 +679,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
   // std::lock_guard<std::mutex> guard(m_read_mutex);   // TODO: I think that this is not needed anymore because this function is not used for image data anymore.
 #endif
 
-  if (!image_exists(ID)) {
+  if (!item_exists(ID)) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Nonexisting_item_referenced);
   }

@@ -103,7 +103,7 @@ public:
 
   std::vector<heif_item_id> get_item_IDs() const;
 
-  bool image_exists(heif_item_id ID) const;
+  bool item_exists(heif_item_id ID) const;
 
   bool has_item_with_id(heif_item_id ID) const;
 

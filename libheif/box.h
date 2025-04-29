@@ -1799,17 +1799,20 @@ public:
 
   bool get_timestamp_is_modified() const { return m_timestamp.timestamp_is_modified; }
 
+  void set_from_tai_timestamp_packet(const heif_tai_timestamp_packet* tai) {
+    heif_tai_timestamp_packet_copy(&m_timestamp, tai);
+  }
+
+  const heif_tai_timestamp_packet* get_tai_timestamp_packet() const
+  {
+    return &m_timestamp;
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   heif_tai_timestamp_packet m_timestamp;
-  /*
-  uint64_t m_tai_timestamp = 0;
-  bool m_synchronization_state = false;
-  bool m_timestamp_generation_failure = false;
-  bool m_timestamp_is_modified = false;
-   */
 };
 #endif
 

@@ -43,7 +43,7 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
 
   // Check if itemId exists
   auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
+  if (!file->item_exists(itemId)) {
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
   }
 
@@ -80,7 +80,7 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 
   // Check if itemId exists
   auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
+  if (!file->item_exists(itemId)) {
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "item ID does not exist"};
   }
 
@@ -96,4 +96,74 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
   return heif_error_success;
 }
 
+
+void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info)
+{
+  delete clock_info;
+}
+
+
+struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
+                                                       heif_item_id itemId,
+                                                       heif_tai_timestamp_packet* timestamp,
+                                                       heif_property_id* out_propertyId)
+{
+  if (!ctx) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  // Check if itemId exists
+  auto file = ctx->context->get_heif_file();
+  if (!file->item_exists(itemId)) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "item does not exist"};
+  }
+
+  // Create new itai if one doesn't exist for the itemId.
+  auto itai = file->get_property_for_item<Box_itai>(itemId);
+  if (!itai) {
+    itai = std::make_shared<Box_itai>();
+  }
+
+  // Set timestamp values
+  itai->set_from_tai_timestamp_packet(timestamp);
+
+  heif_property_id id = ctx->context->add_property(itemId, itai, false);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context* ctx,
+                                                       heif_item_id itemId,
+                                                       struct heif_tai_timestamp_packet** out_timestamp)
+{
+  if (!ctx) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+  else if (!out_timestamp) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_timestamp_packet passed in"};
+  }
+
+  // Check if itemId exists
+  auto file = ctx->context->get_heif_file();
+  if (!file->item_exists(itemId)) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "item does not exist"};
+  }
+
+  // Check if itai exists for itemId
+  auto itai = file->get_property_for_item<Box_itai>(itemId);
+  if (!itai) {
+    out_timestamp = nullptr;
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "Timestamp property not found for itemId"};
+  }
+
+  *out_timestamp = new heif_tai_timestamp_packet;
+  **out_timestamp = *itai->get_tai_timestamp_packet();
+
+  return heif_error_success;
+}
 
