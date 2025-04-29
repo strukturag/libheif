@@ -25,8 +25,8 @@
 #include "file.h"
 
 
-const uint64_t heif_tai_clock_info_time_uncertainty_unknown = 0xFFFFFFFFFFFFFFFF;
-const int32_t heif_tai_clock_info_clock_drift_rate_unknown = 0x7FFFFFFF;
+const uint64_t heif_tai_clock_info_time_uncertainty_unknown = UINT64_C(0xFFFFFFFFFFFFFFFF);
+const int32_t heif_tai_clock_info_clock_drift_rate_unknown = INT32_C(0x7FFFFFFF);
 const int8_t heif_tai_clock_info_clock_type_unknown = 0;
 const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source = 1;
 const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source = 2;
