@@ -360,16 +360,6 @@ struct heif_error find_property(const struct heif_context* context,
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 
-
-int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
-{
-  if (drift_rate == heif_tai_clock_info_clock_drift_rate_unknown) {
-    return 1;
-  }
-  return 0;
-}
-
-
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
                                                const heif_tai_clock_info* clock,

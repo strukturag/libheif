@@ -4800,7 +4800,7 @@ std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
   sstr << indent << "time_uncertainty: " << info.time_uncertainty << "\n";
   sstr << indent << "clock_resolution: " << info.clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
-  if (heif_is_tai_clock_info_drift_rate_undefined(info.clock_drift_rate)) {
+  if (info.clock_drift_rate == heif_tai_clock_info_clock_drift_rate_unknown) {
     sstr << "undefined\n";
   }
   else {

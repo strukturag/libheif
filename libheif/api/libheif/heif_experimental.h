@@ -360,9 +360,6 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
 #include <libheif/heif_tai_timestamps.h>
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
-
-
 
 // Creates a new clock info property if it doesn't already exist.
 LIBHEIF_API
