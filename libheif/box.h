@@ -1676,9 +1676,9 @@ public:
     set_short_type(fourcc("taic"));
 
     m_info.version = 1;
-    m_info.time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
+    m_info.time_uncertainty = heif_tai_clock_info_time_uncertainty_unknown;
     m_info.clock_resolution = 0;
-    m_info.clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
+    m_info.clock_drift_rate = heif_tai_clock_info_clock_drift_rate_unknown;
     m_info.clock_type = 0;
   }
 

@@ -353,27 +353,11 @@ LIBHEIF_API
 struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         enum heif_channel channel,
                                                         size_t* out_stride);
-
+#endif
 
 // ========================= Timestamps =========================
 
-LIBHEIF_API extern const uint64_t heif_tai_clock_info_unknown_time_uncertainty;
-LIBHEIF_API extern const int32_t heif_tai_clock_info_unknown_drift_rate;
-LIBHEIF_API extern const uint64_t heif_unknown_tai_timestamp;
-#endif
-
-struct heif_tai_clock_info
-{
-  uint8_t version;
-
-  // version 1
-
-  uint64_t time_uncertainty;
-  uint32_t clock_resolution;
-  int32_t clock_drift_rate;
-  uint8_t clock_type;
-};
-
+#include <libheif/heif_tai_timestamps.h>
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
@@ -395,18 +379,6 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
                                                struct heif_tai_clock_info* out_clock);
 #endif
-
-struct heif_tai_timestamp_packet
-{
-  uint8_t version;
-
-  // version 1
-
-  uint64_t tai_timestamp;
-  uint8_t synchronization_state;         // bool
-  uint8_t timestamp_generation_failure;  // bool
-  uint8_t timestamp_is_modified;         // bool
-};
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 

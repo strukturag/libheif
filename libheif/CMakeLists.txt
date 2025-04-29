@@ -10,6 +10,7 @@ set(libheif_headers
         api/libheif/heif_regions.h
         api/libheif/heif_items.h
         api/libheif/heif_sequences.h
+        api/libheif/heif_tai_timestamps.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
@@ -51,6 +52,7 @@ set(libheif_sources
         api/libheif/heif_properties.cc
         api/libheif/heif_items.cc
         api/libheif/heif_sequences.cc
+        api/libheif/heif_tai_timestamps.cc
         codecs/decoder.h
         codecs/decoder.cc
         codecs/encoder.h
