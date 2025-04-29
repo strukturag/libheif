@@ -47,12 +47,9 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
   }
 
-  // Create new taic if none exists for the itemId.
-  auto taic = ctx->context->get_heif_file()->get_property_for_item<Box_taic>(itemId);
-  if (!taic) {
-    taic = std::make_shared<Box_taic>();
-  }
+  // Create new taic (it will be deduplicated automatically in add_property())
 
+  auto taic = std::make_shared<Box_taic>();
   taic->set_from_tai_clock_info(clock);
 
   heif_property_id id = ctx->context->add_property(itemId, taic, false);
@@ -118,13 +115,9 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "item does not exist"};
   }
 
-  // Create new itai if one doesn't exist for the itemId.
-  auto itai = file->get_property_for_item<Box_itai>(itemId);
-  if (!itai) {
-    itai = std::make_shared<Box_itai>();
-  }
+  // Create new itai (it will be deduplicated automatically in add_property())
 
-  // Set timestamp values
+  auto itai = std::make_shared<Box_itai>();
   itai->set_from_tai_timestamp_packet(timestamp);
 
   heif_property_id id = ctx->context->add_property(itemId, itai, false);

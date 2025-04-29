@@ -4856,12 +4856,12 @@ bool operator==(const heif_tai_clock_info& a,
 
 bool Box_taic::operator==(const Box& other) const
 {
-  const auto* other_ispe = dynamic_cast<const Box_taic*>(&other);
-  if (other_ispe == nullptr) {
+  const auto* other_taic = dynamic_cast<const Box_taic*>(&other);
+  if (other_taic == nullptr) {
     return false;
   }
 
-  return m_info == other_ispe->m_info;
+  return m_info == other_taic->m_info;
 }
 
 
@@ -4890,6 +4890,27 @@ std::vector<uint8_t> Box_itai::encode_tai_to_bitstream(const heif_tai_timestamp_
 
   return writer.get_data();
 }
+
+bool operator==(const heif_tai_timestamp_packet& a,
+                const heif_tai_timestamp_packet& b)
+{
+  return a.version == b.version &&
+         a.tai_timestamp == b.tai_timestamp &&
+         a.synchronization_state == b.synchronization_state &&
+         a.timestamp_generation_failure == b.timestamp_generation_failure &&
+         a.timestamp_is_modified == b.timestamp_is_modified;
+}
+
+bool Box_itai::operator==(const Box& other) const
+{
+  const auto* other_itai = dynamic_cast<const Box_itai*>(&other);
+  if (other_itai == nullptr) {
+    return false;
+  }
+
+  return m_timestamp == other_itai->m_timestamp;
+}
+
 
 
 uint64_t uint8_vector_to_uint64_BE(const uint8_t* data)

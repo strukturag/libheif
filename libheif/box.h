@@ -1808,12 +1808,18 @@ public:
     return &m_timestamp;
   }
 
+  bool operator==(const Box& other) const override;
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   heif_tai_timestamp_packet m_timestamp;
 };
+
+bool operator==(const heif_tai_timestamp_packet& a,
+                const heif_tai_timestamp_packet& b);
+
 #endif
 
 #endif
