@@ -364,6 +364,16 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
     codedImage.properties.push_back(mdcv);
   }
 
+
+  // --- write TAI property
+
+  if (auto* tai = image->get_tai_timestamp()) {
+    auto itai = std::make_shared<Box_itai>();
+    itai->set_from_tai_timestamp_packet(tai);
+
+    codedImage.properties.push_back(itai);
+  }
+
   return encodeResult;
 }
 
@@ -846,6 +856,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     auto pasp = get_property<Box_pasp>();
     if (pasp) {
       img->set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
+    }
+
+    // TAI
+
+    auto itai = get_property<Box_itai>();
+    if (itai) {
+      img->set_tai_timestamp(itai->get_tai_timestamp_packet());
     }
   }
 

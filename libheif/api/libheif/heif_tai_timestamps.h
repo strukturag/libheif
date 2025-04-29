@@ -161,6 +161,9 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
 
 /**
  * Attach a TAI timestamp to the image.
+ * The main use of this function is for image sequences, but it can also be used for still images.
+ * If used for still images, note that you also have to set the heif_tai_clock_info to the image item
+ * through heif_item_set_property_tai_clock_info().
  *
  * @param timestamp The TAI timestamp to set to the image. This object will be copied.
  */
@@ -170,6 +173,7 @@ struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
 
 /**
  * Get the heif_tai_timestamp_packet attached to the image.
+ * The main use of this function is for image sequences, but it can also be used for still images.
  * This function allocates a new heif_tai_timestamp_packet and returns it through out_timestamp.
  *
  * @param out_timestamp This parameter must not be nullptr. The object returned through this parameter must
