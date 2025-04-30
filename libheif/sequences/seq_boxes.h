@@ -22,6 +22,10 @@
 #define SEQ_BOXES_H
 
 #include "box.h"
+#include <string>
+#include <memory>
+#include <vector>
+
 
 class Box_container : public Box {
 public:

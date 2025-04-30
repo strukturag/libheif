@@ -30,6 +30,7 @@
 #include <fstream>
 #include <array>
 #include <vector>
+#include <algorithm>
 
 
 void show_version()

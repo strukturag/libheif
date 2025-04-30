@@ -22,6 +22,9 @@
 #define LIBHEIF_TRACK_VISUAL_H
 
 #include "track.h"
+#include <string>
+#include <memory>
+#include <vector>
 
 
 class Track_Visual : public Track {

@@ -21,7 +21,9 @@
 #ifndef LIBHEIF_CHUNK_H
 #define LIBHEIF_CHUNK_H
 
-#include <codecs/decoder.h>
+#include "codecs/decoder.h"
+#include <memory>
+#include <vector>
 
 
 class HeifContext;

@@ -31,6 +31,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 
 
 int heif_context_has_sequence(heif_context* ctx)

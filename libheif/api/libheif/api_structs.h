@@ -25,6 +25,8 @@
 #include "context.h"
 
 #include <memory>
+#include <vector>
+#include <string>
 #include "image-items/image_item.h"
 
 struct heif_image_handle

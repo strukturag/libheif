@@ -21,8 +21,10 @@
 #ifndef LIBHEIF_TRACK_METADATA_H
 #define LIBHEIF_TRACK_METADATA_H
 
-
 #include "track.h"
+#include <string>
+#include <memory>
+#include <vector>
 
 
 class Track_Metadata : public Track {

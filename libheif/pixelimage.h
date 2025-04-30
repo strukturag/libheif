@@ -33,6 +33,7 @@
 #include <set>
 #include <utility>
 #include <cassert>
+#include <string>
 
 
 heif_chroma chroma_from_subsampling(int h, int v);

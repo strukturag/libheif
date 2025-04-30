@@ -21,8 +21,8 @@
 #include <libheif/heif_tai_timestamps.h>
 #include <libheif/api_structs.h>
 #include "box.h"
-#include "context.h"
 #include "file.h"
+#include <memory>
 
 
 void initialize_heif_tai_clock_info(heif_tai_clock_info* taic)

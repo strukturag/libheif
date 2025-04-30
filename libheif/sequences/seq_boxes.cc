@@ -21,6 +21,8 @@
 #include "sequences/seq_boxes.h"
 #include <iomanip>
 #include <set>
+#include <limits>
+#include <utility>
 
 
 Error Box_container::parse(BitstreamRange& range, const heif_security_limits* limits)
