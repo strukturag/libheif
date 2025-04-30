@@ -238,7 +238,20 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
     }
 
     // TODO: overflow
-    next_box_start = next_box_start + box_header.get_box_size();
+    uint64_t boxSize = box_header.get_box_size();
+    if (boxSize == 0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Box with size 0 found"};
+    }
+
+    if (std::numeric_limits<uint64_t>::max() - boxSize < next_box_start) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Box size too large, integer overflow"};
+    }
+
+    next_box_start = next_box_start + boxSize;
   }
 
   return Error::Ok;
