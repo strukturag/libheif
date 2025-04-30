@@ -25,36 +25,39 @@
 #include "file.h"
 
 
-const uint64_t heif_tai_clock_info_time_uncertainty_unknown = UINT64_C(0xFFFFFFFFFFFFFFFF);
-const int32_t heif_tai_clock_info_clock_drift_rate_unknown = INT32_C(0x7FFFFFFF);
-const int8_t heif_tai_clock_info_clock_type_unknown = 0;
-const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source = 1;
-const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source = 2;
-
-
-heif_tai_clock_info* heif_tai_clock_info_alloc()
+void initialize_heif_tai_clock_info(heif_tai_clock_info* taic)
 {
-  auto* taic = new heif_tai_clock_info;
   taic->version = 1;
   taic->time_uncertainty = heif_tai_clock_info_time_uncertainty_unknown;
   taic->clock_resolution = 0;
   taic->clock_drift_rate = heif_tai_clock_info_clock_drift_rate_unknown;
   taic->clock_type = heif_tai_clock_info_clock_type_unknown;
+}
+
+heif_tai_clock_info* heif_tai_clock_info_alloc()
+{
+  auto* taic = new heif_tai_clock_info;
+  initialize_heif_tai_clock_info(taic);
 
   return taic;
 }
 
 
+void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai)
+{
+  itai->version = 1;
+  itai->tai_timestamp = 0;
+  itai->synchronization_state = false;
+  itai->timestamp_generation_failure = false;
+  itai->timestamp_is_modified = false;
+}
+
 heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
 {
-  auto* tai = new heif_tai_timestamp_packet;
-  tai->version = 1;
-  tai->tai_timestamp = 0;
-  tai->synchronization_state = false;
-  tai->timestamp_generation_failure = false;
-  tai->timestamp_is_modified = false;
+  auto* itai = new heif_tai_timestamp_packet;
+  initialize_heif_tai_timestamp_packet(itai);
 
-  return tai;
+  return itai;
 }
 
 

@@ -4804,7 +4804,13 @@ std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
     sstr << info.clock_drift_rate << "\n";
   }
 
-  sstr << indent << "clock_type: " << static_cast<int>(info.clock_type) << "\n";
+  sstr << indent << "clock_type: " << int(info.clock_type) << " ";
+  switch (info.clock_type) {
+    case heif_tai_clock_info_clock_type_unknown: sstr << "(unknown)\n"; break;
+    case heif_tai_clock_info_clock_type_synchronized_to_atomic_source: sstr << "(synchronized to atomic source)\n"; break;
+    case heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source: sstr << "(not synchronized to atomic source)\n"; break;
+    default: sstr << "(illegal value)\n"; break;;
+  }
   return sstr.str();
 }
 
@@ -4866,9 +4872,9 @@ std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "tai_timestamp: " << m_timestamp.tai_timestamp << "\n";
-  sstr << indent << "synchronization_state: " << m_timestamp.synchronization_state << "\n";
-  sstr << indent << "timestamp_generation_failure: " << m_timestamp.timestamp_generation_failure << "\n";
-  sstr << indent << "timestamp_is_modified: " << m_timestamp.timestamp_is_modified << "\n";
+  sstr << indent << "synchronization_state: " << int(m_timestamp.synchronization_state) << "\n";
+  sstr << indent << "timestamp_generation_failure: " << int(m_timestamp.timestamp_generation_failure) << "\n";
+  sstr << indent << "timestamp_is_modified: " << int(m_timestamp.timestamp_is_modified) << "\n";
   return sstr.str();
 }
 

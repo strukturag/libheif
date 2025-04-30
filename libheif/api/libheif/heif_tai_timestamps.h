@@ -45,11 +45,17 @@ struct heif_tai_clock_info {
   uint8_t clock_type;
 };
 
-LIBHEIF_API extern const uint64_t heif_tai_clock_info_time_uncertainty_unknown;
-LIBHEIF_API extern const int32_t heif_tai_clock_info_clock_drift_rate_unknown;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_unknown;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source;
-LIBHEIF_API extern const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source;
+#define heif_tai_clock_info_time_uncertainty_unknown UINT64_C(0xFFFFFFFFFFFFFFFF)
+#define heif_tai_clock_info_clock_drift_rate_unknown INT32_C(0x7FFFFFFF)
+#define heif_tai_clock_info_clock_type_unknown 0
+#define heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source 1
+#define heif_tai_clock_info_clock_type_synchronized_to_atomic_source 2
+
+//const uint64_t heif_tai_clock_info_time_uncertainty_unknown = UINT64_C(0xFFFFFFFFFFFFFFFF);
+//const int32_t heif_tai_clock_info_clock_drift_rate_unknown = INT32_C(0x7FFFFFFF);
+//const int8_t heif_tai_clock_info_clock_type_unknown = 0;
+//const int8_t heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source = 1;
+//const int8_t heif_tai_clock_info_clock_type_synchronized_to_atomic_source = 2;
 
 /**
  * Allocate a new heif_tai_clock_info object and initialize with default values.

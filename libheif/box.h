@@ -1666,18 +1666,17 @@ private:
 };
 
 
+void initialize_heif_tai_clock_info(heif_tai_clock_info* taic);
+void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai);
+
+
 class Box_taic : public FullBox
 {
 public:
   Box_taic()
   {
     set_short_type(fourcc("taic"));
-
-    m_info.version = 1;
-    m_info.time_uncertainty = heif_tai_clock_info_time_uncertainty_unknown;
-    m_info.clock_resolution = 0;
-    m_info.clock_drift_rate = heif_tai_clock_info_clock_drift_rate_unknown;
-    m_info.clock_type = 0;
+    initialize_heif_tai_clock_info(&m_info);
   }
 
   static std::string dump(const heif_tai_clock_info& info, Indent&);
@@ -1757,6 +1756,7 @@ public:
   Box_itai()
   {
     set_short_type(fourcc("itai"));
+    initialize_heif_tai_timestamp_packet(&m_timestamp);
   }
 
   std::string dump(Indent&) const override;
