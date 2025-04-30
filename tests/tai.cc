@@ -55,6 +55,10 @@ TEST_CASE( "image-tai" )
   err = heif_item_set_property_tai_clock_info(ctx, itemId, clock_info, nullptr);
   REQUIRE(err.code == heif_error_Ok);
 
+  // check that adding a second timestamp leads to an error
+  err = heif_item_set_property_tai_clock_info(ctx, itemId, clock_info, nullptr);
+  REQUIRE(err.code != heif_error_Ok);
+
   heif_tai_clock_info_release(clock_info);
 
   // add TAI timestamp
@@ -67,6 +71,10 @@ TEST_CASE( "image-tai" )
 
   err = heif_item_set_property_tai_timestamp(ctx, itemId, timestamp, nullptr);
   REQUIRE(err.code == heif_error_Ok);
+
+  // check that adding a second timestamp leads to an error
+  err = heif_item_set_property_tai_timestamp(ctx, itemId, timestamp, nullptr);
+  REQUIRE(err.code != heif_error_Ok);
 
   heif_tai_timestamp_packet_release(timestamp);
 

@@ -104,6 +104,15 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
   }
 
+  // make sure that we do not add two taic boxes to one image
+
+  if (auto img= ctx->context->get_image(itemId, false)) {
+    auto existing_taic = img->get_property<Box_taic>();
+    if (existing_taic) {
+      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item already has an taic property"};
+    }
+  }
+
   // Create new taic (it will be deduplicated automatically in add_property())
 
   auto taic = std::make_shared<Box_taic>();
@@ -177,6 +186,15 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
   auto file = ctx->context->get_heif_file();
   if (!file->item_exists(itemId)) {
     return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "item does not exist"};
+  }
+
+  // make sure that we do not add two TAI timestamps to one image
+
+  if (auto img= ctx->context->get_image(itemId, false)) {
+    auto existing_itai = img->get_property<Box_itai>();
+    if (existing_itai) {
+      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item already has an itai property"};
+    }
   }
 
   // Create new itai (it will be deduplicated automatically in add_property())

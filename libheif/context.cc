@@ -1566,7 +1566,14 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 
 heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential)
 {
-  heif_property_id id = m_heif_file->add_property(targetItem, property, essential);
+  heif_property_id id;
+
+  if (auto img = get_image(targetItem, false)) {
+    id = img->add_property(property, essential);
+  }
+  else {
+    id = m_heif_file->add_property(targetItem, property, essential);
+  }
 
   return id;
 }

@@ -114,6 +114,7 @@ void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
 
 /**
  * Creates a new clock info property if it doesn't exist yet.
+ * You can only add one tai_clock_info to an image.
  *
  * @param clock_info The TAI clock info to set for the item. This object will be copied.
  * @param out_optional_propertyId Output parameter for the property ID of the tai_clock_info. This parameter may be nullptr if the info is not required.
@@ -141,6 +142,7 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 
 /**
  * Creates a new TAI timestamp property if it doesn't exist yet.
+ * You can only add one tai_timestamp to an image.
  *
  * @param timestamp The TAI timestamp to set for the item. This object will be copied.
  * @param out_optional_propertyId Output parameter for the property ID of the TAI timestamp. This parameter may be nullptr if the info is not required.
