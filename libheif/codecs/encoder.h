@@ -38,7 +38,7 @@ class Box;
 
 class Encoder {
 public:
-  virtual ~Encoder() {}
+  virtual ~Encoder() = default;
 
   struct CodedImageData {
     std::vector<std::shared_ptr<Box>> properties;
