@@ -65,23 +65,6 @@ if (PNG_FOUND)
 endif()
 
 
-
-add_executable(heif-enc-seq ${getopt_sources}
-        heif_enc_seq.cc
-        benchmark.h
-        benchmark.cc
-        common.cc
-        common.h)
-target_link_libraries(heif-enc-seq PRIVATE heif heifio)
-target_include_directories(heif-enc-seq PRIVATE ${libheif_SOURCE_DIR})
-install(TARGETS heif-enc-seq RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-# install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-
-if (WITH_HEADER_COMPRESSION)
-    target_compile_definitions(heif-enc-seq PRIVATE WITH_HEADER_COMPRESSION=1)
-endif ()
-
-
 find_package(SDL2 NO_MODULE)
 
 if (SDL2_FOUND)
