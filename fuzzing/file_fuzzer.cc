@@ -37,6 +37,7 @@ static void TestDecodeImage(struct heif_context* ctx,
   (void) primary;
   int width = heif_image_handle_get_width(handle);
   int height = heif_image_handle_get_height(handle);
+  (void)width; (void)height;
   assert(width >= 0);
   assert(height >= 0);
   int metadata_count = heif_image_handle_get_number_of_metadata_blocks(handle, nullptr);
@@ -47,6 +48,7 @@ static void TestDecodeImage(struct heif_context* ctx,
   int metadata_ids_count = heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, metadata_ids,
                                                                             metadata_count);
   assert(metadata_count == metadata_ids_count);
+  (void)metadata_ids_count;
   for (int i = 0; i < metadata_count; i++) {
     heif_image_handle_get_metadata_type(handle, metadata_ids[i]);
     heif_image_handle_get_metadata_content_type(handle, metadata_ids[i]);

@@ -249,11 +249,11 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
 
       for (uint32_t y = 0; y < height; y++)
         for (uint32_t x = 0; x < width; x++) {
-          int parity = (x / options_ext.checkerboard_square_size + y / options_ext.checkerboard_square_size) % 2;
+          uint8_t parity = (x / options_ext.checkerboard_square_size + y / options_ext.checkerboard_square_size) % 2;
           Pixel bkg = parity ? bkg1 : bkg2;
 
           int a = p_alpha[y * stride_alpha + x];
-          p_out[y * stride_out + x] = (p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha;
+          p_out[y * stride_out + x] = static_cast<Pixel>((p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha);
         }
     }
 
