@@ -62,7 +62,7 @@ private:
   uint32_t m_first_sample = 0;
   uint32_t m_last_sample = 0;
 
-  uint32_t m_sample_description_index = 0;
+  //uint32_t m_sample_description_index = 0;
 
   uint32_t m_next_sample_to_be_decoded = 0;
 

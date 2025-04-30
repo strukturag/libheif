@@ -1594,7 +1594,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   if (add_pyramid_group && encoded_image_ids.size() > 1) {
-    error = heif_context_add_pyramid_entity_group(context, encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
+    heif_error error = heif_context_add_pyramid_entity_group(context, encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
     if (error.code) {
       std::cerr << "Cannot set multi-resolution pyramid: " << error.message << "\n";
       return 5;
