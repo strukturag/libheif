@@ -30,6 +30,7 @@
 #include <cstring>
 #include "catch_amalgamated.hpp"
 
+
 struct heif_context * get_context_for_test_file(std::string filename)
 {
   return get_context_for_local_file(tests_data_directory + "/" + filename);
@@ -193,4 +194,28 @@ heif_encoder* get_encoder_or_skip_test(heif_compression_format format)
   }
 
   return encoder;
+}
+
+
+fs::path get_tests_output_dir()
+{
+  if (const char* env_p = std::getenv("LIBHEIF_TEST_OUTPUT_DIR")) {
+    return fs::path(env_p);
+  }
+
+  static const fs::path output_dir = fs::current_path() / "libheif_test_output";
+
+  if (!fs::exists(output_dir)) {
+    fs::create_directories(output_dir);
+  }
+
+  return output_dir;
+}
+
+
+std::string get_tests_output_file_path(const char* filename)
+{
+  fs::path dir = get_tests_output_dir();
+  dir /= filename;
+  return dir.string();
 }
