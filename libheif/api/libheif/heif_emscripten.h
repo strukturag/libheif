@@ -328,6 +328,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_error_Decoder_plugin_error", heif_error_Decoder_plugin_error)
     .value("heif_error_Encoder_plugin_error", heif_error_Encoder_plugin_error)
     .value("heif_error_Encoding_error", heif_error_Encoding_error)
+    .value("heif_error_End_of_sequence", heif_error_End_of_sequence)
     .value("heif_error_Color_profile_does_not_exist", heif_error_Color_profile_does_not_exist)
     .value("heif_error_Canceled", heif_error_Canceled);
     emscripten::enum_<heif_suberror_code>("heif_suberror_code")
@@ -344,6 +345,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_ftyp_box", heif_suberror_No_ftyp_box)
     .value("heif_suberror_No_idat_box", heif_suberror_No_idat_box)
     .value("heif_suberror_No_meta_box", heif_suberror_No_meta_box)
+    .value("heif_suberror_No_moov_box", heif_suberror_No_moov_box)
     .value("heif_suberror_No_hdlr_box", heif_suberror_No_hdlr_box)
     .value("heif_suberror_No_hvcC_box", heif_suberror_No_hvcC_box)
     .value("heif_suberror_No_vvcC_box", heif_suberror_No_vvcC_box)
