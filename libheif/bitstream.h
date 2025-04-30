@@ -206,7 +206,13 @@ public:
       }
     }
     else {
-      return std::numeric_limits<uint64_t>::max();
+      auto result = m_func_table->wait_for_file_size(end_pos, m_userdata);
+      if (result == heif_reader_grow_status_size_reached) {
+        return end_pos;
+      }
+      else {
+        return start; // we do not have more information, just say that this range is not available
+      }
     }
   }
 
