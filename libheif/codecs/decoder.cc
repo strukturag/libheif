@@ -38,8 +38,11 @@
 #include "vvc_boxes.h"
 #include "jpeg_boxes.h"
 #include "jpeg2000_boxes.h"
-#include "codecs/uncompressed/unc_dec.h"
 
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_boxes.h"
+#endif
 
 void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
 {
@@ -186,6 +189,7 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
       return std::make_shared<Decoder_AVC>(avcC);
     }
 
+#if WITH_UNCOMPRESSED_CODEC
     case fourcc("uncv"): {
       auto uncC = sample_description_box->get_child_box<Box_uncC>();
       auto cmpd = sample_description_box->get_child_box<Box_cmpd>();
@@ -194,6 +198,7 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
                      sample_description_box->get_VisualSampleEntry_const().height);
       return std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
     }
+#endif
 
     case fourcc("j2ki"): {
       auto j2kH = sample_description_box->get_child_box<Box_j2kH>();

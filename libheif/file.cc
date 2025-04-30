@@ -28,7 +28,6 @@
 #include "image-items/vvc.h"
 #include "codecs/avif_boxes.h"
 #include "codecs/hevc_boxes.h"
-#include "codecs/uncompressed/unc_boxes.h"
 #include "sequences/seq_boxes.h"
 
 #include <cstdint>
