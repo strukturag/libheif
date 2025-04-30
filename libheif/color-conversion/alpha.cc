@@ -210,6 +210,8 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
         case heif_channel_B:
           bkg = options_ext.background_blue;
           break;
+        default:
+          assert(false);
       }
 
       bkg >>= (16 - input->get_bits_per_pixel(channel));
@@ -236,6 +238,8 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
           bkg1 = options_ext.background_blue;
           bkg2 = options_ext.secondary_background_blue;
           break;
+        default:
+          assert(false);
       }
 
       bkg1 >>= (16 - input->get_bits_per_pixel(channel));
