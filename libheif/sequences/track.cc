@@ -26,6 +26,7 @@
 #include "sequences/track_visual.h"
 #include "sequences/track_metadata.h"
 #include "libheif/api_structs.h"
+#include <limits>
 
 
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)

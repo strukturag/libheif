@@ -25,6 +25,9 @@
 #include "libheif/api_structs.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_sequences.h"
+#include <string>
+#include <memory>
+#include <vector>
 
 class HeifContext;
 
