@@ -103,6 +103,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 
   ctx = heif_context_alloc();
   assert(ctx);
+
+  auto* limits = heif_context_get_security_limits(ctx);
+  limits->max_memory_block_size = 128 * 1024 * 1024; // 128 MB
+
   err = heif_context_read_from_memory(ctx, data, size, nullptr);
   if (err.code != heif_error_Ok) {
     // Not a valid HEIF file passed (which is most likely while fuzzing).
