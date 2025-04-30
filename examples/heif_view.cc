@@ -357,7 +357,7 @@ int main(int argc, char** argv)
       SDL_Delay(next_frame_pts - elapsed_time);
     }
 
-    next_frame_pts += duration_ms / option_speedup;
+    next_frame_pts += static_cast<uint64_t>(static_cast<double>(duration_ms) / option_speedup);
 
 
     // --- display image

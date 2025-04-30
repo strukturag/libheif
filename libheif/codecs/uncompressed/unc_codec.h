@@ -72,7 +72,7 @@ public:
   };
 
   static Result<std::shared_ptr<HeifPixelImage>> decode_uncompressed_image(const unci_properties& properties,
-                                                                           const class DataExtent& extent,
+                                                                           const struct DataExtent& extent,
                                                                            const heif_security_limits*);
 
 
