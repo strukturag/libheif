@@ -198,52 +198,54 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
 
     if (options_ext.alpha_composition_mode == heif_alpha_composition_mode_solid_color ||
         (options_ext.alpha_composition_mode == heif_alpha_composition_mode_checkerboard && options_ext.checkerboard_square_size == 0)) {
-      uint16_t bkg;
+      uint16_t bkg16;
 
       switch (channel) {
         case heif_channel_R:
-          bkg = options_ext.background_red;
+          bkg16 = options_ext.background_red;
           break;
         case heif_channel_G:
-          bkg = options_ext.background_green;
+          bkg16 = options_ext.background_green;
           break;
         case heif_channel_B:
-          bkg = options_ext.background_blue;
+          bkg16 = options_ext.background_blue;
           break;
         default:
           assert(false);
+          bkg16 = 0;
       }
 
-      bkg >>= (16 - input->get_bits_per_pixel(channel));
+      Pixel bkg = static_cast<Pixel>(bkg16 >> (16 - input->get_bits_per_pixel(channel)));
 
       for (uint32_t y = 0; y < height; y++)
         for (uint32_t x = 0; x < width; x++) {
           int a = p_alpha[y * stride_alpha + x];
-          p_out[y * stride_out + x] = (p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha;
+          p_out[y * stride_out + x] = static_cast<Pixel>((p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha);
         }
     }
     else {
-      uint16_t bkg1, bkg2;
+      uint16_t bkg16_1, bkg16_2;
 
       switch (channel) {
         case heif_channel_R:
-          bkg1 = options_ext.background_red;
-          bkg2 = options_ext.secondary_background_red;
+          bkg16_1 = options_ext.background_red;
+          bkg16_2 = options_ext.secondary_background_red;
           break;
         case heif_channel_G:
-          bkg1 = options_ext.background_green;
-          bkg2 = options_ext.secondary_background_green;
+          bkg16_1 = options_ext.background_green;
+          bkg16_2 = options_ext.secondary_background_green;
           break;
         case heif_channel_B:
-          bkg1 = options_ext.background_blue;
-          bkg2 = options_ext.secondary_background_blue;
+          bkg16_1 = options_ext.background_blue;
+          bkg16_2 = options_ext.secondary_background_blue;
           break;
         default:
           assert(false);
+          bkg16_1 = bkg16_2 = 0;
       }
 
-      bkg1 >>= (16 - input->get_bits_per_pixel(channel));
-      bkg2 >>= (16 - input->get_bits_per_pixel(channel));
+      Pixel bkg1 = static_cast<Pixel>(bkg16_1 >> (16 - input->get_bits_per_pixel(channel)));
+      Pixel bkg2 = static_cast<Pixel>(bkg16_2 >> (16 - input->get_bits_per_pixel(channel)));
 
       for (uint32_t y = 0; y < height; y++)
         for (uint32_t x = 0; x < width; x++) {
