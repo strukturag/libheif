@@ -153,8 +153,8 @@ CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_INSTALL_PREFIX=${BUILD_ROOT}/dist"
 # turn on warnings-as-errors
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_COMPILE_WARNING_AS_ERROR=1"
 
-# compile in debug mode
-CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+# compilation mode
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
 
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
@@ -177,7 +177,8 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} --list-decoders
 
         echo "Dumping information of sample file ..."
-        ${BIN_WRAPPER} gdb -batch -ex "run" -ex "bt" --args ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
+        #${BIN_WRAPPER} gdb -batch -ex "run" -ex "bt" --args ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
+        ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_DECODER" ]; then
             echo "Converting sample HEIF file to JPEG ..."
             ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} examples/example.heic example.jpg
