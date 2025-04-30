@@ -1399,8 +1399,6 @@ int main(int argc, char** argv)
 
 int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<std::string>& args)
 {
-  struct heif_error error;
-
   std::shared_ptr<heif_image> primary_image;
 
   bool is_primary_image = true;
