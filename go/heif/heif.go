@@ -182,6 +182,8 @@ const (
 	// Error during encoding or when writing to the output
 	ErrorEncoding = C.heif_error_Encoding_error
 
+	ErrorEndOfSequence = C.heif_error_End_of_sequence
+
 	// Application has asked for a color profile type that does not exist
 	ErrorColorProfileDoesNotExist = C.heif_error_Color_profile_does_not_exist
 
@@ -210,6 +212,8 @@ const (
 	SuberrorNoIdatBox = C.heif_suberror_No_idat_box
 
 	SuberrorNoMetaBox = C.heif_suberror_No_meta_box
+
+	SuberrorNoMoovBox = C.heif_suberror_No_moov_box
 
 	SuberrorNoHdlrBox = C.heif_suberror_No_hdlr_box
 
