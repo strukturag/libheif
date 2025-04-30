@@ -25,6 +25,9 @@
 #include "pixelimage.h"
 #include "file.h"
 #include "context.h"
+#if WITH_UNCOMPRESSED_CODEC
+#include "unc_boxes.h"
+#endif
 
 #include <cstdint>
 #include <string>
