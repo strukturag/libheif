@@ -920,7 +920,7 @@ Error VisualSampleEntry::parse(BitstreamRange& range, const heif_security_limits
   frame_count = range.read16();
   compressorname = range.read_fixed_string(32);
   depth = range.read16();
-  pre_defined3 = range.read16();
+  pre_defined3 = range.read16s();
 
   // other boxes from derived specifications
   //std::shared_ptr<Box_clap> clap; // optional // TODO
