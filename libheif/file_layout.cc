@@ -20,6 +20,7 @@
 
 #include "file_layout.h"
 #include "sequences/seq_boxes.h"
+#include <limits>
 
 
 FileLayout::FileLayout()

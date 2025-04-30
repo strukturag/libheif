@@ -1701,6 +1701,12 @@ Error Box_tref::parse(BitstreamRange& range, const heif_security_limits* limits)
       return err;
     }
 
+    if (header.get_box_size() < header.get_header_size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Invalid box size (smaller than header)"};
+    }
+
     uint64_t dataSize = (header.get_box_size() - header.get_header_size());
 
     if (dataSize % 4 != 0 || dataSize < 4) {
