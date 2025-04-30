@@ -372,9 +372,9 @@ Error Box_mdhd::write(StreamWriter& writer) const
     writer.write32(static_cast<uint32_t>(m_duration));
   }
 
-  uint16_t language_packed = ((((m_language[0] - 0x60) & 0x1F) << 10) |
-                              (((m_language[1] - 0x60) & 0x1F) << 5) |
-                              (((m_language[2] - 0x60) & 0x1F) << 0));
+  uint16_t language_packed = static_cast<uint16_t>((((m_language[0] - 0x60) & 0x1F) << 10) |
+                                                   (((m_language[1] - 0x60) & 0x1F) << 5) |
+                                                   (((m_language[2] - 0x60) & 0x1F) << 0));
   writer.write16(language_packed);
   writer.write16(0);
 
