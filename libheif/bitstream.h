@@ -211,8 +211,27 @@ public:
         return end_pos;
       }
       else {
-        return start; // we do not have more information, just say that this range is not available
+        uint64_t pos = m_func_table->get_position(m_userdata);
+        return bisect_filesize(pos,end_pos);
       }
+    }
+  }
+
+  uint64_t bisect_filesize(uint64_t mini, uint64_t maxi) {
+    // mini - <= filesize
+    // maxi - >  filesize
+
+    if (maxi == mini + 1) {
+      return mini;
+    }
+
+    uint64_t pos = (mini + maxi) / 2;
+    auto result = m_func_table->wait_for_file_size(pos, m_userdata);
+    if (result == heif_reader_grow_status_size_reached) {
+      return bisect_filesize(pos, maxi);
+    }
+    else {
+      return bisect_filesize(mini, pos);
     }
   }
 
