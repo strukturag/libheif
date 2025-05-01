@@ -1553,7 +1553,7 @@ Error Box_saiz::write(StreamWriter& writer) const
 }
 
 
-Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits*)
+Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1566,8 +1566,24 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits*)
   m_num_samples = range.read32();
 
   if (m_default_sample_info_size == 0) {
+    // check required memory
+
+    uint64_t mem_size = m_num_samples;
+    if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
+      std::stringstream sstr;
+      sstr << "Allocating " << mem_size << " bytes for the 'saiz' table exceeds the security limit of "
+           << limits->max_memory_block_size << " bytes";
+
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+  }
+
+  if (m_default_sample_info_size == 0) {
+    m_sample_sizes.reserve(m_num_samples);
     for (uint32_t i = 0; i < m_num_samples; i++) {
-      m_sample_sizes.push_back(range.read8());
+      m_sample_sizes[i] = range.read8();
     }
   }
 
@@ -1689,7 +1705,7 @@ Error Box_saio::write(StreamWriter& writer) const
 }
 
 
-Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
+Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1700,6 +1716,21 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
 
   uint32_t num_samples = range.read32();
 
+  // check required memory
+  uint64_t mem_size = num_samples * (get_version() == 1 ? 8 : 4);
+  if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
+    std::stringstream sstr;
+    sstr << "Allocating " << mem_size << " bytes for the 'saio' table exceeds the security limit of "
+         << limits->max_memory_block_size << " bytes";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+
+  m_sample_offset.reserve(num_samples);
+
   for (uint32_t i = 0; i < num_samples; i++) {
     uint64_t offset;
     if (get_version() == 1) {
@@ -1709,7 +1740,7 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
       offset = range.read32();
     }
 
-    m_sample_offset.push_back(offset);
+    m_sample_offset[i] = offset;
   }
 
   return Error::Ok;
