@@ -534,11 +534,23 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_count = range.read32();
+  if (limits->max_memory_block_size && uint64_t(entry_count) * sizeof(TimeToSample) > limits->max_memory_block_size) {
+    std::stringstream sstr;
+    sstr << "Allocating " << static_cast<uint64_t>(entry_count) * sizeof(TimeToSample) << " bytes for the 'stts' table exceeds the security limit of "
+         << limits->max_memory_block_size << " bytes";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  m_entries.resize(entry_count);
+
   for (uint32_t i = 0; i < entry_count; i++) {
     TimeToSample entry;
     entry.sample_count = range.read32();
     entry.sample_delta = range.read32();
-    m_entries.push_back(entry);
+    m_entries[i] = entry;
   }
 
   return range.get_error();
@@ -628,12 +640,24 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_count = range.read32();
+  if (limits->max_memory_block_size && uint64_t(entry_count) * sizeof(SampleToChunk) > limits->max_memory_block_size) {
+    std::stringstream sstr;
+    sstr << "Allocating " << static_cast<uint64_t>(entry_count) * sizeof(SampleToChunk) << " bytes for the 'stsc' table exceeds the security limit of "
+         << limits->max_memory_block_size << " bytes";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  m_entries.resize(entry_count);
+
   for (uint32_t i = 0; i < entry_count; i++) {
     SampleToChunk entry;
     entry.first_chunk = range.read32();
     entry.samples_per_chunk = range.read32();
     entry.sample_description_index = range.read32();
-    m_entries.push_back(entry);
+    m_entries[i] = entry;
   }
 
   return range.get_error();
