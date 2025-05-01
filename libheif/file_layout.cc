@@ -231,13 +231,6 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       moov_found = true;
     }
 
-
-    if (!meta_found && !mini_found && !moov_found && box_header.get_box_size() == 0) {
-      return {heif_error_Invalid_input,
-              heif_suberror_No_meta_box,
-              "No meta box found"};
-    }
-
     uint64_t boxSize = box_header.get_box_size();
     if (boxSize == Box::size_until_end_of_file) {
       if (meta_found || mini_found || moov_found) {
@@ -246,7 +239,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       else {
         return {heif_error_Invalid_input,
                 heif_suberror_Unspecified,
-                "Insufficient input data"};
+                "No meta box found"};
       }
     }
 
