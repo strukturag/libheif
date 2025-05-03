@@ -777,9 +777,7 @@ void HeifPixelImage::fill_plane(heif_channel dst_channel, uint16_t value)
   else {
     uint16_t* dst;
     size_t dst_stride = 0;
-    dst = (uint16_t*) get_plane(dst_channel, &dst_stride);
-
-    dst_stride /= 2;
+    dst = get_channel<uint16_t>(dst_channel, &dst_stride);
 
     for (uint32_t y = 0; y < height; y++) {
       for (uint32_t x = 0; x < width * num_interleaved; x++) {
@@ -1513,7 +1511,7 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
       const auto* in_data = static_cast<const uint8_t*>(plane.mem);
 
       size_t out_stride = 0;
-      auto* out_data = static_cast<uint8_t*>(out_img->get_plane(channel, &out_stride));
+      auto* out_data = out_img->get_plane(channel, &out_stride);
 
       for (uint32_t y = 0; y < out_h; y++) {
         uint32_t iy = y * m_height / height;
