@@ -1500,46 +1500,49 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    const int bpp = get_storage_bits_per_pixel(channel) / 8;
-
     if (!out_img->has_channel(channel)) {
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
     }
 
 
-    if (plane.m_bit_depth != 8) {
-      return {heif_error_Unsupported_feature,
-              heif_suberror_Unspecified,
-              "Can currently only crop images with 8 bits per pixel"};
-    }
-
     uint32_t out_w = out_img->get_width(channel);
     uint32_t out_h = out_img->get_height(channel);
 
-    size_t in_stride = plane.stride;
-    const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+    if (plane.m_bit_depth <= 8) {
+      size_t in_stride = plane.stride;
+      const auto* in_data = static_cast<const uint8_t*>(plane.mem);
 
-    size_t out_stride = 0;
-    auto* out_data = static_cast<uint8_t*>(out_img->get_plane(channel, &out_stride));
+      size_t out_stride = 0;
+      auto* out_data = static_cast<uint8_t*>(out_img->get_plane(channel, &out_stride));
 
+      for (uint32_t y = 0; y < out_h; y++) {
+        uint32_t iy = y * m_height / height;
 
-    for (uint32_t y = 0; y < out_h; y++) {
-      uint32_t iy = y * m_height / height;
-
-      if (bpp == 1) {
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
           out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
         }
       }
-      else {
+    }
+    else {
+      // HDR
+
+      size_t in_stride = plane.stride;
+      const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
+
+      size_t out_stride = 0;
+      uint16_t* out_data = out_img->get_channel<uint16_t>(channel, &out_stride);
+
+      in_stride /= 2;
+
+      for (uint32_t y = 0; y < out_h; y++) {
+        uint32_t iy = y * m_height / height;
+
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
-          for (int b = 0; b < bpp; b++) {
-            out_data[y * out_stride + bpp * x + b] = in_data[iy * in_stride + bpp * ix + b];
-          }
+          out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
         }
       }
     }
