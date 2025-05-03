@@ -196,6 +196,12 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
     size_t stride_out;
     p_out = (Pixel*)outimg->get_plane(channel, &stride_out);
 
+    if (sizeof(Pixel) == 2) {
+      stride_alpha /= 2;
+      stride_in /= 2;
+      stride_out /= 2;
+    }
+
     if (options_ext.alpha_composition_mode == heif_alpha_composition_mode_solid_color ||
         (options_ext.alpha_composition_mode == heif_alpha_composition_mode_checkerboard && options_ext.checkerboard_square_size == 0)) {
       uint16_t bkg16;
