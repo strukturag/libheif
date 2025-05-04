@@ -46,7 +46,10 @@ struct heif_security_limits global_security_limits {
     // --- version 2
 
     .min_memory_margin = 100 * 1024*1024, // 100 MB
-    .max_memory_margin = 1 * 1024*1024*1024 // 1 GB
+    .max_memory_margin = 1 * 1024*1024*1024, // 1 GB
+
+    .max_sample_description_box_entries = 1024,
+    .max_sample_group_description_box_entries = 1024
 };
 
 

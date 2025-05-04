@@ -693,6 +693,9 @@ struct heif_security_limits {
   // Setting max_memory_margin to zero switches off checking the available RAM. Libheif will try to get all memory it needs.
   size_t  min_memory_margin;
   size_t  max_memory_margin; // must be >= min_memory_margin
+
+  uint32_t max_sample_description_box_entries;
+  uint32_t max_sample_group_description_box_entries;
 };
 
 // The global security limits are the default for new heif_contexts.
