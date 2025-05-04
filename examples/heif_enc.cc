@@ -172,9 +172,7 @@ static struct option long_options[] = {
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
-#endif
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
     {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
     {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
@@ -253,9 +251,7 @@ void show_help(const char* argv0)
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
             << "\n"
             << "tiling:\n"
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "  --cut-tiles #             cuts the input image into tiles of the given width\n"
-#endif
+            << "  --cut-tiles #             cuts the input image into square tiles of the given width\n"
             << "  -T,--tiled-input          input is a set of tile images (only provide one filename with two tile position numbers).\n"
             << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
             << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
@@ -812,7 +808,7 @@ std::shared_ptr<input_tiles_generator> determine_input_images_tiling(const std::
   return generator;
 }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+
 class input_tiles_generator_cut_image : public input_tiles_generator
 {
 public:
@@ -854,7 +850,6 @@ private:
   uint32_t mWidth, mHeight;
   int mTileSize;
 };
-#endif
 
 
 // TODO: we have to attach the input image Exif and XMP to the tiled image
@@ -1435,7 +1430,6 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
         return 5;
       }
     }
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     else if (cut_tiles != 0) {
       auto cutting_tile_generator = std::make_shared<input_tiles_generator_cut_image>(input_filename.c_str(),
                                                                          cut_tiles, output_bit_depth);
@@ -1449,7 +1443,6 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       tiling.image_height = cutting_tile_generator->get_image_height();
       tiling.number_of_extra_dimensions = 0;
     }
-#endif
 
     if (!primary_image) {
       primary_image = image;

@@ -2108,6 +2108,12 @@ int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, ui
 LIBHEIF_API
 void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, uint32_t aspect_v);
 
+LIBHEIF_API
+struct heif_error heif_image_extract_area(const struct heif_image*,
+                                          uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                          const struct heif_security_limits* limits,
+                                          struct heif_image** out_image);
+
 // ====================================================================================================
 //  Encoding API
 

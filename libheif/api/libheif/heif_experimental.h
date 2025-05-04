@@ -355,16 +355,6 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         size_t* out_stride);
 #endif
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-
-LIBHEIF_API
-heif_error heif_image_extract_area(const heif_image*,
-                                   uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-                                   const heif_security_limits* limits,
-                                   struct heif_image** out_image);
-
-#endif
-
 
 #ifdef __cplusplus
 }
