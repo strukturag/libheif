@@ -103,6 +103,10 @@ enum heif_channel
 
 // Planar RGB images are specified as heif_colorspace_RGB / heif_chroma_444.
 
+struct heif_image;
+struct heif_image_handle;
+struct heif_security_limits;
+
 
 // Get the colorspace format of the image.
 LIBHEIF_API
