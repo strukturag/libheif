@@ -1582,12 +1582,10 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   if (m_default_sample_info_size == 0) {
     m_sample_sizes.reserve(m_num_samples);
-    for (uint32_t i = 0; i < m_num_samples; i++) {
-      m_sample_sizes[i] = range.read8();
-    }
+    range.read(m_sample_sizes.data(), m_num_samples);
   }
 
-  return Error::Ok;
+  return range.get_error();
 }
 
 
@@ -1741,6 +1739,10 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
 
     m_sample_offset[i] = offset;
+
+    if (range.error()) {
+      return range.get_error();
+    }
   }
 
   return Error::Ok;
