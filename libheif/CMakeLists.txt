@@ -6,6 +6,7 @@ set(libheif_headers
         api/libheif/heif.h
         api/libheif/heif_image.h
         api/libheif/heif_color.h
+        api/libheif/heif_error.h
         api/libheif/heif_cxx.h
         api/libheif/heif_plugin.h
         api/libheif/heif_properties.h
