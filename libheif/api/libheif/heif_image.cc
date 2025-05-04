@@ -50,21 +50,6 @@
 
 #include <cassert>
 
-// TODO: duplicated in heif.cc
-// const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
-static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
-                                                        heif_suberror_Unsupported_parameter,
-                                                        "Unsupported encoder parameter"};
-static struct heif_error error_invalid_parameter_value = {heif_error_Usage_error,
-                                                          heif_suberror_Invalid_parameter_value,
-                                                          "Invalid parameter value"};
-static struct heif_error error_unsupported_plugin_version = {heif_error_Usage_error,
-                                                             heif_suberror_Unsupported_plugin_version,
-                                                             "Unsupported plugin version"};
-static struct heif_error error_null_parameter = {heif_error_Usage_error,
-                                                 heif_suberror_Null_pointer_argument,
-                                                 "NULL passed"};
-
 
 struct heif_error heif_image_create(int width, int height,
                                     heif_colorspace colorspace,
