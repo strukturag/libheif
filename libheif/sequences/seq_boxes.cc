@@ -806,8 +806,25 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_sample_count = range.read32();
 
   if (m_fixed_sample_size == 0) {
+    // check required memory
+
+    uint64_t mem_size = m_sample_count * sizeof(uint32_t);
+    if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
+      std::stringstream sstr;
+      sstr << "Allocating " << mem_size << " bytes for the 'stsz' table exceeds the security limit of "
+           << limits->max_memory_block_size << " bytes";
+
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
     for (uint32_t i = 0; i < m_sample_count; i++) {
       m_sample_sizes.push_back(range.read32());
+
+      if (range.error()) {
+        return range.get_error();
+      }
     }
   }
 
@@ -891,8 +908,25 @@ Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t sample_count = range.read32();
 
+  // check required memory
+
+  uint64_t mem_size = sample_count * sizeof(uint32_t);
+  if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
+    std::stringstream sstr;
+    sstr << "Allocating " << mem_size << " bytes for the 'stss' table exceeds the security limit of "
+         << limits->max_memory_block_size << " bytes";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
   for (uint32_t i = 0; i < sample_count; i++) {
     m_sync_samples.push_back(range.read32());
+
+    if (range.error()) {
+      return range.get_error();
+    }
   }
 
   return range.get_error();
@@ -1578,9 +1612,7 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
               heif_suberror_Security_limit_exceeded,
               sstr.str()};
     }
-  }
 
-  if (m_default_sample_info_size == 0) {
     m_sample_sizes.reserve(m_num_samples);
     range.read(m_sample_sizes.data(), m_num_samples);
   }
