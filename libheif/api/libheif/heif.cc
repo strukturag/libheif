@@ -75,37 +75,10 @@ static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
 static struct heif_error error_invalid_parameter_value = {heif_error_Usage_error,
                                                           heif_suberror_Invalid_parameter_value,
                                                           "Invalid parameter value"};
-static struct heif_error error_unsupported_plugin_version = {heif_error_Usage_error,
-                                                             heif_suberror_Unsupported_plugin_version,
-                                                             "Unsupported plugin version"};
 static struct heif_error error_null_parameter = {heif_error_Usage_error,
                                                  heif_suberror_Null_pointer_argument,
                                                  "NULL passed"};
 
-const char* heif_get_version(void)
-{
-  return (LIBHEIF_VERSION);
-}
-
-uint32_t heif_get_version_number(void)
-{
-  return (LIBHEIF_NUMERIC_VERSION);
-}
-
-int heif_get_version_number_major(void)
-{
-  return ((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF;
-}
-
-int heif_get_version_number_minor(void)
-{
-  return ((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF;
-}
-
-int heif_get_version_number_maintenance(void)
-{
-  return ((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF;
-}
 
 
 heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
@@ -1784,40 +1757,6 @@ struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct 
   return heif_error_success;
 }
 
-
-
-// DEPRECATED
-struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
-{
-  return heif_register_decoder_plugin(decoder_plugin);
-}
-
-
-struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
-{
-  if (!decoder_plugin) {
-    return error_null_parameter;
-  }
-  else if (decoder_plugin->plugin_api_version > 3) {
-    return error_unsupported_plugin_version;
-  }
-
-  register_decoder(decoder_plugin);
-  return heif_error_success;
-}
-
-struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encoder_plugin)
-{
-  if (!encoder_plugin) {
-    return error_null_parameter;
-  }
-  else if (encoder_plugin->plugin_api_version > 3) {
-    return error_unsupported_plugin_version;
-  }
-
-  register_encoder(encoder_plugin);
-  return heif_error_success;
-}
 
 
 /*
