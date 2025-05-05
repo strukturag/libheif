@@ -39,6 +39,7 @@ struct dav1d_decoder
   Dav1dContext* context;
   Dav1dData data;
   bool strict_decoding = false;
+  std::string error_message;
 };
 
 static const char kEmptyString[] = "";
@@ -275,6 +276,10 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
     if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(heif_img);
       return err;
     }

@@ -28,6 +28,7 @@
 #include <vector>
 #include <cassert>
 #include <memory>
+#include <err.h>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;
 static const int OPENJPEG_PLUGIN_PRIORITY_HTJ2K = 90;
@@ -36,6 +37,7 @@ struct openjpeg_decoder
 {
   std::vector<uint8_t> encoded_data;
   size_t read_position = 0;
+  std::string error_message;
 };
 
 
@@ -368,6 +370,15 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     int cheight = opj_comp.h;
 
     error = heif_image_add_plane(*out_img, channels[c], cwidth, cheight, bit_depth);
+    if (error.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = error.message;
+      error.message = decoder->error_message.c_str();
+
+      heif_image_release(*out_img);
+      *out_img = nullptr;
+      return error;
+    }
 
     size_t stride = 0;
     uint8_t* p = heif_image_get_plane2(*out_img, channels[c], &stride);

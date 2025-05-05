@@ -36,6 +36,7 @@ extern "C" {
 struct jpeg_decoder
 {
   std::vector<uint8_t> data;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -222,7 +223,15 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
       return err;
     }
 
-    heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    err = heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
 
     size_t y_stride;
     uint8_t* py = heif_image_get_plane2(heif_img, heif_channel_Y, &y_stride);
@@ -262,14 +271,26 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
 
     err = heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
     if (err.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       return err;
     }
     err = heif_image_add_plane(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
     if (err.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       return err;
     }
     err = heif_image_add_plane(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
     if (err.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       return err;
     }
 

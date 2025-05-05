@@ -42,6 +42,7 @@ struct vvdec_decoder
   bool strict_decoding = false;
 
   std::vector<std::vector<uint8_t>> nalus;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -298,6 +299,10 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
     if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(heif_img);
       return err;
     }

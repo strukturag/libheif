@@ -33,6 +33,7 @@
 struct openh264_decoder
 {
   std::vector<uint8_t> data;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -263,9 +264,35 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
 
     *out_img = heif_img;
 
-    heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
+    err = heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
 
     size_t y_stride;
     size_t cb_stride;

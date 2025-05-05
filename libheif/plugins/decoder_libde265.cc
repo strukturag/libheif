@@ -35,6 +35,7 @@ struct libde265_decoder
 {
   de265_decoder_context* ctx;
   bool strict_decoding = false;
+  std::string error_message;
 };
 
 static const char kEmptyString[] = "";
@@ -138,6 +139,10 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
     err = heif_image_add_plane(*image, channel2plane[c], w,h, bpp);
     if (err.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(*image);
       return err;
     }

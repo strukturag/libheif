@@ -41,6 +41,7 @@ struct ffmpeg_decoder
 {
     NalMap nalMap;
     bool strict_decoding = false;
+    std::string error_message;
 };
 
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
@@ -217,7 +218,7 @@ static int get_ffmpeg_format_bpp(enum AVPixelFormat pix_fmt)
   }
 }
 
-static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
+static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
 {
     int ret;
 
@@ -288,6 +289,10 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
 
             err = heif_image_add_plane(*image, channel2plane[channel], w, h, bpp);
             if (err.code) {
+              // copy error message to decoder object because heif_image will be released
+              decoder->error_message = err.message;
+              err.message = decoder->error_message.c_str();
+
                 heif_image_release(*image);
                 return err;
             }
@@ -475,7 +480,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 
       if (hevc_pkt->size)
       {
-	err = hevc_decode(hevc_codecContext, hevc_frame, hevc_pkt, out_img);
+	err = hevc_decode(decoder, hevc_codecContext, hevc_frame, hevc_pkt, out_img);
 	if (err.code != heif_error_Ok)
 	  goto errexit;
       }

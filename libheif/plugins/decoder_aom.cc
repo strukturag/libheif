@@ -37,6 +37,7 @@ struct aom_decoder
   aom_codec_iface_t* iface;
 
   bool strict_decoding = false;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -255,6 +256,10 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
     if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(heif_img);
       return err;
     }
