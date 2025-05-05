@@ -239,17 +239,16 @@ public:
 
   // --- mdcv
 
-  bool has_mdcv() const { return m_mdcv_set; }
+  bool has_mdcv() const { return m_mdcv.has_value(); }
 
-  heif_mastering_display_colour_volume get_mdcv() const { return m_mdcv; }
+  heif_mastering_display_colour_volume get_mdcv() const { return *m_mdcv; }
 
   void set_mdcv(const heif_mastering_display_colour_volume& mdcv)
   {
     m_mdcv = mdcv;
-    m_mdcv_set = true;
   }
 
-  void unset_mdcv() { m_mdcv_set = false; }
+  void unset_mdcv() { m_mdcv.reset(); }
 
   Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
     delete m_tai_timestamp;
@@ -332,8 +331,7 @@ private:
   uint32_t m_PixelAspectRatio_h = 1;
   uint32_t m_PixelAspectRatio_v = 1;
   heif_content_light_level m_clli{};
-  heif_mastering_display_colour_volume m_mdcv{};
-  bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17
+  std::optional<heif_mastering_display_colour_volume> m_mdcv;
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame
 
