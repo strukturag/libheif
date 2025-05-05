@@ -56,6 +56,10 @@
 #include "getopt.h"
 #endif
 
+#if !SDL_VERSION_ATLEAST(2, 0, 18)
+#define SDL_GetTicks64 SDL_GetTicks
+#endif
+
 #define UNUSED(x) (void)x
 
 
