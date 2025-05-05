@@ -321,6 +321,14 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,
                                        int width, int height, int bit_depth);
 
+// TODO: maybe this should not be in the public API, but only in a
+//       plugin support library.
+LIBHEIF_API
+struct heif_error heif_image_add_plane_safe(struct heif_image* image,
+                                            enum heif_channel channel,
+                                            int width, int height, int bit_depth,
+                                            const struct heif_security_limits*);
+
 // Signal that the image is premultiplied by the alpha pixel values.
 LIBHEIF_API
 void heif_image_set_premultiplied_alpha(struct heif_image* image,

@@ -147,7 +147,8 @@ void on_jpeg_error(j_common_ptr cinfo)
 }
 
 
-struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error jpeg_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                         const heif_security_limits* limits)
 {
   struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
 
@@ -224,7 +225,7 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
       return err;
     }
 
-    err = heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8, limits);
     if (err.code) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -270,7 +271,7 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
       return err;
     }
 
-    err = heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8, limits);
     if (err.code) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -278,7 +279,7 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
 
       return err;
     }
-    err = heif_image_add_plane(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
     if (err.code) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -286,7 +287,7 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
 
       return err;
     }
-    err = heif_image_add_plane(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
     if (err.code) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -359,10 +360,16 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
   return heif_error_ok;
 }
 
+struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return jpeg_decode_next_image(decoder_raw, out_img, limits);
+}
+
 
 static const struct heif_decoder_plugin decoder_jpeg
     {
-        3,
+        4,
         jpeg_plugin_name,
         jpeg_init_plugin,
         jpeg_deinit_plugin,
@@ -372,7 +379,8 @@ static const struct heif_decoder_plugin decoder_jpeg
         jpeg_push_data,
         jpeg_decode_image,
         jpeg_set_strict_decoding,
-        "jpeg"
+        "jpeg",
+        jpeg_decode_next_image
     };
 
 

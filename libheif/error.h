@@ -77,6 +77,8 @@ public:
         heif_suberror_code sc = heif_suberror_Unspecified,
         const std::string& msg = "");
 
+  static Error from_heif_error(const heif_error&);
+
   static const Error Ok;
 
   static const Error InternalError;

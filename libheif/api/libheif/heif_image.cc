@@ -247,6 +247,19 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
 }
 
 
+struct heif_error heif_image_add_plane_safe(struct heif_image* image,
+                                            heif_channel channel, int width, int height, int bit_depth,
+                                            const heif_security_limits* limits)
+{
+  if (auto err = image->image->add_plane(channel, width, height, bit_depth, limits)) {
+    return err.error_struct(image->image.get());
+  }
+  else {
+    return heif_error_success;
+  }
+}
+
+
 struct heif_error heif_image_add_channel(struct heif_image* image,
                                          enum heif_channel channel,
                                          int width, int height,

@@ -175,7 +175,8 @@ struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, siz
 }
 
 
-struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error vvdec_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                          const heif_security_limits* limits)
 {
   auto* decoder = (struct vvdec_decoder*) decoder_raw;
 
@@ -298,7 +299,7 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
     int w = (int)plane.width;
     int h = (int)plane.height;
 
-    err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
+    err = heif_image_add_plane_safe(heif_img, channel2plane[c], w, h, bpp, limits);
     if (err.code != heif_error_Ok) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -331,10 +332,16 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
   return err;
 }
 
+struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return vvdec_decode_next_image(decoder_raw, out_img, limits);
+}
+
 
 static const struct heif_decoder_plugin decoder_vvdec
     {
-        3,
+        4,
         vvdec_plugin_name,
         vvdec_init_plugin,
         vvdec_deinit_plugin,
@@ -344,7 +351,8 @@ static const struct heif_decoder_plugin decoder_vvdec
         vvdec_push_data,
         vvdec_decode_image,
         vvdec_set_strict_decoding,
-        "vvdec"
+        "vvdec",
+        vvdec_decode_next_image
     };
 
 

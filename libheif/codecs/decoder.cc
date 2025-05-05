@@ -291,13 +291,13 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
     err = decoder_plugin->decode_next_image(decoder, &decoded_img, limits);
     if (err.code != heif_error_Ok) {
-      return Error(err.code, err.subcode, err.message);
+      return Error::from_heif_error(err);
     }
   }
   else {
     err = decoder_plugin->decode_image(decoder, &decoded_img);
     if (err.code != heif_error_Ok) {
-      return Error(err.code, err.subcode, err.message);
+      return Error::from_heif_error(err);
     }
   }
 

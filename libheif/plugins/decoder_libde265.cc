@@ -87,7 +87,8 @@ static int libde265_does_support_format(enum heif_compression_format format)
 
 static struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* decoder,
                                                               const struct de265_image* de265img,
-                                                              struct heif_image** image)
+                                                              struct heif_image** image,
+                                                              const heif_security_limits* limits)
 {
   bool is_mono = (de265_get_chroma_format(de265img) == de265_chroma_mono);
 
@@ -136,7 +137,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
       return err;
     }
 
-    err = heif_image_add_plane(*image, channel2plane[c], w,h, bpp);
+    err = heif_image_add_plane_safe(*image, channel2plane[c], w,h, bpp, limits);
     if (err.code) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -307,8 +308,9 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
 }
 
 
-static struct heif_error libde265_v1_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static struct heif_error libde265_v1_decode_next_image(void* decoder_raw,
+                                                       struct heif_image** out_img,
+                                                       const heif_security_limits* limits)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*) decoder_raw;
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -335,7 +337,7 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
       if (*out_img) {
         heif_image_release(*out_img);
       }
-      err = convert_libde265_image_to_heif_image(decoder, image, out_img);
+      err = convert_libde265_image_to_heif_image(decoder, image, out_img, limits);
       if (err.code != heif_error_Ok) {
         return err;
       }
@@ -373,6 +375,13 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
 }
 
 
+static struct heif_error libde265_v1_decode_image(void* decoder_raw,
+                                                  struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return libde265_v1_decode_next_image(decoder_raw, out_img, limits);
+}
+
 #endif
 
 
@@ -395,7 +404,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 static const struct heif_decoder_plugin decoder_libde265
     {
-        3,
+        4,
         libde265_plugin_name,
         libde265_init_plugin,
         libde265_deinit_plugin,
@@ -405,7 +414,8 @@ static const struct heif_decoder_plugin decoder_libde265
         libde265_v1_push_data,
         libde265_v1_decode_image,
         libde265_set_strict_decoding,
-        "libde265"
+        "libde265",
+        libde265_v1_decode_next_image
     };
 
 #endif

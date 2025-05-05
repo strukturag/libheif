@@ -219,7 +219,8 @@ static int get_ffmpeg_format_bpp(enum AVPixelFormat pix_fmt)
   }
 }
 
-static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
+static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image,
+                                     const heif_security_limits* limits)
 {
     int ret;
 
@@ -288,7 +289,7 @@ static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* he
                 return err;
             }
 
-            err = heif_image_add_plane(*image, channel2plane[channel], w, h, bpp);
+            err = heif_image_add_plane_safe(*image, channel2plane[channel], w, h, bpp, limits);
             if (err.code) {
               // copy error message to decoder object because heif_image will be released
               decoder->error_message = err.message;
@@ -319,8 +320,9 @@ static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* he
     }
 }
 
-static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
+                                                     struct heif_image** out_img,
+                                                     const heif_security_limits* limits)
 {
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
@@ -481,7 +483,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 
       if (hevc_pkt->size)
       {
-	err = hevc_decode(decoder, hevc_codecContext, hevc_frame, hevc_pkt, out_img);
+	err = hevc_decode(decoder, hevc_codecContext, hevc_frame, hevc_pkt, out_img, limits);
 	if (err.code != heif_error_Ok)
 	  goto errexit;
       }
@@ -522,9 +524,17 @@ errexit:
   return err;
 }
 
+static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
+                                                struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return ffmpeg_v1_decode_next_image(decoder_raw, out_img, limits);
+}
+
+
 static const struct heif_decoder_plugin decoder_ffmpeg
     {
-        3,
+        4,
         ffmpeg_plugin_name,
         ffmpeg_init_plugin,
         ffmpeg_deinit_plugin,
@@ -534,7 +544,8 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_v1_push_data,
         ffmpeg_v1_decode_image,
         ffmpeg_set_strict_decoding,
-        "ffmpeg"
+        "ffmpeg",
+        ffmpeg_v1_decode_next_image
     };
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()

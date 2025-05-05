@@ -120,7 +120,8 @@ struct heif_error openh264_push_data(void* decoder_raw, const void* frame_data, 
 }
 
 
-struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error openh264_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                             const heif_security_limits* limits)
 {
   auto* decoder = (struct openh264_decoder*) decoder_raw;
 
@@ -265,7 +266,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
 
     *out_img = heif_img;
 
-    err = heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Y, width, height, 8, limits);
     if (err.code != heif_error_Ok) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -275,7 +276,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
       return err;
     }
 
-    err = heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, cwidth, cheight, 8, limits);
     if (err.code != heif_error_Ok) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -285,7 +286,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
       return err;
     }
 
-    err = heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, cwidth, cheight, 8, limits);
     if (err.code != heif_error_Ok) {
       // copy error message to decoder object because heif_image will be released
       decoder->error_message = err.message;
@@ -329,9 +330,15 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
   return heif_error_ok;
 }
 
+struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return openh264_decode_next_image(decoder_raw, out_img, limits);
+}
+
 
 static const struct heif_decoder_plugin decoder_openh264{
-        3,
+        4,
         openh264_plugin_name,
         openh264_init_plugin,
         openh264_deinit_plugin,
@@ -341,7 +348,8 @@ static const struct heif_decoder_plugin decoder_openh264{
         openh264_push_data,
         openh264_decode_image,
         openh264_set_strict_decoding,
-        "openh264"
+        "openh264",
+        openh264_decode_next_image
 };
 
 
