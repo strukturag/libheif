@@ -28,6 +28,7 @@
 #include <cstdio>
 
 #include <wels/codec_api.h>
+#include <string>
 
 
 struct openh264_decoder

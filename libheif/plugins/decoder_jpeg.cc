@@ -27,6 +27,7 @@
 #include <csetjmp>
 #include <vector>
 #include <cstdio>
+#include <string>
 
 extern "C" {
 #include <jpeglib.h>

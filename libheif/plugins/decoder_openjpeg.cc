@@ -28,6 +28,7 @@
 #include <vector>
 #include <cassert>
 #include <memory>
+#include <string>
 #include <err.h>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;

@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits>
 #include <utility>
+#include <string>
 
 #include <dav1d/version.h>
 #include <dav1d/dav1d.h>

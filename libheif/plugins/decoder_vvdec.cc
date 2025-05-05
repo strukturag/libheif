@@ -25,6 +25,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 #include <vvdec/vvdec.h>
 

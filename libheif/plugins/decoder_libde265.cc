@@ -20,12 +20,11 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-//#include "libheif/heif_colorconversion.h"
-//#include "libheif/heif_api_structs.h"
 #include "decoder_libde265.h"
-#include <assert.h>
+#include <cassert>
 #include <memory>
 #include <cstring>
+#include <string>
 
 #include <libde265/de265.h>
 

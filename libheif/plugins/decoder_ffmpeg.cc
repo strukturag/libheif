@@ -22,6 +22,7 @@
 #include "libheif/heif_plugin.h"
 #include "decoder_ffmpeg.h"
 #include "nalu_utils.h"
+#include <string>
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
