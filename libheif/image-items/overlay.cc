@@ -38,7 +38,7 @@ void writevec(uint8_t* data, size_t& idx, I value, int len)
 
 static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int len)
 {
-  const uint32_t high_bit = 0x80 << ((len - 1) * 8);
+  const uint32_t high_bit = UINT32_C(0x80) << ((len - 1) * 8);
 
   uint32_t val = 0;
   while (len--) {

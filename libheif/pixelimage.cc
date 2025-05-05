@@ -1267,11 +1267,8 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
     uint32_t out_w = get_width(channel);
     uint32_t out_h = get_height(channel);
 
-    // top-left points where to start copying in source and destination
-    uint32_t in_x0;
-    uint32_t in_y0;
-    uint32_t out_x0;
-    uint32_t out_y0;
+
+    // --- check whether overlay image overlaps with current image
 
     if (dx > 0 && static_cast<uint32_t>(dx) >= out_w) {
       // the overlay image is completely outside the right border -> skip overlaying
@@ -1282,8 +1279,39 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       return Error::Ok;
     }
 
+    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
+      // the overlay image is completely outside the bottom border -> skip overlaying
+      return Error::Ok;
+    }
+    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
+      // the overlay image is completely outside the top border -> skip overlaying
+      return Error::Ok;
+    }
+
+
+    // --- compute overlapping area
+
+    // top-left points where to start copying in source and destination
+    uint32_t in_x0;
+    uint32_t in_y0;
+    uint32_t out_x0;
+    uint32_t out_y0;
+
+    // right border
+    if (dx + static_cast<int64_t>(in_w) > out_w) {
+      // overlay image extends partially outside of right border
+      in_w = static_cast<uint32_t>(static_cast<int64_t>(out_w) - dx);
+    }
+
+    // bottom border
+    if (dy + static_cast<int64_t>(in_h) > out_h) {
+      // overlay image extends partially outside of bottom border
+      in_h = static_cast<uint32_t>(static_cast<int64_t>(out_h) - dy);
+    }
+
+    // left border
     if (dx < 0) {
-      // overlay image started partially outside of left border
+      // overlay image starts partially outside of left border
 
       in_x0 = negate_negative_int32(dx);
       out_x0 = 0;
@@ -1294,25 +1322,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       out_x0 = static_cast<uint32_t>(dx);
     }
 
-    // we know that dx >= 0 && dx < out_w
-
-    if (static_cast<uint32_t>(dx) > UINT32_MAX - in_w ||
-        dx + in_w > out_w) {
-      // overlay image extends partially outside of right border
-
-      in_w = out_w - static_cast<uint32_t>(dx); // we know that dx < out_w from first condition
-    }
-
-
-    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
-      // the overlay image is completely outside the bottom border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
-      // the overlay image is completely outside the top border -> skip overlaying
-      return Error::Ok;
-    }
-
+    // top border
     if (dy < 0) {
       // overlay image started partially outside of top border
 
@@ -1325,15 +1335,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       out_y0 = static_cast<uint32_t>(dy);
     }
 
-    // we know that dy >= 0 && dy < out_h
-
-    if (static_cast<uint32_t>(dy) > UINT32_MAX - in_h ||
-        dy + in_h > out_h) {
-      // overlay image extends partially outside of bottom border
-
-      in_h = out_h - static_cast<uint32_t>(dy); // we know that dy < out_h from first condition
-    }
-
+    // --- computer overlay in overlapping area
 
     for (uint32_t y = in_y0; y < in_h; y++) {
       if (!has_alpha) {
