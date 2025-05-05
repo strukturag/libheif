@@ -77,8 +77,8 @@ Error Box_mvhd::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_volume = range.read16();
   range.skip(2);
   range.skip(8);
-  for (int i = 0; i < 9; i++) {
-    m_matrix[i] = range.read32();
+  for (uint32_t& m : m_matrix) {
+    m = range.read32();
   }
   for (int i = 0; i < 6; i++) {
     range.skip(4);
@@ -93,7 +93,7 @@ Error Box_mvhd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_mvhd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "creation time:     " << m_creation_time << "\n"
       << indent << "modification time: " << m_modification_time << "\n"
       << indent << "timescale: " << m_timescale << "\n"
@@ -150,8 +150,8 @@ Error Box_mvhd::write(StreamWriter& writer) const
   writer.write16(m_volume);
   writer.write16(0);
   writer.write64(0);
-  for (int i = 0; i < 9; i++) {
-    writer.write32(m_matrix[i]);
+  for (uint32_t m : m_matrix) {
+    writer.write32(m);
   }
   for (int i = 0; i < 6; i++) {
     writer.write32(0);
@@ -204,8 +204,8 @@ Error Box_tkhd::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_alternate_group = range.read16();
   m_volume = range.read16();
   range.skip(2);
-  for (int i = 0; i < 9; i++) {
-    m_matrix[i] = range.read32();
+  for (uint32_t& m : m_matrix) {
+    m = range.read32();
   }
 
   m_width = range.read32();
@@ -218,7 +218,7 @@ Error Box_tkhd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_tkhd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "creation time:     " << m_creation_time << "\n"
       << indent << "modification time: " << m_modification_time << "\n"
       << indent << "track ID: " << m_track_id << "\n"
@@ -280,8 +280,8 @@ Error Box_tkhd::write(StreamWriter& writer) const
   writer.write16(m_alternate_group);
   writer.write16(m_volume);
   writer.write16(0);
-  for (int i = 0; i < 9; i++) {
-    writer.write32(m_matrix[i]);
+  for (uint32_t m : m_matrix) {
+    writer.write32(m);
   }
 
   writer.write32(m_width);
@@ -330,7 +330,7 @@ Error Box_mdhd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_mdhd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "creation time:     " << m_creation_time << "\n"
       << indent << "modification time: " << m_modification_time << "\n"
       << indent << "timescale: " << m_timescale << "\n"
@@ -372,9 +372,9 @@ Error Box_mdhd::write(StreamWriter& writer) const
     writer.write32(static_cast<uint32_t>(m_duration));
   }
 
-  uint16_t language_packed = static_cast<uint16_t>((((m_language[0] - 0x60) & 0x1F) << 10) |
-                                                   (((m_language[1] - 0x60) & 0x1F) << 5) |
-                                                   (((m_language[2] - 0x60) & 0x1F) << 0));
+  auto language_packed = static_cast<uint16_t>((((m_language[0] - 0x60) & 0x1F) << 10) |
+                                               (((m_language[1] - 0x60) & 0x1F) << 5) |
+                                               (((m_language[2] - 0x60) & 0x1F) << 0));
   writer.write16(language_packed);
   writer.write16(0);
 
@@ -394,8 +394,8 @@ Error Box_vmhd::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   m_graphics_mode = range.read16();
-  for (int i = 0; i < 3; i++) {
-    m_op_color[i] = range.read16();
+  for (uint16_t& c : m_op_color) {
+    c = range.read16();
   }
 
   return range.get_error();
@@ -405,7 +405,7 @@ Error Box_vmhd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_vmhd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "graphics mode: " << m_graphics_mode;
   if (m_graphics_mode == 0) {
     sstr << " (copy)";
@@ -422,8 +422,8 @@ Error Box_vmhd::write(StreamWriter& writer) const
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write16(m_graphics_mode);
-  for (int i = 0; i < 3; i++) {
-    writer.write16(m_op_color[i]);
+  for (uint16_t c : m_op_color) {
+    writer.write16(c);
   }
 
   prepend_header(writer, box_start);
@@ -447,7 +447,7 @@ Error Box_nmhd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_nmhd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   return sstr.str();
 }
@@ -511,7 +511,7 @@ Error Box_stsd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stsd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   for (size_t i = 0; i < m_sample_entries.size(); i++) {
     sstr << indent << "[" << i << "]\n";
     indent++;
@@ -560,7 +560,7 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_entries.resize(entry_count);
 
   for (uint32_t i = 0; i < entry_count; i++) {
-    TimeToSample entry;
+    TimeToSample entry{};
     entry.sample_count = range.read32();
     entry.sample_delta = range.read32();
     m_entries[i] = entry;
@@ -573,7 +573,7 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stts::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   for (size_t i = 0; i < m_entries.size(); i++) {
     sstr << indent << "[" << i << "] : cnt=" << m_entries[i].sample_count << ", delta=" << m_entries[i].sample_delta << "\n";
   }
@@ -617,7 +617,7 @@ uint32_t Box_stts::get_sample_duration(uint32_t sample_idx)
 void Box_stts::append_sample_duration(uint32_t duration)
 {
   if (m_entries.empty() || m_entries.back().sample_delta != duration) {
-    TimeToSample entry;
+    TimeToSample entry{};
     entry.sample_delta = duration;
     entry.sample_count = 1;
     m_entries.push_back(entry);
@@ -666,7 +666,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_entries.resize(entry_count);
 
   for (uint32_t i = 0; i < entry_count; i++) {
-    SampleToChunk entry;
+    SampleToChunk entry{};
     entry.first_chunk = range.read32();
     entry.samples_per_chunk = range.read32();
     entry.sample_description_index = range.read32();
@@ -680,7 +680,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stsc::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   for (size_t i = 0; i < m_entries.size(); i++) {
     sstr << indent << "[" << i << "]\n"
         << indent << "  first chunk: " << m_entries[i].first_chunk << "\n"
@@ -724,7 +724,7 @@ const Box_stsc::SampleToChunk* Box_stsc::get_chunk(uint32_t idx) const
 
 void Box_stsc::add_chunk(uint32_t description_index)
 {
-  SampleToChunk entry;
+  SampleToChunk entry{};
   entry.first_chunk = 1; // TODO
   entry.samples_per_chunk = 0;
   entry.sample_description_index = description_index;
@@ -778,7 +778,7 @@ Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stco::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   for (size_t i = 0; i < m_offsets.size(); i++) {
     sstr << indent << "[" << i << "] : 0x" << std::hex << m_offsets[i] << std::dec << "\n";
   }
@@ -866,7 +866,7 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stsz::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "sample count: " << m_sample_count << "\n";
   if (m_fixed_sample_size == 0) {
     for (size_t i = 0; i < m_sample_sizes.size(); i++) {
@@ -967,7 +967,7 @@ Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_stss::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   for (size_t i = 0; i < m_sync_samples.size(); i++) {
     sstr << indent << "[" << i << "] : " << m_sync_samples[i] << "\n";
   }
@@ -993,13 +993,15 @@ Error Box_stss::write(StreamWriter& writer) const
 
 Error VisualSampleEntry::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
+  (void)limits;
+
   range.skip(6);
   data_reference_index = range.read16();
 
   pre_defined = range.read16();
   range.skip(2);
-  for (int i=0;i<3;i++) {
-    pre_defined2[i] = range.read32();
+  for (uint32_t& p : pre_defined2) {
+    p = range.read32();
   }
   width = range.read16();
   height = range.read16();
@@ -1027,8 +1029,8 @@ Error VisualSampleEntry::write(StreamWriter& writer) const
 
   writer.write16(pre_defined);
   writer.write16(0);
-  for (int i=0;i<3;i++) {
-    writer.write32(pre_defined2[i]);
+  for (uint32_t p : pre_defined2) {
+    writer.write32(p);
   }
 
   writer.write16(width);
@@ -1118,7 +1120,7 @@ Error Box_uri::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_uri::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "uri: " << m_uri << "\n";
 
   return sstr.str();
@@ -1163,7 +1165,7 @@ std::string Box_ccst::dump(Indent& indent) const
   const auto& constraints = m_codingConstraints;
 
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "all ref pics intra: " << std::boolalpha <<constraints.all_ref_pics_intra << "\n"
        << indent << "intra pred used: " << constraints.intra_pred_used << "\n"
        << indent << "max ref per pic: " << ((int) constraints.max_ref_per_pic) << "\n";
@@ -1244,7 +1246,7 @@ Error Box_VisualSampleEntry::parse(BitstreamRange& range, const heif_security_li
 std::string Box_sbgp::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
   sstr << indent << "grouping_type: " << fourcc_to_string(m_grouping_type) << "\n";
 
   if (m_grouping_type_parameter) {
@@ -1327,7 +1329,7 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   for (uint32_t i = 0; i < count; i++) {
-    Entry e;
+    Entry e{};
     e.sample_count = range.read32();
     e.group_description_index = range.read32();
     m_entries.push_back(e);
@@ -1390,7 +1392,7 @@ void Box_sgpd::derive_box_version()
 std::string Box_sgpd::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   sstr << indent << "grouping_type: " << fourcc_to_string(m_grouping_type) << "\n";
   if (m_default_length) {
@@ -1482,7 +1484,7 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 std::string Box_btrt::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   sstr << indent << "bufferSizeDB: " << m_bufferSizeDB << " bytes\n";
   sstr << indent << "max bitrate: " << m_maxBitrate << " bits/sec\n";
@@ -1580,7 +1582,7 @@ uint8_t Box_saiz::get_sample_size(uint32_t idx)
 std::string Box_saiz::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   sstr << indent << "aux_info_type: ";
   if (m_aux_info_type == 0) {
@@ -1714,7 +1716,7 @@ uint64_t Box_saio::get_sample_offset(uint32_t idx) const
 std::string Box_saio::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   sstr << indent << "aux_info_type: ";
   if (m_aux_info_type == 0) {
