@@ -1668,7 +1668,9 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
               sstr.str()};
     }
 
-    m_sample_sizes.reserve(m_num_samples);
+    // read whole table at once
+
+    m_sample_sizes.resize(m_num_samples);
     range.read(m_sample_sizes.data(), m_num_samples);
   }
 
@@ -1814,7 +1816,7 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-  m_sample_offset.reserve(num_samples);
+  m_sample_offset.resize(num_samples);
 
   for (uint32_t i = 0; i < num_samples; i++) {
     uint64_t offset;
