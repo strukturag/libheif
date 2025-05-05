@@ -831,7 +831,8 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
 
   m_tile_decoder->set_data_extent(std::move(*extentResult));
 
-  return m_tile_decoder->decode_single_frame_from_compressed_data(options);
+  return m_tile_decoder->decode_single_frame_from_compressed_data(options,
+                                                                  get_context()->get_security_limits());
 }
 
 

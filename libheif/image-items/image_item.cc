@@ -899,7 +899,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
 
   decoder->set_data_extent(std::move(extent));
 
-  return decoder->decode_single_frame_from_compressed_data(options);
+  return decoder->decode_single_frame_from_compressed_data(options,
+                                                           get_context()->get_security_limits());
 }
 
 

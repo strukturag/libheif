@@ -164,7 +164,8 @@ bool Decoder_uncompressed::has_alpha_component() const
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options)
+Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                                               const struct heif_security_limits* limits)
 {
   UncompressedImageCodec::unci_properties properties;
   properties.uncC = m_uncC;
@@ -173,7 +174,7 @@ Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif
 
   auto decodeResult = UncompressedImageCodec::decode_uncompressed_image(properties,
                                                           get_data_extent(),
-                                                          heif_get_global_security_limits()); // TODO: use correct security limits
+                                                          limits);
 
   if (decodeResult.error) {
     return decodeResult.error;

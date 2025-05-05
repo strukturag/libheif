@@ -95,7 +95,8 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
   decoder->set_data_extent(chunk->get_data_extent_for_sample(m_next_sample_to_be_processed));
 
-  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decoder->decode_single_frame_from_compressed_data(options);
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decoder->decode_single_frame_from_compressed_data(options,
+                                                                                                             m_heif_context->get_security_limits());
   if (decodingResult.error) {
     m_next_sample_to_be_processed++;
     return decodingResult.error;

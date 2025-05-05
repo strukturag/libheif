@@ -243,7 +243,8 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options)
+Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                                  const struct heif_security_limits* limits)
 {
   const struct heif_decoder_plugin* decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
   if (!decoder_plugin) {
@@ -285,9 +286,19 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   heif_image* decoded_img = nullptr;
 
-  err = decoder_plugin->decode_image(decoder, &decoded_img);
-  if (err.code != heif_error_Ok) {
-    return Error(err.code, err.subcode, err.message);
+  if (decoder_plugin->plugin_api_version >= 4 &&
+      decoder_plugin->decode_next_image != nullptr) {
+
+    err = decoder_plugin->decode_next_image(decoder, &decoded_img, limits);
+    if (err.code != heif_error_Ok) {
+      return Error(err.code, err.subcode, err.message);
+    }
+  }
+  else {
+    err = decoder_plugin->decode_image(decoder, &decoded_img);
+    if (err.code != heif_error_Ok) {
+      return Error(err.code, err.subcode, err.message);
+    }
   }
 
   if (!decoded_img) {

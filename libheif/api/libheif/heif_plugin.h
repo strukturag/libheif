@@ -109,6 +109,9 @@ struct heif_decoder_plugin
   const char* id_name;
 
   // --- version 4 functions will follow below ... ---
+
+  struct heif_error (* decode_next_image)(void* decoder, struct heif_image** out_img,
+                                          const struct heif_security_limits* limits);
 };
 
 

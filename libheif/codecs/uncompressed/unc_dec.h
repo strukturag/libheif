@@ -53,7 +53,8 @@ public:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
   Result<std::shared_ptr<HeifPixelImage>>
-  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options) override;
+  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                           const struct heif_security_limits* limits) override;
 
 private:
   const std::shared_ptr<const Box_uncC> m_uncC;
