@@ -242,8 +242,9 @@ static struct heif_error libde265_v2_push_data(void* decoder_raw, const void* da
 }
 
 
-static struct heif_error libde265_v2_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static struct heif_error libde265_v2_decode_next_image(void* decoder_raw,
+                                                       struct heif_image** out_img,
+                                                       const heif_security_limits* limits)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
@@ -258,7 +259,7 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw,
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
       struct heif_error err = convert_libde265_image_to_heif_image(decoder, img,
-                                                                   out_img);
+                                                                   out_img, limits);
       de265_release_picture(img);
 
       return err;
@@ -269,6 +270,12 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw,
   return err;
 }
 
+static struct heif_error libde265_v2_decode_image(void* decoder_raw,
+                                                  struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return libde265_v2_decode_next_image(decoder_raw, out_img, limits);
+}
 #else
 
 static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
@@ -397,7 +404,10 @@ static const struct heif_decoder_plugin decoder_libde265
   libde265_new_decoder,
   libde265_free_decoder,
   libde265_v2_push_data,
-  libde265_v2_decode_image
+  libde265_v2_decode_image,
+  libde265_set_strict_decoding,
+  "libde265",
+  libde265_v2_decode_next_image
 };
 
 #else
