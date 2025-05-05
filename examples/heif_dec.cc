@@ -623,7 +623,7 @@ int main(int argc, char** argv)
         }
         break;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
       case 'o':
         output_filename = optarg;
@@ -635,7 +635,7 @@ int main(int argc, char** argv)
   }
 
   if (option_list_decoders) {
-    list_all_decoders();
+    heif_examples::list_all_decoders();
     return 0;
   }
 
@@ -732,7 +732,7 @@ int main(int argc, char** argv)
 
   // --- check whether input is a supported HEIF file
 
-  if (int ret = check_for_valid_input_HEIF_file(input_filename)) {
+  if (int ret = heif_examples::check_for_valid_input_HEIF_file(input_filename)) {
     return ret;
   }
 
@@ -771,7 +771,7 @@ int main(int argc, char** argv)
 
     for (uint32_t id : track_ids) {
       heif_track* track = heif_context_get_track(ctx, id);
-      std::cout << "#" << id << " : " << fourcc_to_string(heif_track_get_track_handler_type(track));
+      std::cout << "#" << id << " : " << heif_examples::fourcc_to_string(heif_track_get_track_handler_type(track));
 
       if (heif_track_get_track_handler_type(track) == heif_track_type_image_sequence ||
           heif_track_get_track_handler_type(track) == heif_track_type_video) {
@@ -781,7 +781,7 @@ int main(int argc, char** argv)
       }
       else {
         uint32_t sample_entry_type = heif_track_get_sample_entry_type_of_first_cluster(track);
-        std::cout << "\n  sample entry type: " << fourcc_to_string(sample_entry_type);
+        std::cout << "\n  sample entry type: " << heif_examples::fourcc_to_string(sample_entry_type);
         if (sample_entry_type == heif_fourcc('u', 'r', 'i', 'm')) {
           const char* uri;
           err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);

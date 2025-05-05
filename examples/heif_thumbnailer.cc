@@ -78,7 +78,7 @@ int main(int argc, char** argv)
         thumbnail_from_primary_image_only = true;
         break;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
       case 'h':
       default:

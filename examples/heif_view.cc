@@ -190,7 +190,7 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
       case OPTION_SPEEDUP:
         option_speedup = atof(optarg);
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
   }
 
   if (option_list_decoders) {
-    list_all_decoders();
+    heif_examples::list_all_decoders();
     return 0;
   }
 
@@ -242,7 +242,7 @@ int main(int argc, char** argv)
 
   // --- check whether input is a supported HEIF file
 
-  if (int ret = check_for_valid_input_HEIF_file(input_filename)) {
+  if (int ret = heif_examples::check_for_valid_input_HEIF_file(input_filename)) {
     return ret;
   }
 

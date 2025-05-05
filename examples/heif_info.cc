@@ -147,7 +147,7 @@ int main(int argc, char** argv)
         output_filename = optarg;
         break;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
     }
   }
@@ -366,7 +366,7 @@ int main(int argc, char** argv)
     // --- color profile
 
     uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
-    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType).c_str() : "no");
+    printf("  color profile: %s\n", profileType ? heif_examples::fourcc_to_string(profileType).c_str() : "no");
 
 
     // --- depth information
@@ -775,7 +775,7 @@ int main(int argc, char** argv)
 
       heif_track_type handler = heif_track_get_track_handler_type(track);
       std::cout << "track " << id << "\n";
-      std::cout << "  handler: '" << fourcc_to_string(handler) << "' = ";
+      std::cout << "  handler: '" << heif_examples::fourcc_to_string(handler) << "' = ";
 
       switch (handler) {
         case heif_track_type_image_sequence:
@@ -800,7 +800,7 @@ int main(int argc, char** argv)
       }
 
       uint32_t sampleEntryType = heif_track_get_sample_entry_type_of_first_cluster(track);
-      std::cout << "  sample entry type: " << fourcc_to_string(sampleEntryType) << "\n";
+      std::cout << "  sample entry type: " << heif_examples::fourcc_to_string(sampleEntryType) << "\n";
 
       if (sampleEntryType == heif_fourcc('u', 'r', 'i', 'm')) {
         const char* uri;
@@ -820,7 +820,7 @@ int main(int argc, char** argv)
 
       for (size_t i=0;i<aux_types.size();i++) {
         if (i) { std::cout << ", "; }
-        std::cout << fourcc_to_string(aux_types[i].type);
+        std::cout << heif_examples::fourcc_to_string(aux_types[i].type);
       }
 
       if (nSampleAuxTypes==0) {
@@ -837,7 +837,7 @@ int main(int argc, char** argv)
         heif_track_get_track_reference_types(track, refTypes.data());
 
         for (uint32_t refType : refTypes) {
-          std::cout << "    " << fourcc_to_string(refType) << ": ";
+          std::cout << "    " << heif_examples::fourcc_to_string(refType) << ": ";
 
           size_t n = heif_track_get_number_of_track_reference_of_type(track, refType);
           std::vector<uint32_t> track_ids(n);

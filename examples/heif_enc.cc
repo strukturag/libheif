@@ -997,7 +997,7 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
       case 'q':
         quality = atoi(optarg);
