@@ -30,10 +30,6 @@
 #include <algorithm>
 #include <color-conversion/colorconversion.h>
 
-#if __linux__
-#include <sys/mman.h>
-#include <sys/sysinfo.h>
-#endif
 
 heif_chroma chroma_from_subsampling(int h, int v)
 {
@@ -97,11 +93,6 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
-
-#if __linux__
-    munlock(iter.second.allocated_mem, iter.second.allocation_size);
-#endif
-
     delete[] iter.second.allocated_mem;
   }
 
