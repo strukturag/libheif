@@ -1806,7 +1806,7 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
   uint32_t num_samples = range.read32();
 
   // check required memory
-  uint64_t mem_size = num_samples * (get_version() == 1 ? 8 : 4);
+  uint64_t mem_size = num_samples * sizeof(uint64_t);
   if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
     std::stringstream sstr;
     sstr << "Allocating " << mem_size << " bytes for the 'saio' table exceeds the security limit of "
