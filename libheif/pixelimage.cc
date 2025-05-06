@@ -1300,6 +1300,10 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
     // right border
     if (dx + static_cast<int64_t>(in_w) > out_w) {
       // overlay image extends partially outside of right border
+      // Notes:
+      // - (out_w-dx) cannot underflow because dx<out_w is ensured above
+      // - (out_w-dx) cannot overflow (for dx<0) because, as just checked, out_w-dx < in_w
+      //              and in_w fits into uint32_t
       in_w = static_cast<uint32_t>(static_cast<int64_t>(out_w) - dx);
     }
 
