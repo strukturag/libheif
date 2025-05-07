@@ -547,14 +547,10 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_count = range.read32();
-  if (limits->max_memory_block_size && uint64_t(entry_count) * sizeof(TimeToSample) > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << static_cast<uint64_t>(entry_count) * sizeof(TimeToSample) << " bytes for the 'stts' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
 
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(entry_count * sizeof(TimeToSample),
+                                       limits, "the 'stts' table")) {
+    return err;
   }
 
   m_entries.resize(entry_count);
@@ -653,14 +649,10 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_count = range.read32();
-  if (limits->max_memory_block_size && uint64_t(entry_count) * sizeof(SampleToChunk) > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << static_cast<uint64_t>(entry_count) * sizeof(SampleToChunk) << " bytes for the 'stsc' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
 
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(entry_count * sizeof(SampleToChunk),
+                                       limits, "the 'stsc' table")) {
+    return err;
   }
 
   m_entries.resize(entry_count);
@@ -753,14 +745,9 @@ Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
   // check required memory
 
   uint64_t mem_size = entry_count * sizeof(uint32_t);
-  if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << mem_size << " bytes for the 'stco' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
-
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(mem_size,
+                                       limits, "the 'stco' table")) {
+    return err;
   }
 
   for (uint32_t i = 0; i < entry_count; i++) {
@@ -840,14 +827,8 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
     // check required memory
 
     uint64_t mem_size = m_sample_count * sizeof(uint32_t);
-    if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
-      std::stringstream sstr;
-      sstr << "Allocating " << mem_size << " bytes for the 'stsz' table exceeds the security limit of "
-           << limits->max_memory_block_size << " bytes";
-
-      return {heif_error_Memory_allocation_error,
-              heif_suberror_Security_limit_exceeded,
-              sstr.str()};
+    if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
+      return err;
     }
 
     for (uint32_t i = 0; i < m_sample_count; i++) {
@@ -942,14 +923,8 @@ Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
   // check required memory
 
   uint64_t mem_size = sample_count * sizeof(uint32_t);
-  if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << mem_size << " bytes for the 'stss' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
-
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stss' table")) {
+    return err;
   }
 
   for (uint32_t i = 0; i < sample_count; i++) {
@@ -1317,15 +1292,9 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t count = range.read32();
-
-  if (limits->max_memory_block_size && uint64_t(count) * 2 * sizeof(uint32_t) > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << static_cast<uint64_t>(count) * 2 * sizeof(uint32_t) << " bytes for the 'sample to group' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
-
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(count * sizeof(Entry),
+                                       limits, "the 'sample to group' table")) {
+    return err;
   }
 
   for (uint32_t i = 0; i < count; i++) {
@@ -1660,14 +1629,8 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
     // check required memory
 
     uint64_t mem_size = m_num_samples;
-    if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
-      std::stringstream sstr;
-      sstr << "Allocating " << mem_size << " bytes for the 'saiz' table exceeds the security limit of "
-           << limits->max_memory_block_size << " bytes";
-
-      return {heif_error_Memory_allocation_error,
-              heif_suberror_Security_limit_exceeded,
-              sstr.str()};
+    if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'sample aux info sizes' (saiz) table")) {
+      return err;
     }
 
     // read whole table at once
@@ -1807,16 +1770,10 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // check required memory
   uint64_t mem_size = num_samples * sizeof(uint64_t);
-  if (limits->max_memory_block_size && mem_size > limits->max_memory_block_size) {
-    std::stringstream sstr;
-    sstr << "Allocating " << mem_size << " bytes for the 'saio' table exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
 
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'saio' table")) {
+    return err;
   }
-
 
   m_sample_offset.resize(num_samples);
 

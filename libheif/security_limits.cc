@@ -131,7 +131,8 @@ size_t TotalMemoryTracker::get_max_total_memory_used() const
 }
 
 
-Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limits_context)
+Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limits_context,
+                          const char* reason_description)
 {
   // we allow several allocations on the same handle, but they have to be for the same context
   if (m_limits_context) {
@@ -150,8 +151,15 @@ Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limi
   if (limits_context->max_memory_block_size != 0 &&
       memory_amount > limits_context->max_memory_block_size) {
     std::stringstream sstr;
-    sstr << "Allocating " << memory_amount << " bytes exceeds the security limit of "
-         << limits_context->max_memory_block_size << " bytes";
+
+    if (reason_description) {
+      sstr << "Allocating " << memory_amount << " bytes for " << reason_description <<" exceeds the security limit of "
+           << limits_context->max_memory_block_size << " bytes";
+    }
+    else {
+      sstr << "Allocating " << memory_amount << " bytes exceeds the security limit of "
+           << limits_context->max_memory_block_size << " bytes";
+    }
 
     return {heif_error_Memory_allocation_error,
             heif_suberror_Security_limit_exceeded,
@@ -174,9 +182,17 @@ Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limi
   if (limits_context->max_total_memory != 0 &&
       it->second.total_memory_usage + memory_amount > limits_context->max_total_memory) {
     std::stringstream sstr;
-    sstr << "Memory usage of " << it->second.total_memory_usage + memory_amount
-         << " bytes exceeds the security limit of "
-         << limits_context->max_total_memory << " bytes of total memory usage";
+
+    if (reason_description) {
+      sstr << "Memory usage of " << it->second.total_memory_usage + memory_amount
+           << " bytes for " << reason_description << " exceeds the security limit of "
+           << limits_context->max_total_memory << " bytes of total memory usage";
+    }
+    else {
+      sstr << "Memory usage of " << it->second.total_memory_usage + memory_amount
+           << " bytes exceeds the security limit of "
+           << limits_context->max_total_memory << " bytes of total memory usage";
+    }
 
     return {heif_error_Memory_allocation_error,
             heif_suberror_Security_limit_exceeded,

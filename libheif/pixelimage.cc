@@ -241,6 +241,12 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
   assert(bit_depth >= 1);
   assert(bit_depth <= 128);
 
+  if (width == 0 || height == 0) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Invalid image size"};
+  }
+
   // use 16 byte alignment (enough for 128 bit data-types). Every row is an integer number of data-elements.
   uint16_t alignment = 16; // must be power of two
 
@@ -280,7 +286,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
 
   allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
 
-  if (auto err = m_memory_handle.alloc(allocation_size, limits)) {
+  if (auto err = m_memory_handle.alloc(allocation_size, limits, "image data")) {
     return err;
   }
 

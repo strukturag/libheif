@@ -63,7 +63,7 @@ class MemoryHandle
 public:
   // Note: no automatic free in destructor so that it is easy to copy.
 
-  Error alloc(size_t memory_amount, const heif_security_limits* limits_context);
+  Error alloc(size_t memory_amount, const heif_security_limits* limits_context, const char* reason_description);
   void free();
 
 private:

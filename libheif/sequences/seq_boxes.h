@@ -22,6 +22,8 @@
 #define SEQ_BOXES_H
 
 #include "box.h"
+#include "security_limits.h"
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -322,6 +324,8 @@ public:
     set_short_type(fourcc("stts"));
   }
 
+  ~Box_stts() { m_memory_handle.free(); }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Decoding Time to Sample"; }
@@ -344,6 +348,7 @@ protected:
 
 private:
   std::vector<TimeToSample> m_entries;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -354,6 +359,8 @@ public:
   {
     set_short_type(fourcc("stsc"));
   }
+
+  ~Box_stsc() { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -387,6 +394,7 @@ protected:
 
 private:
   std::vector<SampleToChunk> m_entries;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -397,6 +405,8 @@ public:
   {
     set_short_type(fourcc("stco"));
   }
+
+  ~Box_stco() { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -415,6 +425,7 @@ protected:
 
 private:
   std::vector<uint32_t> m_offsets;
+  MemoryHandle m_memory_handle;
 
   mutable size_t m_offset_start_pos = 0;
 };
@@ -427,6 +438,8 @@ public:
   {
     set_short_type(fourcc("stsz"));
   }
+
+  ~Box_stsz() { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -449,6 +462,7 @@ private:
   uint32_t m_fixed_sample_size = 0;
   uint32_t m_sample_count = 0;
   std::vector<uint32_t> m_sample_sizes;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -459,6 +473,8 @@ public:
   {
     set_short_type(fourcc("stss"));
   }
+
+  ~Box_stss() { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -473,6 +489,7 @@ protected:
 
 private:
   std::vector<uint32_t> m_sync_samples;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -618,6 +635,8 @@ public:
     set_short_type(fourcc("sbgp"));
   }
 
+  ~Box_sbgp() { m_memory_handle.free(); }
+
   void derive_box_version() override;
 
   std::string dump(Indent&) const override;
@@ -639,6 +658,7 @@ private:
   };
 
   std::vector<Entry> m_entries;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -733,6 +753,8 @@ public:
     set_short_type(fourcc("saiz"));
   }
 
+  ~Box_saiz() { m_memory_handle.free(); }
+
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
   uint32_t get_aux_info_type() const { return m_aux_info_type; }
@@ -763,6 +785,7 @@ private:
   uint32_t m_num_samples = 0; // needed in case we are using the default sample size
 
   std::vector<uint8_t> m_sample_sizes;
+  MemoryHandle m_memory_handle;
 };
 
 
@@ -772,6 +795,8 @@ public:
   {
     set_short_type(fourcc("saio"));
   }
+
+  ~Box_saio() { m_memory_handle.free(); }
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
@@ -806,6 +831,8 @@ private:
 
   // If sample_offset==1, all samples are stored contiguous in the file
   std::vector<uint64_t> m_sample_offset;
+
+  MemoryHandle m_memory_handle;
 };
 
 
