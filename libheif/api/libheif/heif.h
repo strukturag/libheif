@@ -688,6 +688,7 @@ struct heif_security_limits {
 
   // --- version 2
 
+  uint64_t max_total_memory;
   uint32_t max_sample_description_box_entries;
   uint32_t max_sample_group_description_box_entries;
 };

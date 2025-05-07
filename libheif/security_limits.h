@@ -41,4 +41,35 @@ static const int MAX_FRACTION_VALUE = 0x10000;
 
 Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height);
 
+
+class TotalMemoryTracker
+{
+public:
+  explicit TotalMemoryTracker(const heif_security_limits* limits_context);
+  ~TotalMemoryTracker();
+
+  size_t get_max_total_memory_used() const;
+
+  void operator=(const TotalMemoryTracker&) = delete;
+  TotalMemoryTracker(const TotalMemoryTracker&) = delete;
+
+private:
+  const heif_security_limits* m_limits_context = nullptr;
+};
+
+
+class MemoryHandle
+{
+public:
+  // Note: no automatic free in destructor so that it is easy to copy.
+
+  Error alloc(size_t memory_amount, const heif_security_limits* limits_context);
+  void free();
+
+private:
+  const heif_security_limits* m_limits_context = nullptr;
+  size_t m_memory_amount = 0;
+};
+
+
 #endif  // LIBHEIF_SECURITY_LIMITS_H

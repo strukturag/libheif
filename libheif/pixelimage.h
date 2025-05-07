@@ -26,6 +26,7 @@
 #include "error.h"
 #include "nclx.h"
 #include <libheif/heif_experimental.h>
+#include "security_limits.h"
 
 #include <vector>
 #include <memory>
@@ -34,7 +35,6 @@
 #include <utility>
 #include <cassert>
 #include <string>
-
 
 heif_chroma chroma_from_subsampling(int h, int v);
 
@@ -307,6 +307,8 @@ private:
     uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
     size_t   allocation_size = 0;
     uint32_t stride = 0; // bytes per line
+
+    MemoryHandle m_memory_handle;
 
     int get_bytes_per_pixel() const;
 

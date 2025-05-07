@@ -212,6 +212,7 @@ private:
   int m_max_decoding_threads = 4;
 
   heif_security_limits m_limits;
+  TotalMemoryTracker m_memory_tracker;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
 

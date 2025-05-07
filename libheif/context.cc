@@ -98,6 +98,7 @@ struct heif_error heif_encoder::alloc()
 
 
 HeifContext::HeifContext()
+    : m_memory_tracker(&m_limits)
 {
   const char* security_limits_variable = getenv("LIBHEIF_SECURITY_LIMITS");
 

@@ -94,6 +94,7 @@ HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
+    iter.second.m_memory_handle.free();
   }
 
   heif_tai_timestamp_packet_release(m_tai_timestamp);
@@ -265,19 +266,6 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
   assert(alignment>=1);
 
   if (limits &&
-      limits->max_memory_block_size &&
-      (limits->max_memory_block_size < alignment - 1U ||
-       (limits->max_memory_block_size - (alignment - 1U)) / stride < m_mem_height)) {
-    std::stringstream sstr;
-    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes exceeds the security limit of "
-         << limits->max_memory_block_size << " bytes";
-
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
-  }
-
-  if (limits &&
       limits->max_image_size_pixels &&
       limits->max_image_size_pixels / height < width) {
 
@@ -291,6 +279,10 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
   }
 
   allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
+
+  if (auto err = m_memory_handle.alloc(allocation_size, limits)) {
+    return err;
+  }
 
   try {
     // --- allocate memory
