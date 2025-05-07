@@ -50,6 +50,9 @@ public:
 
   size_t get_max_total_memory_used() const;
 
+  void operator=(const TotalMemoryTracker&) = delete;
+  TotalMemoryTracker(const TotalMemoryTracker&) = delete;
+
 private:
   const heif_security_limits* m_limits_context = nullptr;
 };
