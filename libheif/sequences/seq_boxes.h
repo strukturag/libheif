@@ -324,7 +324,7 @@ public:
     set_short_type(fourcc("stts"));
   }
 
-  ~Box_stts() { m_memory_handle.free(); }
+  ~Box_stts() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -360,7 +360,7 @@ public:
     set_short_type(fourcc("stsc"));
   }
 
-  ~Box_stsc() { m_memory_handle.free(); }
+  ~Box_stsc() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -406,7 +406,7 @@ public:
     set_short_type(fourcc("stco"));
   }
 
-  ~Box_stco() { m_memory_handle.free(); }
+  ~Box_stco() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -439,7 +439,7 @@ public:
     set_short_type(fourcc("stsz"));
   }
 
-  ~Box_stsz() { m_memory_handle.free(); }
+  ~Box_stsz() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -474,7 +474,7 @@ public:
     set_short_type(fourcc("stss"));
   }
 
-  ~Box_stss() { m_memory_handle.free(); }
+  ~Box_stss() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -635,7 +635,7 @@ public:
     set_short_type(fourcc("sbgp"));
   }
 
-  ~Box_sbgp() { m_memory_handle.free(); }
+  ~Box_sbgp() override { m_memory_handle.free(); }
 
   void derive_box_version() override;
 
@@ -753,7 +753,7 @@ public:
     set_short_type(fourcc("saiz"));
   }
 
-  ~Box_saiz() { m_memory_handle.free(); }
+  ~Box_saiz() override { m_memory_handle.free(); }
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
@@ -796,7 +796,7 @@ public:
     set_short_type(fourcc("saio"));
   }
 
-  ~Box_saio() { m_memory_handle.free(); }
+  ~Box_saio() override { m_memory_handle.free(); }
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
