@@ -324,8 +324,6 @@ public:
     set_short_type(fourcc("stts"));
   }
 
-  ~Box_stts() override { m_memory_handle.free(); }
-
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Decoding Time to Sample"; }
@@ -359,8 +357,6 @@ public:
   {
     set_short_type(fourcc("stsc"));
   }
-
-  ~Box_stsc() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -406,8 +402,6 @@ public:
     set_short_type(fourcc("stco"));
   }
 
-  ~Box_stco() override { m_memory_handle.free(); }
-
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Sample Offset"; }
@@ -438,8 +432,6 @@ public:
   {
     set_short_type(fourcc("stsz"));
   }
-
-  ~Box_stsz() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -473,8 +465,6 @@ public:
   {
     set_short_type(fourcc("stss"));
   }
-
-  ~Box_stss() override { m_memory_handle.free(); }
 
   std::string dump(Indent&) const override;
 
@@ -635,8 +625,6 @@ public:
     set_short_type(fourcc("sbgp"));
   }
 
-  ~Box_sbgp() override { m_memory_handle.free(); }
-
   void derive_box_version() override;
 
   std::string dump(Indent&) const override;
@@ -753,8 +741,6 @@ public:
     set_short_type(fourcc("saiz"));
   }
 
-  ~Box_saiz() override { m_memory_handle.free(); }
-
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
   uint32_t get_aux_info_type() const { return m_aux_info_type; }
@@ -795,8 +781,6 @@ public:
   {
     set_short_type(fourcc("saio"));
   }
-
-  ~Box_saio() override { m_memory_handle.free(); }
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 

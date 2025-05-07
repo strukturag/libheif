@@ -50,9 +50,6 @@ public:
 
   size_t get_max_total_memory_used() const;
 
-  void operator=(const TotalMemoryTracker&) = delete;
-  TotalMemoryTracker(const TotalMemoryTracker&) = delete;
-
 private:
   const heif_security_limits* m_limits_context = nullptr;
 };
@@ -61,10 +58,19 @@ private:
 class MemoryHandle
 {
 public:
-  // Note: no automatic free in destructor so that it is easy to copy.
+  MemoryHandle() = default;
+  ~MemoryHandle() { free(); }
 
   Error alloc(size_t memory_amount, const heif_security_limits* limits_context, const char* reason_description);
+
   void free();
+
+  void free(size_t memory_amount);
+
+  const heif_security_limits* get_security_limits() const { return m_limits_context; }
+
+  void operator=(const MemoryHandle&) = delete;
+  MemoryHandle(const MemoryHandle&) = delete;
 
 private:
   const heif_security_limits* m_limits_context = nullptr;

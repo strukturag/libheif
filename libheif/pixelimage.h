@@ -288,8 +288,10 @@ private:
   struct ImagePlane
   {
     // limits=nullptr disables the limits
-    Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components,
-                const heif_security_limits* limits);
+    Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+                int num_interleaved_components,
+                const heif_security_limits* limits,
+                MemoryHandle& memory_handle);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
@@ -307,8 +309,6 @@ private:
     uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
     size_t   allocation_size = 0;
     uint32_t stride = 0; // bytes per line
-
-    MemoryHandle m_memory_handle;
 
     int get_bytes_per_pixel() const;
 
@@ -329,6 +329,7 @@ private:
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   std::map<heif_channel, ImagePlane> m_planes;
+  MemoryHandle m_memory_handle;
 
   uint32_t m_PixelAspectRatio_h = 1;
   uint32_t m_PixelAspectRatio_v = 1;

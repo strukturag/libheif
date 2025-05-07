@@ -231,3 +231,18 @@ void MemoryHandle::free()
   }
 }
 
+
+void MemoryHandle::free(size_t memory_amount)
+{
+  if (m_limits_context) {
+    std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+
+    auto it = sMemoryUsage.find(m_limits_context);
+    if (it != sMemoryUsage.end()) {
+      it->second.total_memory_usage -= memory_amount;
+    }
+
+    m_memory_amount -= memory_amount;
+  }
+}
+

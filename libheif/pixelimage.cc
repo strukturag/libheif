@@ -94,7 +94,6 @@ HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
-    iter.second.m_memory_handle.free();
   }
 
   heif_tai_timestamp_packet_release(m_tai_timestamp);
@@ -210,7 +209,7 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
     bit_depth = 8;
   }
 
-  if (auto err = plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels, limits)) {
+  if (auto err = plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels, limits, m_memory_handle)) {
     return err;
   }
   else {
@@ -224,7 +223,7 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
                                   const heif_security_limits* limits)
 {
   ImagePlane plane;
-  if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits)) {
+  if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
   else {
@@ -236,7 +235,8 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
 
 Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                         int num_interleaved_components,
-                                        const heif_security_limits* limits)
+                                        const heif_security_limits* limits,
+                                        MemoryHandle& memory_handle)
 {
   assert(bit_depth >= 1);
   assert(bit_depth <= 128);
@@ -286,7 +286,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
 
   allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
 
-  if (auto err = m_memory_handle.alloc(allocation_size, limits, "image data")) {
+  if (auto err = memory_handle.alloc(allocation_size, limits, "image data")) {
     return err;
   }
 
@@ -340,7 +340,7 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
       ImagePlane newPlane;
       if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth,
                                     num_interleaved_pixels_per_plane(m_chroma),
-                                    limits))
+                                    limits, m_memory_handle))
       {
         return err;
       }
@@ -416,7 +416,7 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
         plane->m_mem_height < subsampled_height) {
 
       ImagePlane newPlane;
-      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma), limits)) {
+      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma), limits, m_memory_handle)) {
         return err;
       }
 
@@ -732,8 +732,14 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
 
   ImagePlane plane = source->m_planes[src_channel];
   source->m_planes.erase(src_channel);
+  source->m_memory_handle.free(plane.allocation_size);
 
   m_planes.insert(std::make_pair(dst_channel, plane));
+
+  // Note: we assume that image planes are never transferred between heif_contexts
+  m_memory_handle.alloc(plane.allocation_size,
+                        source->m_memory_handle.get_security_limits(),
+                        "transferred image data");
 }
 
 
