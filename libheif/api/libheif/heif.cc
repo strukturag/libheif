@@ -19,7 +19,7 @@
  */
 
 #include "heif.h"
-
+#include "heif_experimental.h"
 
 void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info* infos)
 {
