@@ -23,6 +23,7 @@ set(libheif_headers
         api/libheif/heif_decoding.h
         api/libheif/heif_image_handle.h
         api/libheif/heif_context.h
+        api/libheif/heif_tiling.h
         api/libheif/heif_cxx.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
@@ -78,6 +79,7 @@ set(libheif_sources
         api/libheif/heif_decoding.cc
         api/libheif/heif_image_handle.cc
         api/libheif/heif_context.cc
+        api/libheif/heif_tiling.cc
         codecs/decoder.h
         codecs/decoder.cc
         codecs/encoder.h
