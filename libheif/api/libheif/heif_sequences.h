@@ -286,12 +286,10 @@ struct heif_track_info
 
   // --- GIMI content IDs for samples
 
-  // TODO: should this be in an extension API as it is not in the HEIF standard?
   enum heif_sample_aux_info_presence with_sample_content_ids;
 
   // --- GIMI content ID for the track
 
-  // TODO: should this be in an extension API as it is not in the HEIF standard?
   uint8_t with_gimi_track_content_id;
   const char* gimi_track_content_id;
 };
@@ -453,6 +451,8 @@ void heif_raw_sequence_sample_set_gimi_sample_content_id(heif_raw_sequence_sampl
 
 
 // --- TAI timestamps
+
+// Note: functions for setting timestamps on images are in heif_tai_timestamps.h
 
 /**
  * Returns whether the raw (metadata) sample has a TAI timestamp attached to it (stored as SAI).
