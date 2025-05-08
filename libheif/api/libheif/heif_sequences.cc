@@ -246,6 +246,8 @@ struct heif_error heif_track_get_image_resolution(heif_track* track_ptr, uint16_
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
                                                          struct heif_track_info* info,
                                                          heif_track_type track_type,
+                                                         const struct heif_encoding_options* options,
+                                                         const struct heif_sequence_encoding_options* seq_options,
                                                          heif_track** out_track)
 {
   if (track_type != heif_track_type_video &&
@@ -488,7 +490,8 @@ extern void copy_options(heif_encoding_options& options, const heif_encoding_opt
 struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                                    const struct heif_image* input_image,
                                                    struct heif_encoder* encoder,
-                                                   const struct heif_encoding_options* input_options)
+                                                   const struct heif_encoding_options* input_options,
+                                                   const struct heif_sequence_encoding_options* seq_input_options)
 {
   heif_encoding_options options;
   heif_color_profile_nclx nclx;

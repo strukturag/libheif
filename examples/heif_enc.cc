@@ -1798,6 +1798,8 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
                                              image_width, image_height,
                                              track_info,
                                              heif_track_type_video,
+                                             nullptr,
+                                             nullptr,
                                              &track);
 
       heif_track_info_release(track_info);
@@ -1824,7 +1826,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     heif_image_set_duration(image.get(), sequence_durations);
 
-    error = heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, nullptr, nullptr);
     if (error.code) {
       std::cerr << "Cannot encode sequence image: " << error.message << "\n";
       return 5;
