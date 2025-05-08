@@ -89,6 +89,7 @@ const char* heif_item_get_mime_item_content_type(const struct heif_context* ctx,
   return infe->get_content_type().c_str();
 }
 
+
 const char* heif_item_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
@@ -114,6 +115,7 @@ const char* heif_item_get_uri_item_uri_type(const struct heif_context* ctx, heif
   return infe->get_item_uri_type().c_str();
 }
 
+
 const char* heif_item_get_item_name(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
@@ -123,13 +125,28 @@ const char* heif_item_get_item_name(const struct heif_context* ctx, heif_item_id
 }
 
 
+struct heif_error heif_item_set_item_name(struct heif_context* ctx,
+                                          heif_item_id item,
+                                          const char* item_name)
+{
+  auto infe = ctx->context->get_heif_file()->get_infe_box(item);
+  if (!infe) {
+    return heif_error{heif_error_Input_does_not_exist, heif_suberror_Nonexisting_item_referenced, "Item does not exist"};
+  }
+
+  infe->set_item_name(item_name);
+
+  return heif_error_success;
+}
+
+
 struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
-                                             heif_item_id item_id,
-                                             heif_metadata_compression* out_compression_format,
-                                             uint8_t** out_data, size_t* out_data_size)
+                                          heif_item_id item_id,
+                                          heif_metadata_compression* out_compression_format,
+                                          uint8_t** out_data, size_t* out_data_size)
 {
   if (out_data && !out_data_size) {
-      return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
   }
 
   std::vector<uint8_t> data;
@@ -165,7 +182,6 @@ void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data)
     *item_data = nullptr;
   }
 }
-
 
 
 size_t heif_context_get_item_references(const struct heif_context* ctx,
@@ -212,6 +228,32 @@ void heif_release_item_references(const struct heif_context* ctx, heif_item_id**
     delete[] *references;
     *references = nullptr;
   }
+}
+
+
+struct heif_error heif_context_add_item_reference(struct heif_context* ctx,
+                                                  uint32_t reference_type,
+                                                  heif_item_id from_item,
+                                                  heif_item_id to_item)
+{
+  ctx->context->get_heif_file()->add_iref_reference(from_item,
+                                                    reference_type, {to_item});
+
+  return heif_error_success;
+}
+
+struct heif_error heif_context_add_item_references(struct heif_context* ctx,
+                                                   uint32_t reference_type,
+                                                   heif_item_id from_item,
+                                                   const heif_item_id* to_item,
+                                                   int num_to_items)
+{
+  std::vector<heif_item_id> to_refs(to_item, to_item + num_to_items);
+
+  ctx->context->get_heif_file()->add_iref_reference(from_item,
+                                                    reference_type, to_refs);
+
+  return heif_error_success;
 }
 
 
@@ -291,41 +333,3 @@ struct heif_error heif_context_add_uri_item(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_item_reference(struct heif_context* ctx,
-                                                  uint32_t reference_type,
-                                                  heif_item_id from_item,
-                                                  heif_item_id to_item)
-{
-  ctx->context->get_heif_file()->add_iref_reference(from_item,
-                                                    reference_type, {to_item});
-
-  return heif_error_success;
-}
-
-struct heif_error heif_context_add_item_references(struct heif_context* ctx,
-                                                   uint32_t reference_type,
-                                                   heif_item_id from_item,
-                                                   const heif_item_id* to_item,
-                                                   int num_to_items)
-{
-  std::vector<heif_item_id> to_refs(to_item, to_item + num_to_items);
-
-  ctx->context->get_heif_file()->add_iref_reference(from_item,
-                                                    reference_type, to_refs);
-
-  return heif_error_success;
-}
-
-struct heif_error heif_item_set_item_name(struct heif_context* ctx,
-                                             heif_item_id item,
-                                             const char* item_name)
-{
-  auto infe = ctx->context->get_heif_file()->get_infe_box(item);
-  if (!infe) {
-    return heif_error{heif_error_Input_does_not_exist, heif_suberror_Nonexisting_item_referenced, "Item does not exist"};
-  }
-
-  infe->set_item_name(item_name);
-
-  return heif_error_success;
-}

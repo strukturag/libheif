@@ -21,36 +21,18 @@
 #include "heif_tiling.h"
 #include "api_structs.h"
 #include "image-items/grid.h"
-#include "image-items/overlay.h"
 #include "image-items/tiled.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
 #endif
 
-#include <algorithm>
-#include <iostream>
-#include <fstream>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
-#include <cstring>
 #include <array>
 
-#ifdef _WIN32
-// for _write
-#include <io.h>
-#else
 
-#include <unistd.h>
-
-#endif
-
-#include <cassert>
-
-
-const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 static struct heif_error error_null_parameter = {heif_error_Usage_error,
                                                  heif_suberror_Null_pointer_argument,
                                                  "NULL passed"};
@@ -110,36 +92,6 @@ struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_ima
 
   return heif_error_ok;
 }
-
-
-#if 0
-// TODO: do we need this ? This does not handle rotations. We can use heif_image_handle_get_image_tiling() to get the same information.
-struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* handle,
-                                                  uint32_t* tile_width, uint32_t* tile_height)
-{
-  if (!handle) {
-    return error_null_parameter;
-  }
-
-
-  uint32_t w,h;
-
-  handle->image->get_tile_size(w,h);
-
-  if (tile_width) {
-    *tile_width = w;
-  }
-
-  if (tile_height) {
-    *tile_height = h;
-  }
-
-  return heif_error_success;
-}
-#endif
-
-
-
 
 
 struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
@@ -289,35 +241,6 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
 
   return heif_error_success;
 }
-
-
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
-                                               const struct heif_tiled_image_parameters* parameters,
-                                               const struct heif_encoding_options* options, // TODO: do we need this?
-                                               const struct heif_encoder* encoder,
-                                               struct heif_image_handle** out_grid_image_handle)
-{
-  if (out_grid_image_handle) {
-    *out_grid_image_handle = nullptr;
-  }
-
-  Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
-  gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
-
-  if (gridImageResult.error != Error::Ok) {
-    return gridImageResult.error.error_struct(ctx->context.get());
-  }
-
-  if (out_grid_image_handle) {
-    *out_grid_image_handle = new heif_image_handle;
-    (*out_grid_image_handle)->image = gridImageResult.value;
-    (*out_grid_image_handle)->context = ctx->context;
-  }
-
-  return heif_error_success;
-}
-#endif
 
 
 struct heif_error heif_context_add_image_tile(struct heif_context* ctx,

@@ -88,21 +88,65 @@ heif_error heif_context_read_from_reader(struct heif_context* ctx,
 
 // TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
+int heif_context_get_number_of_top_level_images(heif_context* ctx)
 {
-  if (!ctx) {
-    return;
+  return (int) ctx->context->get_top_level_images(true).size();
+}
+
+
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
+{
+  const std::vector<std::shared_ptr<ImageItem>> images = ctx->context->get_top_level_images(true);
+
+  for (const auto& img : images) {
+    if (img->get_id() == id) {
+      return true;
+    }
   }
 
-  std::string dump = ctx->context->debug_dump_boxes();
-  // TODO(fancycode): Should we return an error if writing fails?
-#ifdef _WIN32
-  auto written = _write(fd, dump.c_str(), static_cast<unsigned int>(dump.size()));
-#else
-  auto written = write(fd, dump.c_str(), dump.size());
-#endif
-  (void) written;
+  return false;
 }
+
+
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+                                                 heif_item_id* ID_array,
+                                                 int count)
+{
+  if (ID_array == nullptr || count == 0 || ctx == nullptr) {
+    return 0;
+  }
+
+
+  // fill in ID values into output array
+
+  const std::vector<std::shared_ptr<ImageItem>> imgs = ctx->context->get_top_level_images(true);
+  int n = (int) std::min(count, (int) imgs.size());
+  for (int i = 0; i < n; i++) {
+    ID_array[i] = imgs[i]->get_id();
+  }
+
+  return n;
+}
+
+
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id)
+{
+  if (!id) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<ImageItem> primary = ctx->context->get_primary_image(true);
+  if (!primary) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_or_invalid_primary_item).error_struct(ctx->context.get());
+  }
+
+  *id = primary->get_id();
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
 
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
@@ -135,66 +179,6 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id)
-{
-  if (!id) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
-  }
-
-  std::shared_ptr<ImageItem> primary = ctx->context->get_primary_image(true);
-  if (!primary) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_or_invalid_primary_item).error_struct(ctx->context.get());
-  }
-
-  *id = primary->get_id();
-
-  return Error::Ok.error_struct(ctx->context.get());
-}
-
-
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
-{
-  const std::vector<std::shared_ptr<ImageItem>> images = ctx->context->get_top_level_images(true);
-
-  for (const auto& img : images) {
-    if (img->get_id() == id) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-
-int heif_context_get_number_of_top_level_images(heif_context* ctx)
-{
-  return (int) ctx->context->get_top_level_images(true).size();
-}
-
-
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
-                                                 heif_item_id* ID_array,
-                                                 int count)
-{
-  if (ID_array == nullptr || count == 0 || ctx == nullptr) {
-    return 0;
-  }
-
-
-  // fill in ID values into output array
-
-  const std::vector<std::shared_ptr<ImageItem>> imgs = ctx->context->get_top_level_images(true);
-  int n = (int) std::min(count, (int) imgs.size());
-  for (int i = 0; i < n; i++) {
-    ID_array[i] = imgs[i]->get_id();
-  }
-
-  return n;
-}
-
-
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
                                                 struct heif_image_handle** imgHdl)
@@ -222,6 +206,27 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 
   return heif_error_success;
 }
+
+
+void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
+{
+  if (!ctx) {
+    return;
+  }
+
+  std::string dump = ctx->context->debug_dump_boxes();
+  // TODO(fancycode): Should we return an error if writing fails?
+#ifdef _WIN32
+  auto written = _write(fd, dump.c_str(), static_cast<unsigned int>(dump.size()));
+#else
+  auto written = write(fd, dump.c_str(), dump.size());
+#endif
+  (void) written;
+}
+
+
+// ====================================================================================================
+//   Write the heif_context to a HEIF file
 
 
 static struct heif_error heif_file_writer_write(struct heif_context* ctx,

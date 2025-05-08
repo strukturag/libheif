@@ -40,11 +40,73 @@
 #include <array>
 
 
-// TODO: duplicated in heif.h
-//const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 static struct heif_error error_null_parameter = {heif_error_Usage_error,
                                                  heif_suberror_Null_pointer_argument,
                                                  "NULL passed"};
+
+
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options* options)
+{
+  options->version = 1;
+#if HAVE_LIBSHARPYUV
+  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+#else
+  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+#endif
+
+  options->preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options->only_use_preferred_chroma_algorithm = true;
+}
+
+
+static void fill_default_color_conversion_options_ext(heif_color_conversion_options_ext& options)
+{
+  options.version = 1;
+  options.alpha_composition_mode = heif_alpha_composition_mode_none;
+  options.background_red = options.background_green = options.background_blue = 0xFFFF;
+  options.secondary_background_red = options.secondary_background_green = options.secondary_background_blue = 0xCCCC;
+  options.checkerboard_square_size = 16;
+}
+
+
+struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc()
+{
+  auto options = new heif_color_conversion_options_ext;
+
+  fill_default_color_conversion_options_ext(*options);
+
+  return options;
+}
+
+
+void heif_color_conversion_options_ext_copy(struct heif_color_conversion_options_ext* dst,
+                                            const struct heif_color_conversion_options_ext* src)
+{
+  if (src == nullptr) {
+    return;
+  }
+
+  int min_version = std::min(dst->version, src->version);
+
+  switch (min_version) {
+    case 1:
+      dst->alpha_composition_mode = src->alpha_composition_mode;
+      dst->background_red = src->background_red;
+      dst->background_green = src->background_green;
+      dst->background_blue = src->background_blue;
+      dst->secondary_background_red = src->secondary_background_red;
+      dst->secondary_background_green = src->secondary_background_green;
+      dst->secondary_background_blue = src->secondary_background_blue;
+      dst->checkerboard_square_size = src->checkerboard_square_size;
+  }
+}
+
+
+void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext* options)
+{
+  delete options;
+}
+
 
 heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
 {
@@ -62,6 +124,7 @@ heif_color_profile_type heif_image_handle_get_color_profile_type(const struct he
   }
 }
 
+
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle)
 {
   auto profile_icc = handle->image->get_color_profile_icc();
@@ -71,6 +134,31 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
   else {
     return 0;
   }
+}
+
+
+struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
+                                                          void* out_data)
+{
+  if (out_data == nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto raw_profile = handle->image->get_color_profile_icc();
+  if (raw_profile) {
+    memcpy(out_data,
+           raw_profile->get_data().data(),
+           raw_profile->get_data().size());
+  }
+  else {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(handle->image.get());
+  }
+
+  return Error::Ok.error_struct(handle->image.get());
 }
 
 
@@ -88,6 +176,7 @@ static const std::set<typename std::underlying_type<heif_color_primaries>::type>
     heif_color_primaries_SMPTE_EG_432_1,
     heif_color_primaries_EBU_Tech_3213_E,
 };
+
 
 struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t cp)
 {
@@ -165,6 +254,7 @@ static const std::set<typename std::underlying_type<heif_matrix_coefficients>::t
     heif_matrix_coefficients_ICtCp
 };
 
+
 struct heif_error heif_nclx_color_profile_set_matrix_coefficients(struct heif_color_profile_nclx* nclx, uint16_t mc)
 {
   if (static_cast<std::underlying_type<heif_color_primaries>::type>(mc) > std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::max()) {
@@ -206,31 +296,6 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
 }
 
 
-struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
-                                                          void* out_data)
-{
-  if (out_data == nullptr) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Null_pointer_argument);
-    return err.error_struct(handle->image.get());
-  }
-
-  auto raw_profile = handle->image->get_color_profile_icc();
-  if (raw_profile) {
-    memcpy(out_data,
-           raw_profile->get_data().data(),
-           raw_profile->get_data().size());
-  }
-  else {
-    Error err(heif_error_Color_profile_does_not_exist,
-              heif_suberror_Unspecified);
-    return err.error_struct(handle->image.get());
-  }
-
-  return Error::Ok.error_struct(handle->image.get());
-}
-
-
 struct heif_color_profile_nclx* heif_nclx_color_profile_alloc()
 {
   return color_profile_nclx::alloc_nclx_color_profile();
@@ -240,6 +305,179 @@ struct heif_color_profile_nclx* heif_nclx_color_profile_alloc()
 void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 {
   color_profile_nclx::free_nclx_color_profile(nclx_profile);
+}
+
+
+enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image)
+{
+  std::shared_ptr<const color_profile> profile;
+
+  profile = image->image->get_color_profile_icc();
+  if (!profile) {
+    profile = image->image->get_color_profile_nclx();
+  }
+
+  if (!profile) {
+    return heif_color_profile_type_not_present;
+  }
+  else {
+    return (heif_color_profile_type) profile->get_type();
+  }
+}
+
+
+size_t heif_image_get_raw_color_profile_size(const struct heif_image* image)
+{
+  auto raw_profile = image->image->get_color_profile_icc();
+  if (raw_profile) {
+    return raw_profile->get_data().size();
+  }
+  else {
+    return 0;
+  }
+}
+
+
+struct heif_error heif_image_get_raw_color_profile(const struct heif_image* image,
+                                                   void* out_data)
+{
+  if (out_data == nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(image->image.get());
+  }
+
+  auto raw_profile = image->image->get_color_profile_icc();
+  if (raw_profile) {
+    memcpy(out_data,
+           raw_profile->get_data().data(),
+           raw_profile->get_data().size());
+  }
+  else {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(image->image.get());
+  }
+
+  return Error::Ok.error_struct(image->image.get());
+}
+
+
+struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
+                                                    struct heif_color_profile_nclx** out_data)
+{
+  if (!out_data) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(image->image.get());
+  }
+
+  auto nclx_profile = image->image->get_color_profile_nclx();
+
+  if (!nclx_profile) {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(image->image.get());
+  }
+
+  Error err = nclx_profile->get_nclx_color_profile(out_data);
+
+  return err.error_struct(image->image.get());
+}
+
+
+struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
+                                                   const char* color_profile_type_fourcc,
+                                                   const void* profile_data,
+                                                   const size_t profile_size)
+{
+  if (strlen(color_profile_type_fourcc) != 4) {
+    heif_error err = {heif_error_Usage_error,
+                      heif_suberror_Unspecified,
+                      "Invalid color_profile_type (must be 4 characters)"};
+    return err;
+  }
+
+  uint32_t color_profile_type = fourcc(color_profile_type_fourcc);
+
+  std::vector<uint8_t> data;
+  data.insert(data.end(),
+              (const uint8_t*) profile_data,
+              (const uint8_t*) profile_data + profile_size);
+
+  auto color_profile = std::make_shared<color_profile_raw>(color_profile_type, data);
+
+  image->image->set_color_profile_icc(color_profile);
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
+                                                    const struct heif_color_profile_nclx* color_profile)
+{
+  auto nclx = std::make_shared<color_profile_nclx>();
+
+  nclx->set_colour_primaries(color_profile->color_primaries);
+  nclx->set_transfer_characteristics(color_profile->transfer_characteristics);
+  nclx->set_matrix_coefficients(color_profile->matrix_coefficients);
+  nclx->set_full_range_flag(color_profile->full_range_flag);
+
+  image->image->set_color_profile_nclx(nclx);
+
+  return heif_error_success;
+}
+
+
+// --- content light level ---
+
+int heif_image_has_content_light_level(const struct heif_image* image)
+{
+  return image->image->has_clli();
+}
+
+
+void heif_image_get_content_light_level(const struct heif_image* image, struct heif_content_light_level* out)
+{
+  if (out) {
+    *out = image->image->get_clli();
+  }
+}
+
+
+int heif_image_handle_get_content_light_level(const struct heif_image_handle* handle, struct heif_content_light_level* out)
+{
+  auto clli = handle->image->get_property<Box_clli>();
+  if (out && clli) {
+    *out = clli->clli;
+  }
+
+  return clli ? 1 : 0;
+}
+
+
+void heif_image_set_content_light_level(const struct heif_image* image, const struct heif_content_light_level* in)
+{
+  if (in == nullptr) {
+    return;
+  }
+
+  image->image->set_clli(*in);
+}
+
+
+// --- mastering display colour volume ---
+
+
+int heif_image_has_mastering_display_colour_volume(const struct heif_image* image)
+{
+  return image->image->has_mdcv();
+}
+
+
+void heif_image_get_mastering_display_colour_volume(const struct heif_image* image, struct heif_mastering_display_colour_volume* out)
+{
+  *out = image->image->get_mdcv();
 }
 
 
@@ -253,48 +491,6 @@ int heif_image_handle_get_mastering_display_colour_volume(const struct heif_imag
   return mdcv ? 1 : 0;
 }
 
-int heif_image_has_content_light_level(const struct heif_image* image)
-{
-  return image->image->has_clli();
-}
-
-void heif_image_get_content_light_level(const struct heif_image* image, struct heif_content_light_level* out)
-{
-  if (out) {
-    *out = image->image->get_clli();
-  }
-}
-
-int heif_image_handle_get_content_light_level(const struct heif_image_handle* handle, struct heif_content_light_level* out)
-{
-  auto clli = handle->image->get_property<Box_clli>();
-  if (out && clli) {
-    *out = clli->clli;
-  }
-
-  return clli ? 1 : 0;
-}
-
-void heif_image_set_content_light_level(const struct heif_image* image, const struct heif_content_light_level* in)
-{
-  if (in == nullptr) {
-    return;
-  }
-
-  image->image->set_clli(*in);
-}
-
-
-int heif_image_has_mastering_display_colour_volume(const struct heif_image* image)
-{
-  return image->image->has_mdcv();
-}
-
-void heif_image_get_mastering_display_colour_volume(const struct heif_image* image, struct heif_mastering_display_colour_volume* out)
-{
-  *out = image->image->get_mdcv();
-}
-
 
 void heif_image_set_mastering_display_colour_volume(const struct heif_image* image, const struct heif_mastering_display_colour_volume* in)
 {
@@ -304,6 +500,7 @@ void heif_image_set_mastering_display_colour_volume(const struct heif_image* ima
 
   image->image->set_mdcv(*in);
 }
+
 
 float mdcv_coord_decode_x(uint16_t coord)
 {
@@ -315,6 +512,7 @@ float mdcv_coord_decode_x(uint16_t coord)
   return (float) (coord * 0.00002);
 }
 
+
 float mdcv_coord_decode_y(uint16_t coord)
 {
   // check for unspecified value
@@ -324,6 +522,7 @@ float mdcv_coord_decode_y(uint16_t coord)
 
   return (float) (coord * 0.00002);
 }
+
 
 struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_mastering_display_colour_volume* in,
                                                               struct heif_decoded_mastering_display_colour_volume* out)

@@ -70,13 +70,6 @@ int heif_get_version_number_maintenance(void)
 
 
 
-// DEPRECATED
-struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
-{
-  return heif_register_decoder_plugin(decoder_plugin);
-}
-
-
 struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
 {
   if (!decoder_plugin) {
@@ -103,3 +96,9 @@ struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encode
   return heif_error_success;
 }
 
+
+// DEPRECATED
+struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
+{
+  return heif_register_decoder_plugin(decoder_plugin);
+}

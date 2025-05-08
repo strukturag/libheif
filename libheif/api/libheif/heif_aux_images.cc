@@ -35,40 +35,6 @@ int heif_image_handle_has_depth_image(const struct heif_image_handle* handle)
   return handle->image->get_depth_channel() != nullptr;
 }
 
-void heif_depth_representation_info_free(const struct heif_depth_representation_info* info)
-{
-  delete info;
-}
-
-int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
-                                                          heif_item_id depth_image_id,
-                                                          const struct heif_depth_representation_info** out)
-{
-  std::shared_ptr<ImageItem> depth_image;
-
-  if (out) {
-    if (handle->image->is_depth_channel()) {
-      // Because of an API bug before v1.11.0, the input handle may be the depth image (#422).
-      depth_image = handle->image;
-    }
-    else {
-      depth_image = handle->image->get_depth_channel();
-    }
-
-    if (depth_image->has_depth_representation_info()) {
-      auto info = new heif_depth_representation_info;
-      *info = depth_image->get_depth_representation_info();
-      *out = info;
-      return true;
-    }
-    else {
-      *out = nullptr;
-    }
-  }
-
-  return false;
-}
-
 
 int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle)
 {
@@ -129,7 +95,44 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 }
 
 
+void heif_depth_representation_info_free(const struct heif_depth_representation_info* info)
+{
+  delete info;
+}
+
+
+int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
+                                                          heif_item_id depth_image_id,
+                                                          const struct heif_depth_representation_info** out)
+{
+  std::shared_ptr<ImageItem> depth_image;
+
+  if (out) {
+    if (handle->image->is_depth_channel()) {
+      // Because of an API bug before v1.11.0, the input handle may be the depth image (#422).
+      depth_image = handle->image;
+    }
+    else {
+      depth_image = handle->image->get_depth_channel();
+    }
+
+    if (depth_image->has_depth_representation_info()) {
+      auto info = new heif_depth_representation_info;
+      *info = depth_image->get_depth_representation_info();
+      *out = info;
+      return true;
+    }
+    else {
+      *out = nullptr;
+    }
+  }
+
+  return false;
+}
+
+
 // ------------------------- thumbnails -------------------------
+
 
 int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle)
 {
@@ -180,15 +183,6 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
 }
 
 
-struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
-                                                const struct heif_image_handle* master_image,
-                                                const struct heif_image_handle* thumbnail_image)
-{
-  Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
-  return error.error_struct(ctx->context.get());
-}
-
-
 struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image* image,
                                                 const struct heif_image_handle* image_handle,
@@ -232,6 +226,15 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
   }
 
   return heif_error_success;
+}
+
+
+struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
+                                                const struct heif_image_handle* master_image,
+                                                const struct heif_image_handle* thumbnail_image)
+{
+  Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
+  return error.error_struct(ctx->context.get());
 }
 
 

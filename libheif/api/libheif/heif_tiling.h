@@ -55,6 +55,8 @@ struct heif_image_tiling
 };
 
 
+// --- decoding ---
+
 // If 'process_image_transformations' is true, this returns modified sizes.
 // If it is false, the top_offset and left_offset will always be (0;0).
 LIBHEIF_API

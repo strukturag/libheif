@@ -143,20 +143,21 @@ std::string ImageGrid::dump() const
 }
 
 
-extern void set_default_encoding_options(heif_encoding_options& options);
-
-
 ImageItem_Grid::ImageItem_Grid(HeifContext* ctx)
     : ImageItem(ctx)
 {
-  set_default_encoding_options(m_encoding_options);
+  auto* options = heif_encoding_options_alloc();
+  heif_encoding_options_copy(&m_encoding_options, options);
+  heif_encoding_options_free(options);
 }
 
 
 ImageItem_Grid::ImageItem_Grid(HeifContext* ctx, heif_item_id id)
     : ImageItem(ctx, id)
 {
-  set_default_encoding_options(m_encoding_options);
+  auto* options = heif_encoding_options_alloc();
+  heif_encoding_options_copy(&m_encoding_options, options);
+  heif_encoding_options_free(options);
 }
 
 

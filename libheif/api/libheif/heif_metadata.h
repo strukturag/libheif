@@ -126,43 +126,6 @@ struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx
                                                         const char* item_uri_type,
                                                         heif_item_id* out_item_id);
 
-// ------------------------- intrinsic and extrinsic matrices -------------------------
-
-struct heif_camera_intrinsic_matrix
-{
-  double focal_length_x;
-  double focal_length_y;
-  double principal_point_x;
-  double principal_point_y;
-  double skew;
-};
-
-
-LIBHEIF_API
-int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle);
-
-LIBHEIF_API
-struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_intrinsic_matrix* out_matrix);
-
-
-struct heif_camera_extrinsic_matrix;
-
-LIBHEIF_API
-int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle);
-
-LIBHEIF_API
-struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_extrinsic_matrix** out_matrix);
-
-LIBHEIF_API
-void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix*);
-
-LIBHEIF_API
-struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix*,
-                                                                   double* out_matrix_row_major);
-
-
 #ifdef __cplusplus
 }
 #endif

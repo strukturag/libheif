@@ -499,8 +499,6 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 }
 
 
-extern heif_color_conversion_options_ext normalize_options(const heif_color_conversion_options_ext* input_options);
-
 Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                            heif_colorspace target_colorspace,
                                                            heif_chroma target_chroma,
@@ -510,7 +508,10 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
                                                            const heif_color_conversion_options_ext* options_ext_optional,
                                                            const heif_security_limits* limits)
 {
-  heif_color_conversion_options_ext options_ext = normalize_options(options_ext_optional);;
+  std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+      options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+  heif_color_conversion_options_ext_copy(options_ext.get(), options_ext_optional);
 
 
   // --- check that input image is valid
@@ -582,7 +583,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {
-    if (options_ext.alpha_composition_mode != heif_alpha_composition_mode_none) {
+    if (options_ext->alpha_composition_mode != heif_alpha_composition_mode_none) {
       output_state.has_alpha = false;
     }
     else {
@@ -614,7 +615,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   }
 
   ColorConversionPipeline pipeline;
-  bool success = pipeline.construct_pipeline(input_state, output_state, options, options_ext);
+  bool success = pipeline.construct_pipeline(input_state, output_state, options, *options_ext);
   if (!success) {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_color_conversion};

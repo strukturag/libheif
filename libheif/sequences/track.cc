@@ -56,34 +56,6 @@ void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 }
 
 
-heif_track_info* heif_track_info_alloc()
-{
-  auto* info = new heif_track_info;
-  info->version = 1;
-
-  info->track_timescale = 90000;
-  info->write_aux_info_interleaved = false;
-  info->with_tai_timestamps = heif_sample_aux_info_presence_none;
-  info->tai_clock_info = nullptr;
-  info->with_sample_content_ids = heif_sample_aux_info_presence_none;
-  info->with_gimi_track_content_id = false;
-  info->gimi_track_content_id = nullptr;
-
-  return info;
-}
-
-
-void heif_track_info_release(struct heif_track_info* info)
-{
-  if (info) {
-    heif_tai_clock_info_release(info->tai_clock_info);
-    delete[] info->gimi_track_content_id;
-
-    delete info;
-  }
-}
-
-
 SampleAuxInfoHelper::SampleAuxInfoHelper(bool interleaved)
     : m_interleaved(interleaved)
 {

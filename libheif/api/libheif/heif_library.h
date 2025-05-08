@@ -146,6 +146,8 @@ LIBHEIF_API
 void heif_deinit(void);
 
 
+// --- Codec plugins ---
+
 // --- Plugins are currently only supported on Unix platforms.
 
 enum heif_plugin_type
@@ -189,16 +191,16 @@ void heif_free_plugin_directories(const char*const*);
 struct heif_decoder_plugin;
 struct heif_encoder_plugin;
 
-// DEPRECATED. Use heif_register_decoder_plugin(const struct heif_decoder_plugin*) instead.
-LIBHEIF_API
-struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
-
 LIBHEIF_API
 struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*);
 
 LIBHEIF_API
 struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
 
+
+// DEPRECATED. Use heif_register_decoder_plugin(const struct heif_decoder_plugin*) instead.
+LIBHEIF_API
+struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
 
 #ifdef __cplusplus
 }

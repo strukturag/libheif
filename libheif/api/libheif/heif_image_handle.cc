@@ -22,6 +22,12 @@
 #include "api_structs.h"
 
 
+void heif_image_handle_release(const struct heif_image_handle* handle)
+{
+  delete handle;
+}
+
+
 int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
 {
   return handle->image->is_primary();
@@ -56,49 +62,6 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
-{
-  if (handle && handle->image) {
-    return handle->image->get_ispe_width();
-  }
-  else {
-    return 0;
-  }
-}
-
-
-int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
-{
-  if (handle && handle->image) {
-    return handle->image->get_ispe_height();
-  }
-  else {
-    return 0;
-  }
-}
-
-
-struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle)
-{
-  auto ctx = new heif_context();
-  ctx->context = handle->context;
-  return ctx;
-}
-
-
-struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
-                                                                      enum heif_colorspace* out_colorspace,
-                                                                      enum heif_chroma* out_chroma)
-{
-  Error err = image_handle->image->get_coded_image_colorspace(out_colorspace, out_chroma);
-  if (err) {
-    return err.error_struct(image_handle->image.get());
-  }
-
-  return heif_error_success;
-}
-
-
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 {
   // TODO: for now, also scan the grid tiles for alpha information (issue #708), but depending about
@@ -128,6 +91,39 @@ int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle* 
 }
 
 
+struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
+                                                                      enum heif_colorspace* out_colorspace,
+                                                                      enum heif_chroma* out_chroma)
+{
+  Error err = image_handle->image->get_coded_image_colorspace(out_colorspace, out_chroma);
+  if (err) {
+    return err.error_struct(image_handle->image.get());
+  }
+
+  return heif_error_success;
+}
+
+
+int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_width();
+  }
+  else {
+    return 0;
+  }
+}
+
+
+int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_height();
+  }
+  else {
+    return 0;
+  }
+}
 
 
 int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* handle, uint32_t* aspect_h, uint32_t* aspect_v)
@@ -145,8 +141,10 @@ int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* han
   }
 }
 
-void heif_image_handle_release(const struct heif_image_handle* handle)
-{
-  delete handle;
-}
 
+struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle)
+{
+  auto ctx = new heif_context();
+  ctx->context = handle->context;
+  return ctx;
+}

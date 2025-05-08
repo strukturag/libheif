@@ -262,13 +262,13 @@ public:
     return m_tai_timestamp;
   }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+
   void set_gimi_sample_content_id(std::string id) { m_gimi_sample_content_id = id; }
 
   bool has_gimi_sample_content_id() const { return m_gimi_sample_content_id.has_value(); }
 
   std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
-#endif
+
 
   // --- sequences
 

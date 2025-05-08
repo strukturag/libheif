@@ -32,6 +32,7 @@ extern "C" {
 #include <libheif/heif_image.h>
 #include <libheif/heif_context.h>
 #include <libheif/heif_brands.h>
+#include <libheif/heif_color.h>
 
 
 // ----- encoder -----
@@ -47,19 +48,12 @@ struct heif_encoder_descriptor;
 // the parameters are provided.
 struct heif_encoder_parameter;
 
-// DEPRECATED: use heif_get_encoder_descriptors() instead.
-// Get a list of available encoders. You can filter the encoders by compression format and name.
-// Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
-// The returned list of encoders is sorted by their priority (which is a plugin property).
-// The number of encoders is returned, which are not more than 'count' if (out_encoders != nullptr).
-// By setting out_encoders==nullptr, you can query the number of encoders, 'count' is ignored.
-// Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
+
+// Quick check whether there is an enoder available for the given format.
+// Note that the encoder may be limited to a certain subset of features (e.g. only 8 bit, only lossy).
+// You will have to query the specific capabilities further.
 LIBHEIF_API
-int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do we need this parameter?
-                                         enum heif_compression_format format_filter,
-                                         const char* name_filter,
-                                         const struct heif_encoder_descriptor** out_encoders,
-                                         int count);
+int heif_have_encoder_for_format(enum heif_compression_format format);
 
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
@@ -98,18 +92,6 @@ LIBHEIF_API
 struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor*,
                                            struct heif_encoder** out_encoder);
-
-// Quick check whether there is a decoder available for the given format.
-// Note that the decoder still may not be able to decode all variants of that format.
-// You will have to query that further (todo) or just try to decode and check the returned error.
-LIBHEIF_API
-int heif_have_decoder_for_format(enum heif_compression_format format);
-
-// Quick check whether there is an enoder available for the given format.
-// Note that the encoder may be limited to a certain subset of features (e.g. only 8 bit, only lossy).
-// You will have to query the specific capabilities further.
-LIBHEIF_API
-int heif_have_encoder_for_format(enum heif_compression_format format);
 
 // Get an encoder for the given compression format. If there are several encoder plugins
 // for this format, the encoder with the highest plugin priority will be returned.
@@ -371,6 +353,7 @@ LIBHEIF_API
 void heif_context_add_compatible_brand(struct heif_context* ctx,
                                        heif_brand2 compatible_brand);
 
+// --- deprecated functions ---
 
 // DEPRECATED, typo in function name
 LIBHEIF_API
@@ -380,6 +363,19 @@ int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encode
 LIBHEIF_API
 int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
 
+// DEPRECATED: use heif_get_encoder_descriptors() instead.
+// Get a list of available encoders. You can filter the encoders by compression format and name.
+// Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
+// The returned list of encoders is sorted by their priority (which is a plugin property).
+// The number of encoders is returned, which are not more than 'count' if (out_encoders != nullptr).
+// By setting out_encoders==nullptr, you can query the number of encoders, 'count' is ignored.
+// Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
+LIBHEIF_API
+int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do we need this parameter?
+                                         enum heif_compression_format format_filter,
+                                         const char* name_filter,
+                                         const struct heif_encoder_descriptor** out_encoders,
+                                         int count);
 
 #ifdef __cplusplus
 }

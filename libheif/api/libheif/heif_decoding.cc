@@ -34,21 +34,14 @@ void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_thr
 }
 
 
-void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options* options)
+int heif_have_decoder_for_format(enum heif_compression_format format)
 {
-  options->version = 1;
-#if HAVE_LIBSHARPYUV
-  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
-#else
-  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
-#endif
-
-  options->preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
-  options->only_use_preferred_chroma_algorithm = true;
+  auto plugin = get_decoder(format, nullptr);
+  return plugin != nullptr;
 }
 
 
-void fill_default_decoding_options(heif_decoding_options& options)
+static void fill_default_decoding_options(heif_decoding_options& options)
 {
   options.version = 7;
 
@@ -88,13 +81,20 @@ void fill_default_decoding_options(heif_decoding_options& options)
 }
 
 
+heif_decoding_options* heif_decoding_options_alloc()
+{
+  auto options = new heif_decoding_options;
+
+  fill_default_decoding_options(*options);
+
+  return options;
+}
+
+
 // overwrite the (possibly lower version) input options over the default options
 void heif_decoding_options_copy(struct heif_decoding_options* dst,
                                 const struct heif_decoding_options* src)
 {
-  //heif_decoding_options options{};
-  //fill_default_decoding_options(options);
-
   if (src == nullptr) {
     return;
   }
@@ -130,114 +130,10 @@ void heif_decoding_options_copy(struct heif_decoding_options* dst,
 }
 
 
-heif_decoding_options* heif_decoding_options_alloc()
-{
-  auto options = new heif_decoding_options;
-
-  fill_default_decoding_options(*options);
-
-  return options;
-}
-
-
 void heif_decoding_options_free(heif_decoding_options* options)
 {
   delete options;
 }
-
-
-void fill_default_color_conversion_options_ext(heif_color_conversion_options_ext& options)
-{
-  options.version = 1;
-  options.alpha_composition_mode = heif_alpha_composition_mode_none;
-  options.background_red = options.background_green = options.background_blue = 0xFFFF;
-  options.secondary_background_red = options.secondary_background_green = options.secondary_background_blue = 0xCCCC;
-  options.checkerboard_square_size = 16;
-}
-
-
-// overwrite the (possibly lower version) input options over the default options
-heif_color_conversion_options_ext normalize_options(const heif_color_conversion_options_ext* input_options)
-{
-  heif_color_conversion_options_ext options{};
-  fill_default_color_conversion_options_ext(options);
-
-  if (input_options) {
-    switch (input_options->version) {
-      case 1:
-        options.alpha_composition_mode = input_options->alpha_composition_mode;
-        options.background_red = input_options->background_red;
-        options.background_green = input_options->background_green;
-        options.background_blue = input_options->background_blue;
-        options.secondary_background_red = input_options->secondary_background_red;
-        options.secondary_background_green = input_options->secondary_background_green;
-        options.secondary_background_blue = input_options->secondary_background_blue;
-        options.checkerboard_square_size = input_options->checkerboard_square_size;
-    }
-  }
-
-  return options;
-}
-
-
-struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc()
-{
-  auto options = new heif_color_conversion_options_ext;
-
-  fill_default_color_conversion_options_ext(*options);
-
-  return options;
-}
-
-
-void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext* options)
-{
-  delete options;
-}
-
-
-struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img,
-                                    heif_colorspace colorspace,
-                                    heif_chroma chroma,
-                                    const struct heif_decoding_options* input_options)
-{
-  if (out_img == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "NULL out_img passed to heif_decode_image()"};
-  }
-
-  if (in_handle == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "NULL heif_image_handle passed to heif_decode_image()"};
-  }
-
-  *out_img = nullptr;
-  heif_item_id id = in_handle->image->get_id();
-
-  heif_decoding_options dec_options;
-  fill_default_decoding_options(dec_options);
-  heif_decoding_options_copy(&dec_options, input_options);
-
-  Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
-                                                                                            colorspace,
-                                                                                            chroma,
-                                                                                            dec_options,
-                                                                                            false, 0, 0);
-  if (decodingResult.error.error_code != heif_error_Ok) {
-    return decodingResult.error.error_struct(in_handle->image.get());
-  }
-
-  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
-
-  *out_img = new heif_image();
-  (*out_img)->image = std::move(img);
-
-  return Error::Ok.error_struct(in_handle->image.get());
-}
-
 
 
 int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
@@ -304,3 +200,49 @@ const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descri
     return decoder->id_name;
   }
 }
+
+
+struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
+                                    struct heif_image** out_img,
+                                    heif_colorspace colorspace,
+                                    heif_chroma chroma,
+                                    const struct heif_decoding_options* input_options)
+{
+  if (out_img == nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL out_img passed to heif_decode_image()"};
+  }
+
+  if (in_handle == nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL heif_image_handle passed to heif_decode_image()"};
+  }
+
+  *out_img = nullptr;
+  heif_item_id id = in_handle->image->get_id();
+
+  heif_decoding_options dec_options;
+  fill_default_decoding_options(dec_options);
+  heif_decoding_options_copy(&dec_options, input_options);
+
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
+                                                                                            colorspace,
+                                                                                            chroma,
+                                                                                            dec_options,
+                                                                                            false, 0, 0);
+  if (decodingResult.error.error_code != heif_error_Ok) {
+    return decodingResult.error.error_struct(in_handle->image.get());
+  }
+
+  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+
+  *out_img = new heif_image();
+  (*out_img)->image = std::move(img);
+
+  return Error::Ok.error_struct(in_handle->image.get());
+}
+
+
+

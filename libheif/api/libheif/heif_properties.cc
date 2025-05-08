@@ -207,6 +207,21 @@ struct heif_error heif_item_add_property_user_description(const struct heif_cont
 }
 
 
+void heif_property_user_description_release(struct heif_property_user_description* udes)
+{
+  if (udes == nullptr) {
+    return;
+  }
+
+  delete[] udes->lang;
+  delete[] udes->name;
+  delete[] udes->description;
+  delete[] udes->tags;
+
+  delete udes;
+}
+
+
 enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(const struct heif_context* context,
                                                                              heif_item_id itemId,
                                                                              heif_property_id propertyId)
@@ -284,21 +299,6 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
   if (right) *right = image_width - 1 - clap->right_rounded(image_width);
   if (top) *top = clap->top_rounded(image_height);
   if (bottom) *bottom = image_height - 1 - clap->bottom_rounded(image_height);
-}
-
-
-void heif_property_user_description_release(struct heif_property_user_description* udes)
-{
-  if (udes == nullptr) {
-    return;
-  }
-
-  delete[] udes->lang;
-  delete[] udes->name;
-  delete[] udes->description;
-  delete[] udes->tags;
-
-  delete udes;
 }
 
 
@@ -413,6 +413,7 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
   return heif_error_success;
 }
 
+
 struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
@@ -438,3 +439,104 @@ struct heif_error heif_item_get_property_uuid_type(const struct heif_context* co
 
   return heif_error_success;
 }
+
+
+
+// ------------------------- intrinsic and extrinsic matrices -------------------------
+
+
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_intrinsic_matrix();
+}
+
+
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_intrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_intrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  const auto& m = handle->image->get_intrinsic_matrix();
+  out_matrix->focal_length_x = m.focal_length_x;
+  out_matrix->focal_length_y = m.focal_length_y;
+  out_matrix->principal_point_x = m.principal_point_x;
+  out_matrix->principal_point_y = m.principal_point_y;
+  out_matrix->skew = m.skew;
+
+  return heif_error_success;
+}
+
+
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_extrinsic_matrix();
+}
+
+
+struct heif_camera_extrinsic_matrix
+{
+  Box_cmex::ExtrinsicMatrix matrix;
+};
+
+
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_extrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_extrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = new heif_camera_extrinsic_matrix;
+  (*out_matrix)->matrix = handle->image->get_extrinsic_matrix();
+
+  return heif_error_success;
+}
+
+
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+                                                                   double* out_matrix_row_major)
+{
+  if (matrix == nullptr || out_matrix_row_major == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  auto m3x3 = matrix->matrix.calculate_rotation_matrix();
+
+  for (int i=0;i<9;i++) {
+    out_matrix_row_major[i] = m3x3[i];
+  }
+
+  return heif_error_success;
+}
+

@@ -31,7 +31,6 @@ extern "C" {
 #include <libheif/heif_library.h>
 #include <libheif/heif_error.h>
 
-// ========================= enum types ======================
 
 /**
  * libheif known compression formats.
@@ -145,6 +144,7 @@ enum heif_reader_grow_status
   heif_reader_grow_status_size_beyond_eof, // size has not been reached and never will. The file has grown to its full size
   heif_reader_grow_status_error            // an error has occurred
 };
+
 
 struct heif_reader_range_request_result
 {
@@ -297,7 +297,7 @@ LIBHEIF_API
 void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 
 // ====================================================================================================
-//  Encoding API
+//   Write the heif_context to a HEIF file
 
 LIBHEIF_API
 struct heif_error heif_context_write_to_file(struct heif_context*,

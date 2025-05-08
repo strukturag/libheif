@@ -30,8 +30,226 @@
 #include <memory>
 
 
-// const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 
+heif_brand2 heif_read_main_brand(const uint8_t* data, int len)
+{
+  if (len < 12) {
+    return heif_unknown_brand;
+  }
+
+  return heif_fourcc_to_brand((char*) (data + 8));
+}
+
+
+heif_brand2 heif_read_minor_version_brand(const uint8_t* data, int len)
+{
+  if (len < 16) {
+    return heif_unknown_brand;
+  }
+  return heif_fourcc_to_brand((char*) (data + 12));
+}
+
+
+heif_brand2 heif_fourcc_to_brand(const char* fourcc_string)
+{
+  if (fourcc_string == nullptr || !fourcc_string[0] || !fourcc_string[1] || !fourcc_string[2] || !fourcc_string[3]) {
+    return 0;
+  }
+
+  return fourcc(fourcc_string);
+}
+
+void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc)
+{
+  if (out_fourcc) {
+    out_fourcc[0] = (char) ((brand >> 24) & 0xFF);
+    out_fourcc[1] = (char) ((brand >> 16) & 0xFF);
+    out_fourcc[2] = (char) ((brand >> 8) & 0xFF);
+    out_fourcc[3] = (char) ((brand >> 0) & 0xFF);
+  }
+}
+
+
+int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc)
+{
+  if (data == nullptr || len <= 0 || brand_fourcc == nullptr || !brand_fourcc[0] || !brand_fourcc[1] || !brand_fourcc[2] || !brand_fourcc[3]) {
+    return -1;
+  }
+
+  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
+  BitstreamRange range(stream, len);
+
+  std::shared_ptr<Box> box;
+  Error err = Box::read(range, &box, heif_get_global_security_limits());
+  if (err) {
+    if (err.sub_error_code == heif_suberror_End_of_data) {
+      return -1;
+    }
+
+    return -2;
+  }
+
+  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
+  if (!ftyp) {
+    return -2;
+  }
+
+  return ftyp->has_compatible_brand(fourcc(brand_fourcc)) ? 1 : 0;
+}
+
+
+struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
+{
+  if (data == nullptr || out_brands == nullptr || out_size == nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+  }
+
+  if (len <= 0) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "data length must be positive"};
+  }
+
+  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
+  BitstreamRange range(stream, len);
+
+  std::shared_ptr<Box> box;
+  Error err = Box::read(range, &box, heif_get_global_security_limits());
+  if (err) {
+    if (err.sub_error_code == heif_suberror_End_of_data) {
+      return {err.error_code, err.sub_error_code, "insufficient input data"};
+    }
+
+    return {err.error_code, err.sub_error_code, "error reading ftyp box"};
+  }
+
+  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
+  if (!ftyp) {
+    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is not a ftyp box"};
+  }
+
+  auto brands = ftyp->list_brands();
+  size_t nBrands = brands.size();
+  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * nBrands);
+  *out_size = (int)nBrands;
+
+  for (size_t i = 0; i < nBrands; i++) {
+    (*out_brands)[i] = brands[i];
+  }
+
+  return heif_error_success;
+}
+
+
+void heif_free_list_of_compatible_brands(heif_brand2* brands_list)
+{
+  if (brands_list) {
+    free(brands_list);
+  }
+}
+
+
+enum class TriBool
+{
+  No, Yes, Unknown
+};
+
+static TriBool is_jpeg(const uint8_t* data, int len)
+{
+  if (len < 12) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE0 &&
+      data[4] == 0x00 && data[5] == 0x10 && data[6] == 0x4A && data[7] == 0x46 &&
+      data[8] == 0x49 && data[9] == 0x46 && data[10] == 0x00 && data[11] == 0x01) {
+    return TriBool::Yes;
+  }
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE1 &&
+      data[6] == 0x45 && data[7] == 0x78 && data[8] == 0x69 && data[9] == 0x66 &&
+      data[10] == 0x00 && data[11] == 0x00) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+static TriBool is_png(const uint8_t* data, int len)
+{
+  if (len < 8) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 &&
+      data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+const char* heif_get_file_mime_type(const uint8_t* data, int len)
+{
+  heif_brand mainBrand = heif_main_brand(data, len);
+
+  if (mainBrand == heif_heic ||
+      mainBrand == heif_heix ||
+      mainBrand == heif_heim ||
+      mainBrand == heif_heis) {
+    return "image/heic";
+  }
+  else if (mainBrand == heif_mif1) {
+    return "image/heif";
+  }
+  else if (mainBrand == heif_hevc ||
+           mainBrand == heif_hevx ||
+           mainBrand == heif_hevm ||
+           mainBrand == heif_hevs) {
+    return "image/heic-sequence";
+  }
+  else if (mainBrand == heif_msf1) {
+    return "image/heif-sequence";
+  }
+  else if (mainBrand == heif_avif) {
+    return "image/avif";
+  }
+  else if (mainBrand == heif_avis) {
+    return "image/avif-sequence";
+  }
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+  else if (mainBrand == heif_brand2_mif3) {
+    heif_brand2 minorBrand = heif_read_minor_version_brand(data, len);
+    if (minorBrand == heif_brand2_avif) {
+      return "image/avif";
+    }
+    if (minorBrand == heif_brand2_heic ||
+        minorBrand == heif_brand2_heix ||
+        minorBrand == heif_brand2_heim ||
+        minorBrand == heif_brand2_heis) {
+      return "image/heic";
+    }
+    // There could be other options in here, like VVC or J2K
+    return "image/heif";
+  }
+#endif
+  else if (mainBrand == heif_j2ki) {
+    return "image/hej2k";
+  }
+  else if (mainBrand == heif_j2is) {
+    return "image/j2is";
+  }
+  else if (is_jpeg(data, len) == TriBool::Yes) {
+    return "image/jpeg";
+  }
+  else if (is_png(data, len) == TriBool::Yes) {
+    return "image/png";
+  }
+  else {
+    return "";
+  }
+}
 
 heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 {
@@ -139,7 +357,7 @@ int heif_check_jpeg_filetype(const uint8_t* data, int len)
 }
 
 
-heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
+static heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
 {
   if (fourcc == nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {
     return heif_unknown_brand;
@@ -211,224 +429,3 @@ enum heif_brand heif_main_brand(const uint8_t* data, int len)
 
   return heif_fourcc_to_brand_enum((char*) (data + 8));
 }
-
-
-heif_brand2 heif_read_main_brand(const uint8_t* data, int len)
-{
-  if (len < 12) {
-    return heif_unknown_brand;
-  }
-
-  return heif_fourcc_to_brand((char*) (data + 8));
-}
-
-
-heif_brand2 heif_fourcc_to_brand(const char* fourcc_string)
-{
-  if (fourcc_string == nullptr || !fourcc_string[0] || !fourcc_string[1] || !fourcc_string[2] || !fourcc_string[3]) {
-    return 0;
-  }
-
-  return fourcc(fourcc_string);
-}
-
-heif_brand2 heif_read_minor_version_brand(const uint8_t* data, int len)
-{
-  if (len < 16) {
-    return heif_unknown_brand;
-  }
-  return heif_fourcc_to_brand((char*) (data + 12));
-}
-
-void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc)
-{
-  if (out_fourcc) {
-    out_fourcc[0] = (char) ((brand >> 24) & 0xFF);
-    out_fourcc[1] = (char) ((brand >> 16) & 0xFF);
-    out_fourcc[2] = (char) ((brand >> 8) & 0xFF);
-    out_fourcc[3] = (char) ((brand >> 0) & 0xFF);
-  }
-}
-
-
-int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc)
-{
-  if (data == nullptr || len <= 0 || brand_fourcc == nullptr || !brand_fourcc[0] || !brand_fourcc[1] || !brand_fourcc[2] || !brand_fourcc[3]) {
-    return -1;
-  }
-
-  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
-  BitstreamRange range(stream, len);
-
-  std::shared_ptr<Box> box;
-  Error err = Box::read(range, &box, heif_get_global_security_limits());
-  if (err) {
-    if (err.sub_error_code == heif_suberror_End_of_data) {
-      return -1;
-    }
-
-    return -2;
-  }
-
-  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
-  if (!ftyp) {
-    return -2;
-  }
-
-  return ftyp->has_compatible_brand(fourcc(brand_fourcc)) ? 1 : 0;
-}
-
-
-struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
-{
-  if (data == nullptr || out_brands == nullptr || out_size == nullptr) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
-  }
-
-  if (len <= 0) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "data length must be positive"};
-  }
-
-  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
-  BitstreamRange range(stream, len);
-
-  std::shared_ptr<Box> box;
-  Error err = Box::read(range, &box, heif_get_global_security_limits());
-  if (err) {
-    if (err.sub_error_code == heif_suberror_End_of_data) {
-      return {err.error_code, err.sub_error_code, "insufficient input data"};
-    }
-
-    return {err.error_code, err.sub_error_code, "error reading ftyp box"};
-  }
-
-  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
-  if (!ftyp) {
-    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is not a ftyp box"};
-  }
-
-  auto brands = ftyp->list_brands();
-  size_t nBrands = brands.size();
-  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * nBrands);
-  *out_size = (int)nBrands;
-
-  for (size_t i = 0; i < nBrands; i++) {
-    (*out_brands)[i] = brands[i];
-  }
-
-  return heif_error_success;
-}
-
-
-void heif_free_list_of_compatible_brands(heif_brand2* brands_list)
-{
-  if (brands_list) {
-    free(brands_list);
-  }
-}
-
-
-enum class TriBool
-{
-  No, Yes, Unknown
-};
-
-TriBool is_jpeg(const uint8_t* data, int len)
-{
-  if (len < 12) {
-    return TriBool::Unknown;
-  }
-
-  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE0 &&
-      data[4] == 0x00 && data[5] == 0x10 && data[6] == 0x4A && data[7] == 0x46 &&
-      data[8] == 0x49 && data[9] == 0x46 && data[10] == 0x00 && data[11] == 0x01) {
-    return TriBool::Yes;
-  }
-  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE1 &&
-      data[6] == 0x45 && data[7] == 0x78 && data[8] == 0x69 && data[9] == 0x66 &&
-      data[10] == 0x00 && data[11] == 0x00) {
-    return TriBool::Yes;
-  }
-  else {
-    return TriBool::No;
-  }
-}
-
-
-TriBool is_png(const uint8_t* data, int len)
-{
-  if (len < 8) {
-    return TriBool::Unknown;
-  }
-
-  if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 &&
-      data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A) {
-    return TriBool::Yes;
-  }
-  else {
-    return TriBool::No;
-  }
-}
-
-
-const char* heif_get_file_mime_type(const uint8_t* data, int len)
-{
-  heif_brand mainBrand = heif_main_brand(data, len);
-
-  if (mainBrand == heif_heic ||
-      mainBrand == heif_heix ||
-      mainBrand == heif_heim ||
-      mainBrand == heif_heis) {
-    return "image/heic";
-  }
-  else if (mainBrand == heif_mif1) {
-    return "image/heif";
-  }
-  else if (mainBrand == heif_hevc ||
-           mainBrand == heif_hevx ||
-           mainBrand == heif_hevm ||
-           mainBrand == heif_hevs) {
-    return "image/heic-sequence";
-  }
-  else if (mainBrand == heif_msf1) {
-    return "image/heif-sequence";
-  }
-  else if (mainBrand == heif_avif) {
-    return "image/avif";
-  }
-  else if (mainBrand == heif_avis) {
-    return "image/avif-sequence";
-  }
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
-  else if (mainBrand == heif_brand2_mif3) {
-    heif_brand2 minorBrand = heif_read_minor_version_brand(data, len);
-    if (minorBrand == heif_brand2_avif) {
-      return "image/avif";
-    }
-    if (minorBrand == heif_brand2_heic ||
-        minorBrand == heif_brand2_heix ||
-        minorBrand == heif_brand2_heim ||
-        minorBrand == heif_brand2_heis) {
-      return "image/heic";
-    }
-    // There could be other options in here, like VVC or J2K
-    return "image/heif";
-  }
-#endif
-  else if (mainBrand == heif_j2ki) {
-    return "image/hej2k";
-  }
-  else if (mainBrand == heif_j2is) {
-    return "image/j2is";
-  }
-  else if (is_jpeg(data, len) == TriBool::Yes) {
-    return "image/jpeg";
-  }
-  else if (is_png(data, len) == TriBool::Yes) {
-    return "image/png";
-  }
-  else {
-    return "";
-  }
-}
-

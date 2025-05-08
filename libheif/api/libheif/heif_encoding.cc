@@ -25,7 +25,6 @@
 #include "plugin_registry.h"
 #include "image-items/overlay.h"
 #include "image-items/tiled.h"
-#include "image-items/unc_image.h"
 #include "image-items/grid.h"
 
 #include <cstring>
@@ -45,13 +44,11 @@ static struct heif_error error_invalid_parameter_value = {heif_error_Usage_error
                                                           "Invalid parameter value"};
 
 
-int heif_context_get_encoder_descriptors(struct heif_context* ctx,
-                                         enum heif_compression_format format,
-                                         const char* name,
-                                         const struct heif_encoder_descriptor** out_encoder_descriptors,
-                                         int count)
+
+int heif_have_encoder_for_format(enum heif_compression_format format)
 {
-  return heif_get_encoder_descriptors(format, name, out_encoder_descriptors, count);
+  auto plugin = get_encoder(format);
+  return plugin != nullptr;
 }
 
 
@@ -112,26 +109,6 @@ int heif_encoder_descriptor_supports_lossless_compression(const struct heif_enco
 }
 
 
-// DEPRECATED: typo in function name
-int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor* descriptor)
-{
-  return descriptor->plugin->supports_lossy_compression;
-}
-
-
-// DEPRECATED: typo in function name
-int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor* descriptor)
-{
-  return descriptor->plugin->supports_lossless_compression;
-}
-
-
-const char* heif_encoder_get_name(const struct heif_encoder* encoder)
-{
-  return encoder->plugin->get_plugin_name();
-}
-
-
 struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor* descriptor,
                                            struct heif_encoder** encoder)
@@ -146,20 +123,6 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 
   *encoder = new struct heif_encoder(descriptor->plugin);
   return (*encoder)->alloc();
-}
-
-
-int heif_have_decoder_for_format(enum heif_compression_format format)
-{
-  auto plugin = get_decoder(format, nullptr);
-  return plugin != nullptr;
-}
-
-
-int heif_have_encoder_for_format(enum heif_compression_format format)
-{
-  auto plugin = get_encoder(format);
-  return plugin != nullptr;
 }
 
 
@@ -199,15 +162,10 @@ void heif_encoder_release(struct heif_encoder* encoder)
 }
 
 
-//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder* encoder)
-//{
-//  return nullptr;
-//}
-
-
-//void heif_encoder_release_param(struct heif_encoder_param* param)
-//{
-//}
+const char* heif_encoder_get_name(const struct heif_encoder* encoder)
+{
+  return encoder->plugin->get_plugin_name();
+}
 
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
@@ -267,61 +225,6 @@ heif_encoder_parameter_get_type(const struct heif_encoder_parameter* param)
   return param->type;
 }
 
-
-struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder* encoder,
-                                                     const char* parameter_name,
-                                                     int value)
-{
-  // --- check if parameter is valid
-
-  for (const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
-       *params;
-       params++) {
-    if (strcmp((*params)->name, parameter_name) == 0) {
-
-      int have_minimum = 0, have_maximum = 0, minimum = 0, maximum = 0, num_valid_values = 0;
-      const int* valid_values = nullptr;
-      heif_error err = heif_encoder_parameter_get_valid_integer_values((*params), &have_minimum, &have_maximum,
-                                                                       &minimum, &maximum,
-                                                                       &num_valid_values,
-                                                                       &valid_values);
-      if (err.code) {
-        return err;
-      }
-
-      if ((have_minimum && value < minimum) ||
-          (have_maximum && value > maximum)) {
-        return error_invalid_parameter_value;
-      }
-
-      if (num_valid_values > 0) {
-        bool found = false;
-        for (int i = 0; i < num_valid_values; i++) {
-          if (valid_values[i] == value) {
-            found = true;
-            break;
-          }
-        }
-
-        if (!found) {
-          return error_invalid_parameter_value;
-        }
-      }
-    }
-  }
-
-
-  // --- parameter is ok, pass it to the encoder plugin
-
-  return encoder->plugin->set_parameter_integer(encoder->encoder, parameter_name, value);
-}
-
-struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder* encoder,
-                                                     const char* parameter_name,
-                                                     int* value_ptr)
-{
-  return encoder->plugin->get_parameter_integer(encoder->encoder, parameter_name, value_ptr);
-}
 
 struct heif_error
 heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_parameter* param,
@@ -412,6 +315,63 @@ heif_encoder_parameter_get_valid_string_values(const struct heif_encoder_paramet
 
   return heif_error_success;
 }
+
+
+struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder* encoder,
+                                                     const char* parameter_name,
+                                                     int value)
+{
+  // --- check if parameter is valid
+
+  for (const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name) == 0) {
+
+      int have_minimum = 0, have_maximum = 0, minimum = 0, maximum = 0, num_valid_values = 0;
+      const int* valid_values = nullptr;
+      heif_error err = heif_encoder_parameter_get_valid_integer_values((*params), &have_minimum, &have_maximum,
+                                                                       &minimum, &maximum,
+                                                                       &num_valid_values,
+                                                                       &valid_values);
+      if (err.code) {
+        return err;
+      }
+
+      if ((have_minimum && value < minimum) ||
+          (have_maximum && value > maximum)) {
+        return error_invalid_parameter_value;
+      }
+
+      if (num_valid_values > 0) {
+        bool found = false;
+        for (int i = 0; i < num_valid_values; i++) {
+          if (valid_values[i] == value) {
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          return error_invalid_parameter_value;
+        }
+      }
+    }
+  }
+
+
+  // --- parameter is ok, pass it to the encoder plugin
+
+  return encoder->plugin->set_parameter_integer(encoder->encoder, parameter_name, value);
+}
+
+struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder* encoder,
+                                                     const char* parameter_name,
+                                                     int* value_ptr)
+{
+  return encoder->plugin->get_parameter_integer(encoder->encoder, parameter_name, value_ptr);
+}
+
 
 struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder* encoder,
                                                              const char* parameter_name,
@@ -615,7 +575,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 }
 
 
-void set_default_encoding_options(heif_encoding_options& options)
+static void set_default_encoding_options(heif_encoding_options& options)
 {
   options.version = 7;
 
@@ -633,6 +593,17 @@ void set_default_encoding_options(heif_encoding_options& options)
 
   options.prefer_uncC_short_form = true;
 }
+
+
+heif_encoding_options* heif_encoding_options_alloc()
+{
+  auto options = new heif_encoding_options;
+
+  set_default_encoding_options(*options);
+
+  return options;
+}
+
 
 void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_options*  src)
 {
@@ -665,16 +636,6 @@ void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_
     case 1:
       dst->save_alpha_channel = src->save_alpha_channel;
   }
-}
-
-
-heif_encoding_options* heif_encoding_options_alloc()
-{
-  auto options = new heif_encoding_options;
-
-  set_default_encoding_options(*options);
-
-  return options;
 }
 
 
@@ -797,32 +758,12 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
-                                              const struct heif_unci_image_parameters* parameters,
-                                              const struct heif_encoding_options* encoding_options,
-                                              const heif_image* prototype,
-                                              struct heif_image_handle** out_unci_image_handle)
+struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
+                                                 struct heif_image_handle* image_handle)
 {
-#if WITH_UNCOMPRESSED_CODEC
-  Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
-  unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
-
-  if (unciImageResult.error != Error::Ok) {
-    return unciImageResult.error.error_struct(ctx->context.get());
-  }
-
-  if (out_unci_image_handle) {
-    *out_unci_image_handle = new heif_image_handle;
-    (*out_unci_image_handle)->image = unciImageResult.value;
-    (*out_unci_image_handle)->context = ctx->context;
-  }
+  ctx->context->set_primary_image(image_handle->image);
 
   return heif_error_success;
-#else
-  return {heif_error_Unsupported_feature,
-          heif_suberror_Unspecified,
-          "support for uncompressed images (ISO23001-17) has been disabled."};
-#endif
 }
 
 
@@ -833,11 +774,28 @@ void heif_context_add_compatible_brand(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
-                                                 struct heif_image_handle* image_handle)
-{
-  ctx->context->set_primary_image(image_handle->image);
+// === DEPRECATED ===
 
-  return heif_error_success;
+// DEPRECATED: typo in function name
+int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossy_compression;
 }
 
+
+// DEPRECATED: typo in function name
+int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossless_compression;
+}
+
+
+// DEPRECATED
+int heif_context_get_encoder_descriptors(struct heif_context* ctx,
+                                         enum heif_compression_format format,
+                                         const char* name,
+                                         const struct heif_encoder_descriptor** out_encoder_descriptors,
+                                         int count)
+{
+  return heif_get_encoder_descriptors(format, name, out_encoder_descriptors, count);
+}

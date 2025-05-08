@@ -25,12 +25,85 @@
 extern "C" {
 #endif
 
-#include <libheif/heif.h>
+#include <libheif/heif_library.h>
+
+
+enum heif_chroma_downsampling_algorithm {
+  heif_chroma_downsampling_nearest_neighbor = 1,
+  heif_chroma_downsampling_average = 2,
+
+  // Combine with 'heif_chroma_upsampling_bilinear' for best quality.
+  // Makes edges look sharper when using YUV 420 with bilinear chroma upsampling.
+  heif_chroma_downsampling_sharp_yuv = 3
+};
+
+enum heif_chroma_upsampling_algorithm {
+  heif_chroma_upsampling_nearest_neighbor = 1,
+  heif_chroma_upsampling_bilinear = 2
+};
+
+
+struct heif_color_conversion_options {
+  // 'version' must be 1.
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_chroma_downsampling_algorithm preferred_chroma_downsampling_algorithm;
+  enum heif_chroma_upsampling_algorithm preferred_chroma_upsampling_algorithm;
+
+  // When set to 'false' libheif may also use a different algorithm if the preferred one is not available
+  // or using a different algorithm is computationally less complex. Note that currently (v1.17.0) this
+  // means that for RGB input it will usually choose nearest-neighbor sampling because this is computationally
+  // the simplest.
+  // Set this field to 'true' if you want to make sure that the specified algorithm is used even
+  // at the cost of slightly higher computation times.
+  uint8_t only_use_preferred_chroma_algorithm;
+
+  // --- Note that we cannot extend this struct because it is embedded in
+  //     other structs (heif_decoding_options and heif_encoding_options).
+};
+
+
+enum heif_alpha_composition_mode {
+  heif_alpha_composition_mode_none,
+  heif_alpha_composition_mode_solid_color,
+  heif_alpha_composition_mode_checkerboard,
+};
+
+
+struct heif_color_conversion_options_ext {
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_alpha_composition_mode alpha_composition_mode;
+
+  // color values should be specified in the range [0, 65535]
+  uint16_t background_red, background_green, background_blue;
+  uint16_t secondary_background_red, secondary_background_green, secondary_background_blue;
+  uint16_t checkerboard_square_size;
+};
+
+
+// Assumes that it is a version=1 struct.
+LIBHEIF_API
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*);
+
+LIBHEIF_API
+struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc(void);
+
+LIBHEIF_API
+void heif_color_conversion_options_ext_copy(struct heif_color_conversion_options_ext* dst,
+                                            const struct heif_color_conversion_options_ext* src);
+
+LIBHEIF_API
+void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext*);
+
 
 // ------------------------- color profiles -------------------------
 
-enum heif_color_profile_type
-{
+enum heif_color_profile_type {
   heif_color_profile_type_not_present = 0,
   heif_color_profile_type_nclx = heif_fourcc('n', 'c', 'l', 'x'),
   heif_color_profile_type_rICC = heif_fourcc('r', 'I', 'C', 'C'),
@@ -47,7 +120,7 @@ LIBHEIF_API
 enum heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
 
 LIBHEIF_API
-    size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle);
+size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle);
 
 // Returns 'heif_error_Color_profile_does_not_exist' when there is no ICC profile.
 LIBHEIF_API
@@ -55,8 +128,7 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
                                                           void* out_data);
 
 
-enum heif_color_primaries
-{
+enum heif_color_primaries {
   heif_color_primaries_ITU_R_BT_709_5 = 1, // g=0.3;0.6, b=0.15;0.06, r=0.64;0.33, w=0.3127,0.3290
   heif_color_primaries_unspecified = 2,
   heif_color_primaries_ITU_R_BT_470_6_System_M = 4,
@@ -71,8 +143,7 @@ enum heif_color_primaries
   heif_color_primaries_EBU_Tech_3213_E = 22
 };
 
-enum heif_transfer_characteristics
-{
+enum heif_transfer_characteristics {
   heif_transfer_characteristic_ITU_R_BT_709_5 = 1,
   heif_transfer_characteristic_unspecified = 2,
   heif_transfer_characteristic_ITU_R_BT_470_6_System_M = 4,
@@ -92,8 +163,7 @@ enum heif_transfer_characteristics
   heif_transfer_characteristic_ITU_R_BT_2100_0_HLG = 18
 };
 
-enum heif_matrix_coefficients
-{
+enum heif_matrix_coefficients {
   heif_matrix_coefficients_RGB_GBR = 0,
   heif_matrix_coefficients_ITU_R_BT_709_5 = 1,  // TODO: or 709-6 according to h.273
   heif_matrix_coefficients_unspecified = 2,
@@ -110,8 +180,7 @@ enum heif_matrix_coefficients
   heif_matrix_coefficients_ICtCp = 14
 };
 
-struct heif_color_profile_nclx
-{
+struct heif_color_profile_nclx {
   // === version 1 fields
 
   uint8_t version;
@@ -162,7 +231,7 @@ enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif
 
 // Returns the size of the ICC profile if one is assigned to the image. Otherwise, it returns 0.
 LIBHEIF_API
-    size_t heif_image_get_raw_color_profile_size(const struct heif_image* image);
+size_t heif_image_get_raw_color_profile_size(const struct heif_image* image);
 
 // Returns the ICC profile if one is assigned to the image. Otherwise, it returns an error.
 LIBHEIF_API
@@ -192,10 +261,11 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 //void heif_image_remove_color_profile(struct heif_image* image);
 
 
+// --- content light level ---
+
 // Note: a value of 0 for any of these values indicates that the value is undefined.
 // The unit of these values is Candelas per square meter.
-struct heif_content_light_level
-{
+struct heif_content_light_level {
   uint16_t max_content_light_level;
   uint16_t max_pic_average_light_level;
 };
@@ -214,9 +284,10 @@ LIBHEIF_API
 void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
 
 
+// --- mastering display colour volume ---
+
 // Note: color coordinates are defined according to the CIE 1931 definition of x as specified in ISO 11664-1 (see also ISO 11664-3 and CIE 15).
-struct heif_mastering_display_colour_volume
-{
+struct heif_mastering_display_colour_volume {
   uint16_t display_primaries_x[3];
   uint16_t display_primaries_y[3];
   uint16_t white_point_x;
@@ -226,8 +297,7 @@ struct heif_mastering_display_colour_volume
 };
 
 // The units for max_display_mastering_luminance and min_display_mastering_luminance is Candelas per square meter.
-struct heif_decoded_mastering_display_colour_volume
-{
+struct heif_decoded_mastering_display_colour_volume {
   float display_primaries_x[3];
   float display_primaries_y[3];
   float white_point_x;
@@ -236,8 +306,7 @@ struct heif_decoded_mastering_display_colour_volume
   double min_display_mastering_luminance;
 };
 
-struct heif_ambient_viewing_environment
-{
+struct heif_ambient_viewing_environment {
   uint32_t ambient_illumination;
   uint16_t ambient_light_x;
   uint16_t ambient_light_y;

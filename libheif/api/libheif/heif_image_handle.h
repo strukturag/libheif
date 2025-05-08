@@ -96,6 +96,11 @@ int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle);
 LIBHEIF_API
 int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
 
+// Returns whether the image has 'pixel aspect ratio information' information. If 0 is returned, the output is filled with the 1:1 default.
+LIBHEIF_API
+int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, uint32_t* aspect_h, uint32_t* aspect_v);
+
+
 // This gets the context associated with the image handle.
 // Note that you have to release the returned context with heif_context_free() in any case.
 //

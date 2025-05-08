@@ -28,6 +28,7 @@ extern "C" {
 #include <libheif/heif_library.h>
 #include <libheif/heif_image.h>
 #include <libheif/heif_context.h>
+#include <libheif/heif_color.h>
 
 
 // If the maximum threads number is set to 0, the image tiles are decoded in the main thread.
@@ -37,6 +38,12 @@ extern "C" {
 // to minimize parallelism in each decoder.
 LIBHEIF_API
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
+
+// Quick check whether there is a decoder available for the given format.
+// Note that the decoder still may not be able to decode all variants of that format.
+// You will have to query that further (todo) or just try to decode and check the returned error.
+LIBHEIF_API
+int heif_have_decoder_for_format(enum heif_compression_format format);
 
 
 enum heif_progress_step
@@ -110,11 +117,6 @@ void heif_decoding_options_copy(struct heif_decoding_options* dst,
 LIBHEIF_API
 void heif_decoding_options_free(struct heif_decoding_options*);
 
-LIBHEIF_API
-struct heif_color_conversion_options_ext* heif_color_conversion_options_ext_alloc(void);
-
-LIBHEIF_API
-void heif_color_conversion_options_ext_free(struct heif_color_conversion_options_ext*);
 
 struct heif_decoder_descriptor;
 

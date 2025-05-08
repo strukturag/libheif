@@ -64,6 +64,7 @@ struct heif_security_limits {
   uint32_t max_sample_group_description_box_entries;
 };
 
+
 // The global security limits are the default for new heif_contexts.
 // These global limits cannot be changed, but you can override the limits for a specific heif_context.
 LIBHEIF_API
@@ -83,7 +84,8 @@ struct heif_security_limits* heif_context_get_security_limits(const struct heif_
 LIBHEIF_API
 struct heif_error heif_context_set_security_limits(struct heif_context*, const struct heif_security_limits*);
 
-// DEPRECATED
+
+// --- DEPRECATED ---
 
 // Set the maximum image size security limit. This function will set the maximum image area (number of pixels)
 // to maximum_width ^ 2. Alternatively to using this function, you can also set the maximum image area
