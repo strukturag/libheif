@@ -38,8 +38,4 @@
 #include <libheif/heif_image_handle.h>
 #include <libheif/heif_tiling.h>
 
-#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
-#include "heif_emscripten.h"
-#endif
-
 #endif

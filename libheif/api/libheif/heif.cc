@@ -28,6 +28,10 @@
 #include <vector>
 #include <memory>
 
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
+#include "heif_emscripten.h"
+#endif
+
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 
