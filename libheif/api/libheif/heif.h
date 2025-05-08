@@ -39,6 +39,7 @@ extern "C" {
 #include <libheif/heif_color.h>
 #include <libheif/heif_error.h>
 #include <libheif/heif_brands.h>
+#include <libheif/heif_metadata.h>
 
 
 // ========================= enum types ======================
@@ -661,90 +662,6 @@ struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif
                                                                heif_item_id auxiliary_id,
                                                                struct heif_image_handle** out_auxiliary_handle);
 
-
-// ------------------------- metadata (Exif / XMP) -------------------------
-
-// How many metadata blocks are attached to an image. If you only want to get EXIF data,
-// set the type_filter to "Exif". Otherwise, set the type_filter to NULL.
-LIBHEIF_API
-int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
-                                                    const char* type_filter);
-
-// 'type_filter' can be used to get only metadata of specific types, like "Exif".
-// If 'type_filter' is NULL, it will return all types of metadata IDs.
-LIBHEIF_API
-int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
-                                                     const char* type_filter,
-                                                     heif_item_id* ids, int count);
-
-// Return a string indicating the type of the metadata, as specified in the HEIF file.
-// Exif data will have the type string "Exif".
-// This string will be valid until the next call to a libheif function.
-// You do not have to free this string.
-LIBHEIF_API
-const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
-                                                heif_item_id metadata_id);
-
-// For EXIF, the content type is empty.
-// For XMP, the content type is "application/rdf+xml".
-LIBHEIF_API
-const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
-                                                        heif_item_id metadata_id);
-
-// Get the size of the raw metadata, as stored in the HEIF file.
-LIBHEIF_API
-size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
-                                           heif_item_id metadata_id);
-
-// 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
-// The data is returned exactly as stored in the HEIF file.
-// For Exif data, you probably have to skip the first four bytes of the data, since they
-// indicate the offset to the start of the TIFF header of the Exif data.
-LIBHEIF_API
-struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
-                                                 heif_item_id metadata_id,
-                                                 void* out_data);
-
-// Only valid for item type == "uri ", an absolute URI
-LIBHEIF_API
-const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
-                                                         heif_item_id metadata_id);
-
-// ------------------------- intrinsic and extrinsic matrices -------------------------
-
-struct heif_camera_intrinsic_matrix
-{
-  double focal_length_x;
-  double focal_length_y;
-  double principal_point_x;
-  double principal_point_y;
-  double skew;
-};
-
-
-LIBHEIF_API
-int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle);
-
-LIBHEIF_API
-struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_intrinsic_matrix* out_matrix);
-
-
-struct heif_camera_extrinsic_matrix;
-
-LIBHEIF_API
-int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle);
-
-LIBHEIF_API
-struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_extrinsic_matrix** out_matrix);
-
-LIBHEIF_API
-void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix*);
-
-LIBHEIF_API
-struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix*,
-                                                                   double* out_matrix_row_major);
 
 
 
