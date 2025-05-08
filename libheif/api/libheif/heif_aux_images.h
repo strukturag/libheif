@@ -29,6 +29,9 @@ extern "C" {
 #include <libheif/heif_image.h>
 #include <libheif/heif_error.h>
 
+struct heif_encoder;
+struct heif_encoding_options;
+
 
 // ------------------------- depth images -------------------------
 
