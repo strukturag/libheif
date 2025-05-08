@@ -139,88 +139,6 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 #endif
 
 
-struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
-                                                        const heif_item_id* layer_item_ids,
-                                                        size_t num_layers,
-                                                        /*
-                                                        uint16_t tile_width,
-                                                        uint16_t tile_height,
-                                                        uint32_t num_layers,
-                                                        const heif_pyramid_layer_info* in_layers,
-                                                         */
-                                                        heif_item_id* out_group_id)
-{
-  if (!layer_item_ids) {
-    return error_null_parameter;
-  }
-
-  if (num_layers == 0) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Number of layers cannot be 0."};
-  }
-
-  std::vector<heif_item_id> layers(num_layers);
-  for (size_t i = 0; i < num_layers; i++) {
-    layers[i] = layer_item_ids[i];
-  }
-
-  Result<heif_item_id> result = ctx->context->add_pyramid_group(layers);
-
-  if (result) {
-    if (out_group_id) {
-      *out_group_id = result.value;
-    }
-    return heif_error_success;
-  }
-  else {
-    return result.error.error_struct(ctx->context.get());
-  }
-}
-
-
-struct heif_pyramid_layer_info* heif_context_get_pyramid_entity_group_info(struct heif_context* ctx, heif_entity_group_id id, int* out_num_layers)
-{
-  if (!out_num_layers) {
-    return nullptr;
-  }
-
-  std::shared_ptr<Box_EntityToGroup> groupBox = ctx->context->get_heif_file()->get_entity_group(id);
-  if (!groupBox) {
-    return nullptr;
-  }
-
-  const auto pymdBox = std::dynamic_pointer_cast<Box_pymd>(groupBox);
-  if (!pymdBox) {
-    return nullptr;
-  }
-
-  const std::vector<Box_pymd::LayerInfo> pymd_layers = pymdBox->get_layers();
-  if (pymd_layers.empty()) {
-    return nullptr;
-  }
-
-  auto items = pymdBox->get_item_ids();
-  assert(items.size() == pymd_layers.size());
-
-  auto* layerInfo = new heif_pyramid_layer_info[pymd_layers.size()];
-  for (size_t i=0; i<pymd_layers.size(); i++) {
-    layerInfo[i].layer_image_id = items[i];
-    layerInfo[i].layer_binning = pymd_layers[i].layer_binning;
-    layerInfo[i].tile_rows_in_layer = pymd_layers[i].tiles_in_layer_row_minus1 + 1;
-    layerInfo[i].tile_columns_in_layer = pymd_layers[i].tiles_in_layer_column_minus1 + 1;
-  }
-
-  *out_num_layers = static_cast<int>(pymd_layers.size());
-
-  return layerInfo;
-}
-
-
-void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info* infos)
-{
-  delete[] infos;
-}
-
-
 
 
 
@@ -257,4 +175,176 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
   (*out_img)->image = std::move(img);
 
   return Error::Ok.error_struct(in_handle->image.get());
+}
+
+
+// --- encoding ---
+
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** tiles,
+                                           uint16_t columns,
+                                           uint16_t rows,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle)
+{
+  if (!encoder || !tiles) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+  else if (rows == 0 || columns == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
+  }
+
+  // TODO: Don't repeat this code from heif_context_encode_image()
+  heif_encoding_options* options = heif_encoding_options_alloc();
+
+  heif_color_profile_nclx nclx;
+  if (input_options) {
+    heif_encoding_options_copy(options, input_options);
+
+    if (options->output_nclx_profile == nullptr) {
+      auto input_nclx = tiles[0]->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options->output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
+  }
+
+  // Convert heif_images to a vector of HeifPixelImages
+  std::vector<std::shared_ptr<HeifPixelImage>> pixel_tiles;
+  for (int i=0; i<rows*columns; i++) {
+    pixel_tiles.push_back(tiles[i]->image);
+  }
+
+  // Encode Grid
+  std::shared_ptr<ImageItem> out_grid;
+  auto addGridResult = ImageItem_Grid::add_and_encode_full_grid(ctx->context.get(),
+                                                                pixel_tiles,
+                                                                rows, columns,
+                                                                encoder,
+                                                                *options);
+  heif_encoding_options_free(options);
+
+  if (addGridResult.error) {
+    return addGridResult.error.error_struct(ctx->context.get());
+  }
+
+  out_grid = addGridResult.value;
+
+  // Mark as primary image
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(out_grid);
+  }
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = std::move(out_grid);
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
+                                              uint32_t image_width,
+                                              uint32_t image_height,
+                                              uint32_t tile_columns,
+                                              uint32_t tile_rows,
+                                              const struct heif_encoding_options* encoding_options,
+                                              struct heif_image_handle** out_grid_image_handle)
+{
+  if (tile_rows == 0 || tile_columns == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
+  }
+  else if (tile_rows > 0xFFFF || tile_columns > 0xFFFF) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Invalid_image_size,
+                      "Number of tile rows/columns may not exceed 65535"};
+  }
+
+  auto generateGridItemResult = ImageItem_Grid::add_new_grid_item(ctx->context.get(),
+                                                                  image_width,
+                                                                  image_height,
+                                                                  static_cast<uint16_t>(tile_rows),
+                                                                  static_cast<uint16_t>(tile_columns),
+                                                                  encoding_options);
+  if (generateGridItemResult.error) {
+    return generateGridItemResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_grid_image_handle) {
+    *out_grid_image_handle = new heif_image_handle;
+    (*out_grid_image_handle)->image = generateGridItemResult.value;
+    (*out_grid_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
+                                               const struct heif_tiled_image_parameters* parameters,
+                                               const struct heif_encoding_options* options, // TODO: do we need this?
+                                               const struct heif_encoder* encoder,
+                                               struct heif_image_handle** out_grid_image_handle)
+{
+  if (out_grid_image_handle) {
+    *out_grid_image_handle = nullptr;
+  }
+
+  Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
+  gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
+
+  if (gridImageResult.error != Error::Ok) {
+    return gridImageResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_grid_image_handle) {
+    *out_grid_image_handle = new heif_image_handle;
+    (*out_grid_image_handle)->image = gridImageResult.value;
+    (*out_grid_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+#endif
+
+
+struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
+                                              struct heif_image_handle* tiled_image,
+                                              uint32_t tile_x, uint32_t tile_y,
+                                              const struct heif_image* image,
+                                              struct heif_encoder* encoder)
+{
+  if (auto tili_image = std::dynamic_pointer_cast<ImageItem_Tiled>(tiled_image->image)) {
+    Error err = tili_image->add_image_tile(tile_x, tile_y, image->image, encoder);
+    return err.error_struct(ctx->context.get());
+  }
+#if WITH_UNCOMPRESSED_CODEC
+  else if (auto unci = std::dynamic_pointer_cast<ImageItem_uncompressed>(tiled_image->image)) {
+    Error err = unci->add_image_tile(tile_x, tile_y, image->image);
+    return err.error_struct(ctx->context.get());
+  }
+#endif
+  else if (auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(tiled_image->image)) {
+    Error err = grid_item->add_image_tile(tile_x, tile_y, image->image, encoder);
+    return err.error_struct(ctx->context.get());
+  }
+  else {
+    return {
+        heif_error_Usage_error,
+        heif_suberror_Unspecified,
+        "Cannot add tile to a non-tiled image"
+    };
+  }
 }

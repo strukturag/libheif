@@ -350,43 +350,6 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
 
-/**
- * @brief Encodes an array of images into a grid.
- * 
- * @param ctx The file context
- * @param tiles User allocated array of images that will form the grid.
- * @param rows The number of rows in the grid.
- * @param columns The number of columns in the grid.
- * @param encoder Defines the encoder to use. See heif_context_get_encoder_for_format()
- * @param input_options Optional, may be nullptr.
- * @param out_image_handle Returns a handle to the grid. The caller is responsible for freeing it.
- * @return Returns an error if ctx, tiles, or encoder is nullptr. If rows or columns is 0. 
- */
-LIBHEIF_API
-struct heif_error heif_context_encode_grid(struct heif_context* ctx,
-                                           struct heif_image** tiles,
-                                           uint16_t rows,
-                                           uint16_t columns,
-                                           struct heif_encoder* encoder,
-                                           const struct heif_encoding_options* input_options,
-                                           struct heif_image_handle** out_image_handle);
-
-LIBHEIF_API
-struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
-                                              uint32_t image_width,
-                                              uint32_t image_height,
-                                              uint32_t tile_columns,
-                                              uint32_t tile_rows,
-                                              const struct heif_encoding_options* encoding_options,
-                                              struct heif_image_handle** out_grid_image_handle);
-
-LIBHEIF_API
-struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
-                                              struct heif_image_handle* tiled_image,
-                                              uint32_t tile_x, uint32_t tile_y,
-                                              const struct heif_image* image,
-                                              struct heif_encoder* encoder);
-
 // offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
 // If background_rgba is NULL, the background is transparent.
 LIBHEIF_API
