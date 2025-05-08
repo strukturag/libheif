@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <algorithm>
 
 
 // ------------------------- depth images -------------------------

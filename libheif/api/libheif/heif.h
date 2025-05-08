@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2017-2023 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2017-2025 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -41,6 +41,7 @@ extern "C" {
 #include <libheif/heif_brands.h>
 #include <libheif/heif_metadata.h>
 #include <libheif/heif_aux_images.h>
+#include <libheif/heif_entity_groups.h>
 
 
 // ========================= enum types ======================
@@ -517,31 +518,6 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
                                                       enum heif_chroma chroma,
                                                       const struct heif_decoding_options* options,
                                                       uint32_t tile_x, uint32_t tile_y);
-
-
-// ------------------------- entity groups ------------------------
-
-typedef uint32_t heif_entity_group_id;
-
-struct heif_entity_group
-{
-  heif_entity_group_id entity_group_id;
-  uint32_t entity_group_type;  // this is a FourCC constant
-  heif_item_id* entities;
-  uint32_t num_entities;
-};
-
-// Use 0 for `type_filter` or `item_filter` to disable the filter.
-// Returns an array of heif_entity_group structs with *out_num_groups entries.
-LIBHEIF_API
-struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context*,
-                                                         uint32_t type_filter,
-                                                         heif_item_id item_filter,
-                                                         int* out_num_groups);
-
-// Release an array of entity groups returned by heif_context_get_entity_groups().
-LIBHEIF_API
-void heif_entity_groups_release(struct heif_entity_group*, int num_groups);
 
 
 enum heif_progress_step
