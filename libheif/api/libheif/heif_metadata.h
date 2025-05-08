@@ -27,6 +27,17 @@ extern "C" {
 
 #include <libheif/heif_library.h>
 
+
+enum heif_metadata_compression
+{
+  heif_metadata_compression_off = 0,
+  heif_metadata_compression_auto = 1,
+  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_zlib = 4,    // do not use for header data
+  heif_metadata_compression_brotli = 5
+};
+
 // ------------------------- metadata (Exif / XMP) -------------------------
 
 // How many metadata blocks are attached to an image. If you only want to get EXIF data,
@@ -74,6 +85,46 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 LIBHEIF_API
 const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
                                                          heif_item_id metadata_id);
+
+// --- writing Exif / XMP metadata ---
+
+// Add EXIF metadata to an image.
+LIBHEIF_API
+struct heif_error heif_context_add_exif_metadata(struct heif_context*,
+                                                 const struct heif_image_handle* image_handle,
+                                                 const void* data, int size);
+
+// Add XMP metadata to an image.
+LIBHEIF_API
+struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
+                                                const struct heif_image_handle* image_handle,
+                                                const void* data, int size);
+
+// New version of heif_context_add_XMP_metadata() with data compression (experimental).
+LIBHEIF_API
+struct heif_error heif_context_add_XMP_metadata2(struct heif_context*,
+                                                 const struct heif_image_handle* image_handle,
+                                                 const void* data, int size,
+                                                 enum heif_metadata_compression compression);
+
+// Add generic, proprietary metadata to an image. You have to specify an 'item_type' that will
+// identify your metadata. 'content_type' can be an additional type, or it can be NULL.
+// For example, this function can be used to add IPTC metadata (IIM stream, not XMP) to an image.
+// Although not standard, we propose to store IPTC data with item type="iptc", content_type=NULL.
+LIBHEIF_API
+struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_type, const char* content_type);
+
+// Add generic metadata with item_type "uri ". Items with this type do not have a content_type, but
+// an item_uri_type and they have no content_encoding (they are always stored uncompressed).
+LIBHEIF_API
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                        const struct heif_image_handle* image_handle,
+                                                        const void* data, int size,
+                                                        const char* item_uri_type,
+                                                        heif_item_id* out_item_id);
 
 // ------------------------- intrinsic and extrinsic matrices -------------------------
 
