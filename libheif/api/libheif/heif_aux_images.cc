@@ -180,6 +180,61 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
 }
 
 
+struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
+                                                const struct heif_image_handle* master_image,
+                                                const struct heif_image_handle* thumbnail_image)
+{
+  Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
+  return error.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
+                                                const struct heif_image* image,
+                                                const struct heif_image_handle* image_handle,
+                                                struct heif_encoder* encoder,
+                                                const struct heif_encoding_options* input_options,
+                                                int bbox_size,
+                                                struct heif_image_handle** out_image_handle)
+{
+  heif_encoding_options* options = heif_encoding_options_alloc();
+  heif_encoding_options_copy(options, input_options);
+
+  auto encodingResult = ctx->context->encode_thumbnail(image->image,
+                                                       encoder,
+                                                       *options,
+                                                       bbox_size);
+  heif_encoding_options_free(options);
+
+  if (encodingResult.error != Error::Ok) {
+    return encodingResult.error.error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<ImageItem> thumbnail_image = *encodingResult;
+
+  if (!thumbnail_image) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Invalid_parameter_value,
+              "Thumbnail images must be smaller than the original image.");
+    return err.error_struct(ctx->context.get());
+  }
+
+  Error error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = thumbnail_image;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
 // ------------------------- auxiliary images -------------------------
 
 

@@ -1572,30 +1572,36 @@ void set_default_encoding_options(heif_encoding_options& options)
   options.prefer_uncC_short_form = true;
 }
 
-void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
+void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_options*  src)
 {
-  switch (input_options.version) {
+  if (src == nullptr) {
+    return;
+  }
+
+  int min_version = std::min(dst->version, src->version);
+
+  switch (min_version) {
     case 7:
-      options.prefer_uncC_short_form = input_options.prefer_uncC_short_form;
-      // fallthrough
+      dst->prefer_uncC_short_form = src->prefer_uncC_short_form;
+      [[fallthrough]];
     case 6:
-      options.color_conversion_options = input_options.color_conversion_options;
-      // fallthrough
+      dst->color_conversion_options = src->color_conversion_options;
+      [[fallthrough]];
     case 5:
-      options.image_orientation = input_options.image_orientation;
-      // fallthrough
+      dst->image_orientation = src->image_orientation;
+      [[fallthrough]];
     case 4:
-      options.output_nclx_profile = input_options.output_nclx_profile;
-      options.macOS_compatibility_workaround_no_nclx_profile = input_options.macOS_compatibility_workaround_no_nclx_profile;
-      // fallthrough
+      dst->output_nclx_profile = src->output_nclx_profile;
+      dst->macOS_compatibility_workaround_no_nclx_profile = src->macOS_compatibility_workaround_no_nclx_profile;
+      [[fallthrough]];
     case 3:
-      options.save_two_colr_boxes_when_ICC_and_nclx_available = input_options.save_two_colr_boxes_when_ICC_and_nclx_available;
-      // fallthrough
+      dst->save_two_colr_boxes_when_ICC_and_nclx_available = src->save_two_colr_boxes_when_ICC_and_nclx_available;
+      [[fallthrough]];
     case 2:
-      options.macOS_compatibility_workaround = input_options.macOS_compatibility_workaround;
-      // fallthrough
+      dst->macOS_compatibility_workaround = src->macOS_compatibility_workaround;
+      [[fallthrough]];
     case 1:
-      options.save_alpha_channel = input_options.save_alpha_channel;
+      dst->save_alpha_channel = src->save_alpha_channel;
   }
 }
 
@@ -1923,63 +1929,6 @@ struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
 #endif
 }
 
-
-
-struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
-                                                const struct heif_image_handle* master_image,
-                                                const struct heif_image_handle* thumbnail_image)
-{
-  Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
-  return error.error_struct(ctx->context.get());
-}
-
-
-struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
-                                                const struct heif_image* image,
-                                                const struct heif_image_handle* image_handle,
-                                                struct heif_encoder* encoder,
-                                                const struct heif_encoding_options* input_options,
-                                                int bbox_size,
-                                                struct heif_image_handle** out_image_handle)
-{
-  heif_encoding_options options;
-  set_default_encoding_options(options);
-
-  if (input_options != nullptr) {
-    copy_options(options, *input_options);
-  }
-
-  auto encodingResult = ctx->context->encode_thumbnail(image->image,
-                                               encoder,
-                                               options,
-                                               bbox_size);
-  if (encodingResult.error != Error::Ok) {
-    return encodingResult.error.error_struct(ctx->context.get());
-  }
-
-  std::shared_ptr<ImageItem> thumbnail_image = *encodingResult;
-
-  if (!thumbnail_image) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Invalid_parameter_value,
-              "Thumbnail images must be smaller than the original image.");
-    return err.error_struct(ctx->context.get());
-  }
-
-  Error error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
-  }
-
-
-  if (out_image_handle) {
-    *out_image_handle = new heif_image_handle;
-    (*out_image_handle)->image = thumbnail_image;
-    (*out_image_handle)->context = ctx->context;
-  }
-
-  return heif_error_success;
-}
 
 
 struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
