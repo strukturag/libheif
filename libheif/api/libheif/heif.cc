@@ -1640,7 +1640,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   heif_color_profile_nclx nclx;
   set_default_encoding_options(options);
   if (input_options) {
-    copy_options(options, *input_options);
+    heif_encoding_options_copy(&options, input_options);
 
     if (options.output_nclx_profile == nullptr) {
       auto input_nclx = input_image->image->get_color_profile_nclx();
@@ -1703,7 +1703,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
   heif_color_profile_nclx nclx;
   set_default_encoding_options(options);
   if (input_options) {
-    copy_options(options, *input_options);
+    heif_encoding_options_copy(&options, input_options);
 
     if (options.output_nclx_profile == nullptr) {
       auto input_nclx = tiles[0]->image->get_color_profile_nclx();

@@ -1015,7 +1015,7 @@ LIBHEIF_API
 struct heif_encoding_options* heif_encoding_options_alloc(void);
 
 LIBHEIF_API
-void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_options*  src);
+void heif_encoding_options_copy(struct heif_encoding_options* dst, const struct heif_encoding_options*  src);
 
 LIBHEIF_API
 void heif_encoding_options_free(struct heif_encoding_options*);

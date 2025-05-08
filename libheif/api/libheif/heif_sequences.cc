@@ -483,9 +483,6 @@ void heif_gimi_content_id_release(const char* id)
 }
 */
 
-extern void set_default_encoding_options(heif_encoding_options& options);
-extern void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options);
-
 
 struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                                    const struct heif_image* input_image,
@@ -493,16 +490,15 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                                    const struct heif_encoding_options* input_options,
                                                    const struct heif_sequence_encoding_options* seq_input_options)
 {
-  heif_encoding_options options;
+  heif_encoding_options* options = heif_encoding_options_alloc();
   heif_color_profile_nclx nclx;
-  set_default_encoding_options(options);
   if (input_options) {
-    copy_options(options, *input_options);
+    heif_encoding_options_copy(options, input_options);
 
-    if (options.output_nclx_profile == nullptr) {
+    if (options->output_nclx_profile == nullptr) {
       auto input_nclx = input_image->image->get_color_profile_nclx();
       if (input_nclx) {
-        options.output_nclx_profile = &nclx;
+        options->output_nclx_profile = &nclx;
         nclx.version = 1;
         nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
         nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
@@ -514,6 +510,8 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
   auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track->track);
   if (!visual_track) {
+    heif_encoding_options_free(options);
+
     return {heif_error_Usage_error,
             heif_suberror_Invalid_parameter_value,
             "Cannot encode image for non-visual track."};
@@ -521,8 +519,10 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
   auto error = visual_track->encode_image(input_image->image,
                                           encoder,
-                                          options,
+                                          *options,
                                           heif_image_input_class_normal);
+  heif_encoding_options_free(options);
+
   if (error.error_code) {
     return error.error_struct(track->context.get());
   }
