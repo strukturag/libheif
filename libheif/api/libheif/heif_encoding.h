@@ -29,7 +29,9 @@ extern "C" {
 #include <stdint.h>
 
 #include <libheif/heif_library.h>
-#include <libheif/heif.h>
+#include <libheif/heif_image.h>
+#include <libheif/heif_context.h>
+#include <libheif/heif_brands.h>
 
 
 // ----- encoder -----
@@ -44,28 +46,6 @@ struct heif_encoder_descriptor;
 // set of parameters. For the most common settings (e.q. quality), special functions to set
 // the parameters are provided.
 struct heif_encoder_parameter;
-
-struct heif_decoder_descriptor;
-
-// Get a list of available decoders. You can filter the encoders by compression format.
-// Use format_filter==heif_compression_undefined to get all available decoders.
-// The returned list of decoders is sorted by their priority (which is a plugin property).
-// The number of decoders is returned, which are not more than 'count' if (out_decoders != nullptr).
-// By setting out_decoders==nullptr, you can query the number of decoders, 'count' is ignored.
-LIBHEIF_API
-int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
-                                 const struct heif_decoder_descriptor** out_decoders,
-                                 int count);
-
-// Return a long, descriptive name of the decoder (including version information).
-LIBHEIF_API
-const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descriptor*);
-
-// Return a short, symbolic name for identifying the decoder.
-// This name should stay constant over different decoder versions.
-// Note: the returned ID may be NULL for old plugins that don't support this yet.
-LIBHEIF_API
-const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor*);
 
 // DEPRECATED: use heif_get_encoder_descriptors() instead.
 // Get a list of available encoders. You can filter the encoders by compression format and name.
@@ -422,6 +402,11 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);
+
+// Add a compatible brand that is now added automatically by libheif when encoding images (e.g. some application brands like 'geo1').
+LIBHEIF_API
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand);
 
 
 // DEPRECATED, typo in function name

@@ -346,6 +346,74 @@ LIBHEIF_API
 struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height);
 
 
+enum heif_chroma_downsampling_algorithm
+{
+  heif_chroma_downsampling_nearest_neighbor = 1,
+  heif_chroma_downsampling_average = 2,
+
+  // Combine with 'heif_chroma_upsampling_bilinear' for best quality.
+  // Makes edges look sharper when using YUV 420 with bilinear chroma upsampling.
+  heif_chroma_downsampling_sharp_yuv = 3
+};
+
+enum heif_chroma_upsampling_algorithm
+{
+  heif_chroma_upsampling_nearest_neighbor = 1,
+  heif_chroma_upsampling_bilinear = 2
+};
+
+
+struct heif_color_conversion_options
+{
+  // 'version' must be 1.
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_chroma_downsampling_algorithm preferred_chroma_downsampling_algorithm;
+  enum heif_chroma_upsampling_algorithm preferred_chroma_upsampling_algorithm;
+
+  // When set to 'false' libheif may also use a different algorithm if the preferred one is not available
+  // or using a different algorithm is computationally less complex. Note that currently (v1.17.0) this
+  // means that for RGB input it will usually choose nearest-neighbor sampling because this is computationally
+  // the simplest.
+  // Set this field to 'true' if you want to make sure that the specified algorithm is used even
+  // at the cost of slightly higher computation times.
+  uint8_t only_use_preferred_chroma_algorithm;
+
+  // --- Note that we cannot extend this struct because it is embedded in
+  //     other structs (heif_decoding_options and heif_encoding_options).
+};
+
+
+enum heif_alpha_composition_mode
+{
+  heif_alpha_composition_mode_none,
+  heif_alpha_composition_mode_solid_color,
+  heif_alpha_composition_mode_checkerboard,
+};
+
+
+struct heif_color_conversion_options_ext
+{
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_alpha_composition_mode alpha_composition_mode;
+
+  // color values should be specified in the range [0, 65535]
+  uint16_t background_red, background_green, background_blue;
+  uint16_t secondary_background_red, secondary_background_green, secondary_background_blue;
+  uint16_t checkerboard_square_size;
+};
+
+
+// Assumes that it is a version=1 struct.
+LIBHEIF_API
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*);
+
+
 #ifdef __cplusplus
 }
 #endif

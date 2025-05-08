@@ -985,3 +985,20 @@ struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
           "support for uncompressed images (ISO23001-17) has been disabled."};
 #endif
 }
+
+
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand)
+{
+  ctx->context->get_heif_file()->get_ftyp_box()->add_compatible_brand(compatible_brand);
+}
+
+
+struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
+                                                 struct heif_image_handle* image_handle)
+{
+  ctx->context->set_primary_image(image_handle->image);
+
+  return heif_error_success;
+}
+

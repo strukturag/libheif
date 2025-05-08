@@ -279,6 +279,7 @@ LIBHEIF_API
 void heif_free_list_of_compatible_brands(heif_brand2* brands_list);
 
 
+
 // Returns one of these MIME types:
 // - image/heic           HEIF file using h265 compression
 // - image/heif           HEIF file using any other compression
