@@ -23,6 +23,9 @@
 #include "api_structs.h"
 #include "file.h"
 
+#include <memory>
+#include <vector>
+
 
 struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context* ctx,
                                                          uint32_t type_filter,

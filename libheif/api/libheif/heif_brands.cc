@@ -86,7 +86,7 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
   int nBrands = 0;
   struct heif_error err = heif_list_compatible_brands(data, len, &compatible_brands, &nBrands);
   if (err.code) {
-    assert(compatible_brands == nullptr);
+    assert(compatible_brands == nullptr); // NOLINT(clang-analyzer-unix.Malloc)
     return err;
   }
 
