@@ -24,6 +24,11 @@
 #include "init.h"
 
 #include <fstream>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+#include <algorithm>
 
 
 heif_context* heif_context_alloc()

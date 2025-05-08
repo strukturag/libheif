@@ -22,6 +22,11 @@
 #include "api_structs.h"
 #include "plugin_registry.h"
 
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
 
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads)
 {

@@ -30,6 +30,11 @@
 
 #include <cstring>
 
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <memory>
+#include <utility>
 
 
 static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
