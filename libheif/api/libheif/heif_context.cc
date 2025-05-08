@@ -22,6 +22,7 @@
 #include "api_structs.h"
 #include "context.h"
 #include "init.h"
+#include "file.h"
 
 #include <fstream>
 #include <memory>
@@ -29,6 +30,13 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+
+#ifdef _WIN32
+// for _write
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 
 heif_context* heif_context_alloc()

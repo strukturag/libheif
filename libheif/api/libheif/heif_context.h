@@ -322,14 +322,6 @@ struct heif_error heif_context_write(struct heif_context*,
                                      struct heif_writer* writer,
                                      void* userdata);
 
-
-#include <libheif/heif_metadata.h>
-#include <libheif/heif_aux_images.h>
-#include <libheif/heif_entity_groups.h>
-#include <libheif/heif_security.h>
-#include <libheif/heif_encoding.h>
-#include <libheif/heif_decoding.h>
-
 #ifdef __cplusplus
 }
 #endif

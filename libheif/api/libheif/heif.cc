@@ -26,6 +26,7 @@
 #include "file.h"
 
 #include <vector>
+#include <memory>
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
