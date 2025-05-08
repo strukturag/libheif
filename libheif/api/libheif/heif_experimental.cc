@@ -21,15 +21,14 @@
 #include "heif_experimental.h"
 #include "context.h"
 #include "api_structs.h"
-#include "file.h"
+#include "image-items/unc_image.h"
+#include "image-items/tiled.h"
 
 #include <array>
 #include <cstring>
 #include <memory>
 #include <vector>
-#include <string>
-#include "image-items/unc_image.h"
-#include "image-items/tiled.h"
+#include <limits>
 
 
 struct heif_property_camera_intrinsic_matrix

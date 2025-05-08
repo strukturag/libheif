@@ -21,6 +21,7 @@
 #include "heif.h"
 
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
+#include "api_structs.h"
 #include "heif_emscripten.h"
 #endif
 
