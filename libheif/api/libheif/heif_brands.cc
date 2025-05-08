@@ -27,6 +27,7 @@
 
 #include <cstring>
 #include <set>
+#include <memory>
 
 
 // const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
