@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#include <libheif/heif.h>
+#include <libheif/heif_library.h>
 #include <libheif/heif_error.h>
 #include <stddef.h>
 #include <stdint.h>
