@@ -29,7 +29,7 @@ DEFINE_TYPES="
     heif_channel_
     "
 
-HEADERS="libheif/api/libheif/heif_error.h libheif/api/libheif/heif_image.h libheif/api/libheif/heif.h"
+HEADERS="libheif/api/libheif/heif_error.h libheif/api/libheif/heif_image.h libheif/api/libheif/heif_context.h"
 
 API_DEFINES=""
 for type in $DEFINE_TYPES; do
