@@ -1302,6 +1302,9 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
     e.sample_count = range.read32();
     e.group_description_index = range.read32();
     m_entries.push_back(e);
+    if (range.error()) {
+      return range.get_error();
+    }
   }
 
   return range.get_error();
