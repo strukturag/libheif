@@ -767,6 +767,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
   std::shared_ptr<ImageItem> alpha_image = get_alpha_channel();
   if (alpha_image) {
+    if (alpha_image->get_item_error()) {
+      return alpha_image->get_item_error();
+    }
+
     auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0);
     if (alphaDecodingResult.error) {
       return alphaDecodingResult.error;
