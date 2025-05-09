@@ -38,7 +38,7 @@ public:
     SDL_CHROMA_444 =444
   };
 
-  bool init(int frame_width, int frame_height, enum SDL_Chroma chroma = SDL_CHROMA_420);
+  bool init(int frame_width, int frame_height, enum SDL_Chroma chroma, const char* window_title);
   void display(const unsigned char *Y, const unsigned char *U, const unsigned char *V,
                int stride, int chroma_stride);
   void close();

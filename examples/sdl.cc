@@ -28,7 +28,8 @@
 #include <assert.h>
 
 
-bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma chroma)
+bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma chroma,
+                           const char* window_title)
 {
   // reduce image size to a multiple of 8 (apparently required by YUV overlay)
 
@@ -44,7 +45,6 @@ bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma ch
   }
 
   // set window title
-  const char *window_title = "SDL YUV display";
   mWindow = SDL_CreateWindow(window_title,
     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     frame_width, frame_height, 0);

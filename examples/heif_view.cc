@@ -312,7 +312,7 @@ int main(int argc, char** argv)
   // --- open output window
 
   SDL_YUV_Display sdlWindow;
-  bool success = sdlWindow.init(w, h, SDL_YUV_Display::SDL_CHROMA_420);
+  bool success = sdlWindow.init(w, h, SDL_YUV_Display::SDL_CHROMA_420, "heif-view");
   if (!success) {
     std::cerr << "Cannot open output window\n";
     return 10;
