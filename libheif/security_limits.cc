@@ -166,7 +166,8 @@ Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limi
             sstr.str()};
   }
 
-  if (limits_context == &global_security_limits) {
+  if (limits_context == &global_security_limits ||
+      limits_context == &disabled_security_limits) {
     return Error::Ok;
   }
 
