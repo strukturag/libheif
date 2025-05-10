@@ -25,6 +25,7 @@
 
 #include <array>
 #include <memory>
+#include <algorithm>
 
 
 struct heif_unci_image_parameters* heif_unci_image_parameters_alloc()
