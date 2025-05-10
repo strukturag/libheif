@@ -246,7 +246,9 @@ std::shared_ptr<ImageItem> HeifContext::get_image(heif_item_id id, bool return_e
 
 std::shared_ptr<ImageItem> HeifContext::get_primary_image(bool return_error_image)
 {
-  if (!return_error_image && m_primary_image->get_item_error())
+  if (m_primary_image == nullptr)
+    return nullptr;
+  else if (!return_error_image && m_primary_image->get_item_error())
     return nullptr;
   else
     return m_primary_image;
