@@ -269,9 +269,8 @@ struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
 
   auto* tai = img->image->get_tai_timestamp();
   if (!tai) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "No timestamp attached to image"};
+    *out_timestamp = nullptr;
+    return heif_error_success;
   }
 
   *out_timestamp = new heif_tai_timestamp_packet;
