@@ -74,3 +74,8 @@ Error ImageItem_JPEG::on_load_file()
 
   return Error::Ok;
 }
+
+heif_brand2 ImageItem_JPEG::get_compatible_brand() const
+{
+  return heif_brand2_jpeg;
+}

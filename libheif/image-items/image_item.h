@@ -28,6 +28,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <set>
 #include "api/libheif/heif_plugin.h"
 #include "codecs/encoder.h"
 
@@ -277,6 +278,8 @@ public:
 
   bool is_miaf_compatible() const { return m_miaf_compatible; }
 
+  // return 0 if we don't know the brand
+  virtual heif_brand2 get_compatible_brand() const { return 0; }
 
   // === decoding ===
 
@@ -291,6 +294,8 @@ public:
                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
+
+  bool has_essential_property_other_than(const std::set<uint32_t>&) const;
 
   // === encoding ===
 

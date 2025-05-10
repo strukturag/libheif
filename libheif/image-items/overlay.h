@@ -105,6 +105,8 @@ public:
 
   Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const override;
 
+  heif_brand2 get_compatible_brand() const override;
+
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                          struct heif_encoder* encoder,
                                          const struct heif_encoding_options& options,

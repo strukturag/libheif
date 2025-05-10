@@ -96,6 +96,8 @@ public:
 
   std::shared_ptr<ImageItem> get_primary_image(bool return_error_image);
 
+  std::shared_ptr<const ImageItem> get_primary_image(bool return_error_image) const;
+
   bool is_image(heif_item_id ID) const;
 
   bool has_alpha(heif_item_id ID) const;
@@ -186,6 +188,8 @@ public:
 
   // If 0 is passed as track_id, the main visual track is returned (we assume that there is only one visual track).
   Result<std::shared_ptr<Track>> get_track(uint32_t track_id);
+
+  Result<std::shared_ptr<const Track>> get_track(uint32_t track_id) const;
 
   uint32_t get_sequence_timescale() const;
 

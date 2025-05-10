@@ -180,6 +180,13 @@ bool HEVCDecoderConfigurationRecord::get_general_profile_compatibility_flag(int 
 }
 
 
+bool HEVCDecoderConfigurationRecord::is_profile_compatibile(Profile profile) const
+{
+  return (general_profile_idc == profile ||
+          get_general_profile_compatibility_flag(profile));
+}
+
+
 Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);

@@ -949,6 +949,24 @@ Result<std::vector<std::shared_ptr<Box>>> ImageItem::get_properties() const
 }
 
 
+bool ImageItem::has_essential_property_other_than(const std::set<uint32_t>& props) const
+{
+  Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
+  if (propertiesResult.error) {
+    return false;
+  }
+
+  for (const auto& property : *propertiesResult) {
+    if (property->is_essential() &&
+        props.find(property->get_short_type()) == props.end()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tiling) const
 {
   Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();

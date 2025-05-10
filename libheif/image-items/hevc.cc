@@ -68,6 +68,34 @@ Error ImageItem_HEVC::on_load_file()
 }
 
 
+heif_brand2 ImageItem_HEVC::get_compatible_brand() const
+{
+  auto hvcC = get_property<Box_hvcC>();
+
+  if (has_essential_property_other_than(std::set{fourcc("hvcC"),
+                                                 fourcc("irot"),
+                                                 fourcc("imir"),
+                                                 fourcc("clap")})) {
+    return 0;
+  }
+
+  auto config = hvcC->get_configuration();
+  if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
+      config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
+    return heif_brand2_heic;
+  }
+
+  if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main10) ||
+      config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_RExt)) {
+    return heif_brand2_heix;
+  }
+
+  // TODO: what brand should we use for this case?
+
+  return heif_brand2_heix;
+}
+
+
 Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();

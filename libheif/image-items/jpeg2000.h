@@ -41,6 +41,8 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
 
+  heif_brand2 get_compatible_brand() const override;
+
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 

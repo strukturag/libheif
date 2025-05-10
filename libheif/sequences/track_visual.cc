@@ -25,6 +25,7 @@
 #include "pixelimage.h"
 #include "context.h"
 #include "libheif/api_structs.h"
+#include "codecs/hevc_boxes.h"
 
 
 Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
@@ -228,4 +229,49 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 #endif
 
   return Error::Ok;
+}
+
+
+heif_brand2 Track_Visual::get_compatible_brand() const
+{
+  if (m_stsd->get_num_sample_entries() == 0) {
+    return 0; // TODO: error ? Or can we assume at this point that there is at least one sample entry?
+  }
+
+  auto sampleEntry = m_stsd->get_sample_entry(0);
+
+  uint32_t sample_entry_type = sampleEntry->get_short_type();
+  switch (sample_entry_type) {
+    case fourcc("hvc1"): {
+      auto hvcC = sampleEntry->get_child_box<Box_hvcC>();
+      if (!hvcC) { return 0; }
+
+      auto config = hvcC->get_configuration();
+      if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
+          config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
+        return heif_brand2_hevc;
+      }
+      else {
+        return heif_brand2_hevx;
+      }
+    }
+
+    case fourcc("avc1"):
+      return heif_brand2_avcs;
+
+    case fourcc("av01"):
+      return heif_brand2_avis;
+
+    case fourcc("j2ki"):
+      return heif_brand2_j2is;
+
+    case fourcc("mjpg"):
+      return heif_brand2_jpgs;
+
+    case fourcc("vvc1"):
+      return heif_brand2_vvis;
+
+    default:
+      return 0;
+  }
 }

@@ -20,6 +20,7 @@
 
 #include "brands.h"
 #include "file.h"
+#include "sequences/track_visual.h"
 
 
 static bool check_mif1(const HeifContext* ctx)
@@ -65,16 +66,98 @@ static bool check_mif1(const HeifContext* ctx)
 }
 
 
+std::vector<std::shared_ptr<const ImageItem>> get_primary_and_alternative_images(const HeifContext* ctx)
+{
+  auto img = ctx->get_primary_image(false);
+  if (img) {
+    return {img};
+  }
+  else {
+    return {};
+  }
+}
+
+
 std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_brand2* out_main_brand)
 {
   std::vector<heif_brand2> compatible_brands;
 
+  if (out_main_brand != nullptr) {
+    *out_main_brand = 0;
+  }
+
+  // --- "mif" brands
 
   bool is_mif1 = check_mif1(ctx);
 
   if (is_mif1) {
     compatible_brands.push_back(heif_brand2_mif1);
   }
+
+  bool is_structural_image = is_mif1;
+
+
+  // --- image brand
+
+  std::vector<std::shared_ptr<const ImageItem>> images = get_primary_and_alternative_images(ctx);
+
+  bool miaf_compatible = true;
+
+  for (auto& img : images) {
+    heif_brand2 brand = img->get_compatible_brand();
+    if (brand != 0 &&
+        is_structural_image &&
+        std::find(compatible_brands.begin(),
+                  compatible_brands.end(),
+                  brand) == compatible_brands.end()) {
+      compatible_brands.push_back(brand);
+    }
+
+    if (!img->is_miaf_compatible()) {
+      miaf_compatible = false;
+    }
+  }
+
+  // --- "miaf"
+
+  if (miaf_compatible && is_structural_image) {
+    compatible_brands.push_back(heif_brand2_miaf);
+  }
+
+
+  // --- main brand is first image brand
+
+  if (!images.empty() && out_main_brand != nullptr) {
+    *out_main_brand = images[0]->get_compatible_brand();
+  }
+
+
+  // --- --- sequences
+
+  if (ctx->has_sequence()) {
+    compatible_brands.push_back(heif_brand2_msf1);
+
+    auto track_result = ctx->get_track(0);
+    assert(!track_result.error);
+
+    std::shared_ptr<const Track> track = track_result.value;
+    std::shared_ptr<const Track_Visual> visual_track = std::dynamic_pointer_cast<const Track_Visual>(track);
+
+    heif_brand2 track_brand = visual_track->get_compatible_brand();
+    if (track_brand != 0) {
+      compatible_brands.push_back(track_brand);
+
+      if (out_main_brand != nullptr && *out_main_brand == 0) {
+        *out_main_brand = track_brand;
+      }
+    }
+
+    // if we don't have a track brand, use at least the sequence structural brand
+    if (out_main_brand != nullptr && *out_main_brand == 0) {
+      *out_main_brand = heif_brand2_msf1;
+    }
+  }
+
 
   return compatible_brands;
 }

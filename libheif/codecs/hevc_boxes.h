@@ -65,6 +65,16 @@ struct HEVCDecoderConfigurationRecord
     std::vector<std::vector<uint8_t> > m_nal_units;
   };
 
+  enum Profile {
+    Profile_Main = 1,
+    Profile_Main10 = 2,
+    Profile_MainStillPicture = 3,
+    Profile_RExt = 4,
+    Profile_HighThroughput = 5,
+    Profile_ScreenCoding = 9,
+    Profile_HighTHroughputScreenCoding = 11
+  };
+
   std::vector<NalArray> m_nal_array;
 
   Error parse(BitstreamRange& range, const heif_security_limits* limits);
@@ -72,6 +82,8 @@ struct HEVCDecoderConfigurationRecord
   Error write(StreamWriter& writer) const;
 
   bool get_general_profile_compatibility_flag(int idx) const;
+
+  bool is_profile_compatibile(Profile) const;
 };
 
 

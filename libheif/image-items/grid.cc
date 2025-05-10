@@ -782,8 +782,19 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   // Set Brands
 
-  file->set_brand(encoder->plugin->compression_format,
-                  griditem->is_miaf_compatible());
+  //file->set_brand(encoder->plugin->compression_format,
+  //                griditem->is_miaf_compatible());
 
   return griditem;
+}
+
+heif_brand2 ImageItem_Grid::get_compatible_brand() const
+{
+  if (m_grid_tile_ids.empty()) { return 0; }
+
+  heif_item_id child_id = m_grid_tile_ids[0];
+  auto child = get_context()->get_image(child_id, false);
+  if (!child) { return 0; }
+
+  return child->get_compatible_brand();
 }

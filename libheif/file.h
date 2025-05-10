@@ -85,13 +85,11 @@ public:
 
   void init_for_sequence();
 
-  void set_brand(heif_compression_format format, bool miaf_compatible);
-
-  void set_sequence_brand(heif_compression_format format);
-
   void set_hdlr_box(std::shared_ptr<Box_hdlr> box) { m_hdlr_box = std::move(box); }
 
   size_t append_mdat_data(const std::vector<uint8_t>& data);
+
+  void derive_box_versions();
 
   void write(StreamWriter& writer);
 

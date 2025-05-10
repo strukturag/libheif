@@ -47,6 +47,8 @@ public:
 
   Error on_load_file() override;
 
+  heif_brand2 get_compatible_brand() const override;
+
   // currently not used
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 

@@ -736,8 +736,8 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
     }
   }
 
-  get_file()->set_brand(encoder->plugin->compression_format,
-                        true); // TODO: out_grid_image->is_miaf_compatible());
+  //get_file()->set_brand(encoder->plugin->compression_format,
+  //                      true); // TODO: out_grid_image->is_miaf_compatible());
 
   return Error::Ok;
 }
@@ -911,4 +911,18 @@ int ImageItem_Tiled::get_chroma_bits_per_pixel() const
   m_tile_decoder->set_data_extent(std::move(any_tile_extent));
 
   return m_tile_decoder->get_chroma_bits_per_pixel();
+}
+
+heif_brand2 ImageItem_Tiled::get_compatible_brand() const
+{
+  return 0;
+
+  // TODO: it is not clear to me what brand to use here.
+
+  /*
+  switch (m_tild_header.get_parameters().compression_format_fourcc) {
+    case heif_compression_HEVC:
+      return heif_brand2_heic;
+  }
+   */
 }

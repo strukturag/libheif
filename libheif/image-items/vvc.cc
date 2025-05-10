@@ -92,3 +92,8 @@ Error ImageItem_VVC::on_load_file()
 
   return Error::Ok;
 }
+
+heif_brand2 ImageItem_VVC::get_compatible_brand() const
+{
+  return heif_brand2_vvic;
+}

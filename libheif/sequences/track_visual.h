@@ -49,6 +49,8 @@ public:
                      const struct heif_encoding_options& options,
                      heif_image_input_class image_class);
 
+  heif_brand2 get_compatible_brand() const;
+
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;

@@ -457,3 +457,14 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
 
   return iovl_image;
 }
+
+heif_brand2 ImageItem_Overlay::get_compatible_brand() const
+{
+  if (m_overlay_image_ids.empty()) { return 0; }
+
+  heif_item_id child_id = m_overlay_image_ids[0];
+  auto child = get_context()->get_image(child_id, false);
+  if (!child) { return 0; }
+
+  return child->get_compatible_brand();
+}

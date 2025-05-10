@@ -200,88 +200,6 @@ void HeifFile::init_for_sequence()
 
   m_mvhd_box = std::make_shared<Box_mvhd>();
   m_moov_box->append_child_box(m_mvhd_box);
-
-  set_sequence_brand(heif_compression_HEVC);
-}
-
-
-void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
-{
-  // Note: major brand should be repeated in the compatible brands, according to this:
-  //   ISOBMFF (ISO/IEC 14496-12:2020) § K.4:
-  //   NOTE This document requires that the major brand be repeated in the compatible-brands,
-  //   but this requirement is relaxed in the 'profiles' parameter for compactness.
-  // See https://github.com/strukturag/libheif/issues/478
-
-  switch (format) {
-    case heif_compression_HEVC:
-      m_ftyp_box->set_major_brand(heif_brand2_heic);
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
-      m_ftyp_box->add_compatible_brand(heif_brand2_heic);
-      break;
-
-    case heif_compression_AV1:
-      m_ftyp_box->set_major_brand(heif_brand2_avif);
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(heif_brand2_avif);
-      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
-      break;
-
-    case heif_compression_VVC:
-      m_ftyp_box->set_major_brand(heif_brand2_vvic);
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
-      m_ftyp_box->add_compatible_brand(heif_brand2_vvic);
-      break;
-
-    case heif_compression_JPEG:
-      m_ftyp_box->set_major_brand(heif_brand2_jpeg);
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(heif_brand2_jpeg);
-      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
-      break;
-
-    case heif_compression_uncompressed:
-      // Not clear what the correct major brand should be
-      m_ftyp_box->set_major_brand(heif_brand2_mif2);
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
-      break;
-
-    case heif_compression_JPEG2000:
-    case heif_compression_HTJ2K:
-      m_ftyp_box->set_major_brand(fourcc("j2ki"));
-      m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
-      m_ftyp_box->add_compatible_brand(fourcc("j2ki"));
-      break;
-
-    default:
-      break;
-  }
-
-  if (miaf_compatible) {
-    m_ftyp_box->add_compatible_brand(heif_brand2_miaf);
-  }
-
-#if 0
-  // Temporarily disabled, pending resolution of
-  // https://github.com/strukturag/libheif/issues/888
-  if (get_num_images() == 1) {
-    // This could be overly conservative, but is safe
-    m_ftyp_box->add_compatible_brand(heif_brand2_1pic);
-  }
-#endif
-}
-
-
-void HeifFile::set_sequence_brand(heif_compression_format format)
-{
-  // TODO
-  m_ftyp_box->set_major_brand(heif_brand2_heic);
-  m_ftyp_box->set_minor_version(0);
-  m_ftyp_box->add_compatible_brand(heif_brand2_msf1);
 }
 
 
@@ -295,6 +213,14 @@ size_t HeifFile::append_mdat_data(const std::vector<uint8_t>& data)
 }
 
 
+void HeifFile::derive_box_versions()
+{
+  for (auto& box : m_top_level_boxes) {
+    box->derive_box_version_recursive();
+  }
+}
+
+
 void HeifFile::write(StreamWriter& writer)
 {
   for (auto& box : m_top_level_boxes) {
@@ -304,7 +230,6 @@ void HeifFile::write(StreamWriter& writer)
       continue;
     }
 #endif
-    box->derive_box_version_recursive();
     Error err = box->write(writer);
     (void)err; // TODO: error ?
   }

@@ -45,6 +45,8 @@ public:
 
   std::shared_ptr<class Encoder> get_encoder() const override;
 
+  heif_brand2 get_compatible_brand() const override;
+
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 

@@ -46,6 +46,8 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_AV1; }
 
+  heif_brand2 get_compatible_brand() const override { return heif_brand2_avif; }
+
   Error on_load_file() override;
 
 protected:

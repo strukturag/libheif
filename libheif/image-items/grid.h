@@ -130,6 +130,8 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
+  heif_brand2 get_compatible_brand() const override;
+
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 

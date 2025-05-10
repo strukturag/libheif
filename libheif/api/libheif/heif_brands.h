@@ -246,6 +246,10 @@ typedef uint32_t heif_brand2;
 */
 #define heif_brand2_1pic   heif_fourcc('1','p','i','c')
 
+// H.264
+#define heif_brand2_avci   heif_fourcc('a','v','c','i')
+#define heif_brand2_avcs   heif_fourcc('a','v','c','s')
+
 // input data should be at least 12 bytes
 LIBHEIF_API
 heif_brand2 heif_read_main_brand(const uint8_t* data, int len);

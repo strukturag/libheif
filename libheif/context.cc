@@ -22,6 +22,7 @@
 #include "error.h"
 #include "libheif/heif.h"
 #include "region.h"
+#include "brands.h"
 #include <cstdint>
 #include <cassert>
 #include <cstring>
@@ -252,6 +253,12 @@ std::shared_ptr<ImageItem> HeifContext::get_primary_image(bool return_error_imag
 }
 
 
+std::shared_ptr<const ImageItem> HeifContext::get_primary_image(bool return_error_image) const
+{
+  return const_cast<HeifContext*>(this)->get_primary_image(return_error_image);
+}
+
+
 bool HeifContext::is_image(heif_item_id ID) const
 {
   return m_all_images.find(ID) != m_all_images.end();
@@ -343,6 +350,29 @@ void HeifContext::write(StreamWriter& writer)
 
   if (auto ipma = m_heif_file->get_ipma_box()) {
     ipma->sort_properties(m_heif_file->get_ipco_box());
+  }
+
+  // --- derive box versions
+
+  m_heif_file->derive_box_versions();
+
+  // --- determine brands
+
+  heif_brand2 main_brand;
+  std::vector<heif_brand2> compatible_brands;
+  compatible_brands = compute_compatible_brands(this, &main_brand);
+
+  // Note: major brand should be repeated in the compatible brands, according to this:
+  //   ISOBMFF (ISO/IEC 14496-12:2020) § K.4:
+  //   NOTE This document requires that the major brand be repeated in the compatible-brands,
+  //   but this requirement is relaxed in the 'profiles' parameter for compactness.
+  // See https://github.com/strukturag/libheif/issues/478
+
+  auto ftyp = m_heif_file->get_ftyp_box();
+  ftyp->set_major_brand(main_brand);
+  ftyp->set_minor_version(0);
+  for (auto brand : compatible_brands) {
+    ftyp->add_compatible_brand(brand);
   }
 
   // --- write to file
@@ -1371,8 +1401,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
   }
   output_image_item->set_properties(properties);
 
-  m_heif_file->set_brand(encoder->plugin->compression_format,
-                         output_image_item->is_miaf_compatible());
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       output_image_item->is_miaf_compatible());
 
   return output_image_item;
 }
@@ -1732,6 +1762,20 @@ Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
   }
 
   return m_tracks.begin()->second;
+}
+
+
+Result<std::shared_ptr<const Track>> HeifContext::get_track(uint32_t track_id) const
+{
+  auto result = const_cast<HeifContext*>(this)->get_track(track_id);
+  if (result.error) {
+    return result.error;
+  }
+  else {
+    Result<std::shared_ptr<const Track>> my_result;
+    my_result.value = result.value;
+    return my_result;
+  }
 }
 
 

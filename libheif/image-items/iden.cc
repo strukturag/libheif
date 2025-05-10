@@ -131,3 +131,9 @@ int ImageItem_iden::get_chroma_bits_per_pixel() const
 
   return image->get_chroma_bits_per_pixel();
 }
+
+heif_brand2 ImageItem_iden::get_compatible_brand() const
+{
+  assert(false);
+  return 0; // TODO (we never write 'iden' images)
+}

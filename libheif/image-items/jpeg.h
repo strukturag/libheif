@@ -42,6 +42,8 @@ public:
 
   Error on_load_file() override;
 
+  heif_brand2 get_compatible_brand() const override;
+
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 

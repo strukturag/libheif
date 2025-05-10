@@ -420,7 +420,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   }
 
   // Set Brands
-  ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
+  //ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
 
   return {unci_image};
 }
@@ -565,4 +565,9 @@ Error ImageItem_uncompressed::on_load_file()
 bool ImageItem_uncompressed::has_coded_alpha_channel() const
 {
   return m_decoder->has_alpha_component();
+}
+
+heif_brand2 ImageItem_uncompressed::get_compatible_brand() const
+{
+  return 0; // TODO: not clear to me what to use
 }
