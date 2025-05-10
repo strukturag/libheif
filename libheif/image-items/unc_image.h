@@ -25,6 +25,7 @@
 #include "pixelimage.h"
 #include "file.h"
 #include "context.h"
+#include "libheif/heif_uncompressed.h"
 
 #include <cstdint>
 #include <string>

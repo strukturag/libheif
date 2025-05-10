@@ -25,6 +25,8 @@
 #include "pixelimage.h"
 #include "file.h"
 #include "context.h"
+#include "libheif/heif_uncompressed.h"
+
 #if WITH_UNCOMPRESSED_CODEC
 #include "unc_boxes.h"
 #endif

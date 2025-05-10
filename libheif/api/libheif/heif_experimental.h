@@ -149,46 +149,6 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                struct heif_image_handle** out_tiled_image_handle);
 #endif
 
-// --- 'unci' images
-
-// This is similar to heif_metadata_compression. We should try to keep the integers compatible, but each enum will just
-// contain the allowed values.
-enum heif_unci_compression
-{
-  heif_unci_compression_off = 0,
-  //heif_unci_compression_auto = 1,
-  //heif_unci_compression_unknown = 2, // only used when reading unknown method from input file
-  heif_unci_compression_deflate = 3,
-  heif_unci_compression_zlib = 4,
-  heif_unci_compression_brotli = 5
-};
-
-
-struct heif_unci_image_parameters {
-  int version;
-
-  // --- version 1
-
-  uint32_t image_width;
-  uint32_t image_height;
-
-  uint32_t tile_width;
-  uint32_t tile_height;
-
-  enum heif_unci_compression compression; // TODO
-
-  // TODO: interleave type, padding
-};
-
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-LIBHEIF_API
-struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
-                                              const struct heif_unci_image_parameters* parameters,
-                                              const struct heif_encoding_options* encoding_options,
-                                              const struct heif_image* prototype,
-                                              struct heif_image_handle** out_unci_image_handle);
-#endif
-
 // --- 'pymd' entity group (pyramid layers)
 
 struct heif_pyramid_layer_info {

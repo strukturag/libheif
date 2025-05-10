@@ -369,35 +369,6 @@ void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info* infos)
 }
 
 
-struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
-                                              const struct heif_unci_image_parameters* parameters,
-                                              const struct heif_encoding_options* encoding_options,
-                                              const heif_image* prototype,
-                                              struct heif_image_handle** out_unci_image_handle)
-{
-#if WITH_UNCOMPRESSED_CODEC
-  Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
-  unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
-
-  if (unciImageResult.error != Error::Ok) {
-    return unciImageResult.error.error_struct(ctx->context.get());
-  }
-
-  if (out_unci_image_handle) {
-    *out_unci_image_handle = new heif_image_handle;
-    (*out_unci_image_handle)->image = unciImageResult.value;
-    (*out_unci_image_handle)->context = ctx->context;
-  }
-
-  return heif_error_success;
-#else
-  return {heif_error_Unsupported_feature,
-          heif_suberror_Unspecified,
-          "support for uncompressed images (ISO23001-17) has been disabled."};
-#endif
-}
-
-
 struct heif_error heif_image_add_channel(struct heif_image* image,
                                          enum heif_channel channel,
                                          int width, int height,
