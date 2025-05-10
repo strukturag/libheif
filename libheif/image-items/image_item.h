@@ -272,7 +272,7 @@ public:
 
   // --- miaf
 
-  // TODO: we should have a function that challs all MIAF constraints and sets the compatibility flag.
+  // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.
   void mark_not_miaf_compatible() { m_miaf_compatible = false; }
 
   bool is_miaf_compatible() const { return m_miaf_compatible; }

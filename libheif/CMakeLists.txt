@@ -60,6 +60,8 @@ set(libheif_sources
         common_utils.h
         region.cc
         region.h
+        brands.cc
+        brands.h
         api/libheif/api_structs.h
         api/libheif/heif.cc
         api/libheif/heif_library.cc

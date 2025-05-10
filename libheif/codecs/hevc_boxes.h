@@ -70,6 +70,8 @@ struct HEVCDecoderConfigurationRecord
   Error parse(BitstreamRange& range, const heif_security_limits* limits);
 
   Error write(StreamWriter& writer) const;
+
+  bool get_general_profile_compatibility_flag(int idx) const;
 };
 
 

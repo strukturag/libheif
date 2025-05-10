@@ -174,6 +174,11 @@ Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
 }
 
 
+bool HEVCDecoderConfigurationRecord::get_general_profile_compatibility_flag(int idx) const
+{
+  return general_profile_compatibility_flags & (UINT32_C(0x80000000) >> idx);
+}
+
 
 Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {

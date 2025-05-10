@@ -153,6 +153,8 @@ public:
 
   std::shared_ptr<Box_grpl> get_grpl_box() const { return m_grpl_box; }
 
+  std::shared_ptr<Box_meta> get_meta_box() const { return m_meta_box; }
+
   std::shared_ptr<Box_EntityToGroup> get_entity_group(heif_entity_group_id id);
 
   Error get_properties(heif_item_id imageID,

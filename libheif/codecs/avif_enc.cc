@@ -89,6 +89,6 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_AVIF::get_sample_descriptio
     }
   }
 
-  assert(false); // no hvcC generated
+  assert(false); // no av1C generated
   return nullptr;
 }
