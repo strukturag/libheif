@@ -27,6 +27,54 @@
 #include <memory>
 
 
+struct heif_unci_image_parameters* heif_unci_image_parameters_alloc()
+{
+  auto* params = new heif_unci_image_parameters();
+
+  params->version = 1;
+
+  // --- version 1
+
+  params->image_width = 0;
+  params->image_height = 0;
+
+  // TODO: should we define that tile size = 0 means no tiling?
+  params->tile_width = 0;
+  params->tile_height = 0;
+
+  params->compression = heif_unci_compression_off;
+
+  return params;
+}
+
+
+void heif_unci_image_parameters_copy(struct heif_unci_image_parameters* dst,
+                                     const struct heif_unci_image_parameters* src)
+{
+  if (src == nullptr || dst == nullptr) {
+    return;
+  }
+
+  int min_version = std::min(src->version, dst->version);
+
+  switch (min_version) {
+    case 1:
+      dst->image_width = src->image_width;
+      dst->image_height = src->image_height;
+      dst->tile_width = src->tile_width;
+      dst->tile_height = src->tile_height;
+      dst->compression = src->compression;
+      break;
+  }
+}
+
+
+void heif_unci_image_parameters_release(struct heif_unci_image_parameters* params)
+{
+  delete params;
+}
+
+
 struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
                                               const struct heif_unci_image_parameters* parameters,
                                               const struct heif_encoding_options* encoding_options,

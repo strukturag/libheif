@@ -283,16 +283,19 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared
 Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std::shared_ptr<HeifPixelImage>& src_image,
                                                                const struct heif_encoding_options& options)
 {
-  heif_unci_image_parameters parameters{};
-  parameters.image_width = src_image->get_width();
-  parameters.image_height = src_image->get_height();
-  parameters.tile_width = parameters.image_width;
-  parameters.tile_height = parameters.image_height;
+  auto parameters = std::unique_ptr<heif_unci_image_parameters,
+                                    void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
+                                                                           heif_unci_image_parameters_release);
+
+  parameters->image_width = src_image->get_width();
+  parameters->image_height = src_image->get_height();
+  parameters->tile_width = parameters->image_width;
+  parameters->tile_height = parameters->image_height;
 
 
   // --- generate configuration property boxes
 
-  Result<unciHeaders> genHeadersResult = generate_headers(src_image, &parameters, &options);
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), &options);
   if (genHeadersResult.error) {
     return genHeadersResult.error;
   }
