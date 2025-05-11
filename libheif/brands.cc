@@ -82,9 +82,12 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
 {
   std::vector<heif_brand2> compatible_brands;
 
-  if (out_main_brand != nullptr) {
-    *out_main_brand = 0;
+  heif_brand2 dummy;
+  if (out_main_brand == nullptr) {
+    out_main_brand = &dummy; // so that we do not have to check for NULL out_main_brand in the following
   }
+
+  *out_main_brand = 0;
 
   // --- "mif" brands
 
@@ -92,6 +95,7 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
 
   if (is_mif1) {
     compatible_brands.push_back(heif_brand2_mif1);
+    *out_main_brand = heif_brand2_mif1;
   }
 
   bool is_structural_image = is_mif1;
@@ -127,8 +131,11 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
 
   // --- main brand is first image brand
 
-  if (!images.empty() && out_main_brand != nullptr) {
-    *out_main_brand = images[0]->get_compatible_brand();
+  if (!images.empty()) {
+    heif_brand2 brand = images[0]->get_compatible_brand();
+    if (brand != 0) {
+      *out_main_brand = brand;
+    }
   }
 
 
@@ -148,17 +155,16 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
     if (track_brand != 0) {
       compatible_brands.push_back(track_brand);
 
-      if (out_main_brand != nullptr && *out_main_brand == 0) {
+      if (*out_main_brand == 0) {
         *out_main_brand = track_brand;
       }
     }
 
     // if we don't have a track brand, use at least the sequence structural brand
-    if (out_main_brand != nullptr && *out_main_brand == 0) {
+    if (*out_main_brand == 0) {
       *out_main_brand = heif_brand2_msf1;
     }
   }
-
 
   return compatible_brands;
 }
