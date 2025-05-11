@@ -500,4 +500,3 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
   return heif_error_success;
 }
 #endif
-

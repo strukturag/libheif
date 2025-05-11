@@ -348,6 +348,13 @@ LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);
 
+// Set the major brand of the file.
+// If this function is not called, the major brand is determined automatically from
+// the image or sequence content.
+LIBHEIF_API
+void heif_context_set_major_brand(struct heif_context* ctx,
+                                  heif_brand2 major_brand);
+
 // Add a compatible brand that is now added automatically by libheif when encoding images (e.g. some application brands like 'geo1').
 LIBHEIF_API
 void heif_context_add_compatible_brand(struct heif_context* ctx,

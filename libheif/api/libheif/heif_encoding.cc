@@ -767,6 +767,15 @@ struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
 }
 
 
+void heif_context_set_major_brand(struct heif_context* ctx,
+                                  heif_brand2 major_brand)
+{
+  auto ftyp = ctx->context->get_heif_file()->get_ftyp_box();
+  ftyp->set_major_brand(major_brand);
+  ftyp->add_compatible_brand(major_brand);
+}
+
+
 void heif_context_add_compatible_brand(struct heif_context* ctx,
                                        heif_brand2 compatible_brand)
 {

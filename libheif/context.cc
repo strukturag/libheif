@@ -371,7 +371,12 @@ void HeifContext::write(StreamWriter& writer)
   // See https://github.com/strukturag/libheif/issues/478
 
   auto ftyp = m_heif_file->get_ftyp_box();
-  ftyp->set_major_brand(main_brand);
+
+  // set major brand if not set manually yet
+  if (ftyp->get_major_brand() == 0) {
+    ftyp->set_major_brand(main_brand);
+  }
+
   ftyp->set_minor_version(0);
   for (auto brand : compatible_brands) {
     ftyp->add_compatible_brand(brand);
