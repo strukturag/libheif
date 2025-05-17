@@ -902,6 +902,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     }
   }
 #endif
+#if WITH_UNCOMPRESSED_CODEC
   else if (tiling_method == "unci") {
     heif_unci_image_parameters params{};
     params.version = 1;
@@ -919,6 +920,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       return nullptr;
     }
   }
+#endif
   else {
     assert(false);
     exit(10);
@@ -1094,7 +1096,9 @@ int main(int argc, char** argv)
       case OPTION_TILING_METHOD:
         tiling_method = optarg;
         if (tiling_method != "grid"
+#if WITH_UNCOMPRESSED_CODEC
             && tiling_method != "unci"
+#endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             && tiling_method != "tili"
 #endif
