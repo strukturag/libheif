@@ -80,6 +80,8 @@ public:
 
   ImageItem_Grid(HeifContext* ctx);
 
+  ~ImageItem_Grid() override;
+
   uint32_t get_infe_type() const override { return fourcc("grid"); }
 
   static Result<std::shared_ptr<ImageItem_Grid>> add_new_grid_item(HeifContext* ctx,
@@ -113,10 +115,10 @@ public:
   int get_chroma_bits_per_pixel() const override;
 
   void set_encoding_options(const heif_encoding_options* options) {
-    m_encoding_options = *options;
+    heif_encoding_options_copy(m_encoding_options, options);
   }
 
-  const heif_encoding_options* get_encoding_options() const { return &m_encoding_options; }
+  const heif_encoding_options* get_encoding_options() const { return m_encoding_options; }
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                          struct heif_encoder* encoder,
@@ -155,7 +157,7 @@ private:
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;
 
-  heif_encoding_options m_encoding_options;
+  heif_encoding_options* m_encoding_options = nullptr;
 
   Error read_grid_spec();
 
