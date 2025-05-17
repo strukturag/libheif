@@ -261,8 +261,17 @@ void show_help(const char* argv0)
             << "  --tiled-image-height #    override image height of tiled image\n"
             << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
             << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES || WITH_UNCOMPRESSED_CODEC
+            << "  --tiling-method METHOD    choose one of these methods: grid"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
+               ", tili"
+#endif
+#if WITH_UNCOMPRESSED_CODEC
+               ", unci"
+#endif
+               ". The default is 'grid'.\n"
+#endif
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
             << "\n"
             << "sequences:\n"
@@ -892,6 +901,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       return nullptr;
     }
   }
+#endif
   else if (tiling_method == "unci") {
     heif_unci_image_parameters params{};
     params.version = 1;
@@ -903,13 +913,12 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 
     InputImage prototype_image = tile_generator->get_image(0,0, output_bit_depth);
 
-    heif_error error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
+    heif_error error = heif_context_add_empty_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
     if (error.code != 0) {
       std::cerr << "Could not generate unci image: " << error.message << "\n";
       return nullptr;
     }
   }
-#endif
   else {
     assert(false);
     exit(10);
@@ -1085,8 +1094,9 @@ int main(int argc, char** argv)
       case OPTION_TILING_METHOD:
         tiling_method = optarg;
         if (tiling_method != "grid"
+            && tiling_method != "unci"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            && tiling_method != "tili" && tiling_method != "unci"
+            && tiling_method != "tili"
 #endif
           ) {
           std::cerr << "Invalid tiling method '" << tiling_method << "'\n";

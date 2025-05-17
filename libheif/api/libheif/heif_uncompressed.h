@@ -78,7 +78,7 @@ void heif_unci_image_parameters_release(struct heif_unci_image_parameters*);
 
 /*
  * This adds an empty iso23001-17 (uncompressed) image to the HEIF file.
- * The actual image data is addded later using heif_context_add_image_tile().
+ * The actual image data is added later using heif_context_add_image_tile().
  * If you do not need tiling, you can use heif_context_encode_image() instead.
  * However, this will by default disable any compression and any control about
  * the data layout.
@@ -95,11 +95,11 @@ void heif_unci_image_parameters_release(struct heif_unci_image_parameters*);
  *         If ISO23001-17 images are not supported, returns heif_error_Unsupported_feature.
  */
 LIBHEIF_API
-struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
-                                              const struct heif_unci_image_parameters* parameters,
-                                              const struct heif_encoding_options* encoding_options,
-                                              const struct heif_image* prototype,
-                                              struct heif_image_handle** out_unci_image_handle);
+struct heif_error heif_context_add_empty_unci_image(struct heif_context* ctx,
+                                                    const struct heif_unci_image_parameters* parameters,
+                                                    const struct heif_encoding_options* encoding_options,
+                                                    const struct heif_image* prototype,
+                                                    struct heif_image_handle** out_unci_image_handle);
 
 #ifdef __cplusplus
 }

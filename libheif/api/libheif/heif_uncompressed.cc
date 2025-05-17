@@ -76,11 +76,11 @@ void heif_unci_image_parameters_release(struct heif_unci_image_parameters* param
 }
 
 
-struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
-                                              const struct heif_unci_image_parameters* parameters,
-                                              const struct heif_encoding_options* encoding_options,
-                                              const heif_image* prototype,
-                                              struct heif_image_handle** out_unci_image_handle)
+struct heif_error heif_context_add_empty_unci_image(struct heif_context* ctx,
+                                                    const struct heif_unci_image_parameters* parameters,
+                                                    const struct heif_encoding_options* encoding_options,
+                                                    const heif_image* prototype,
+                                                    struct heif_image_handle** out_unci_image_handle)
 {
 #if WITH_UNCOMPRESSED_CODEC
   if (prototype == nullptr) {
