@@ -30,6 +30,7 @@
 #include <iomanip>
 #include <string>
 #include <utility>
+#include <algorithm>
 #include <libheif/api_structs.h>
 
 
