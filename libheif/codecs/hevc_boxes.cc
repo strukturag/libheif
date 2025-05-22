@@ -320,8 +320,57 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
   nal.resize(size);
   memcpy(nal.data(), data, size);
 
+  for (auto& nal_array : m_configuration.m_nal_array) {
+    if (nal_array.m_NAL_unit_type == uint8_t(nal[0] >> 1)) {
+
+      // kvazaar may send the same headers multiple times. Filter out the identical copies.
+
+      for (auto& nal_unit : nal_array.m_nal_units) {
+
+        // Note: sometimes kvazaar even sends the same packet twice, but with an extra zero byte.
+        //       We detect this by comparing only the common length. This is correct since each NAL
+        //       packet must be complete and thus, if a packet is longer than another complete packet,
+        //       its extra data must be superfluous.
+        //
+        // Example:
+        //| | | <array>
+        //| | | | array_completeness: 1
+        //| | | | NAL_unit_type: 34
+        //| | | | 44 01 c1 71 82 99 20 00
+        //| | | | 44 01 c1 71 82 99 20
+
+        // Check whether packets have similar content.
+
+        size_t common_length = std::min(nal_unit.size(), nal.size());
+        bool similar = true;
+        for (size_t i = 0; i < common_length; i++) {
+          if (nal_unit[i] != nal[i]) {
+            similar = false;
+            break;
+          }
+        }
+
+        if (similar) {
+          // If they are similar, keep the smaller one.
+
+          if (nal_unit.size() > nal.size()) {
+            nal_unit = nal;
+          }
+
+          // Exit. Do not add a copy of the packet.
+
+          return;
+        }
+      }
+
+      nal_array.m_nal_units.push_back(std::move(nal));
+
+      return;
+    }
+  }
+
   HEVCDecoderConfigurationRecord::NalArray array;
-  array.m_array_completeness = 0;
+  array.m_array_completeness = 1;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
   array.m_nal_units.push_back(std::move(nal));
 
