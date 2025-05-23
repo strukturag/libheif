@@ -306,7 +306,6 @@ void heif_track_info_release(struct heif_track_info* info)
 {
   if (info) {
     heif_tai_clock_info_release(info->tai_clock_info);
-    delete[] info->gimi_track_content_id;
 
     delete info;
   }
