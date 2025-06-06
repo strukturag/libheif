@@ -139,7 +139,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("width", width);
   int height = heif_image_handle_get_height(handle);
   result.set("height", height);
-  std::basic_string<unsigned char> data;
+  std::string data;
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
   switch (heif_image_get_colorspace(image)) {
@@ -202,7 +202,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("data", std::move(data));
 
   if (heif_image_has_channel(image, heif_channel_Alpha)) {
-    std::basic_string<unsigned char> alpha;
+    std::string alpha;
     size_t stride_alpha;
     const uint8_t* plane_alpha = heif_image_get_plane_readonly2(image, heif_channel_Alpha, &stride_alpha);
     alpha.resize(width * height);
