@@ -95,8 +95,6 @@ HeifPixelImage::~HeifPixelImage()
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
   }
-
-  heif_tai_timestamp_packet_release(m_tai_timestamp);
 }
 
 
@@ -209,7 +207,7 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
     bit_depth = 8;
   }
 
-  if (auto err = plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels, limits, m_memory_handle)) {
+  if (auto err = plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels, limits)) {
     return err;
   }
   else {
@@ -223,7 +221,7 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
                                   const heif_security_limits* limits)
 {
   ImagePlane plane;
-  if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
+  if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits)) {
     return err;
   }
   else {
@@ -235,17 +233,10 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
 
 Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                         int num_interleaved_components,
-                                        const heif_security_limits* limits,
-                                        MemoryHandle& memory_handle)
+                                        const heif_security_limits* limits)
 {
   assert(bit_depth >= 1);
   assert(bit_depth <= 128);
-
-  if (width == 0 || height == 0) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "Invalid image size"};
-  }
 
   // use 16 byte alignment (enough for 128 bit data-types). Every row is an integer number of data-elements.
   uint16_t alignment = 16; // must be power of two
@@ -271,51 +262,43 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
 
   assert(alignment>=1);
 
-  if (limits &&
-      limits->max_image_size_pixels &&
-      limits->max_image_size_pixels / height < width) {
+  size_t allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
 
+  if (limits &&
+      limits->max_memory_block_size &&
+      (limits->max_memory_block_size < alignment - 1U ||
+       (limits->max_memory_block_size - (alignment - 1U)) / stride < m_mem_height)) {
     std::stringstream sstr;
-    sstr << "Allocating an image of size " << width << "x" << height << " exceeds the security limit of "
-         << limits->max_image_size_pixels << " pixels";
+    sstr << "Allocating " << allocation_size << " bytes exceeds the security limit of "
+         << limits->max_memory_block_size << " bytes";
 
     return {heif_error_Memory_allocation_error,
             heif_suberror_Security_limit_exceeded,
             sstr.str()};
   }
-
-  allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
-
-  if (auto err = memory_handle.alloc(allocation_size, limits, "image data")) {
-    return err;
-  }
-
-  try {
-    // --- allocate memory
-
-    allocated_mem = new uint8_t[allocation_size];
-    uint8_t* mem_8 = allocated_mem;
-
-    // shift beginning of image data to aligned memory position
-
-    auto mem_start_addr = (uint64_t) mem_8;
-    auto mem_start_offset = (mem_start_addr & (alignment - 1U));
-    if (mem_start_offset != 0) {
-      mem_8 += alignment - mem_start_offset;
-    }
-
-    mem = mem_8;
-
-    return Error::Ok;
-  }
-  catch (const std::bad_alloc& excpt) {
+  allocated_mem = new (std::nothrow) uint8_t[allocation_size];
+  if (allocated_mem == nullptr) {
     std::stringstream sstr;
-    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes failed";
+    sstr << "Allocating " << allocation_size << " bytes failed";
 
     return {heif_error_Memory_allocation_error,
             heif_suberror_Unspecified,
             sstr.str()};
   }
+
+  uint8_t* mem_8 = allocated_mem;
+
+  // shift beginning of image data to aligned memory position
+
+  auto mem_start_addr = (uint64_t) mem_8;
+  auto mem_start_offset = (mem_start_addr & (alignment - 1U));
+  if (mem_start_offset != 0) {
+    mem_8 += alignment - mem_start_offset;
+  }
+
+  mem = mem_8;
+
+  return Error::Ok;
 }
 
 
@@ -340,7 +323,7 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
       ImagePlane newPlane;
       if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth,
                                     num_interleaved_pixels_per_plane(m_chroma),
-                                    limits, m_memory_handle))
+                                    limits))
       {
         return err;
       }
@@ -416,7 +399,7 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
         plane->m_mem_height < subsampled_height) {
 
       ImagePlane newPlane;
-      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma), limits, m_memory_handle)) {
+      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma), limits)) {
         return err;
       }
 
@@ -713,7 +696,9 @@ void HeifPixelImage::fill_plane(heif_channel dst_channel, uint16_t value)
   else {
     uint16_t* dst;
     size_t dst_stride = 0;
-    dst = get_channel<uint16_t>(dst_channel, &dst_stride);
+    dst = (uint16_t*) get_plane(dst_channel, &dst_stride);
+
+    dst_stride /= 2;
 
     for (uint32_t y = 0; y < height; y++) {
       for (uint32_t x = 0; x < width * num_interleaved; x++) {
@@ -732,14 +717,8 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
 
   ImagePlane plane = source->m_planes[src_channel];
   source->m_planes.erase(src_channel);
-  source->m_memory_handle.free(plane.allocation_size);
 
   m_planes.insert(std::make_pair(dst_channel, plane));
-
-  // Note: we assume that image planes are never transferred between heif_contexts
-  m_memory_handle.alloc(plane.allocation_size,
-                        source->m_memory_handle.get_security_limits(),
-                        "transferred image data");
 }
 
 
@@ -847,7 +826,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, limits);
     if (converted_image_result.error) {
       return converted_image_result.error;
     }
@@ -1003,7 +982,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, limits);
     if (converted_image_result.error) {
       return converted_image_result.error;
     }
@@ -1083,7 +1062,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, limits);
     if (converted_image_result.error) {
       return converted_image_result.error;
     }
@@ -1271,8 +1250,11 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
     uint32_t out_w = get_width(channel);
     uint32_t out_h = get_height(channel);
 
-
-    // --- check whether overlay image overlaps with current image
+    // top-left points where to start copying in source and destination
+    uint32_t in_x0;
+    uint32_t in_y0;
+    uint32_t out_x0;
+    uint32_t out_y0;
 
     if (dx > 0 && static_cast<uint32_t>(dx) >= out_w) {
       // the overlay image is completely outside the right border -> skip overlaying
@@ -1283,43 +1265,8 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       return Error::Ok;
     }
 
-    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
-      // the overlay image is completely outside the bottom border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
-      // the overlay image is completely outside the top border -> skip overlaying
-      return Error::Ok;
-    }
-
-
-    // --- compute overlapping area
-
-    // top-left points where to start copying in source and destination
-    uint32_t in_x0;
-    uint32_t in_y0;
-    uint32_t out_x0;
-    uint32_t out_y0;
-
-    // right border
-    if (dx + static_cast<int64_t>(in_w) > out_w) {
-      // overlay image extends partially outside of right border
-      // Notes:
-      // - (out_w-dx) cannot underflow because dx<out_w is ensured above
-      // - (out_w-dx) cannot overflow (for dx<0) because, as just checked, out_w-dx < in_w
-      //              and in_w fits into uint32_t
-      in_w = static_cast<uint32_t>(static_cast<int64_t>(out_w) - dx);
-    }
-
-    // bottom border
-    if (dy + static_cast<int64_t>(in_h) > out_h) {
-      // overlay image extends partially outside of bottom border
-      in_h = static_cast<uint32_t>(static_cast<int64_t>(out_h) - dy);
-    }
-
-    // left border
     if (dx < 0) {
-      // overlay image starts partially outside of left border
+      // overlay image started partially outside of left border
 
       in_x0 = negate_negative_int32(dx);
       out_x0 = 0;
@@ -1330,7 +1277,25 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       out_x0 = static_cast<uint32_t>(dx);
     }
 
-    // top border
+    // we know that dx >= 0 && dx < out_w
+
+    if (static_cast<uint32_t>(dx) > UINT32_MAX - in_w ||
+        dx + in_w > out_w) {
+      // overlay image extends partially outside of right border
+
+      in_w = out_w - static_cast<uint32_t>(dx); // we know that dx < out_w from first condition
+    }
+
+
+    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
+      // the overlay image is completely outside the bottom border -> skip overlaying
+      return Error::Ok;
+    }
+    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
+      // the overlay image is completely outside the top border -> skip overlaying
+      return Error::Ok;
+    }
+
     if (dy < 0) {
       // overlay image started partially outside of top border
 
@@ -1343,7 +1308,15 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       out_y0 = static_cast<uint32_t>(dy);
     }
 
-    // --- computer overlay in overlapping area
+    // we know that dy >= 0 && dy < out_h
+
+    if (static_cast<uint32_t>(dy) > UINT32_MAX - in_h ||
+        dy + in_h > out_h) {
+      // overlay image extends partially outside of bottom border
+
+      in_h = out_h - static_cast<uint32_t>(dy); // we know that dy < out_h from first condition
+    }
+
 
     for (uint32_t y = in_y0; y < in_h; y++) {
       if (!has_alpha) {
@@ -1446,49 +1419,46 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
+    const int bpp = get_storage_bits_per_pixel(channel) / 8;
+
     if (!out_img->has_channel(channel)) {
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
     }
 
 
+    if (plane.m_bit_depth != 8) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unspecified,
+              "Can currently only crop images with 8 bits per pixel"};
+    }
+
     uint32_t out_w = out_img->get_width(channel);
     uint32_t out_h = out_img->get_height(channel);
 
-    if (plane.m_bit_depth <= 8) {
-      size_t in_stride = plane.stride;
-      const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+    size_t in_stride = plane.stride;
+    const auto* in_data = static_cast<const uint8_t*>(plane.mem);
 
-      size_t out_stride = 0;
-      auto* out_data = out_img->get_plane(channel, &out_stride);
+    size_t out_stride = 0;
+    auto* out_data = static_cast<uint8_t*>(out_img->get_plane(channel, &out_stride));
 
-      for (uint32_t y = 0; y < out_h; y++) {
-        uint32_t iy = y * m_height / height;
 
+    for (uint32_t y = 0; y < out_h; y++) {
+      uint32_t iy = y * m_height / height;
+
+      if (bpp == 1) {
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
           out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
         }
       }
-    }
-    else {
-      // HDR
-
-      size_t in_stride = plane.stride;
-      const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
-
-      size_t out_stride = 0;
-      uint16_t* out_data = out_img->get_channel<uint16_t>(channel, &out_stride);
-
-      in_stride /= 2;
-
-      for (uint32_t y = 0; y < out_h; y++) {
-        uint32_t iy = y * m_height / height;
-
+      else {
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
-          out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
+          for (int b = 0; b < bpp; b++) {
+            out_data[y * out_stride + bpp * x + b] = in_data[iy * in_stride + bpp * ix + b];
+          }
         }
       }
     }
