@@ -290,25 +290,10 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
     return err;
   }
 
-  try {
     // --- allocate memory
 
-    allocated_mem = new uint8_t[allocation_size];
-    uint8_t* mem_8 = allocated_mem;
-
-    // shift beginning of image data to aligned memory position
-
-    auto mem_start_addr = (uint64_t) mem_8;
-    auto mem_start_offset = (mem_start_addr & (alignment - 1U));
-    if (mem_start_offset != 0) {
-      mem_8 += alignment - mem_start_offset;
-    }
-
-    mem = mem_8;
-
-    return Error::Ok;
-  }
-  catch (const std::bad_alloc& excpt) {
+  allocated_mem = new (std::nothrow) uint8_t[allocation_size];
+  if (allocated_mem == nullptr) {
     std::stringstream sstr;
     sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes failed";
 
@@ -316,6 +301,20 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
             heif_suberror_Unspecified,
             sstr.str()};
   }
+
+  uint8_t* mem_8 = allocated_mem;
+
+  // shift beginning of image data to aligned memory position
+
+  auto mem_start_addr = (uint64_t) mem_8;
+  auto mem_start_offset = (mem_start_addr & (alignment - 1U));
+  if (mem_start_offset != 0) {
+    mem_8 += alignment - mem_start_offset;
+  }
+
+  mem = mem_8;
+
+  return Error::Ok;
 }
 
 
