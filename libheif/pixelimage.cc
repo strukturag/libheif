@@ -295,7 +295,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
   allocated_mem = new (std::nothrow) uint8_t[allocation_size];
   if (allocated_mem == nullptr) {
     std::stringstream sstr;
-    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes failed";
+    sstr << "Allocating " << allocation_size << " bytes failed";
 
     return {heif_error_Memory_allocation_error,
             heif_suberror_Unspecified,
