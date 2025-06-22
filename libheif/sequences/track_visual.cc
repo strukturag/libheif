@@ -60,7 +60,7 @@ Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& tr
 
 
 Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
-                           heif_track_info* info, uint32_t handler_type)
+                           TrackInfo* info, uint32_t handler_type)
     : Track(ctx, track_id, info, handler_type)
 {
   m_tkhd->set_resolution(width, height);

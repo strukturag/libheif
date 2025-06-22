@@ -764,7 +764,7 @@ int main(int argc, char** argv)
     uint64_t duration = heif_context_get_sequence_duration(context);
     std::cout << "sequence duration: " << ((double)duration)/(double)timescale << " seconds\n";
 
-              //    heif_track_info
+              //    TrackInfo
 
     std::vector<uint32_t> track_ids(nTracks);
 

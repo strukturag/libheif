@@ -29,7 +29,7 @@
 #include <limits>
 
 
-heif_track_info& heif_track_info::operator=(const heif_track_info& src)
+TrackInfo& TrackInfo::operator=(const TrackInfo& src)
 {
   if (&src == this) {
     return *this;
@@ -334,7 +334,7 @@ Track::~Track()
 }
 
 
-Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_t handler_type)
+Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t handler_type)
 {
   m_heif_context = ctx;
 

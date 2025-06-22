@@ -286,7 +286,7 @@ void heif_context_set_sequence_timescale(heif_context* ctx, uint32_t timescale)
 
 
 struct heif_track_builder {
-  heif_track_info info;
+  TrackInfo info;
 };
 
 
@@ -366,8 +366,8 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
             "visual track has to be of type video or image sequence"};
   }
 
-  heif_track_info default_track_info;
-  heif_track_info* track_info = &default_track_info;
+  TrackInfo default_track_info;
+  TrackInfo* track_info = &default_track_info;
   if (builder != nullptr) {
     track_info = &builder->info;
   }
@@ -447,8 +447,8 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx
                                                                const char* uri,
                                                                heif_track** out_track)
 {
-  struct heif_track_info default_track_info;
-  struct heif_track_info* track_info = &default_track_info;
+  struct TrackInfo default_track_info;
+  struct TrackInfo* track_info = &default_track_info;
   if (builder != nullptr) {
     track_info = &builder->info;
   }

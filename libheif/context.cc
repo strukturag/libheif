@@ -1827,7 +1827,7 @@ uint64_t HeifContext::get_sequence_duration() const
 }
 
 
-Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(heif_track_info* info,
+Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(TrackInfo* info,
                                                                              uint32_t handler_type,
                                                                              uint16_t width, uint16_t height)
 {
@@ -1840,7 +1840,7 @@ Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(hei
 }
 
 
-Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequence_track(heif_track_info* info,
+Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequence_track(TrackInfo* info,
                                                                                            std::string uri)
 {
   m_heif_file->init_for_sequence();
