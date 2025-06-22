@@ -285,36 +285,75 @@ void heif_context_set_sequence_timescale(heif_context* ctx, uint32_t timescale)
 }
 
 
-heif_track_info* heif_track_info_alloc()
+struct heif_track_builder {
+  heif_track_info info;
+};
+
+
+heif_track_builder* heif_track_builder_alloc()
 {
-  auto* info = new heif_track_info;
-  info->version = 1;
-
-  info->track_timescale = 90000;
-  info->write_aux_info_interleaved = false;
-  info->with_tai_timestamps = heif_sample_aux_info_presence_none;
-  info->tai_clock_info = nullptr;
-  info->with_sample_content_ids = heif_sample_aux_info_presence_none;
-  info->with_gimi_track_content_id = false;
-  info->gimi_track_content_id = nullptr;
-
-  return info;
+  return new heif_track_builder;
 }
 
 
-void heif_track_info_release(struct heif_track_info* info)
+void heif_track_builder_release(struct heif_track_builder* builder)
 {
-  if (info) {
-    heif_tai_clock_info_release(info->tai_clock_info);
-    delete[] info->gimi_track_content_id;
+  delete builder;
+}
 
-    delete info;
+
+void heif_track_builder_set_timescale(struct heif_track_builder* builder, uint32_t timescale)
+{
+  builder->info.track_timescale = timescale;
+}
+
+
+void heif_track_builder_set_interleaved_aux_info(struct heif_track_builder* builder, int interleaved_flag)
+{
+  builder->info.write_aux_info_interleaved = (interleaved_flag != 0);
+}
+
+
+struct heif_error heif_track_builder_enable_tai_timestamps(struct heif_track_builder* builder,
+                                                           struct heif_tai_clock_info* tai_info,
+                                                           enum heif_sample_aux_info_presence presence)
+{
+  builder->info.with_tai_timestamps = presence;
+  builder->info.tai_clock_info = tai_info;
+
+  if (presence != heif_sample_aux_info_presence_none &&
+      tai_info == nullptr) {
+    return heif_error(heif_error_Usage_error,
+                      heif_suberror_Unspecified,
+                      "NULL tai clock info passed for track with TAI timestamps");
   }
+
+  return heif_error_ok;
 }
 
 
-struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
-                                                         struct heif_track_info* info,
+void heif_track_builder_enable_gimi_content_ids(struct heif_track_builder* builder,
+                                                enum heif_sample_aux_info_presence presence)
+{
+  builder->info.with_sample_content_ids = presence;
+}
+
+
+void heif_track_builder_set_gimi_track_id(struct heif_track_builder* builder,
+                                          const char* track_id)
+{
+  if (track_id == nullptr) {
+    builder->info.gimi_track_content_id.clear();
+    return;
+  }
+
+  builder->info.gimi_track_content_id = track_id;
+}
+
+
+struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
+                                                         struct heif_track_builder* builder,
+                                                         uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
                                                          const struct heif_encoding_options* options,
                                                          const struct heif_sequence_encoding_options* seq_options,
@@ -327,7 +366,13 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint
             "visual track has to be of type video or image sequence"};
   }
 
-  Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(info, track_type, width,height);
+  heif_track_info default_track_info;
+  heif_track_info* track_info = &default_track_info;
+  if (builder != nullptr) {
+    track_info = &builder->info;
+  }
+
+  Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(track_info, track_type, width,height);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }
@@ -397,11 +442,18 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 }
 
 
-struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx, struct heif_track_info* info,
+struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx,
+                                                               struct heif_track_builder* builder,
                                                                const char* uri,
                                                                heif_track** out_track)
 {
-  Result<std::shared_ptr<Track_Metadata>> addResult = ctx->context->add_uri_metadata_sequence_track(info, uri);
+  struct heif_track_info default_track_info;
+  struct heif_track_info* track_info = &default_track_info;
+  if (builder != nullptr) {
+    track_info = &builder->info;
+  }
+
+  Result<std::shared_ptr<Track_Metadata>> addResult = ctx->context->add_uri_metadata_sequence_track(track_info, uri);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }
@@ -484,13 +536,13 @@ void heif_track_get_sample_aux_info_types(struct heif_track* track, struct heif_
 
 const char* heif_track_get_gimi_track_content_id(const heif_track* track)
 {
-  const char* contentId = track->track->get_track_info()->gimi_track_content_id;
-  if (!contentId) {
+  std::string contentId = track->track->get_track_info().gimi_track_content_id;
+  if (contentId.empty()) {
     return nullptr;
   }
 
-  char* id = new char[strlen(contentId) + 1];
-  strcpy(id, contentId);
+  char* id = new char[contentId.length() + 1];
+  strcpy(id, contentId.c_str());
 
   return id;
 }

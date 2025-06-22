@@ -29,30 +29,28 @@
 #include <limits>
 
 
-void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
+heif_track_info& heif_track_info::operator=(const heif_track_info& src)
 {
-  if (src->version >= 1 && dst->version >= 1) {
-    dst->track_timescale = src->track_timescale;
-    dst->write_aux_info_interleaved = src->write_aux_info_interleaved;
-    dst->with_tai_timestamps = src->with_tai_timestamps;
-
-    if (src->tai_clock_info) {
-      dst->tai_clock_info = heif_tai_clock_info_alloc();
-      heif_tai_clock_info_copy(dst->tai_clock_info, src->tai_clock_info);
-    }
-
-    dst->with_sample_content_ids = src->with_sample_content_ids;
-
-    dst->with_gimi_track_content_id = src->with_gimi_track_content_id;
-    if (src->with_gimi_track_content_id && src->gimi_track_content_id) {
-      char* dst_id = new char[strlen(src->gimi_track_content_id) + 1];
-      strcpy(dst_id, src->gimi_track_content_id);
-      dst->gimi_track_content_id = dst_id;
-    }
-    else {
-      dst->gimi_track_content_id = nullptr;
-    }
+  if (&src == this) {
+    return *this;
   }
+
+  this->track_timescale = src.track_timescale;
+  this->write_aux_info_interleaved = src.write_aux_info_interleaved;
+  this->with_tai_timestamps = src.with_tai_timestamps;
+
+  if (src.tai_clock_info) {
+    this->tai_clock_info = heif_tai_clock_info_alloc();
+    heif_tai_clock_info_copy(this->tai_clock_info, src.tai_clock_info);
+  }
+  else {
+    this->tai_clock_info = nullptr;
+  }
+
+  this->with_sample_content_ids = src.with_sample_content_ids;
+  this->gimi_track_content_id = src.gimi_track_content_id;
+
+  return *this;
 }
 
 
@@ -303,8 +301,6 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
   // --- read track properties
 
-  m_track_info = heif_track_info_alloc();
-
   if (auto meta = trak_box->get_child_box<Box_meta>()) {
     auto iloc = meta->get_child_box<Box_iloc>();
     auto idat = meta->get_child_box<Box_idat>();
@@ -326,9 +322,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
           // TODO
         }
 
-        char* track_contentID = new char[contentIdResult.value.length() + 1];
-        strcpy(track_contentID, contentIdResult.value.c_str());
-        m_track_info->gimi_track_content_id = track_contentID;
+        m_track_info.gimi_track_content_id = contentIdResult.value;
       }
     }
   }
@@ -337,7 +331,6 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
 Track::~Track()
 {
-  delete m_track_info;
 }
 
 
@@ -413,20 +406,19 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
   m_stbl->append_child_box(m_stss);
 
   if (info) {
-    m_track_info = heif_track_info_alloc();
-    heif_track_info_copy(m_track_info, info);
+    m_track_info = *info;
 
-    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
+    if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
+      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_aux_info_interleaved);
       m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
 
-    if (m_track_info->with_sample_content_ids != heif_sample_aux_info_presence_none) {
-      m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
+    if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
+      m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_aux_info_interleaved);
       m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
     }
 
-    if (info->with_gimi_track_content_id) {
+    if (!info->gimi_track_content_id.empty()) {
       auto hdlr_box = std::make_shared<Box_hdlr>();
       hdlr_box->set_handler_type(fourcc("meta"));
 
@@ -437,8 +429,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
 
       std::vector<uint8_t> track_uuid_vector;
       track_uuid_vector.insert(track_uuid_vector.begin(),
-                               info->gimi_track_content_id,
-                               info->gimi_track_content_id + strlen(info->gimi_track_content_id) + 1);
+                               info->gimi_track_content_id.c_str(),
+                               info->gimi_track_content_id.c_str() + info->gimi_track_content_id.length() + 1);
 
       auto iloc_box = std::make_shared<Box_iloc>();
       iloc_box->append_data(1, track_uuid_vector, 1);
@@ -568,9 +560,9 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 {
   // --- add 'taic' when we store timestamps as sample auxiliary information
 
-  if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+  if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
     auto taic = std::make_shared<Box_taic>();
-    taic->set_from_tai_clock_info(m_track_info->tai_clock_info);
+    taic->set_from_tai_clock_info(m_track_info.tai_clock_info);
     sample_description_box->append_child_box(taic);
   }
 
@@ -608,25 +600,25 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
 
   // --- sample timestamp
 
-  if (m_track_info) {
-    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      if (tai) {
-        std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
-        auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
-        if (err) {
-          return err;
-        }
-      } else if (m_track_info->with_tai_timestamps == heif_sample_aux_info_presence_optional) {
-        m_aux_helper_tai_timestamps->add_nonpresent_sample();
-      } else {
-        return {heif_error_Encoding_error,
-                heif_suberror_Unspecified,
-                "Mandatory TAI timestamp missing"};
+  if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
+    if (tai) {
+      std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
+      auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
+      if (err) {
+        return err;
       }
+    }
+    else if (m_track_info.with_tai_timestamps == heif_sample_aux_info_presence_optional) {
+      m_aux_helper_tai_timestamps->add_nonpresent_sample();
+    }
+    else {
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              "Mandatory TAI timestamp missing"};
     }
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-    if (m_track_info->with_sample_content_ids != heif_sample_aux_info_presence_none) {
+    if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
       if (!gimi_contentID.empty()) {
         auto id = gimi_contentID;
         const char* id_str = id.c_str();
@@ -636,7 +628,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
         if (err) {
           return err;
         }
-      } else if (m_track_info->with_sample_content_ids == heif_sample_aux_info_presence_optional) {
+      } else if (m_track_info.with_sample_content_ids == heif_sample_aux_info_presence_optional) {
         m_aux_helper_content_ids->add_nonpresent_sample();
       } else {
         return {heif_error_Encoding_error,

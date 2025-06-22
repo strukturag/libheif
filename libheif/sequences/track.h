@@ -82,6 +82,43 @@ private:
 };
 
 
+/**
+ * This structure specifies what will be written in a track and how it will be laid out in the file.
+ */
+struct heif_track_info
+{
+  ~heif_track_info()
+  {
+    heif_tai_clock_info_release(tai_clock_info);
+  }
+
+  // Timescale (clock ticks per second) for this track.
+  uint32_t track_timescale = 90000;
+
+  // If 'true', the aux_info data blocks will be interleaved with the compressed image.
+  // This has the advantage that the aux_info is localized near the image data.
+  //
+  // If 'false', all aux_info will be written as one block after the compressed image data.
+  // This has the advantage that no aux_info offsets have to be written.
+  bool write_aux_info_interleaved = false;
+
+
+  // --- TAI timestamps for samples
+  enum heif_sample_aux_info_presence with_tai_timestamps = heif_sample_aux_info_presence_none;
+  struct heif_tai_clock_info* tai_clock_info = nullptr;
+
+  // --- GIMI content IDs for samples
+
+  enum heif_sample_aux_info_presence with_sample_content_ids = heif_sample_aux_info_presence_none;
+
+  // --- GIMI content ID for the track
+
+  std::string gimi_track_content_id;
+
+  heif_track_info& operator=(const heif_track_info&);
+};
+
+
 class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
@@ -121,7 +158,7 @@ public:
   // Compute some parameters after all frames have been encoded (for example: track duration).
   void finalize_track();
 
-  const heif_track_info* get_track_info() const { return m_track_info; }
+  const heif_track_info& get_track_info() const { return m_track_info; }
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
@@ -136,7 +173,7 @@ protected:
   uint32_t m_id = 0;
   uint32_t m_handler_type = 0;
 
-  heif_track_info* m_track_info = nullptr;
+  heif_track_info m_track_info;
 
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
