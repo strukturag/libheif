@@ -127,7 +127,7 @@ public:
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 
-  virtual ~Track();
+  virtual ~Track() = default;
 
   // Allocate a Track of the correct sub-class (visual or metadata)
   static std::shared_ptr<Track> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
