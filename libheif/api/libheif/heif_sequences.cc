@@ -323,9 +323,9 @@ struct heif_error heif_track_builder_enable_tai_timestamps(struct heif_track_bui
 
   if (presence != heif_sample_aux_info_presence_none &&
       tai_info == nullptr) {
-    return heif_error(heif_error_Usage_error,
-                      heif_suberror_Unspecified,
-                      "NULL tai clock info passed for track with TAI timestamps");
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "NULL tai clock info passed for track with TAI timestamps"};
   }
 
   return heif_error_ok;
