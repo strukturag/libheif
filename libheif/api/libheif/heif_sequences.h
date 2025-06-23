@@ -329,7 +329,7 @@ struct heif_sequence_encoding_options;
  */
 LIBHEIF_API
 struct heif_error heif_context_add_visual_sequence_track(heif_context*,
-                                                         struct heif_track_builder* builer,
+                                                         struct heif_track_builder* builder,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
                                                          const struct heif_encoding_options* options,
