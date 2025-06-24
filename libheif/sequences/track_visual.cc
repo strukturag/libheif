@@ -218,15 +218,19 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
     set_sample_description_box(sample_description_box);
   }
 
-  write_sample_data(data.bitstream,
-                    colorConvertedImage->get_sample_duration(),
-                    data.is_sync_frame,
-                    image->get_tai_timestamp(),
+  Error err = write_sample_data(data.bitstream,
+                                colorConvertedImage->get_sample_duration(),
+                                data.is_sync_frame,
+                                image->get_tai_timestamp(),
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-                    image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
+                                image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 #else
   std::string{});
 #endif
+
+  if (err) {
+    return err;
+  }
 
   return Error::Ok;
 }

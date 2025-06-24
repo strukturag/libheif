@@ -590,6 +590,12 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
     m_stss->add_sync_sample(m_next_sample_to_be_processed + 1);
   }
 
+  if (sample_duration == 0) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Sample duration may not be 0"};
+  }
+
   m_stts->append_sample_duration(sample_duration);
 
 
