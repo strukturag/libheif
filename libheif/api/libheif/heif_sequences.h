@@ -272,7 +272,7 @@ void heif_track_builder_release(struct heif_track_builder*);
 
 /**
  * Set the track specific timescale. This is the number of clock ticks per second.
- * The default is 90000 Hz.
+ * The default is 90,000 Hz.
  * @param timescale
  */
 LIBHEIF_API
