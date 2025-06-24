@@ -261,7 +261,7 @@ enum heif_sample_aux_info_presence {
 
 
 /**
- * Allocatea track builder object that is required to set parameters for a new track.
+ * Allocate track builder object that is required to set parameters for a new track.
  * When you create a new track, you can also pass a NULL track_builder, in which case the default parameters are used.
  */
 LIBHEIF_API
