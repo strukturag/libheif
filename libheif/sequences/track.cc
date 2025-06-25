@@ -422,6 +422,9 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
       uuid_box->set_item_uri_type("urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73");
       uuid_box->set_item_ID(1);
 
+      auto iinf_box = std::make_shared<Box_iinf>();
+      iinf_box->append_child_box(uuid_box);
+
       std::vector<uint8_t> track_uuid_vector;
       track_uuid_vector.insert(track_uuid_vector.begin(),
                                options->gimi_track_content_id.c_str(),
@@ -432,7 +435,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
 
       auto meta_box = std::make_shared<Box_meta>();
       meta_box->append_child_box(hdlr_box);
-      meta_box->append_child_box(uuid_box);
+      meta_box->append_child_box(iinf_box);
       meta_box->append_child_box(iloc_box);
 
       m_trak->append_child_box(meta_box);
