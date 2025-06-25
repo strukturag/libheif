@@ -1694,10 +1694,10 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
 
   heif_track* track = nullptr;
 
-  heif_track_options* track_builder = heif_track_options_alloc();
-  heif_track_options_set_timescale(track_builder, 1000);
+  heif_track_options* track_options = heif_track_options_alloc();
+  heif_track_options_set_timescale(track_options, 1000);
 
-  heif_context_add_uri_metadata_sequence_track(context, track_builder, "vmt:metadata",&track);
+  heif_context_add_uri_metadata_sequence_track(context, track_options, "vmt:metadata",&track);
   heif_raw_sequence_sample* sample = heif_raw_sequence_sample_alloc();
 
 
@@ -1760,7 +1760,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
   // --- release all objects
 
   heif_raw_sequence_sample_release(sample);
-  heif_track_options_release(track_builder);
+  heif_track_options_release(track_options);
   heif_track_release(track);
 
   return 0;
@@ -1800,9 +1800,9 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     }
 
     if (first_image) {
-      heif_track_options* track_builder = heif_track_options_alloc();
+      heif_track_options* track_options = heif_track_options_alloc();
 
-      heif_track_options_set_timescale(track_builder, sequence_timebase);
+      heif_track_options_set_timescale(track_options, sequence_timebase);
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
 
@@ -1810,14 +1810,14 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       image_height = static_cast<uint16_t>(h);
 
       heif_context_add_visual_sequence_track(context,
-                                             track_builder,
+                                             track_options,
                                              image_width, image_height,
                                              heif_track_type_video,
                                              nullptr,
                                              nullptr,
                                              &track);
 
-      heif_track_options_release(track_builder);
+      heif_track_options_release(track_options);
 
       first_image = false;
     }
