@@ -261,14 +261,14 @@ enum heif_sample_aux_info_presence {
 
 
 /**
- * Allocate track builder object that is required to set parameters for a new track.
- * When you create a new track, you can also pass a NULL track_builder, in which case the default parameters are used.
+ * Allocate track options object that is required to set options for a new track.
+ * When you create a new track, you can also pass a NULL heif_track_options pointer, in which case the default options are used.
  */
 LIBHEIF_API
-struct heif_track_builder* heif_track_builder_alloc();
+struct heif_track_options* heif_track_options_alloc();
 
 LIBHEIF_API
-void heif_track_builder_release(struct heif_track_builder*);
+void heif_track_options_release(struct heif_track_options*);
 
 /**
  * Set the track specific timescale. This is the number of clock ticks per second.
@@ -276,7 +276,7 @@ void heif_track_builder_release(struct heif_track_builder*);
  * @param timescale
  */
 LIBHEIF_API
-void heif_track_builder_set_timescale(struct heif_track_builder*, uint32_t timescale);
+void heif_track_options_set_timescale(struct heif_track_options*, uint32_t timescale);
 
 /**
  * Set whether the aux-info data should be stored interleaved with the sequence samples.
@@ -289,15 +289,15 @@ void heif_track_builder_set_timescale(struct heif_track_builder*, uint32_t times
  * This has the advantage that no aux_info offsets have to be written.
  */
 LIBHEIF_API
-void heif_track_builder_set_interleaved_aux_info(struct heif_track_builder*, int interleaved_flag);
+void heif_track_options_set_interleaved_aux_info(struct heif_track_options*, int interleaved_flag);
 
 LIBHEIF_API
-struct heif_error heif_track_builder_enable_tai_timestamps(struct heif_track_builder*,
+struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_options*,
                                                            struct heif_tai_clock_info*,
                                                            enum heif_sample_aux_info_presence);
 
 LIBHEIF_API
-void heif_track_builder_enable_gimi_content_ids(struct heif_track_builder*,
+void heif_track_options_enable_gimi_content_ids(struct heif_track_options*,
                                                 enum heif_sample_aux_info_presence);
 
 /**
@@ -305,7 +305,7 @@ void heif_track_builder_enable_gimi_content_ids(struct heif_track_builder*,
  * @param track_id
  */
 LIBHEIF_API
-void heif_track_builder_set_gimi_track_id(struct heif_track_builder*,
+void heif_track_options_set_gimi_track_id(struct heif_track_options*,
                                           const char* track_id);
 
 
@@ -318,7 +318,7 @@ struct heif_sequence_encoding_options;
  * Add a visual track to the sequence.
  * The track ID is assigned automatically.
  *
- * @param builder Optional track builder with more track creation options. If NULL, default options will be used.
+ * @param options Optional track creation options. If NULL, default options will be used.
  * @param width Image resolution width
  * @param height Image resolution height
  * @param track_type Has to be heif_track_type_video or heif_track_type_image_sequence
@@ -329,11 +329,11 @@ struct heif_sequence_encoding_options;
  */
 LIBHEIF_API
 struct heif_error heif_context_add_visual_sequence_track(heif_context*,
-                                                         struct heif_track_builder* builder,
+                                                         struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
-                                                         const struct heif_encoding_options* options,
-                                                         const struct heif_sequence_encoding_options* seq_options,
+                                                         const struct heif_encoding_options* encoding_options,
+                                                         const struct heif_sequence_encoding_options* seq_encoding_options,
                                                          heif_track** out_track);
 
 /**
@@ -362,11 +362,11 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
  * The track content type is specified by the 'uri' parameter.
  * This will be created as a 'urim' "URI Meta Sample Entry".
  *
- * @param builder Optional track builder with more track creation options. If NULL, default options will be used.
+ * @param options Optional track creation options. If NULL, default options will be used.
  */
 LIBHEIF_API
 struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,
-                                                               struct heif_track_builder* builder,
+                                                               struct heif_track_options* options,
                                                                const char* uri,
                                                                heif_track** out_track);
 

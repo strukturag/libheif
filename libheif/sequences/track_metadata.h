@@ -31,7 +31,7 @@ class Track_Metadata : public Track {
 public:
   //Track(HeifContext* ctx);
 
-  Track_Metadata(HeifContext* ctx, uint32_t track_id, std::string uri, TrackInfo* info);
+  Track_Metadata(HeifContext* ctx, uint32_t track_id, std::string uri, TrackOptions* options);
 
   Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 

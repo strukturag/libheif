@@ -29,7 +29,7 @@
 #include <limits>
 
 
-TrackInfo& TrackInfo::operator=(const TrackInfo& src)
+TrackOptions& TrackOptions::operator=(const TrackOptions& src)
 {
   if (&src == this) {
     return *this;
@@ -329,7 +329,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
-Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t handler_type)
+Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_t handler_type)
 {
   m_heif_context = ctx;
 
@@ -366,7 +366,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t hand
   m_trak->append_child_box(mdia);
 
   m_mdhd = std::make_shared<Box_mdhd>();
-  m_mdhd->set_timescale(info->track_timescale);
+  m_mdhd->set_timescale(options->track_timescale);
   mdia->append_child_box(m_mdhd);
 
   m_hdlr = std::make_shared<Box_hdlr>();
@@ -400,8 +400,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t hand
   m_stss = std::make_shared<Box_stss>();
   m_stbl->append_child_box(m_stss);
 
-  if (info) {
-    m_track_info = *info;
+  if (options) {
+    m_track_info = *options;
 
     if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
       m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_aux_info_interleaved);
@@ -413,7 +413,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t hand
       m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
     }
 
-    if (!info->gimi_track_content_id.empty()) {
+    if (!options->gimi_track_content_id.empty()) {
       auto hdlr_box = std::make_shared<Box_hdlr>();
       hdlr_box->set_handler_type(fourcc("meta"));
 
@@ -424,8 +424,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t hand
 
       std::vector<uint8_t> track_uuid_vector;
       track_uuid_vector.insert(track_uuid_vector.begin(),
-                               info->gimi_track_content_id.c_str(),
-                               info->gimi_track_content_id.c_str() + info->gimi_track_content_id.length() + 1);
+                               options->gimi_track_content_id.c_str(),
+                               options->gimi_track_content_id.c_str() + options->gimi_track_content_id.length() + 1);
 
       auto iloc_box = std::make_shared<Box_iloc>();
       iloc_box->append_data(1, track_uuid_vector, 1);

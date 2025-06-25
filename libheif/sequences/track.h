@@ -85,9 +85,9 @@ private:
 /**
  * This structure specifies what will be written in a track and how it will be laid out in the file.
  */
-struct TrackInfo
+struct TrackOptions
 {
-  ~TrackInfo()
+  ~TrackOptions()
   {
     heif_tai_clock_info_release(tai_clock_info);
   }
@@ -115,7 +115,7 @@ struct TrackInfo
 
   std::string gimi_track_content_id;
 
-  TrackInfo& operator=(const TrackInfo&);
+  TrackOptions& operator=(const TrackOptions&);
 };
 
 
@@ -123,7 +123,7 @@ class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id, TrackInfo* info, uint32_t handler_type);
+  Track(HeifContext* ctx, uint32_t track_id, TrackOptions* info, uint32_t handler_type);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 
@@ -158,7 +158,7 @@ public:
   // Compute some parameters after all frames have been encoded (for example: track duration).
   void finalize_track();
 
-  const TrackInfo& get_track_info() const { return m_track_info; }
+  const TrackOptions& get_track_info() const { return m_track_info; }
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
@@ -173,7 +173,7 @@ protected:
   uint32_t m_id = 0;
   uint32_t m_handler_type = 0;
 
-  TrackInfo m_track_info;
+  TrackOptions m_track_info;
 
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
