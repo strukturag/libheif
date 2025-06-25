@@ -305,24 +305,27 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     auto iloc = meta->get_child_box<Box_iloc>();
     auto idat = meta->get_child_box<Box_idat>();
 
-    auto infe_boxes = meta->get_child_boxes<Box_infe>();
-    for (const auto& box : infe_boxes) {
-      if (box->get_item_type_4cc() == fourcc("uri ") &&
-          box->get_item_uri_type() == "urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73") {
-        heif_item_id id = box->get_item_ID();
+    auto iinf = meta->get_child_box<Box_iinf>();
+    if (iinf) {
+      auto infe_boxes = iinf->get_child_boxes<Box_infe>();
+      for (const auto& box : infe_boxes) {
+        if (box->get_item_type_4cc() == fourcc("uri ") &&
+            box->get_item_uri_type() == "urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73") {
+          heif_item_id id = box->get_item_ID();
 
-        std::vector<uint8_t> data;
-        Error err = iloc->read_data(id, ctx->get_heif_file()->get_reader(), idat, &data, ctx->get_security_limits());
-        if (err) {
-          // TODO
+          std::vector<uint8_t> data;
+          Error err = iloc->read_data(id, ctx->get_heif_file()->get_reader(), idat, &data, ctx->get_security_limits());
+          if (err) {
+            // TODO
+          }
+
+          Result contentIdResult = vector_to_string(data);
+          if (contentIdResult.error) {
+            // TODO
+          }
+
+          m_track_info.gimi_track_content_id = contentIdResult.value;
         }
-
-        Result contentIdResult = vector_to_string(data);
-        if (contentIdResult.error) {
-          // TODO
-        }
-
-        m_track_info.gimi_track_content_id = contentIdResult.value;
       }
     }
   }
