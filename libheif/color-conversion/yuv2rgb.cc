@@ -371,11 +371,11 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
     const uint8_t* cr_row = &in_cr[(y / 2) * in_cr_stride];
     uint8_t* out_row = &out_p[y * out_p_stride];
 
-    int cb;
-    int cr;
-    int r_offset;
-    int g_offset;
-    int b_offset;
+    int cb = 0;
+    int cr = 0;
+    int r_offset = 0;
+    int g_offset = 0;
+    int b_offset = 0;
 
     for (x = 0; x < width; x++) {
       // Update color offsets every other pixel
