@@ -220,12 +220,6 @@ heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_tra
 }
 
 
-void heif_string_release(const char* str)
-{
-  delete[] str;
-}
-
-
 struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* track_ptr,
                                                           heif_raw_sequence_sample** out_sample)
 {

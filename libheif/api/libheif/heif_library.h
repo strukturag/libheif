@@ -96,6 +96,12 @@ struct heif_image_handle;
 typedef uint32_t heif_item_id;
 typedef uint32_t heif_property_id;
 
+/**
+ * Free a string returned by libheif in various API functions.
+ * You may pass NULL.
+ */
+LIBHEIF_API
+void heif_string_release(const char*);
 
 
 // ========================= library initialization ======================

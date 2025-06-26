@@ -97,6 +97,12 @@ struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encode
 }
 
 
+void heif_string_release(const char* str)
+{
+  delete[] str;
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

@@ -186,13 +186,6 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
 LIBHEIF_API
 heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track, const char** out_uri);
 
-/**
- * Free a string returned by libheif in various API functions.
- * You may pass NULL.
- */
-LIBHEIF_API
-void heif_string_release(const char*);
-
 
 /** Sequence sample object that can hold any raw byte data.
  * Use this to store and read raw metadata samples.
