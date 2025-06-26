@@ -109,6 +109,8 @@ static void show_help(const char* argv0)
                "  -S, --sequence                 decode image sequence instead of still image\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
+               "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
+               "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n";
 }
 
@@ -143,9 +145,10 @@ int option_sequence = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
+std::string transparency_composition_mode = "checkerboard";
 
 #define OPTION_PNG_COMPRESSION_LEVEL 1000
-
+#define OPTION_TRANSPARENCY_COMPOSITION_MODE 1001
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -164,6 +167,7 @@ static struct option long_options[] = {
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
+    {(char* const) "transparency-composition-mode", required_argument, 0,  OPTION_TRANSPARENCY_COMPOSITION_MODE},
     {(char* const) "version",          no_argument,       0,                        'v'},
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
     {nullptr, no_argument, nullptr, 0}
@@ -622,6 +626,17 @@ int main(int argc, char** argv)
           exit(5);
         }
         break;
+      case OPTION_TRANSPARENCY_COMPOSITION_MODE:
+        if (strcmp(optarg, "white") == 0 ||
+            strcmp(optarg, "black") == 0 ||
+            strcmp(optarg, "checkerboard") == 0) {
+            transparency_composition_mode = optarg;
+          }
+        else {
+          fprintf(stderr, "Unknown transparency composition mode. Must be one of: white, black, checkerboard.\n");
+          exit(5);
+        }
+        break;
       case 'v':
         heif_examples::show_version();
         return 0;
@@ -960,8 +975,25 @@ int main(int argc, char** argv)
     auto* color_conversion_options_ext = heif_color_conversion_options_ext_alloc();
     decode_options->color_conversion_options_ext = color_conversion_options_ext;
 
+
+    // If output file format does not support transparency, render in the selected composition mode.
+
     if (!encoder->supports_alpha()) {
-      color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+      if (transparency_composition_mode == "white") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+        color_conversion_options_ext->background_red = 0xFFFFU;
+        color_conversion_options_ext->background_green = 0xFFFFU;
+        color_conversion_options_ext->background_blue = 0xFFFFU;
+      }
+      else if (transparency_composition_mode == "black") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+        color_conversion_options_ext->background_red = 0;
+        color_conversion_options_ext->background_green = 0;
+        color_conversion_options_ext->background_blue = 0;
+      }
+      else if (transparency_composition_mode == "checkerboard") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_checkerboard;
+      }
     }
 
     if (option_output_tiles) {
