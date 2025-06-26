@@ -369,7 +369,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
   m_trak->append_child_box(mdia);
 
   m_mdhd = std::make_shared<Box_mdhd>();
-  m_mdhd->set_timescale(options->track_timescale);
+  m_mdhd->set_timescale(options ? options->track_timescale : 90000);
   mdia->append_child_box(m_mdhd);
 
   m_hdlr = std::make_shared<Box_hdlr>();
