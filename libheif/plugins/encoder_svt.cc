@@ -26,6 +26,7 @@
 #include <cassert>
 #include <algorithm>
 #include <memory>
+#include <limits>
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
