@@ -841,10 +841,21 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   int bytesPerPixel = bitdepth_y > 8 ? 2 : 1;
   std::vector<uint8_t> dummy_color_plane;
   if (input_class == heif_image_input_class_alpha) {
-    size_t stride;
-    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
-    input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * encoded_height;
+    size_t stride64;
+    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride64);
+
+    uint32_t stride32;
+    if (stride64 > std::numeric_limits<uint32_t>::max()) {
+      return {heif_error_Encoder_plugin_error,
+              heif_suberror_Unspecified,
+              "Image too wide for encoder"};
+    }
+    else {
+      stride32 = static_cast<uint32_t>(stride64);
+    }
+
+    input_picture_buffer->y_stride = stride32 / bytesPerPixel;
+    input_buffer.n_filled_len = stride32 * encoded_height;
 
     uint32_t uvWidth = get_subsampled_size_h(encoded_width, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
     uint32_t uvHeight = get_subsampled_size_v(encoded_height, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
@@ -874,19 +885,32 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     input_picture_buffer->cr = dummy_color_plane.data();
   }
   else {
-    size_t stride;
-    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
-    input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * encoded_height;
+    size_t stride64;
+    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride64);
+
+    uint32_t stride32;
+    if (stride64 > std::numeric_limits<uint32_t>::max()) {
+      return {heif_error_Encoder_plugin_error,
+              heif_suberror_Unspecified,
+              "Image too wide for encoder"};
+    }
+    else {
+      stride32 = static_cast<uint32_t>(stride64);
+    }
+
+    input_picture_buffer->y_stride = stride32 / bytesPerPixel;
+    input_buffer.n_filled_len = stride32 * encoded_height;
 
     uint32_t uvHeight = (encoded_height + yShift) >> yShift;
-    input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
-    input_buffer.n_filled_len += stride * uvHeight;
-    input_picture_buffer->cb_stride = stride / bytesPerPixel;
+    input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride64);
+    stride32 = static_cast<uint32_t>(stride64); // chroma stride should always be smaller than luma stride
+    input_buffer.n_filled_len += stride32 * uvHeight;
+    input_picture_buffer->cb_stride = stride32 / bytesPerPixel;
 
-    input_picture_buffer->cr = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
-    input_buffer.n_filled_len += stride * uvHeight;
-    input_picture_buffer->cr_stride = stride / bytesPerPixel;
+    input_picture_buffer->cr = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride64);
+    stride32 = static_cast<uint32_t>(stride64); // chroma stride should always be smaller than luma stride
+    input_buffer.n_filled_len += stride32 * uvHeight;
+    input_picture_buffer->cr_stride = stride32 / bytesPerPixel;
   }
 
   input_buffer.flags = 0;
