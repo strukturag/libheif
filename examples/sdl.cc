@@ -250,14 +250,14 @@ void SDL_YUV_Display::display444as420(const unsigned char *Y,
   uint8_t *startU = startV + (rect.h*mStride/2);
   for (int y=0;y<rect.h;y+=2)
     {
-      unsigned char* u = startU + y/2*mStride/2;
-      unsigned char* v = startV + y/2*mStride/2;
+      uint8_t* u = startU + y/2*mStride/2;
+      uint8_t* v = startV + y/2*mStride/2;
 
       for (int x=0;x<rect.w;x+=2) {
-        u[x/2] = (U[ y   *chroma_stride + x] + U[ y   *chroma_stride + x +1] +
-                  U[(y+1)*chroma_stride + x] + U[(y+1)*chroma_stride + x +1])/4;
-        v[x/2] = (V[ y   *chroma_stride + x] + V[ y   *chroma_stride + x +1] +
-                  V[(y+1)*chroma_stride + x] + V[(y+1)*chroma_stride + x +1])/4;
+        u[x / 2] = static_cast<uint8_t>((U[(y + 0) * chroma_stride + x] + U[(y + 0) * chroma_stride + x + 1] +
+                                         U[(y + 1) * chroma_stride + x] + U[(y + 1) * chroma_stride + x + 1]) / 4);
+        v[x / 2] = static_cast<uint8_t>((V[(y + 0) * chroma_stride + x] + V[(y + 0) * chroma_stride + x + 1] +
+                                         V[(y + 1) * chroma_stride + x] + V[(y + 1) * chroma_stride + x + 1]) / 4);
 
         //u[x/2] = U[y*chroma_stride + x];
         //v[x/2] = V[y*chroma_stride + x];

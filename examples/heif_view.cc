@@ -358,7 +358,7 @@ int main(int argc, char** argv)
     uint64_t now_time = SDL_GetTicks64();
     uint64_t elapsed_time = (now_time - start_time);
     if (elapsed_time < next_frame_pts) {
-      SDL_Delay(next_frame_pts - elapsed_time);
+      SDL_Delay((Uint32)(next_frame_pts - elapsed_time));
     }
 
     next_frame_pts += static_cast<uint64_t>(static_cast<double>(duration_ms) / option_speedup);
@@ -371,7 +371,7 @@ int main(int argc, char** argv)
     const uint8_t* p_Cb = heif_image_get_plane_readonly2(out_image, heif_channel_Cb, &stride_Cb);
     const uint8_t* p_Cr = heif_image_get_plane_readonly2(out_image, heif_channel_Cr, &stride_Cr);
 
-    sdlWindow.display(p_Y, p_Cb, p_Cr, stride_Y, stride_Cb);
+    sdlWindow.display(p_Y, p_Cb, p_Cr, static_cast<int>(stride_Y), static_cast<int>(stride_Cb));
 
     if (show_frame_number) {
       std::cout << "--- frame " << frameNr << "\n";
@@ -411,11 +411,11 @@ int main(int argc, char** argv)
 
     // --- show metadata
 
-    while (metadata_sample && metadata_sample_display_time / option_speedup <= elapsed_time) {
+    while (metadata_sample && static_cast<uint64_t>((double)metadata_sample_display_time / option_speedup) <= elapsed_time) {
       size_t size;
       const uint8_t* data = heif_raw_sequence_sample_get_data(metadata_sample, &size);
 
-      std::cout << "timestamp: " << metadata_sample_display_time/1000.0f << "sec\n";
+      std::cout << "timestamp: " << ((double)metadata_sample_display_time)/1000.0f << "sec\n";
 
       if (option_metadata_output == metadata_output_text) {
         std::cout << ((const char*) data) << "\n";
@@ -425,9 +425,9 @@ int main(int argc, char** argv)
         std::cout << '\n';
       }
 
-      uint64_t timescale = heif_track_get_timescale(metadata_track);
-      uint32_t duration = heif_raw_sequence_sample_get_duration(metadata_sample);
-      metadata_sample_display_time += duration * 1000 / timescale;
+      uint64_t metadata_timescale = heif_track_get_timescale(metadata_track);
+      uint32_t metadata_duration = heif_raw_sequence_sample_get_duration(metadata_sample);
+      metadata_sample_display_time += metadata_duration * 1000 / metadata_timescale;
 
       heif_raw_sequence_sample_release(metadata_sample);
       metadata_sample = nullptr;
