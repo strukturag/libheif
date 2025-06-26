@@ -250,7 +250,7 @@ heif_brand2 Track_Visual::get_compatible_brand() const
       auto hvcC = sampleEntry->get_child_box<Box_hvcC>();
       if (!hvcC) { return 0; }
 
-      auto config = hvcC->get_configuration();
+      const auto& config = hvcC->get_configuration();
       if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
           config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
         return heif_brand2_hevc;

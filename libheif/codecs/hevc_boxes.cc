@@ -355,7 +355,7 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
           // If they are similar, keep the smaller one.
 
           if (nal_unit.size() > nal.size()) {
-            nal_unit = nal;
+            nal_unit = std::move(nal);
           }
 
           // Exit. Do not add a copy of the packet.

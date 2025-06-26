@@ -51,7 +51,7 @@ Track_Metadata::Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>
 
 Track_Metadata::Track_Metadata(HeifContext* ctx, uint32_t track_id, std::string uri, TrackOptions* options)
     : Track(ctx, track_id, options, fourcc("meta")),
-      m_uri(uri)
+      m_uri(std::move(uri))
 {
   auto nmhd = std::make_shared<Box_nmhd>();
   m_minf->append_child_box(nmhd);

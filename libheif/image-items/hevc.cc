@@ -79,7 +79,7 @@ heif_brand2 ImageItem_HEVC::get_compatible_brand() const
     return 0;
   }
 
-  auto config = hvcC->get_configuration();
+  const auto& config = hvcC->get_configuration();
   if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
       config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
     return heif_brand2_heic;

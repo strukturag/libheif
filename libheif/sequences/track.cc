@@ -387,9 +387,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
   m_stsd = std::make_shared<Box_stsd>();
   m_stbl->append_child_box(m_stsd);
 
-  auto stts = std::make_shared<Box_stts>();
-  m_stbl->append_child_box(stts);
-  m_stts = stts;
+  m_stts = std::make_shared<Box_stts>();
+  m_stbl->append_child_box(m_stts);
 
   m_stsc = std::make_shared<Box_stsc>();
   m_stbl->append_child_box(m_stsc);

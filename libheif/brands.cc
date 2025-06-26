@@ -70,7 +70,7 @@ std::vector<std::shared_ptr<const ImageItem>> get_primary_and_alternative_images
 {
   auto img = ctx->get_primary_image(false);
   if (img) {
-    return {img};
+    return {std::move(img)};
   }
   else {
     return {};
