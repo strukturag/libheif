@@ -286,7 +286,7 @@ void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_optio
 
 LIBHEIF_API
 struct heif_error heif_track_options_enable_sample_tai_timestamps(struct heif_track_options*,
-                                                                  struct heif_tai_clock_info*,
+                                                                  const struct heif_tai_clock_info*,
                                                                   enum heif_sample_aux_info_presence);
 
 LIBHEIF_API

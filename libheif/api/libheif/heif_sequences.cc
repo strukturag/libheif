@@ -309,17 +309,27 @@ void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_optio
 
 
 struct heif_error heif_track_options_enable_sample_tai_timestamps(struct heif_track_options* options,
-                                                                  struct heif_tai_clock_info* tai_info,
+                                                                  const struct heif_tai_clock_info* tai_info,
                                                                   enum heif_sample_aux_info_presence presence)
 {
-  options->options.with_sample_tai_timestamps = presence;
-  options->options.tai_clock_info = tai_info;
-
   if (presence != heif_sample_aux_info_presence_none &&
       tai_info == nullptr) {
     return {heif_error_Usage_error,
             heif_suberror_Unspecified,
             "NULL tai clock info passed for track with TAI timestamps"};
+  }
+
+  options->options.with_sample_tai_timestamps = presence;
+
+  // delete old object in case we are calling heif_track_options_enable_sample_tai_timestamps() multiple times
+  delete options->options.tai_clock_info;
+
+  if (tai_info != nullptr) {
+    options->options.tai_clock_info = heif_tai_clock_info_alloc();
+    heif_tai_clock_info_copy(options->options.tai_clock_info, tai_info);
+  }
+  else {
+    options->options.tai_clock_info = nullptr;
   }
 
   return heif_error_ok;
