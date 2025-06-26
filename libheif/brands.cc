@@ -21,6 +21,7 @@
 #include "brands.h"
 #include "file.h"
 #include "sequences/track_visual.h"
+#include <utility>
 
 
 static bool check_mif1(const HeifContext* ctx)

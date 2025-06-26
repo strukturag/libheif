@@ -22,6 +22,7 @@
 #include "chunk.h"
 #include "context.h"
 #include "libheif/api_structs.h"
+#include <utility>
 
 
 Track_Metadata::Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
