@@ -623,7 +623,6 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
               "Mandatory TAI timestamp missing"};
     }
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
       if (!gimi_contentID.empty()) {
         auto id = gimi_contentID;
@@ -642,7 +641,6 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
                 "Mandatory ContentID missing"};
       }
     }
-#endif
   }
 
 

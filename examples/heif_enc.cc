@@ -273,13 +273,13 @@ void show_help(const char* argv0)
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
+#endif
             << "\n"
             << "sequences:\n"
             << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
             << "      --timebase #          set clock ticks/second for sequence\n"
             << "      --duration #          set frame duration (default: 1)\n"
             << "      --fps #               set timebase and duration based on fps\n"
-#endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
 #endif
