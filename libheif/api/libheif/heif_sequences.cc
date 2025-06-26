@@ -345,11 +345,32 @@ void heif_track_options_set_gimi_track_id(struct heif_track_options* options,
 }
 
 
+heif_sequence_encoding_options* heif_sequence_encoding_options_alloc()
+{
+  heif_sequence_encoding_options* options = new heif_sequence_encoding_options();
+
+  options->version = 1;
+  options->output_nclx_profile = nullptr;
+
+  options->color_conversion_options.version = 1;
+  options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options->color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
+  return options;
+}
+
+
+void heif_sequence_encoding_options_release(heif_sequence_encoding_options* options)
+{
+  delete options;
+}
+
+
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
                                                          struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
-                                                         const struct heif_encoding_options* options,
                                                          const struct heif_sequence_encoding_options* seq_options,
                                                          heif_track** out_track)
 {
@@ -392,13 +413,30 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                                    const struct heif_image* input_image,
                                                    struct heif_encoder* encoder,
-                                                   const struct heif_encoding_options* input_options,
-                                                   const struct heif_sequence_encoding_options* seq_input_options)
+                                                   const struct heif_sequence_encoding_options* sequence_options)
 {
+  // the input track must be a visual track
+
+  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track->track);
+  if (!visual_track) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Cannot encode image for non-visual track."};
+  }
+
+
+  // convert heif_sequence_encoding_options to heif_encoding_options that is used by track->encode_image()
+
   heif_encoding_options* options = heif_encoding_options_alloc();
   heif_color_profile_nclx nclx;
-  if (input_options) {
-    heif_encoding_options_copy(options, input_options);
+  if (sequence_options) {
+    if (sequence_options->version >= 4) {
+      options->output_nclx_profile = sequence_options->output_nclx_profile;
+    }
+
+    if (sequence_options->version >= 6) {
+      options->color_conversion_options = sequence_options->color_conversion_options;
+    }
 
     if (options->output_nclx_profile == nullptr) {
       auto input_nclx = input_image->image->get_color_profile_nclx();
@@ -413,14 +451,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
     }
   }
 
-  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track->track);
-  if (!visual_track) {
-    heif_encoding_options_free(options);
-
-    return {heif_error_Usage_error,
-            heif_suberror_Invalid_parameter_value,
-            "Cannot encode image for non-visual track."};
-  }
+  // encode the image
 
   auto error = visual_track->encode_image(input_image->image,
                                           encoder,

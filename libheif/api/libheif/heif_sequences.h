@@ -305,7 +305,22 @@ void heif_track_options_set_gimi_track_id(struct heif_track_options*,
 // --- writing visual tracks
 
 // This structure is for future use. It is not defined yet.
-struct heif_sequence_encoding_options;
+struct heif_sequence_encoding_options
+{
+  uint8_t version;
+
+  // version 1 options
+
+  // Set this to the NCLX parameters to be used in the output images or set to NULL
+  // when the same parameters as in the input images should be used.
+  struct heif_color_profile_nclx* output_nclx_profile;
+
+  struct heif_color_conversion_options color_conversion_options;
+};
+
+heif_sequence_encoding_options* heif_sequence_encoding_options_alloc();
+
+void heif_sequence_encoding_options_release(heif_sequence_encoding_options*);
 
 /**
  * Add a visual track to the sequence.
@@ -325,7 +340,6 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context*,
                                                          struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
-                                                         const struct heif_encoding_options* encoding_options,
                                                          const struct heif_sequence_encoding_options* seq_encoding_options,
                                                          heif_track** out_track);
 
@@ -339,14 +353,13 @@ void heif_image_set_duration(heif_image*, uint32_t duration);
  * Encode the image into a visual track.
  * If the passed track is no visual track, an error will be returned.
  *
- * Currently, pass NULL as seq_options.
+ * Currently, pass NULL as sequence_options.
  */
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder,
-                                                   const struct heif_encoding_options* options,
-                                                   const struct heif_sequence_encoding_options* seq_options);
+                                                   const struct heif_sequence_encoding_options* sequence_options);
 
 // --- metadata tracks
 
