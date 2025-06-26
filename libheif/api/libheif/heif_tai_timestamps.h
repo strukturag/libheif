@@ -61,7 +61,7 @@ struct heif_tai_clock_info {
  * Allocate a new heif_tai_clock_info object and initialize with default values.
  */
 LIBHEIF_API
-heif_tai_clock_info* heif_tai_clock_info_alloc();
+struct heif_tai_clock_info* heif_tai_clock_info_alloc();
 
 /**
  * Copies the source object into the destination object.
@@ -69,7 +69,7 @@ heif_tai_clock_info* heif_tai_clock_info_alloc();
  * The version property has to be set in both structs.
  */
 LIBHEIF_API
-void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src);
+void heif_tai_clock_info_copy(struct heif_tai_clock_info* dst, const struct heif_tai_clock_info* src);
 
 LIBHEIF_API
 void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
@@ -97,7 +97,7 @@ struct heif_tai_timestamp_packet {
  * Allocate a new heif_tai_timestamp_packet object and initialize with default values.
  */
 LIBHEIF_API
-heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
+struct heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
 
 /**
  * Copies the source object into the destination object.
@@ -105,10 +105,10 @@ heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
  * The version property has to be set in both structs.
  */
 LIBHEIF_API
-void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
+void heif_tai_timestamp_packet_copy(struct heif_tai_timestamp_packet* dst, const struct heif_tai_timestamp_packet* src);
 
 LIBHEIF_API
-void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
+void heif_tai_timestamp_packet_release(struct heif_tai_timestamp_packet*);
 
 
 
@@ -150,7 +150,7 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 LIBHEIF_API
 struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
                                                        heif_item_id itemId,
-                                                       struct heif_tai_timestamp_packet* timestamp,
+                                                       const struct heif_tai_timestamp_packet* timestamp,
                                                        heif_property_id* out_optional_propertyId);
 
 /**

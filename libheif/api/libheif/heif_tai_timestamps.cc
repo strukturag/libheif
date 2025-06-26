@@ -167,7 +167,7 @@ void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info)
 }
 
 
-void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet* tai)
+void heif_tai_timestamp_packet_release(struct heif_tai_timestamp_packet* tai)
 {
   delete tai;
 }
@@ -175,7 +175,7 @@ void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet* tai)
 
 struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
                                                        heif_item_id itemId,
-                                                       heif_tai_timestamp_packet* timestamp,
+                                                       const heif_tai_timestamp_packet* timestamp,
                                                        heif_property_id* out_propertyId)
 {
   if (!ctx) {
