@@ -523,7 +523,7 @@ enum heif_track_reference_type {
  * 'reference_type' can be one of the four-cc codes listed in heif_track_reference_type or any other type.
  */
 LIBHEIF_API
-void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, heif_track* to_track);
+void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, const heif_track* to_track);
 
 /**
  * Return the number of different reference types used in this track's tref box.

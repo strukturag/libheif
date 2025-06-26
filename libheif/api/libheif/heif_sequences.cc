@@ -655,7 +655,7 @@ const struct heif_tai_clock_info* heif_track_get_tai_clock_info_of_first_cluster
 }
 
 
-void heif_track_add_reference_to_track(heif_track* track, uint32_t reference_type, heif_track* to_track)
+void heif_track_add_reference_to_track(heif_track* track, uint32_t reference_type, const heif_track* to_track)
 {
   track->track->add_reference_to_track(reference_type, to_track->track->get_id());
 }
