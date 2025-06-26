@@ -334,21 +334,20 @@ void heif_sequence_encoding_options_release(heif_sequence_encoding_options*);
  * Add a visual track to the sequence.
  * The track ID is assigned automatically.
  *
- * @param options Optional track creation options. If NULL, default options will be used.
  * @param width Image resolution width
  * @param height Image resolution height
  * @param track_type Has to be heif_track_type_video or heif_track_type_image_sequence
- * @param options Which codec to use and other encoding options.
- * @param seq_options Options for sequence encoding. Currently, pass NULL.
+ * @param track_options Optional track creation options. If NULL, default options will be used.
+ * @param encoding_options Options for sequence encoding. If NULL, default options will be used.
  * @param out_track Output parameter to receive the track object for the just created track.
  * @return
  */
 LIBHEIF_API
 struct heif_error heif_context_add_visual_sequence_track(heif_context*,
-                                                         const heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
-                                                         const heif_sequence_encoding_options* seq_encoding_options,
+                                                         const heif_track_options* track_options,
+                                                         const heif_sequence_encoding_options* encoding_options,
                                                          heif_track** out_track);
 
 /**
@@ -361,13 +360,13 @@ void heif_image_set_duration(heif_image*, uint32_t duration);
  * Encode the image into a visual track.
  * If the passed track is no visual track, an error will be returned.
  *
- * Currently, pass NULL as sequence_options.
+ * @param sequence_encoding_options Options for sequence encoding. If NULL, default options will be used.
  */
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(heif_track*,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder,
-                                                   const heif_sequence_encoding_options* sequence_options);
+                                                   const heif_sequence_encoding_options* sequence_encoding_options);
 
 // --- metadata tracks
 
@@ -380,8 +379,8 @@ struct heif_error heif_track_encode_sequence_image(heif_track*,
  */
 LIBHEIF_API
 struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,
-                                                               const heif_track_options* options,
                                                                const char* uri,
+                                                               const heif_track_options* options,
                                                                heif_track** out_track);
 
 /**

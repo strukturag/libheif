@@ -378,10 +378,10 @@ void heif_sequence_encoding_options_release(heif_sequence_encoding_options* opti
 
 
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
-                                                         const struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
-                                                         const struct heif_sequence_encoding_options* seq_options,
+                                                         const struct heif_track_options* track_options,
+                                                         const struct heif_sequence_encoding_options* encoding_options,
                                                          heif_track** out_track)
 {
   if (track_type != heif_track_type_video &&
@@ -423,7 +423,7 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                                    const struct heif_image* input_image,
                                                    struct heif_encoder* encoder,
-                                                   const struct heif_sequence_encoding_options* sequence_options)
+                                                   const struct heif_sequence_encoding_options* sequence_encoding_options)
 {
   // the input track must be a visual track
 
@@ -437,22 +437,22 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
   // convert heif_sequence_encoding_options to heif_encoding_options that is used by track->encode_image()
 
-  heif_encoding_options* options = heif_encoding_options_alloc();
+  heif_encoding_options* encoding_options = heif_encoding_options_alloc();
   heif_color_profile_nclx nclx;
-  if (sequence_options) {
-    if (sequence_options->version >= 4) {
+  if (sequence_encoding_options) {
+    if (sequence_encoding_options->version >= 4) {
       // the const_cast<> is ok, because output_nclx_profile will not be changed. It should actually be const, but we cannot change that.
-      options->output_nclx_profile = const_cast<heif_color_profile_nclx*>(sequence_options->output_nclx_profile);
+      encoding_options->output_nclx_profile = const_cast<heif_color_profile_nclx*>(sequence_encoding_options->output_nclx_profile);
     }
 
-    if (sequence_options->version >= 6) {
-      options->color_conversion_options = sequence_options->color_conversion_options;
+    if (sequence_encoding_options->version >= 6) {
+      encoding_options->color_conversion_options = sequence_encoding_options->color_conversion_options;
     }
 
-    if (options->output_nclx_profile == nullptr) {
+    if (encoding_options->output_nclx_profile == nullptr) {
       auto input_nclx = input_image->image->get_color_profile_nclx();
       if (input_nclx) {
-        options->output_nclx_profile = &nclx;
+        encoding_options->output_nclx_profile = &nclx;
         nclx.version = 1;
         nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
         nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
@@ -466,9 +466,9 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
   auto error = visual_track->encode_image(input_image->image,
                                           encoder,
-                                          *options,
+                                          *encoding_options,
                                           heif_image_input_class_normal);
-  heif_encoding_options_free(options);
+  heif_encoding_options_free(encoding_options);
 
   if (error.error_code) {
     return error.error_struct(track->context.get());
@@ -479,8 +479,8 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
 
 struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx,
-                                                               const struct heif_track_options* track_options,
                                                                const char* uri,
+                                                               const struct heif_track_options* track_options,
                                                                heif_track** out_track)
 {
   struct TrackOptions default_track_info;
