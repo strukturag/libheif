@@ -332,22 +332,22 @@ struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_opt
 }
 
 
-void heif_track_options_enable_gimi_content_ids(struct heif_track_options* builder,
+void heif_track_options_enable_gimi_content_ids(struct heif_track_options* options,
                                                 enum heif_sample_aux_info_presence presence)
 {
-  builder->options.with_sample_content_ids = presence;
+  options->options.with_sample_content_ids = presence;
 }
 
 
-void heif_track_options_set_gimi_track_id(struct heif_track_options* builder,
+void heif_track_options_set_gimi_track_id(struct heif_track_options* options,
                                           const char* track_id)
 {
   if (track_id == nullptr) {
-    builder->options.gimi_track_content_id.clear();
+    options->options.gimi_track_content_id.clear();
     return;
   }
 
-  builder->options.gimi_track_content_id = track_id;
+  options->options.gimi_track_content_id = track_id;
 }
 
 
