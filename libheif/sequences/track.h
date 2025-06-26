@@ -104,7 +104,7 @@ struct TrackOptions
 
 
   // --- TAI timestamps for samples
-  enum heif_sample_aux_info_presence with_tai_timestamps = heif_sample_aux_info_presence_none;
+  enum heif_sample_aux_info_presence with_sample_tai_timestamps = heif_sample_aux_info_presence_none;
   struct heif_tai_clock_info* tai_clock_info = nullptr;
 
   // --- GIMI content IDs for samples

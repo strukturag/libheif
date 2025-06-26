@@ -285,13 +285,13 @@ LIBHEIF_API
 void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_options*, int interleaved_flag);
 
 LIBHEIF_API
-struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_options*,
-                                                           struct heif_tai_clock_info*,
-                                                           enum heif_sample_aux_info_presence);
+struct heif_error heif_track_options_enable_sample_tai_timestamps(struct heif_track_options*,
+                                                                  struct heif_tai_clock_info*,
+                                                                  enum heif_sample_aux_info_presence);
 
 LIBHEIF_API
-void heif_track_options_enable_gimi_content_ids(struct heif_track_options*,
-                                                enum heif_sample_aux_info_presence);
+void heif_track_options_enable_sample_gimi_content_ids(struct heif_track_options*,
+                                                       enum heif_sample_aux_info_presence);
 
 /**
  * Set the GIMI format track ID string. If NULL is passed, no track ID is saved.

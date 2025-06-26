@@ -308,11 +308,11 @@ void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_optio
 }
 
 
-struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_options* options,
-                                                           struct heif_tai_clock_info* tai_info,
-                                                           enum heif_sample_aux_info_presence presence)
+struct heif_error heif_track_options_enable_sample_tai_timestamps(struct heif_track_options* options,
+                                                                  struct heif_tai_clock_info* tai_info,
+                                                                  enum heif_sample_aux_info_presence presence)
 {
-  options->options.with_tai_timestamps = presence;
+  options->options.with_sample_tai_timestamps = presence;
   options->options.tai_clock_info = tai_info;
 
   if (presence != heif_sample_aux_info_presence_none &&
@@ -326,8 +326,8 @@ struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_opt
 }
 
 
-void heif_track_options_enable_gimi_content_ids(struct heif_track_options* options,
-                                                enum heif_sample_aux_info_presence presence)
+void heif_track_options_enable_sample_gimi_content_ids(struct heif_track_options* options,
+                                                       enum heif_sample_aux_info_presence presence)
 {
   options->options.with_sample_content_ids = presence;
 }

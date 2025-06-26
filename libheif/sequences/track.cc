@@ -37,7 +37,7 @@ TrackOptions& TrackOptions::operator=(const TrackOptions& src)
 
   this->track_timescale = src.track_timescale;
   this->write_sample_aux_infos_interleaved = src.write_sample_aux_infos_interleaved;
-  this->with_tai_timestamps = src.with_tai_timestamps;
+  this->with_sample_tai_timestamps = src.with_sample_tai_timestamps;
 
   if (src.tai_clock_info) {
     this->tai_clock_info = heif_tai_clock_info_alloc();
@@ -405,7 +405,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
   if (options) {
     m_track_info = *options;
 
-    if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
+    if (m_track_info.with_sample_tai_timestamps != heif_sample_aux_info_presence_none) {
       m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_sample_aux_infos_interleaved);
       m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
@@ -560,7 +560,7 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 {
   // --- add 'taic' when we store timestamps as sample auxiliary information
 
-  if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
+  if (m_track_info.with_sample_tai_timestamps != heif_sample_aux_info_presence_none) {
     auto taic = std::make_shared<Box_taic>();
     taic->set_from_tai_clock_info(m_track_info.tai_clock_info);
     sample_description_box->append_child_box(taic);
@@ -606,7 +606,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
 
   // --- sample timestamp
 
-  if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
+  if (m_track_info.with_sample_tai_timestamps != heif_sample_aux_info_presence_none) {
     if (tai) {
       std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
       auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
@@ -614,7 +614,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
         return err;
       }
     }
-    else if (m_track_info.with_tai_timestamps == heif_sample_aux_info_presence_optional) {
+    else if (m_track_info.with_sample_tai_timestamps == heif_sample_aux_info_presence_optional) {
       m_aux_helper_tai_timestamps->add_nonpresent_sample();
     }
     else {
