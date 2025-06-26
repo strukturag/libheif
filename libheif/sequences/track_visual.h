@@ -32,7 +32,7 @@ public:
   //Track(HeifContext* ctx);
 
   Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
-               TrackOptions* options, uint32_t handler_type);
+               const TrackOptions* options, uint32_t handler_type);
 
   Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 

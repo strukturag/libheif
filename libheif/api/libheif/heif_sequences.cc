@@ -34,19 +34,19 @@
 #include <utility>
 
 
-int heif_context_has_sequence(heif_context* ctx)
+int heif_context_has_sequence(const heif_context* ctx)
 {
   return ctx->context->has_sequence();
 }
 
 
-uint32_t heif_context_get_sequence_timescale(heif_context* ctx)
+uint32_t heif_context_get_sequence_timescale(const heif_context* ctx)
 {
   return ctx->context->get_sequence_timescale();
 }
 
 
-uint64_t heif_context_get_sequence_duration(heif_context* ctx)
+uint64_t heif_context_get_sequence_duration(const heif_context* ctx)
 {
   return ctx->context->get_sequence_duration();
 }
@@ -97,19 +97,19 @@ struct heif_track* heif_context_get_track(const struct heif_context* ctx, uint32
 }
 
 
-uint32_t heif_track_get_track_handler_type(struct heif_track* track)
+uint32_t heif_track_get_track_handler_type(const struct heif_track* track)
 {
   return track->track->get_handler();
 }
 
 
-uint32_t heif_track_get_timescale(struct heif_track* track)
+uint32_t heif_track_get_timescale(const struct heif_track* track)
 {
   return track->track->get_timescale();
 }
 
 
-struct heif_error heif_track_get_image_resolution(heif_track* track_ptr, uint16_t* out_width, uint16_t* out_height)
+struct heif_error heif_track_get_image_resolution(const struct heif_track* track_ptr, uint16_t* out_width, uint16_t* out_height)
 {
   auto track = track_ptr->track;
 
@@ -192,13 +192,13 @@ uint32_t heif_image_get_duration(const heif_image* img)
 }
 
 
-uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track* track)
+uint32_t heif_track_get_sample_entry_type_of_first_cluster(const struct heif_track* track)
 {
   return track->track->get_first_cluster_sample_entry_type();
 }
 
 
-heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track, const char** out_uri)
+heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const struct heif_track* track, const char** out_uri)
 {
   Result<std::string> uriResult = track->track->get_first_cluster_urim_uri();
 
@@ -244,7 +244,7 @@ struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* tra
 }
 
 
-void heif_raw_sequence_sample_release(const heif_raw_sequence_sample* sample)
+void heif_raw_sequence_sample_release(struct heif_raw_sequence_sample* sample)
 {
   delete sample;
 }
@@ -368,7 +368,7 @@ void heif_sequence_encoding_options_release(heif_sequence_encoding_options* opti
 
 
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
-                                                         struct heif_track_options* track_options,
+                                                         const struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
                                                          const struct heif_sequence_encoding_options* seq_options,
@@ -382,7 +382,7 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
   }
 
   TrackOptions default_track_info;
-  TrackOptions* track_info = &default_track_info;
+  const TrackOptions* track_info = &default_track_info;
   if (track_options != nullptr) {
     track_info = &track_options->options;
   }
@@ -431,7 +431,8 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
   heif_color_profile_nclx nclx;
   if (sequence_options) {
     if (sequence_options->version >= 4) {
-      options->output_nclx_profile = sequence_options->output_nclx_profile;
+      // the const_cast<> is ok, because output_nclx_profile will not be changed. It should actually be const, but we cannot change that.
+      options->output_nclx_profile = const_cast<heif_color_profile_nclx*>(sequence_options->output_nclx_profile);
     }
 
     if (sequence_options->version >= 6) {
@@ -468,12 +469,12 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
 
 struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx,
-                                                               struct heif_track_options* track_options,
+                                                               const struct heif_track_options* track_options,
                                                                const char* uri,
                                                                heif_track** out_track)
 {
   struct TrackOptions default_track_info;
-  struct TrackOptions* track_info = &default_track_info;
+  const struct TrackOptions* track_info = &default_track_info;
   if (track_options != nullptr) {
     track_info = &track_options->options;
   }
@@ -543,14 +544,14 @@ struct heif_error heif_track_add_raw_sequence_sample(struct heif_track* track,
 }
 
 
-int heif_track_get_number_of_sample_aux_infos(struct heif_track* track)
+int heif_track_get_number_of_sample_aux_infos(const struct heif_track* track)
 {
   std::vector<heif_sample_aux_info_type> aux_info_types = track->track->get_sample_aux_info_types();
   return (int)aux_info_types.size();
 }
 
 
-void heif_track_get_sample_aux_info_types(struct heif_track* track, struct heif_sample_aux_info_type out_types[])
+void heif_track_get_sample_aux_info_types(const struct heif_track* track, struct heif_sample_aux_info_type out_types[])
 {
   std::vector<heif_sample_aux_info_type> aux_info_types = track->track->get_sample_aux_info_types();
   for (size_t i=0;i<aux_info_types.size();i++) {
@@ -661,7 +662,7 @@ void heif_track_add_reference_to_track(heif_track* track, uint32_t reference_typ
 }
 
 
-size_t heif_track_get_number_of_track_reference_types(heif_track* track)
+size_t heif_track_get_number_of_track_reference_types(const heif_track* track)
 {
   auto tref = track->track->get_tref_box();
   if (!tref) {
@@ -672,7 +673,7 @@ size_t heif_track_get_number_of_track_reference_types(heif_track* track)
 }
 
 
-void heif_track_get_track_reference_types(heif_track* track, uint32_t out_reference_types[])
+void heif_track_get_track_reference_types(const heif_track* track, uint32_t out_reference_types[])
 {
   auto tref = track->track->get_tref_box();
   if (!tref) {
@@ -686,7 +687,7 @@ void heif_track_get_track_reference_types(heif_track* track, uint32_t out_refere
 }
 
 
-size_t heif_track_get_number_of_track_reference_of_type(heif_track* track, uint32_t reference_type)
+size_t heif_track_get_number_of_track_reference_of_type(const heif_track* track, uint32_t reference_type)
 {
   auto tref = track->track->get_tref_box();
   if (!tref) {
@@ -697,7 +698,7 @@ size_t heif_track_get_number_of_track_reference_of_type(heif_track* track, uint3
 }
 
 
-size_t heif_track_get_references_from_track(heif_track* track, uint32_t reference_type, uint32_t out_to_track_id[])
+size_t heif_track_get_references_from_track(const heif_track* track, uint32_t reference_type, uint32_t out_to_track_id[])
 {
   auto tref = track->track->get_tref_box();
   if (!tref) {
@@ -713,7 +714,7 @@ size_t heif_track_get_references_from_track(heif_track* track, uint32_t referenc
 }
 
 
-size_t heif_track_find_referring_tracks(heif_track* track, uint32_t reference_type, uint32_t out_track_id[], size_t array_size)
+size_t heif_track_find_referring_tracks(const heif_track* track, uint32_t reference_type, uint32_t out_track_id[], size_t array_size)
 {
   size_t nFound = 0;
 

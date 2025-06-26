@@ -123,7 +123,7 @@ class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id, TrackOptions* info, uint32_t handler_type);
+  Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* info, uint32_t handler_type);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 

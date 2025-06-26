@@ -332,7 +332,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
-Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_t handler_type)
+Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, uint32_t handler_type)
 {
   m_heif_context = ctx;
 

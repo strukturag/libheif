@@ -36,7 +36,7 @@ extern "C" {
  * @return A boolean whether there is an image sequence in the HEIF file.
  */
 LIBHEIF_API
-int heif_context_has_sequence(heif_context*);
+int heif_context_has_sequence(const struct heif_context*);
 
 /**
  * Get the timescale (clock ticks per second) for timing values in the sequence.
@@ -46,7 +46,7 @@ int heif_context_has_sequence(heif_context*);
  * @return Clock ticks per second. Returns 0 if there is no sequence in the file.
  */
 LIBHEIF_API
-uint32_t heif_context_get_sequence_timescale(heif_context*);
+uint32_t heif_context_get_sequence_timescale(const struct heif_context*);
 
 /**
  * Get the total duration of the sequence in timescale clock ticks.
@@ -55,7 +55,7 @@ uint32_t heif_context_get_sequence_timescale(heif_context*);
  * @return Sequence duration in clock ticks. Returns 0 if there is no sequence in the file.
  */
 LIBHEIF_API
-uint64_t heif_context_get_sequence_duration(heif_context*);
+uint64_t heif_context_get_sequence_duration(const struct heif_context*);
 
 
 // A track, which may be an image sequence, a video track or a metadata track.
@@ -66,7 +66,7 @@ struct heif_track;
  * Passing NULL is ok.
  */
 LIBHEIF_API
-void heif_track_release(heif_track*);
+void heif_track_release(struct heif_track*);
 
 /**
  * Get the number of tracks in the HEIF file.
@@ -121,7 +121,7 @@ enum heif_track_type_4cc {
  * @return four-cc handler type
  */
 LIBHEIF_API
-heif_track_type heif_track_get_track_handler_type(struct heif_track*);
+heif_track_type heif_track_get_track_handler_type(const struct heif_track*);
 
 /**
  * Get the timescale (clock ticks per second) for this track.
@@ -130,7 +130,7 @@ heif_track_type heif_track_get_track_handler_type(struct heif_track*);
  * @return clock ticks per second
  */
 LIBHEIF_API
-uint32_t heif_track_get_timescale(struct heif_track*);
+uint32_t heif_track_get_timescale(const struct heif_track*);
 
 
 // --- reading visual tracks
@@ -140,7 +140,7 @@ uint32_t heif_track_get_timescale(struct heif_track*);
  * If the passed track is no visual track, an error is returned.
  */
 LIBHEIF_API
-struct heif_error heif_track_get_image_resolution(heif_track*, uint16_t* out_width, uint16_t* out_height);
+struct heif_error heif_track_get_image_resolution(const struct heif_track*, uint16_t* out_width, uint16_t* out_height);
 
 /**
  * Decode the next image in the passed sequence track.
@@ -164,7 +164,7 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track,
  * Make sure to use the timescale of the track and not the timescale of the total sequence.
  */
 LIBHEIF_API
-uint32_t heif_image_get_duration(const heif_image*);
+uint32_t heif_image_get_duration(const struct heif_image*);
 
 
 // --- reading metadata track samples
@@ -175,7 +175,7 @@ uint32_t heif_image_get_duration(const heif_image*);
  * The exact URI can then be obtained with 'heif_track_get_urim_sample_entry_uri_of_first_cluster'.
  */
 LIBHEIF_API
-uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
+uint32_t heif_track_get_sample_entry_type_of_first_cluster(const struct heif_track*);
 
 /**
  * Get the URI of the first sample cluster in an 'urim' track.
@@ -184,7 +184,7 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
  * @param out_uri A string with the URI will be returned. Free this string with `heif_string_release()`.
  */
 LIBHEIF_API
-heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track, const char** out_uri);
+heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const struct heif_track* track, const char** out_uri);
 
 
 /** Sequence sample object that can hold any raw byte data.
@@ -205,7 +205,7 @@ struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track*,
  * You may pass NULL.
  */
 LIBHEIF_API
-void heif_raw_sequence_sample_release(const heif_raw_sequence_sample*);
+void heif_raw_sequence_sample_release(struct heif_raw_sequence_sample*);
 
 /**
  * Get a pointer to the data of the (metadata) sample.
@@ -214,21 +214,21 @@ void heif_raw_sequence_sample_release(const heif_raw_sequence_sample*);
  * @param out_array_size Size of the returned array (may be NULL).
  */
 LIBHEIF_API
-const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample*, size_t* out_array_size);
+const uint8_t* heif_raw_sequence_sample_get_data(const struct heif_raw_sequence_sample*, size_t* out_array_size);
 
 /**
  * Return the size of the raw data contained in the sample.
  * This is the same as returned through the 'out_array_size' parameter of 'heif_raw_sequence_sample_get_data()'.
  */
 LIBHEIF_API
-size_t heif_raw_sequence_sample_get_data_size(const heif_raw_sequence_sample*);
+size_t heif_raw_sequence_sample_get_data_size(const struct heif_raw_sequence_sample*);
 
 /**
  * Get the sample duration in clock ticks of this track.
  * Make sure to use the timescale of the track and not the timescale of the total sequence.
  */
 LIBHEIF_API
-uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample*);
+uint32_t heif_raw_sequence_sample_get_duration(const struct heif_raw_sequence_sample*);
 
 
 // --- writing sequences
@@ -238,7 +238,7 @@ uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample*);
  * If no timescale is set with this function, the timescale of the first track will be used.
  */
 LIBHEIF_API
-void heif_context_set_sequence_timescale(heif_context*, uint32_t);
+void heif_context_set_sequence_timescale(struct heif_context*, uint32_t timescale);
 
 
 /**
@@ -313,14 +313,16 @@ struct heif_sequence_encoding_options
 
   // Set this to the NCLX parameters to be used in the output images or set to NULL
   // when the same parameters as in the input images should be used.
-  struct heif_color_profile_nclx* output_nclx_profile;
+  const struct heif_color_profile_nclx* output_nclx_profile;
 
   struct heif_color_conversion_options color_conversion_options;
 };
 
-heif_sequence_encoding_options* heif_sequence_encoding_options_alloc();
+LIBHEIF_API
+struct heif_sequence_encoding_options* heif_sequence_encoding_options_alloc();
 
-void heif_sequence_encoding_options_release(heif_sequence_encoding_options*);
+LIBHEIF_API
+void heif_sequence_encoding_options_release(struct heif_sequence_encoding_options*);
 
 /**
  * Add a visual track to the sequence.
@@ -337,7 +339,7 @@ void heif_sequence_encoding_options_release(heif_sequence_encoding_options*);
  */
 LIBHEIF_API
 struct heif_error heif_context_add_visual_sequence_track(heif_context*,
-                                                         struct heif_track_options* track_options,
+                                                         const struct heif_track_options* track_options,
                                                          uint16_t width, uint16_t height,
                                                          heif_track_type track_type,
                                                          const struct heif_sequence_encoding_options* seq_encoding_options,
@@ -372,7 +374,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
  */
 LIBHEIF_API
 struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,
-                                                               struct heif_track_options* options,
+                                                               const struct heif_track_options* options,
                                                                const char* uri,
                                                                heif_track** out_track);
 
@@ -381,26 +383,26 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,
  * Free with heif_raw_sequence_sample_release().
  */
 LIBHEIF_API
-heif_raw_sequence_sample* heif_raw_sequence_sample_alloc();
+struct heif_raw_sequence_sample* heif_raw_sequence_sample_alloc();
 
 /**
  * Set the raw sequence sample data.
  */
 LIBHEIF_API
-heif_error heif_raw_sequence_sample_set_data(heif_raw_sequence_sample*, const uint8_t* data, size_t size);
+heif_error heif_raw_sequence_sample_set_data(struct heif_raw_sequence_sample*, const uint8_t* data, size_t size);
 
 /**
  * Set the sample duration in track timescale units.
  */
 LIBHEIF_API
-void heif_raw_sequence_sample_set_duration(heif_raw_sequence_sample*, uint32_t duration);
+void heif_raw_sequence_sample_set_duration(struct heif_raw_sequence_sample*, uint32_t duration);
 
 /**
  * Add a raw sequence sample (usually a metadata sample) to the (metadata) track.
  */
 LIBHEIF_API
 struct heif_error heif_track_add_raw_sequence_sample(struct heif_track*,
-                                                     const heif_raw_sequence_sample*);
+                                                     const struct heif_raw_sequence_sample*);
 
 
 // --- sample auxiliary data
@@ -418,14 +420,14 @@ struct heif_sample_aux_info_type
  * Returns how many different types of sample auxiliary data units are assigned to this track's samples.
  */
 LIBHEIF_API
-int heif_track_get_number_of_sample_aux_infos(struct heif_track*);
+int heif_track_get_number_of_sample_aux_infos(const struct heif_track*);
 
 /**
  * Get get the list of sample auxiliary data types used in the track.
  * The passed array has to have heif_track_get_number_of_sample_aux_infos() entries.
  */
 LIBHEIF_API
-void heif_track_get_sample_aux_info_types(struct heif_track*, struct heif_sample_aux_info_type out_types[]);
+void heif_track_get_sample_aux_info_types(const struct heif_track*, struct heif_sample_aux_info_type out_types[]);
 
 
 // --- GIMI content IDs
@@ -445,7 +447,7 @@ const char* heif_track_get_gimi_track_content_id(const struct heif_track*);
  * @return
  */
 LIBHEIF_API
-const char* heif_image_get_gimi_sample_content_id(const heif_image*);
+const char* heif_image_get_gimi_sample_content_id(const struct heif_image*);
 
 /**
  * Get the GIMI content ID stored in the metadata sample.
@@ -453,21 +455,21 @@ const char* heif_image_get_gimi_sample_content_id(const heif_image*);
  * @return
  */
 LIBHEIF_API
-const char* heif_raw_sequence_sample_get_gimi_sample_content_id(const heif_raw_sequence_sample*);
+const char* heif_raw_sequence_sample_get_gimi_sample_content_id(const struct heif_raw_sequence_sample*);
 
 /**
  * Set the GIMI content ID for an image sample. It will be stored as SAI.
  * When passing NULL, a previously set ID will be removed.
  */
 LIBHEIF_API
-void heif_image_set_gimi_sample_content_id(heif_image*, const char* contentID);
+void heif_image_set_gimi_sample_content_id(struct heif_image*, const char* contentID);
 
 /**
  * Set the GIMI content ID for a (metadata) sample. It will be stored as SAI.
  * When passing NULL, a previously set ID will be removed.
  */
 LIBHEIF_API
-void heif_raw_sequence_sample_set_gimi_sample_content_id(heif_raw_sequence_sample*, const char* contentID);
+void heif_raw_sequence_sample_set_gimi_sample_content_id(struct heif_raw_sequence_sample*, const char* contentID);
 
 
 // --- TAI timestamps
@@ -523,33 +525,33 @@ enum heif_track_reference_type {
  * 'reference_type' can be one of the four-cc codes listed in heif_track_reference_type or any other type.
  */
 LIBHEIF_API
-void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, const heif_track* to_track);
+void heif_track_add_reference_to_track(struct heif_track*, uint32_t reference_type, const struct heif_track* to_track);
 
 /**
  * Return the number of different reference types used in this track's tref box.
  */
 LIBHEIF_API
-size_t heif_track_get_number_of_track_reference_types(heif_track*);
+size_t heif_track_get_number_of_track_reference_types(const struct heif_track*);
 
 /**
  * List the reference types used in this track.
  * The passed array must have heif_track_get_number_of_track_reference_types() entries.
  */
 LIBHEIF_API
-void heif_track_get_track_reference_types(heif_track*, uint32_t out_reference_types[]);
+void heif_track_get_track_reference_types(const struct heif_track*, uint32_t out_reference_types[]);
 
 /**
  * Get the number of references of the passed type.
  */
 LIBHEIF_API
-size_t heif_track_get_number_of_track_reference_of_type(heif_track*, uint32_t reference_type);
+size_t heif_track_get_number_of_track_reference_of_type(const struct heif_track*, uint32_t reference_type);
 
 /**
  * List the track ids this track points to with the passed reference type.
  * The passed array must have heif_track_get_number_of_track_reference_of_type() entries.
  */
 LIBHEIF_API
-size_t heif_track_get_references_from_track(heif_track*, uint32_t reference_type, uint32_t out_to_track_id[]);
+size_t heif_track_get_references_from_track(const struct heif_track*, uint32_t reference_type, uint32_t out_to_track_id[]);
 
 /**
  * Find tracks that are referring to the current track through the passed reference_type.
@@ -558,7 +560,7 @@ size_t heif_track_get_references_from_track(heif_track*, uint32_t reference_type
  * @return number of tracks found. If this is equal to 'array_size', you should ask again with a larger array size to be sure you got all tracks.
  */
 LIBHEIF_API
-size_t heif_track_find_referring_tracks(heif_track*, uint32_t reference_type, uint32_t out_track_id[], size_t array_size);
+size_t heif_track_find_referring_tracks(const struct heif_track*, uint32_t reference_type, uint32_t out_track_id[], size_t array_size);
 
 #ifdef __cplusplus
 }
