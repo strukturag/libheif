@@ -36,7 +36,7 @@ TrackOptions& TrackOptions::operator=(const TrackOptions& src)
   }
 
   this->track_timescale = src.track_timescale;
-  this->write_aux_info_interleaved = src.write_aux_info_interleaved;
+  this->write_sample_aux_infos_interleaved = src.write_sample_aux_infos_interleaved;
   this->with_tai_timestamps = src.with_tai_timestamps;
 
   if (src.tai_clock_info) {
@@ -406,12 +406,12 @@ Track::Track(HeifContext* ctx, uint32_t track_id, TrackOptions* options, uint32_
     m_track_info = *options;
 
     if (m_track_info.with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_aux_info_interleaved);
+      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_sample_aux_infos_interleaved);
       m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
 
     if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
-      m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_aux_info_interleaved);
+      m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info.write_sample_aux_infos_interleaved);
       m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
     }
 

@@ -302,9 +302,9 @@ void heif_track_options_set_timescale(struct heif_track_options* options, uint32
 }
 
 
-void heif_track_options_set_interleaved_aux_info(struct heif_track_options* options, int interleaved_flag)
+void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_options* options, int interleaved_flag)
 {
-  options->options.write_aux_info_interleaved = (interleaved_flag != 0);
+  options->options.write_sample_aux_infos_interleaved = (interleaved_flag != 0);
 }
 
 

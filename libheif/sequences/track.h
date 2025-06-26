@@ -100,7 +100,7 @@ struct TrackOptions
   //
   // If 'false', all aux_info will be written as one block after the compressed image data.
   // This has the advantage that no aux_info offsets have to be written.
-  bool write_aux_info_interleaved = false;
+  bool write_sample_aux_infos_interleaved = false;
 
 
   // --- TAI timestamps for samples

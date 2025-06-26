@@ -282,7 +282,7 @@ void heif_track_options_set_timescale(struct heif_track_options*, uint32_t times
  * This has the advantage that no aux_info offsets have to be written.
  */
 LIBHEIF_API
-void heif_track_options_set_interleaved_aux_info(struct heif_track_options*, int interleaved_flag);
+void heif_track_options_set_interleaved_sample_aux_infos(struct heif_track_options*, int interleaved_flag);
 
 LIBHEIF_API
 struct heif_error heif_track_options_enable_tai_timestamps(struct heif_track_options*,
