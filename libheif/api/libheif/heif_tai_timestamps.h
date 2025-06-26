@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-struct heif_tai_clock_info {
+typedef struct heif_tai_clock_info {
   uint8_t version;
 
   // --- version 1
@@ -43,7 +43,7 @@ struct heif_tai_clock_info {
 
   // whether clock is synchronized to an atomic source
   uint8_t clock_type;
-};
+} heif_tai_clock_info;
 
 #define heif_tai_clock_info_time_uncertainty_unknown UINT64_C(0xFFFFFFFFFFFFFFFF)
 #define heif_tai_clock_info_clock_drift_rate_unknown INT32_C(0x7FFFFFFF)
@@ -61,7 +61,7 @@ struct heif_tai_clock_info {
  * Allocate a new heif_tai_clock_info object and initialize with default values.
  */
 LIBHEIF_API
-struct heif_tai_clock_info* heif_tai_clock_info_alloc();
+heif_tai_clock_info* heif_tai_clock_info_alloc();
 
 /**
  * Copies the source object into the destination object.
@@ -69,13 +69,13 @@ struct heif_tai_clock_info* heif_tai_clock_info_alloc();
  * The version property has to be set in both structs.
  */
 LIBHEIF_API
-void heif_tai_clock_info_copy(struct heif_tai_clock_info* dst, const struct heif_tai_clock_info* src);
+void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src);
 
 LIBHEIF_API
-void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info);
+void heif_tai_clock_info_release(heif_tai_clock_info* clock_info);
 
 
-struct heif_tai_timestamp_packet {
+typedef struct heif_tai_timestamp_packet {
   uint8_t version;
 
   // --- version 1
@@ -91,13 +91,13 @@ struct heif_tai_timestamp_packet {
 
   // whether the original clock value has been modified
   uint8_t timestamp_is_modified;         // bool
-};
+} heif_tai_timestamp_packet;
 
 /**
  * Allocate a new heif_tai_timestamp_packet object and initialize with default values.
  */
 LIBHEIF_API
-struct heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
 
 /**
  * Copies the source object into the destination object.
@@ -105,10 +105,10 @@ struct heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
  * The version property has to be set in both structs.
  */
 LIBHEIF_API
-void heif_tai_timestamp_packet_copy(struct heif_tai_timestamp_packet* dst, const struct heif_tai_timestamp_packet* src);
+void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
 
 LIBHEIF_API
-void heif_tai_timestamp_packet_release(struct heif_tai_timestamp_packet*);
+void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet*);
 
 
 
@@ -122,7 +122,7 @@ void heif_tai_timestamp_packet_release(struct heif_tai_timestamp_packet*);
 LIBHEIF_API
 struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
                                                         heif_item_id itemId,
-                                                        const struct heif_tai_clock_info* clock_info,
+                                                        const heif_tai_clock_info* clock_info,
                                                         heif_property_id* out_optional_propertyId);
 
 /**
@@ -137,7 +137,7 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
 LIBHEIF_API
 struct heif_error heif_item_get_property_tai_clock_info(const struct heif_context* ctx,
                                                         heif_item_id itemId,
-                                                        struct heif_tai_clock_info** out_clock);
+                                                        heif_tai_clock_info** out_clock);
 
 
 /**
@@ -150,7 +150,7 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 LIBHEIF_API
 struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
                                                        heif_item_id itemId,
-                                                       const struct heif_tai_timestamp_packet* timestamp,
+                                                       const heif_tai_timestamp_packet* timestamp,
                                                        heif_property_id* out_optional_propertyId);
 
 /**
@@ -165,7 +165,7 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
 LIBHEIF_API
 struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context* ctx,
                                                        heif_item_id itemId,
-                                                       struct heif_tai_timestamp_packet** out_timestamp);
+                                                       heif_tai_timestamp_packet** out_timestamp);
 
 /**
  * Attach a TAI timestamp to the image.
@@ -177,7 +177,7 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
  */
 LIBHEIF_API
 struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
-                                               const struct heif_tai_timestamp_packet* timestamp);
+                                               const heif_tai_timestamp_packet* timestamp);
 
 /**
  * Get the heif_tai_timestamp_packet attached to the image.
@@ -191,7 +191,7 @@ struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
  */
 LIBHEIF_API
 struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
-                                               struct heif_tai_timestamp_packet** out_timestamp);
+                                               heif_tai_timestamp_packet** out_timestamp);
 
 #ifdef __cplusplus
 }
