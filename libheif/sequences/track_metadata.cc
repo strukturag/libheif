@@ -59,9 +59,9 @@ Track_Metadata::Track_Metadata(HeifContext* ctx, uint32_t track_id, std::string 
 }
 
 
+#if 0
 Result<std::shared_ptr<const Track_Metadata::Metadata>> Track_Metadata::read_next_metadata_sample()
 {
-#if 0
   if (m_current_chunk > m_chunks.size()) {
     return Error{heif_error_End_of_sequence,
                  heif_suberror_Unspecified,
@@ -130,12 +130,11 @@ Result<std::shared_ptr<const Track_Metadata::Metadata>> Track_Metadata::read_nex
   m_next_sample_to_be_decoded++;
 
   return image;
-#endif
-  return {};
 }
+#endif
 
 
-Error Track_Metadata::write_raw_metadata(const Metadata& metadata)
+Error Track_Metadata::write_raw_metadata(const heif_raw_sequence_sample* raw_sample)
 {
   // generate new chunk for first metadata packet
 
@@ -152,8 +151,11 @@ Error Track_Metadata::write_raw_metadata(const Metadata& metadata)
     set_sample_description_box(sample_description_box);
   }
 
-  Error err = write_sample_data(metadata.raw_metadata, metadata.duration, true,
-                                metadata.timestamp, metadata.gimi_contentID);
+  Error err = write_sample_data(raw_sample->data,
+                                raw_sample->duration,
+                                true,
+                                raw_sample->timestamp,
+                                raw_sample->gimi_sample_content_id);
   if (err) {
     return err;
   }

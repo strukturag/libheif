@@ -539,13 +539,7 @@ struct heif_error heif_track_add_raw_sequence_sample(struct heif_track* track,
             "Cannot save metadata in a non-metadata track."};
   }
 
-  Track_Metadata::Metadata metadata;
-  metadata.raw_metadata = sample->data;
-  metadata.duration = sample->duration;
-  metadata.timestamp = sample->timestamp;
-  metadata.gimi_contentID = sample->gimi_sample_content_id;
-
-  auto error = metadata_track->write_raw_metadata(metadata);
+  auto error = metadata_track->write_raw_metadata(sample);
   if (error.error_code) {
     return error.error_struct(track->context.get());
   }

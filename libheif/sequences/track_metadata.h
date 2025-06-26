@@ -37,19 +37,7 @@ public:
 
   ~Track_Metadata() override = default;
 
-  struct Metadata {
-    ~Metadata() { heif_tai_timestamp_packet_release(timestamp); }
-
-    std::vector<uint8_t> raw_metadata;
-    uint32_t duration = 0;
-
-    const heif_tai_timestamp_packet* timestamp = nullptr;
-    std::string gimi_contentID;
-  };
-
-  Result<std::shared_ptr<const Metadata>> read_next_metadata_sample();
-
-  Error write_raw_metadata(const Metadata&);
+  Error write_raw_metadata(const heif_raw_sequence_sample*);
 
 private:
   std::string m_uri;
