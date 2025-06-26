@@ -44,37 +44,37 @@ extern "C" {
 
 // Release image handle.
 LIBHEIF_API
-void heif_image_handle_release(const struct heif_image_handle*);
+void heif_image_handle_release(const heif_image_handle*);
 
 // Check whether the given image_handle is the primary image of the file.
 LIBHEIF_API
-int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
+int heif_image_handle_is_primary_image(const heif_image_handle* handle);
 
 LIBHEIF_API
-heif_item_id heif_image_handle_get_item_id(const struct heif_image_handle* handle);
+heif_item_id heif_image_handle_get_item_id(const heif_image_handle* handle);
 
 // Get the resolution of an image.
 LIBHEIF_API
-int heif_image_handle_get_width(const struct heif_image_handle* handle);
+int heif_image_handle_get_width(const heif_image_handle* handle);
 
 LIBHEIF_API
-int heif_image_handle_get_height(const struct heif_image_handle* handle);
+int heif_image_handle_get_height(const heif_image_handle* handle);
 
 LIBHEIF_API
-int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
+int heif_image_handle_has_alpha_channel(const heif_image_handle*);
 
 LIBHEIF_API
-int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle*);
+int heif_image_handle_is_premultiplied_alpha(const heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
 // Only defined for images coded in the YCbCr or monochrome colorspace.
 LIBHEIF_API
-int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
+int heif_image_handle_get_luma_bits_per_pixel(const heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
 // Only defined for images coded in the YCbCr colorspace.
 LIBHEIF_API
-int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
+int heif_image_handle_get_chroma_bits_per_pixel(const heif_image_handle*);
 
 // Return the colorspace that libheif proposes to use for decoding.
 // Usually, these will be either YCbCr or Monochrome, but it may also propose RGB for images
@@ -83,22 +83,22 @@ int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*)
 // These are only proposed values that avoid colorspace conversions as much as possible.
 // You can still request the output in your preferred colorspace, but this may involve an internal conversion.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
-                                                                      enum heif_colorspace* out_colorspace,
-                                                                      enum heif_chroma* out_chroma);
+heif_error heif_image_handle_get_preferred_decoding_colorspace(const heif_image_handle* image_handle,
+                                                               enum heif_colorspace* out_colorspace,
+                                                               enum heif_chroma* out_chroma);
 
 // Get the image width from the 'ispe' box. This is the original image size without
 // any transformations applied to it. Do not use this unless you know exactly what
 // you are doing.
 LIBHEIF_API
-int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle);
+int heif_image_handle_get_ispe_width(const heif_image_handle* handle);
 
 LIBHEIF_API
-int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
+int heif_image_handle_get_ispe_height(const heif_image_handle* handle);
 
 // Returns whether the image has 'pixel aspect ratio information' information. If 0 is returned, the output is filled with the 1:1 default.
 LIBHEIF_API
-int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, uint32_t* aspect_h, uint32_t* aspect_v);
+int heif_image_handle_get_pixel_aspect_ratio(const heif_image_handle*, uint32_t* aspect_h, uint32_t* aspect_v);
 
 
 // This gets the context associated with the image handle.
@@ -110,7 +110,7 @@ int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, ui
 // After you freed a context pointer, you can still use the context through a different pointer that you
 // might have acquired from elsewhere.
 LIBHEIF_API
-struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle);
+heif_context* heif_image_handle_get_context(const heif_image_handle* handle);
 
 
 #ifdef __cplusplus

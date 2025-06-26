@@ -330,7 +330,7 @@ enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
  * @returns heif_error_ok if a supported brand is found, or other error if not.
  */
 LIBHEIF_API
-struct heif_error heif_has_compatible_filetype(const uint8_t* data, int len);
+heif_error heif_has_compatible_filetype(const uint8_t* data, int len);
 
 LIBHEIF_API
 int heif_check_jpeg_filetype(const uint8_t* data, int len);

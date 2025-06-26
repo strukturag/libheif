@@ -90,8 +90,8 @@ LIBHEIF_API int heif_get_version_number_maintenance(void);
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
-struct heif_context;
-struct heif_image_handle;
+typedef struct heif_context heif_context;
+typedef struct heif_image_handle heif_image_handle;
 
 typedef uint32_t heif_item_id;
 typedef uint32_t heif_property_id;
@@ -106,12 +106,12 @@ void heif_string_release(const char*);
 
 // ========================= library initialization ======================
 
-struct heif_init_params
+typedef struct heif_init_params
 {
   int version;
 
   // currently no parameters
-};
+} heif_init_params;
 
 
 /**
@@ -134,7 +134,7 @@ struct heif_init_params
  * You may pass nullptr to get default parameters. Currently, no parameters are supported.
  */
 LIBHEIF_API
-struct heif_error heif_init(struct heif_init_params*);
+heif_error heif_init(heif_init_params*);
 
 /**
  * Deinitialise and clean up library.
@@ -162,51 +162,51 @@ enum heif_plugin_type
   heif_plugin_type_decoder
 };
 
-struct heif_plugin_info
+typedef struct heif_plugin_info
 {
   int version; // version of this info struct
   enum heif_plugin_type type;
   const void* plugin;
   void* internal_handle; // for internal use only
-};
+} heif_plugin_info;
 
 LIBHEIF_API
-struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin);
+heif_error heif_load_plugin(const char* filename, heif_plugin_info const** out_plugin);
 
 LIBHEIF_API
-struct heif_error heif_load_plugins(const char* directory,
-                                    const struct heif_plugin_info** out_plugins,
-                                    int* out_nPluginsLoaded,
-                                    int output_array_size);
+heif_error heif_load_plugins(const char* directory,
+                             const heif_plugin_info** out_plugins,
+                             int* out_nPluginsLoaded,
+                             int output_array_size);
 
 LIBHEIF_API
-struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin);
+heif_error heif_unload_plugin(const heif_plugin_info* plugin);
 
 // Get a NULL terminated array of the plugin directories that are searched by libheif.
 // This includes the paths specified in the environment variable LIBHEIF_PLUGIN_PATHS and the built-in path
 // (if not overridden by the environment variable).
 LIBHEIF_API
-const char*const* heif_get_plugin_directories(void);
+const char* const* heif_get_plugin_directories(void);
 
 LIBHEIF_API
-void heif_free_plugin_directories(const char*const*);
+void heif_free_plugin_directories(const char* const*);
 
 
 // --- register plugins
 
-struct heif_decoder_plugin;
-struct heif_encoder_plugin;
+typedef struct heif_decoder_plugin heif_decoder_plugin;
+typedef struct heif_encoder_plugin heif_encoder_plugin;
 
 LIBHEIF_API
-struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*);
+heif_error heif_register_decoder_plugin(const heif_decoder_plugin*);
 
 LIBHEIF_API
-struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
+heif_error heif_register_encoder_plugin(const heif_encoder_plugin*);
 
 
 // DEPRECATED. Use heif_register_decoder_plugin(const struct heif_decoder_plugin*) instead.
 LIBHEIF_API
-struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
+heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin*);
 
 #ifdef __cplusplus
 }

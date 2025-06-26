@@ -29,38 +29,36 @@ extern "C" {
 #include <libheif/heif_image.h>
 #include <libheif/heif_error.h>
 
-struct heif_encoder;
-struct heif_encoding_options;
+typedef struct heif_encoder heif_encoder;
+typedef struct heif_encoding_options heif_encoding_options;
 
 
 // ------------------------- depth images -------------------------
 
 LIBHEIF_API
-int heif_image_handle_has_depth_image(const struct heif_image_handle*);
+int heif_image_handle_has_depth_image(const heif_image_handle*);
 
 LIBHEIF_API
-int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle);
+int heif_image_handle_get_number_of_depth_images(const heif_image_handle* handle);
 
 LIBHEIF_API
-int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
+int heif_image_handle_get_list_of_depth_image_IDs(const heif_image_handle* handle,
                                                   heif_item_id* ids, int count);
 
 LIBHEIF_API
-struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
-                                                           heif_item_id depth_image_id,
-                                                           struct heif_image_handle** out_depth_handle);
+heif_error heif_image_handle_get_depth_image_handle(const heif_image_handle* handle,
+                                                    heif_item_id depth_image_id,
+                                                    heif_image_handle** out_depth_handle);
 
 
-enum heif_depth_representation_type
-{
+enum heif_depth_representation_type {
   heif_depth_representation_type_uniform_inverse_Z = 0,
   heif_depth_representation_type_uniform_disparity = 1,
   heif_depth_representation_type_uniform_Z = 2,
   heif_depth_representation_type_nonuniform_disparity = 3
 };
 
-struct heif_depth_representation_info
-{
+typedef struct heif_depth_representation_info {
   uint8_t version;
 
   // version 1 fields
@@ -82,11 +80,11 @@ struct heif_depth_representation_info
   uint8_t* depth_nonlinear_representation_model;
 
   // version 2 fields below
-};
+} heif_depth_representation_info;
 
 
 LIBHEIF_API
-void heif_depth_representation_info_free(const struct heif_depth_representation_info* info);
+void heif_depth_representation_info_free(const heif_depth_representation_info* info);
 
 // Returns true when there is depth_representation_info available
 // Note 1: depth_image_id is currently unused because we support only one depth channel per image, but
@@ -94,9 +92,9 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 // Note 2: Because of an API bug before v1.11.0, the function also works when 'handle' is the handle of the depth image.
 // However, you should pass the handle of the main image. Please adapt your code if needed.
 LIBHEIF_API
-int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
+int heif_image_handle_get_depth_image_representation_info(const heif_image_handle* handle,
                                                           heif_item_id depth_image_id,
-                                                          const struct heif_depth_representation_info** out);
+                                                          const heif_depth_representation_info** out);
 
 
 
@@ -104,17 +102,17 @@ int heif_image_handle_get_depth_image_representation_info(const struct heif_imag
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
-int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
+int heif_image_handle_get_number_of_thumbnails(const heif_image_handle* handle);
 
 LIBHEIF_API
-int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
+int heif_image_handle_get_list_of_thumbnail_IDs(const heif_image_handle* handle,
                                                 heif_item_id* ids, int count);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
-                                                  heif_item_id thumbnail_id,
-                                                  struct heif_image_handle** out_thumbnail_handle);
+heif_error heif_image_handle_get_thumbnail(const heif_image_handle* main_image_handle,
+                                           heif_item_id thumbnail_id,
+                                           heif_image_handle** out_thumbnail_handle);
 
 
 // Encode the 'image' as a scaled down thumbnail image.
@@ -125,19 +123,19 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
 // The encoded thumbnail is automatically assigned to the 'master_image_handle'. Hence, you
 // do not have to call heif_context_assign_thumbnail().
 LIBHEIF_API
-struct heif_error heif_context_encode_thumbnail(struct heif_context*,
-                                                const struct heif_image* image,
-                                                const struct heif_image_handle* master_image_handle,
-                                                struct heif_encoder* encoder,
-                                                const struct heif_encoding_options* options,
-                                                int bbox_size,
-                                                struct heif_image_handle** out_thumb_image_handle);
+heif_error heif_context_encode_thumbnail(heif_context*,
+                                         const heif_image* image,
+                                         const heif_image_handle* master_image_handle,
+                                         heif_encoder* encoder,
+                                         const heif_encoding_options* options,
+                                         int bbox_size,
+                                         heif_image_handle** out_thumb_image_handle);
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
-struct heif_error heif_context_assign_thumbnail(struct heif_context*,
-                                                const struct heif_image_handle* master_image,
-                                                const struct heif_image_handle* thumbnail_image);
+heif_error heif_context_assign_thumbnail(struct heif_context*,
+                                         const heif_image_handle* master_image,
+                                         const heif_image_handle* thumbnail_image);
 
 
 // ------------------------- auxiliary images -------------------------
@@ -147,34 +145,34 @@ struct heif_error heif_context_assign_thumbnail(struct heif_context*,
 
 // List the number of auxiliary images assigned to this image handle.
 LIBHEIF_API
-int heif_image_handle_get_number_of_auxiliary_images(const struct heif_image_handle* handle,
+int heif_image_handle_get_number_of_auxiliary_images(const heif_image_handle* handle,
                                                      int aux_filter);
 
 LIBHEIF_API
-int heif_image_handle_get_list_of_auxiliary_image_IDs(const struct heif_image_handle* handle,
+int heif_image_handle_get_list_of_auxiliary_image_IDs(const heif_image_handle* handle,
                                                       int aux_filter,
                                                       heif_item_id* ids, int count);
 
 // You are responsible to deallocate the returned buffer with heif_image_handle_release_auxiliary_type().
 LIBHEIF_API
-struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_handle* handle,
-                                                       const char** out_type);
+heif_error heif_image_handle_get_auxiliary_type(const heif_image_handle* handle,
+                                                const char** out_type);
 
 LIBHEIF_API
-void heif_image_handle_release_auxiliary_type(const struct heif_image_handle* handle,
+void heif_image_handle_release_auxiliary_type(const heif_image_handle* handle,
                                               const char** out_type);
 
 // Get the image handle of an auxiliary image.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif_image_handle* main_image_handle,
-                                                               heif_item_id auxiliary_id,
-                                                               struct heif_image_handle** out_auxiliary_handle);
+heif_error heif_image_handle_get_auxiliary_image_handle(const heif_image_handle* main_image_handle,
+                                                        heif_item_id auxiliary_id,
+                                                        heif_image_handle** out_auxiliary_handle);
 
 // ===================== DEPRECATED =====================
 
 // DEPRECATED (because typo in function name). Use heif_image_handle_release_auxiliary_type() instead.
 LIBHEIF_API
-void heif_image_handle_free_auxiliary_types(const struct heif_image_handle* handle,
+void heif_image_handle_free_auxiliary_types(const heif_image_handle* handle,
                                             const char** out_type);
 
 #ifdef __cplusplus

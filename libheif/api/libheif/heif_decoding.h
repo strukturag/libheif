@@ -37,7 +37,7 @@ extern "C" {
 // You can use it, for example, in cases where you are decoding several images in parallel anyway you thus want
 // to minimize parallelism in each decoder.
 LIBHEIF_API
-void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
+void heif_context_set_max_decoding_threads(heif_context* ctx, int max_threads);
 
 // Quick check whether there is a decoder available for the given format.
 // Note that the decoder still may not be able to decode all variants of that format.
@@ -53,7 +53,7 @@ enum heif_progress_step
 };
 
 
-struct heif_decoding_options
+typedef struct heif_decoding_options
 {
   uint8_t version;
 
@@ -91,7 +91,7 @@ struct heif_decoding_options
 
   // version 5 options
 
-  struct heif_color_conversion_options color_conversion_options;
+  heif_color_conversion_options color_conversion_options;
 
   // version 6 options
 
@@ -100,25 +100,25 @@ struct heif_decoding_options
   // version 7 options
 
   // When set to NULL, default options will be used
-  struct heif_color_conversion_options_ext* color_conversion_options_ext;
-};
+  heif_color_conversion_options_ext* color_conversion_options_ext;
+} heif_decoding_options;
 
 
 // Allocate decoding options and fill with default values.
 // Note: you should always get the decoding options through this function since the
 // option structure may grow in size in future versions.
 LIBHEIF_API
-struct heif_decoding_options* heif_decoding_options_alloc(void);
+heif_decoding_options* heif_decoding_options_alloc(void);
 
 LIBHEIF_API
-void heif_decoding_options_copy(struct heif_decoding_options* dst,
-                                const struct heif_decoding_options* src);
+void heif_decoding_options_copy(heif_decoding_options* dst,
+                                const heif_decoding_options* src);
 
 LIBHEIF_API
-void heif_decoding_options_free(struct heif_decoding_options*);
+void heif_decoding_options_free(heif_decoding_options*);
 
 
-struct heif_decoder_descriptor;
+typedef struct heif_decoder_descriptor heif_decoder_descriptor;
 
 // Get a list of available decoders. You can filter the encoders by compression format.
 // Use format_filter==heif_compression_undefined to get all available decoders.
@@ -127,18 +127,18 @@ struct heif_decoder_descriptor;
 // By setting out_decoders==nullptr, you can query the number of decoders, 'count' is ignored.
 LIBHEIF_API
 int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
-                                 const struct heif_decoder_descriptor** out_decoders,
+                                 const heif_decoder_descriptor** out_decoders,
                                  int count);
 
 // Return a long, descriptive name of the decoder (including version information).
 LIBHEIF_API
-const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descriptor*);
+const char* heif_decoder_descriptor_get_name(const heif_decoder_descriptor*);
 
 // Return a short, symbolic name for identifying the decoder.
 // This name should stay constant over different decoder versions.
 // Note: the returned ID may be NULL for old plugins that don't support this yet.
 LIBHEIF_API
-const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor*);
+const char* heif_decoder_descriptor_get_id_name(const heif_decoder_descriptor*);
 
 
 // Decode an heif_image_handle into the actual pixel image and also carry out
@@ -149,12 +149,11 @@ const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descri
 // Decoding options may be NULL. If you want to supply options, always use
 // heif_decoding_options_alloc() to get the structure.
 LIBHEIF_API
-struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img,
-                                    enum heif_colorspace colorspace,
-                                    enum heif_chroma chroma,
-                                    const struct heif_decoding_options* options);
-
+heif_error heif_decode_image(const heif_image_handle* in_handle,
+                             heif_image** out_img,
+                             enum heif_colorspace colorspace,
+                             enum heif_chroma chroma,
+                             const heif_decoding_options* options);
 
 #ifdef __cplusplus
 }

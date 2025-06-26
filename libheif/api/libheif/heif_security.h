@@ -34,7 +34,8 @@ extern "C" {
 // --- security limits
 
 // If you set a limit to 0, the limit is disabled.
-struct heif_security_limits {
+typedef struct heif_security_limits
+{
   uint8_t version;
 
   // --- version 1
@@ -62,27 +63,27 @@ struct heif_security_limits {
   uint64_t max_total_memory;
   uint32_t max_sample_description_box_entries;
   uint32_t max_sample_group_description_box_entries;
-};
+} heif_security_limits;
 
 
 // The global security limits are the default for new heif_contexts.
 // These global limits cannot be changed, but you can override the limits for a specific heif_context.
 LIBHEIF_API
-const struct heif_security_limits* heif_get_global_security_limits();
+const heif_security_limits* heif_get_global_security_limits(void);
 
 // Returns a set of fully disabled security limits. Use with care and only after user confirmation.
 LIBHEIF_API
-const struct heif_security_limits* heif_get_disabled_security_limits();
+const heif_security_limits* heif_get_disabled_security_limits(void);
 
 // Returns the security limits for a heif_context.
 // By default, the limits are set to the global limits, but you can change them in the returned object.
 LIBHEIF_API
-struct heif_security_limits* heif_context_get_security_limits(const struct heif_context*);
+heif_security_limits* heif_context_get_security_limits(const heif_context*);
 
 // Overwrites the security limits of a heif_context.
 // This is a convenience function to easily copy limits.
 LIBHEIF_API
-struct heif_error heif_context_set_security_limits(struct heif_context*, const struct heif_security_limits*);
+heif_error heif_context_set_security_limits(heif_context*, const heif_security_limits*);
 
 
 // --- DEPRECATED ---
@@ -91,7 +92,7 @@ struct heif_error heif_context_set_security_limits(struct heif_context*, const s
 // to maximum_width ^ 2. Alternatively to using this function, you can also set the maximum image area
 // in the security limits structure returned by heif_context_get_security_limits().
 LIBHEIF_API
-void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
+void heif_context_set_maximum_image_size_limit(heif_context* ctx, int maximum_width);
 
 
 #ifdef __cplusplus

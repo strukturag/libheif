@@ -127,15 +127,14 @@ enum heif_compression_format
 // Allocate a new context for reading HEIF files.
 // Has to be freed again with heif_context_free().
 LIBHEIF_API
-struct heif_context* heif_context_alloc(void);
+heif_context* heif_context_alloc(void);
 
 // Free a previously allocated HEIF context. You should not free a context twice.
 LIBHEIF_API
-void heif_context_free(struct heif_context*);
+void heif_context_free(heif_context*);
 
 
-
-struct heif_reading_options;
+typedef struct heif_reading_options heif_reading_options;
 
 enum heif_reader_grow_status
 {
@@ -146,7 +145,7 @@ enum heif_reader_grow_status
 };
 
 
-struct heif_reader_range_request_result
+typedef struct heif_reader_range_request_result
 {
   enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
 
@@ -159,10 +158,10 @@ struct heif_reader_range_request_result
   // for status == 'heif_reader_grow_status_error'
   int reader_error_code;        // a reader specific error code
   const char* reader_error_msg; // libheif will call heif_reader.release_error_msg on this if it is not NULL
-};
+} heif_reader_range_request_result;
 
 
-struct heif_reader
+typedef struct heif_reader
 {
   // API version supported by this reader
   int reader_api_version;
@@ -210,100 +209,100 @@ struct heif_reader
   // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
   // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
   //   (the valid part of the range has been read).
-  struct heif_reader_range_request_result (*request_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+  heif_reader_range_request_result (* request_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
 
   // libheif might issue hints when it assumes that a file range might be needed in the future.
   // This may happen, for example, when your are doing selective tile accesses and libheif proposes
   // to preload offset pointer tables.
   // Another difference to request_file_range() is that this call should be non-blocking.
   // If you preload any data, do this in a background thread.
-  void (*preload_range_hint)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+  void (* preload_range_hint)(uint64_t start_pos, uint64_t end_pos, void* userdata);
 
   // If libheif does not need access to a file range anymore, it may call this function to
   // give a hint to the reader that it may release the range from a cache.
   // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
   // need to implement this function.
-  void (*release_file_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+  void (* release_file_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
 
   // Release an error message that was returned by heif_reader in an earlier call.
   // If this function is NULL, the error message string will not be released.
   // This is a viable option if you are only returning static strings.
-  void (*release_error_msg)(const char* msg);
-};
+  void (* release_error_msg)(const char* msg);
+} heif_reader;
 
 
 // Read a HEIF file from a named disk file.
 // The heif_reading_options should currently be set to NULL.
 LIBHEIF_API
-struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename,
-                                              const struct heif_reading_options*);
+heif_error heif_context_read_from_file(heif_context*, const char* filename,
+                                       const heif_reading_options*);
 
 // Read a HEIF file stored completely in memory.
 // The heif_reading_options should currently be set to NULL.
 // DEPRECATED: use heif_context_read_from_memory_without_copy() instead.
 LIBHEIF_API
-struct heif_error heif_context_read_from_memory(struct heif_context*,
-                                                const void* mem, size_t size,
-                                                const struct heif_reading_options*);
+heif_error heif_context_read_from_memory(heif_context*,
+                                         const void* mem, size_t size,
+                                         const heif_reading_options*);
 
 // Same as heif_context_read_from_memory() except that the provided memory is not copied.
 // That means, you will have to keep the memory area alive as long as you use the heif_context.
 LIBHEIF_API
-struct heif_error heif_context_read_from_memory_without_copy(struct heif_context*,
-                                                             const void* mem, size_t size,
-                                                             const struct heif_reading_options*);
+heif_error heif_context_read_from_memory_without_copy(heif_context*,
+                                                      const void* mem, size_t size,
+                                                      const heif_reading_options*);
 
 LIBHEIF_API
-struct heif_error heif_context_read_from_reader(struct heif_context*,
-                                                const struct heif_reader* reader,
-                                                void* userdata,
-                                                const struct heif_reading_options*);
+heif_error heif_context_read_from_reader(heif_context*,
+                                         const heif_reader* reader,
+                                         void* userdata,
+                                         const heif_reading_options*);
 
 // Number of top-level images in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
 LIBHEIF_API
-int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
+int heif_context_get_number_of_top_level_images(heif_context* ctx);
 
 LIBHEIF_API
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id);
+int heif_context_is_top_level_image_ID(heif_context* ctx, heif_item_id id);
 
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'count' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+int heif_context_get_list_of_top_level_image_IDs(heif_context* ctx,
                                                  heif_item_id* ID_array,
                                                  int count);
 
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
+heif_error heif_context_get_primary_image_ID(heif_context* ctx, heif_item_id* id);
 
 // Get a handle to the primary image of the HEIF file.
 // This is the image that should be displayed primarily when there are several images in the file.
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx,
-                                                        struct heif_image_handle**);
+heif_error heif_context_get_primary_image_handle(heif_context* ctx,
+                                                 heif_image_handle**);
 
 // Get the image handle for a known image ID.
 LIBHEIF_API
-struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
-                                                heif_item_id id,
-                                                struct heif_image_handle**);
+heif_error heif_context_get_image_handle(heif_context* ctx,
+                                         heif_item_id id,
+                                         heif_image_handle**);
 
 // Print information about the boxes of a HEIF file to file descriptor.
 // This is for debugging and informational purposes only. You should not rely on
 // the output having a specific format. At best, you should not use this at all.
 LIBHEIF_API
-void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
+void heif_context_debug_dump_boxes_to_file(heif_context* ctx, int fd);
 
 // ====================================================================================================
 //   Write the heif_context to a HEIF file
 
 LIBHEIF_API
-struct heif_error heif_context_write_to_file(struct heif_context*,
-                                             const char* filename);
+heif_error heif_context_write_to_file(heif_context*,
+                                      const char* filename);
 
-struct heif_writer
+typedef struct heif_writer
 {
   // API version supported by this writer
   int writer_api_version;
@@ -311,16 +310,17 @@ struct heif_writer
   // --- version 1 functions ---
 
   // On success, the returned heif_error may have a NULL message. It will automatically be replaced with a "Success" string.
-  struct heif_error (* write)(struct heif_context* ctx, // TODO: why do we need this parameter?
-                              const void* data,
-                              size_t size,
-                              void* userdata);
-};
+  heif_error (* write)(heif_context* ctx, // TODO: why do we need this parameter?
+                       const void* data,
+                       size_t size,
+                       void* userdata);
+} heif_writer;
+
 
 LIBHEIF_API
-struct heif_error heif_context_write(struct heif_context*,
-                                     struct heif_writer* writer,
-                                     void* userdata);
+heif_error heif_context_write(heif_context*,
+                              heif_writer* writer,
+                              void* userdata);
 
 #ifdef __cplusplus
 }

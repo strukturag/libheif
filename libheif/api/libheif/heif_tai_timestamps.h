@@ -27,7 +27,8 @@
 extern "C" {
 #endif
 
-typedef struct heif_tai_clock_info {
+typedef struct heif_tai_clock_info
+{
   uint8_t version;
 
   // --- version 1
@@ -61,7 +62,7 @@ typedef struct heif_tai_clock_info {
  * Allocate a new heif_tai_clock_info object and initialize with default values.
  */
 LIBHEIF_API
-heif_tai_clock_info* heif_tai_clock_info_alloc();
+heif_tai_clock_info* heif_tai_clock_info_alloc(void);
 
 /**
  * Copies the source object into the destination object.
@@ -75,7 +76,8 @@ LIBHEIF_API
 void heif_tai_clock_info_release(heif_tai_clock_info* clock_info);
 
 
-typedef struct heif_tai_timestamp_packet {
+typedef struct heif_tai_timestamp_packet
+{
   uint8_t version;
 
   // --- version 1
@@ -97,7 +99,7 @@ typedef struct heif_tai_timestamp_packet {
  * Allocate a new heif_tai_timestamp_packet object and initialize with default values.
  */
 LIBHEIF_API
-heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc(void);
 
 /**
  * Copies the source object into the destination object.
@@ -120,10 +122,10 @@ void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet*);
  * @param out_optional_propertyId Output parameter for the property ID of the tai_clock_info. This parameter may be nullptr if the info is not required.
  */
 LIBHEIF_API
-struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
-                                                        heif_item_id itemId,
-                                                        const heif_tai_clock_info* clock_info,
-                                                        heif_property_id* out_optional_propertyId);
+heif_error heif_item_set_property_tai_clock_info(heif_context* ctx,
+                                                 heif_item_id itemId,
+                                                 const heif_tai_clock_info* clock_info,
+                                                 heif_property_id* out_optional_propertyId);
 
 /**
  * Get the heif_tai_clock_info attached to the item.
@@ -135,9 +137,9 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
  *                  no error is returned.
  */
 LIBHEIF_API
-struct heif_error heif_item_get_property_tai_clock_info(const struct heif_context* ctx,
-                                                        heif_item_id itemId,
-                                                        heif_tai_clock_info** out_clock);
+heif_error heif_item_get_property_tai_clock_info(const heif_context* ctx,
+                                                 heif_item_id itemId,
+                                                 heif_tai_clock_info** out_clock);
 
 
 /**
@@ -148,10 +150,10 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
  * @param out_optional_propertyId Output parameter for the property ID of the TAI timestamp. This parameter may be nullptr if the info is not required.
  */
 LIBHEIF_API
-struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
-                                                       heif_item_id itemId,
-                                                       const heif_tai_timestamp_packet* timestamp,
-                                                       heif_property_id* out_optional_propertyId);
+heif_error heif_item_set_property_tai_timestamp(heif_context* ctx,
+                                                heif_item_id itemId,
+                                                const heif_tai_timestamp_packet* timestamp,
+                                                heif_property_id* out_optional_propertyId);
 
 /**
  * Get the heif_tai_timestamp_packet attached to the item.
@@ -163,9 +165,9 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
  *                  no error is returned.
  */
 LIBHEIF_API
-struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context* ctx,
-                                                       heif_item_id itemId,
-                                                       heif_tai_timestamp_packet** out_timestamp);
+heif_error heif_item_get_property_tai_timestamp(const heif_context* ctx,
+                                                heif_item_id itemId,
+                                                heif_tai_timestamp_packet** out_timestamp);
 
 /**
  * Attach a TAI timestamp to the image.
@@ -176,8 +178,8 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
  * @param timestamp The TAI timestamp to set to the image. This object will be copied.
  */
 LIBHEIF_API
-struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
-                                               const heif_tai_timestamp_packet* timestamp);
+heif_error heif_image_set_tai_timestamp(heif_image* img,
+                                        const heif_tai_timestamp_packet* timestamp);
 
 /**
  * Get the heif_tai_timestamp_packet attached to the image.
@@ -190,8 +192,8 @@ struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
  *                  no error is returned.
  */
 LIBHEIF_API
-struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
-                                               heif_tai_timestamp_packet** out_timestamp);
+heif_error heif_image_get_tai_timestamp(const heif_image* img,
+                                        heif_tai_timestamp_packet** out_timestamp);
 
 #ifdef __cplusplus
 }

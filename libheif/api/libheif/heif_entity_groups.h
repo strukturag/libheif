@@ -32,25 +32,25 @@ extern "C" {
 
 typedef uint32_t heif_entity_group_id;
 
-struct heif_entity_group
+typedef struct heif_entity_group
 {
   heif_entity_group_id entity_group_id;
   uint32_t entity_group_type;  // this is a FourCC constant
   heif_item_id* entities;
   uint32_t num_entities;
-};
+} heif_entity_group;
 
 // Use 0 for `type_filter` or `item_filter` to disable the filter.
 // Returns an array of heif_entity_group structs with *out_num_groups entries.
 LIBHEIF_API
-struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context*,
-                                                         uint32_t type_filter,
-                                                         heif_item_id item_filter,
-                                                         int* out_num_groups);
+heif_entity_group* heif_context_get_entity_groups(const heif_context*,
+                                                  uint32_t type_filter,
+                                                  heif_item_id item_filter,
+                                                  int* out_num_groups);
 
 // Release an array of entity groups returned by heif_context_get_entity_groups().
 LIBHEIF_API
-void heif_entity_groups_release(struct heif_entity_group*, int num_groups);
+void heif_entity_groups_release(heif_entity_group*, int num_groups);
 
 
 #ifdef __cplusplus

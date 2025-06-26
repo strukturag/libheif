@@ -50,7 +50,7 @@ extern "C" {
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
 
-struct heif_decoder_plugin
+typedef struct heif_decoder_plugin
 {
   // API version supported by this plugin (see table above for supported versions)
   int plugin_api_version;
@@ -59,13 +59,13 @@ struct heif_decoder_plugin
   // --- version 1 functions ---
 
   // Human-readable name of the plugin
-  const char* (* get_plugin_name)();
+  const char* (* get_plugin_name)(void);
 
   // Global plugin initialization (may be NULL)
-  void (* init_plugin)();
+  void (* init_plugin)(void);
 
   // Global plugin deinitialization (may be NULL)
-  void (* deinit_plugin)();
+  void (* deinit_plugin)(void);
 
   // Query whether the plugin supports decoding of the given format
   // Result is a priority value. The plugin with the largest value wins.
@@ -73,24 +73,24 @@ struct heif_decoder_plugin
   int (* does_support_format)(enum heif_compression_format format);
 
   // Create a new decoder context for decoding an image
-  struct heif_error (* new_decoder)(void** decoder);
+  heif_error (* new_decoder)(void** decoder);
 
   // Free the decoder context (heif_image can still be used after destruction)
   void (* free_decoder)(void* decoder);
 
   // Push more data into the decoder. This can be called multiple times.
   // This may not be called after any decode_*() function has been called.
-  struct heif_error (* push_data)(void* decoder, const void* data, size_t size);
+  heif_error (* push_data)(void* decoder, const void* data, size_t size);
 
 
   // --- After pushing the data into the decoder, the decode functions may be called only once.
 
-  struct heif_error (* decode_image)(void* decoder, struct heif_image** out_img);
+  heif_error (* decode_image)(void* decoder, heif_image** out_img);
 
 
   // --- version 2 functions will follow below ... ---
 
-  void (*set_strict_decoding)(void* decoder, int flag);
+  void (* set_strict_decoding)(void* decoder, int flag);
 
   // If not NULL, this can provide a specialized function to convert YCbCr to sRGB, because
   // only the codec itself knows how to interpret the chroma samples and their locations.
@@ -110,9 +110,9 @@ struct heif_decoder_plugin
 
   // --- version 4 functions will follow below ... ---
 
-  struct heif_error (* decode_next_image)(void* decoder, struct heif_image** out_img,
-                                          const struct heif_security_limits* limits);
-};
+  heif_error (* decode_next_image)(void* decoder, heif_image** out_img,
+                                   const heif_security_limits* limits);
+} heif_decoder_plugin;
 
 
 enum heif_encoded_data_type
@@ -135,7 +135,7 @@ enum heif_image_input_class
 };
 
 
-struct heif_encoder_plugin
+typedef struct heif_encoder_plugin
 {
   // API version supported by this plugin (see table above for supported versions)
   int plugin_api_version;
@@ -160,46 +160,46 @@ struct heif_encoder_plugin
 
 
   // Human-readable name of the plugin
-  const char* (* get_plugin_name)();
+  const char* (* get_plugin_name)(void);
 
   // Global plugin initialization (may be NULL)
-  void (* init_plugin)();
+  void (* init_plugin)(void);
 
   // Global plugin cleanup (may be NULL).
   // Free data that was allocated in init_plugin()
-  void (* cleanup_plugin)();
+  void (* cleanup_plugin)(void);
 
   // Create a new decoder context for decoding an image
-  struct heif_error (* new_encoder)(void** encoder);
+  heif_error (* new_encoder)(void** encoder);
 
   // Free the decoder context (heif_image can still be used after destruction)
   void (* free_encoder)(void* encoder);
 
-  struct heif_error (* set_parameter_quality)(void* encoder, int quality);
+  heif_error (* set_parameter_quality)(void* encoder, int quality);
 
-  struct heif_error (* get_parameter_quality)(void* encoder, int* quality);
+  heif_error (* get_parameter_quality)(void* encoder, int* quality);
 
-  struct heif_error (* set_parameter_lossless)(void* encoder, int lossless);
+  heif_error (* set_parameter_lossless)(void* encoder, int lossless);
 
-  struct heif_error (* get_parameter_lossless)(void* encoder, int* lossless);
+  heif_error (* get_parameter_lossless)(void* encoder, int* lossless);
 
-  struct heif_error (* set_parameter_logging_level)(void* encoder, int logging);
+  heif_error (* set_parameter_logging_level)(void* encoder, int logging);
 
-  struct heif_error (* get_parameter_logging_level)(void* encoder, int* logging);
+  heif_error (* get_parameter_logging_level)(void* encoder, int* logging);
 
-  const struct heif_encoder_parameter** (* list_parameters)(void* encoder);
+  const heif_encoder_parameter** (* list_parameters)(void* encoder);
 
-  struct heif_error (* set_parameter_integer)(void* encoder, const char* name, int value);
+  heif_error (* set_parameter_integer)(void* encoder, const char* name, int value);
 
-  struct heif_error (* get_parameter_integer)(void* encoder, const char* name, int* value);
+  heif_error (* get_parameter_integer)(void* encoder, const char* name, int* value);
 
-  struct heif_error (* set_parameter_boolean)(void* encoder, const char* name, int value);
+  heif_error (* set_parameter_boolean)(void* encoder, const char* name, int value);
 
-  struct heif_error (* get_parameter_boolean)(void* encoder, const char* name, int* value);
+  heif_error (* get_parameter_boolean)(void* encoder, const char* name, int* value);
 
-  struct heif_error (* set_parameter_string)(void* encoder, const char* name, const char* value);
+  heif_error (* set_parameter_string)(void* encoder, const char* name, const char* value);
 
-  struct heif_error (* get_parameter_string)(void* encoder, const char* name, char* value, int value_size);
+  heif_error (* get_parameter_string)(void* encoder, const char* name, char* value, int value_size);
 
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.
@@ -209,12 +209,12 @@ struct heif_encoder_plugin
   // Encode an image.
   // After pushing an image into the encoder, you should call get_compressed_data() to
   // get compressed data until it returns a NULL data pointer.
-  struct heif_error (* encode_image)(void* encoder, const struct heif_image* image,
-                                     enum heif_image_input_class image_class);
+  heif_error (* encode_image)(void* encoder, const heif_image* image,
+                              enum heif_image_input_class image_class);
 
   // Get a packet of decoded data. The data format depends on the codec.
   // For HEVC, each packet shall contain exactly one NAL, starting with the NAL header without startcode.
-  struct heif_error (* get_compressed_data)(void* encoder, uint8_t** data, int* size,
+  heif_error (* get_compressed_data)(void* encoder, uint8_t** data, int* size,
                                             enum heif_encoded_data_type* type);
 
 
@@ -234,7 +234,7 @@ struct heif_encoder_plugin
                               uint32_t* encoded_width, uint32_t* encoded_height);
 
   // --- version 4 functions will follow below ... ---
-};
+} heif_encoder_plugin;
 
 
 // Names for standard parameters. These should only be used by the encoder plugins.
@@ -244,7 +244,7 @@ struct heif_encoder_plugin
 // For use only by the encoder plugins.
 // Application programs should use the access functions.
 // NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding)
-struct heif_encoder_parameter
+typedef struct heif_encoder_parameter
 {
   int version; // current version: 2
 
@@ -283,15 +283,15 @@ struct heif_encoder_parameter
   // --- version 2 fields
 
   int has_default;
-};
+} heif_encoder_parameter;
 
 
-extern struct heif_error heif_error_ok;
-extern struct heif_error heif_error_unsupported_parameter;
-extern struct heif_error heif_error_invalid_parameter_value;
+extern heif_error heif_error_ok;
+extern heif_error heif_error_unsupported_parameter;
+extern heif_error heif_error_invalid_parameter_value;
 
 #define HEIF_WARN_OR_FAIL(strict, image, cmd, cleanupBlock) \
-{ struct heif_error e = cmd;                  \
+{ heif_error e = cmd;                         \
   if (e.code != heif_error_Ok) {              \
     if (strict) {                             \
       cleanupBlock                            \

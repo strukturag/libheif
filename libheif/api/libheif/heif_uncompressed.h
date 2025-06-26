@@ -49,7 +49,8 @@ enum heif_unci_compression
 };
 
 
-struct heif_unci_image_parameters {
+typedef struct heif_unci_image_parameters
+{
   int version;
 
   // --- version 1
@@ -63,17 +64,17 @@ struct heif_unci_image_parameters {
   enum heif_unci_compression compression;
 
   // TODO: interleave type, padding
-};
+} heif_unci_image_parameters;
 
 LIBHEIF_API
-struct heif_unci_image_parameters* heif_unci_image_parameters_alloc();
+heif_unci_image_parameters* heif_unci_image_parameters_alloc(void);
 
 LIBHEIF_API
-void heif_unci_image_parameters_copy(struct heif_unci_image_parameters* dst,
-                                     const struct heif_unci_image_parameters* src);
+void heif_unci_image_parameters_copy(heif_unci_image_parameters* dst,
+                                     const heif_unci_image_parameters* src);
 
 LIBHEIF_API
-void heif_unci_image_parameters_release(struct heif_unci_image_parameters*);
+void heif_unci_image_parameters_release(heif_unci_image_parameters*);
 
 
 /*
@@ -95,11 +96,11 @@ void heif_unci_image_parameters_release(struct heif_unci_image_parameters*);
  *         If ISO23001-17 images are not supported, returns heif_error_Unsupported_feature.
  */
 LIBHEIF_API
-struct heif_error heif_context_add_empty_unci_image(struct heif_context* ctx,
-                                                    const struct heif_unci_image_parameters* parameters,
-                                                    const struct heif_encoding_options* encoding_options,
-                                                    const struct heif_image* prototype,
-                                                    struct heif_image_handle** out_unci_image_handle);
+heif_error heif_context_add_empty_unci_image(heif_context* ctx,
+                                             const heif_unci_image_parameters* parameters,
+                                             const heif_encoding_options* encoding_options,
+                                             const heif_image* prototype,
+                                             heif_image_handle** out_unci_image_handle);
 
 #ifdef __cplusplus
 }

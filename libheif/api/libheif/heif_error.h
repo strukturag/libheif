@@ -279,7 +279,7 @@ enum heif_suberror_code
 };
 
 
-struct heif_error
+typedef struct heif_error
 {
   // main error category
   enum heif_error_code code;
@@ -289,10 +289,10 @@ struct heif_error
 
   // textual error message (is always defined, you do not have to check for NULL)
   const char* message;
-};
+} heif_error;
 
 // Default success return value. Intended for use in user-supplied callback functions.
-LIBHEIF_API extern const struct heif_error heif_error_success;
+LIBHEIF_API extern const heif_error heif_error_success;
 
 
 #ifdef __cplusplus

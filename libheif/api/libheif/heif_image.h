@@ -103,18 +103,18 @@ enum heif_channel
 
 // Planar RGB images are specified as heif_colorspace_RGB / heif_chroma_444.
 
-struct heif_image;
-struct heif_image_handle;
-struct heif_security_limits;
+typedef struct heif_image heif_image;
+typedef struct heif_image_handle heif_image_handle;
+typedef struct heif_security_limits heif_security_limits;
 
 
 // Get the colorspace format of the image.
 LIBHEIF_API
-enum heif_colorspace heif_image_get_colorspace(const struct heif_image*);
+enum heif_colorspace heif_image_get_colorspace(const heif_image*);
 
 // Get the chroma format of the image.
 LIBHEIF_API
-enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
+enum heif_chroma heif_image_get_chroma_format(const heif_image*);
 
 /**
  * Get the width of a specified image channel.
@@ -124,7 +124,7 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
  * @return the width of the channel in pixels, or -1 the channel does not exist in the image
  */
 LIBHEIF_API
-int heif_image_get_width(const struct heif_image* img, enum heif_channel channel);
+int heif_image_get_width(const heif_image* img, enum heif_channel channel);
 
 /**
  * Get the height of a specified image channel.
@@ -134,7 +134,7 @@ int heif_image_get_width(const struct heif_image* img, enum heif_channel channel
  * @return the height of the channel in pixels, or -1 the channel does not exist in the image
  */
 LIBHEIF_API
-int heif_image_get_height(const struct heif_image* img, enum heif_channel channel);
+int heif_image_get_height(const heif_image* img, enum heif_channel channel);
 
 /**
  * Get the width of the main channel.
@@ -145,7 +145,7 @@ int heif_image_get_height(const struct heif_image* img, enum heif_channel channe
  * @return the width in pixels
  */
 LIBHEIF_API
-int heif_image_get_primary_width(const struct heif_image* img);
+int heif_image_get_primary_width(const heif_image* img);
 
 /**
  * Get the height of the main channel.
@@ -156,17 +156,17 @@ int heif_image_get_primary_width(const struct heif_image* img);
  * @return the height in pixels
  */
 LIBHEIF_API
-int heif_image_get_primary_height(const struct heif_image* img);
+int heif_image_get_primary_height(const heif_image* img);
 
 LIBHEIF_API
-struct heif_error heif_image_crop(struct heif_image* img,
-                                  int left, int right, int top, int bottom);
+heif_error heif_image_crop(heif_image* img,
+                           int left, int right, int top, int bottom);
 
 LIBHEIF_API
-struct heif_error heif_image_extract_area(const struct heif_image*,
-                                          uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-                                          const struct heif_security_limits* limits,
-                                          struct heif_image** out_image);
+heif_error heif_image_extract_area(const heif_image*,
+                                   uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                   const heif_security_limits* limits,
+                                   heif_image** out_image);
 
 // Get the number of bits per pixel in the given image channel. Returns -1 if
 // a non-existing channel was given.
@@ -175,7 +175,7 @@ struct heif_error heif_image_extract_area(const struct heif_image*,
 // Especially for HDR images, this is probably not what you want. Have a look at
 // heif_image_get_bits_per_pixel_range() instead.
 LIBHEIF_API
-int heif_image_get_bits_per_pixel(const struct heif_image*, enum heif_channel channel);
+int heif_image_get_bits_per_pixel(const heif_image*, enum heif_channel channel);
 
 // Get the number of bits per pixel in the given image channel. This function returns
 // the number of bits used for representing the pixel value, which might be smaller
@@ -184,10 +184,10 @@ int heif_image_get_bits_per_pixel(const struct heif_image*, enum heif_channel ch
 // are reserved for storage. For interleaved RGBA with 12 bit, this function also returns
 // '12', not '48' or '64' (heif_image_get_bits_per_pixel returns 64 in this case).
 LIBHEIF_API
-int heif_image_get_bits_per_pixel_range(const struct heif_image*, enum heif_channel channel);
+int heif_image_get_bits_per_pixel_range(const heif_image*, enum heif_channel channel);
 
 LIBHEIF_API
-int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
+int heif_image_has_channel(const heif_image*, enum heif_channel channel);
 
 // Get a pointer to the actual pixel data.
 // The 'out_stride' is returned as "bytes per line".
@@ -195,13 +195,13 @@ int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
 // Returns NULL if a non-existing channel was given.
 // Deprecated, use the safer version heif_image_get_plane_readonly2() instead.
 LIBHEIF_API
-const uint8_t* heif_image_get_plane_readonly(const struct heif_image*,
+const uint8_t* heif_image_get_plane_readonly(const heif_image*,
                                              enum heif_channel channel,
                                              int* out_stride);
 
 // Deprecated, use the safer version heif_image_get_plane2() instead.
 LIBHEIF_API
-uint8_t* heif_image_get_plane(struct heif_image*,
+uint8_t* heif_image_get_plane(heif_image*,
                               enum heif_channel channel,
                               int* out_stride);
 
@@ -210,31 +210,30 @@ uint8_t* heif_image_get_plane(struct heif_image*,
 // For very large images, this can lead to integer overflows and, consequently, illegal memory accesses.
 // The changed 'stride' parameter types eliminates this common error.
 LIBHEIF_API
-const uint8_t* heif_image_get_plane_readonly2(const struct heif_image*,
+const uint8_t* heif_image_get_plane_readonly2(const heif_image*,
                                               enum heif_channel channel,
                                               size_t* out_stride);
 
 LIBHEIF_API
-uint8_t* heif_image_get_plane2(struct heif_image*,
+uint8_t* heif_image_get_plane2(heif_image*,
                                enum heif_channel channel,
                                size_t* out_stride);
 
 
-
-struct heif_scaling_options;
+typedef struct heif_scaling_options heif_scaling_options;
 
 // Currently, heif_scaling_options is not defined yet. Pass a NULL pointer.
 LIBHEIF_API
-struct heif_error heif_image_scale_image(const struct heif_image* input,
-                                         struct heif_image** output,
-                                         int width, int height,
-                                         const struct heif_scaling_options* options);
+heif_error heif_image_scale_image(const heif_image* input,
+                                  heif_image** output,
+                                  int width, int height,
+                                  const heif_scaling_options* options);
 
 // Extends the image size to match the given size by extending the right and bottom borders.
 // The border areas are filled with zero.
 LIBHEIF_API
-struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
-                                                           uint32_t width, uint32_t height);
+heif_error heif_image_extend_to_size_fill_with_zero(heif_image* image,
+                                                    uint32_t width, uint32_t height);
 
 // Fills the image decoding warnings into the provided 'out_warnings' array.
 // The size of the array has to be provided in max_output_buffer_entries.
@@ -243,25 +242,25 @@ struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* im
 // It returns the number of warnings filled into the buffer.
 // Note: you can iterate through all warnings by using 'max_output_buffer_entries=1' and iterate 'first_warning_idx'.
 LIBHEIF_API
-int heif_image_get_decoding_warnings(struct heif_image* image,
+int heif_image_get_decoding_warnings(heif_image* image,
                                      int first_warning_idx,
-                                     struct heif_error* out_warnings,
+                                     heif_error* out_warnings,
                                      int max_output_buffer_entries);
 
 // This function is only for decoder plugin implementors.
 LIBHEIF_API
-void heif_image_add_decoding_warning(struct heif_image* image,
-                                     struct heif_error err);
+void heif_image_add_decoding_warning(heif_image* image,
+                                     heif_error err);
 
 // Release heif_image.
 LIBHEIF_API
-void heif_image_release(const struct heif_image*);
+void heif_image_release(const heif_image*);
 
 LIBHEIF_API
-void heif_image_get_pixel_aspect_ratio(const struct heif_image*, uint32_t* aspect_h, uint32_t* aspect_v);
+void heif_image_get_pixel_aspect_ratio(const heif_image*, uint32_t* aspect_h, uint32_t* aspect_v);
 
 LIBHEIF_API
-void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, uint32_t aspect_v);
+void heif_image_set_pixel_aspect_ratio(heif_image*, uint32_t aspect_h, uint32_t aspect_v);
 
 
 // --- heif_image allocation
@@ -280,10 +279,10 @@ void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, ui
  * @return whether the creation succeeded or there was an error
 */
 LIBHEIF_API
-struct heif_error heif_image_create(int width, int height,
-                                    enum heif_colorspace colorspace,
-                                    enum heif_chroma chroma,
-                                    struct heif_image** out_image);
+heif_error heif_image_create(int width, int height,
+                             enum heif_colorspace colorspace,
+                             enum heif_chroma chroma,
+                             heif_image** out_image);
 
 /**
  * Add an image plane to the image.
@@ -314,27 +313,27 @@ struct heif_error heif_image_create(int width, int height,
  * to determine row stride.
  */
 LIBHEIF_API
-struct heif_error heif_image_add_plane(struct heif_image* image,
-                                       enum heif_channel channel,
-                                       int width, int height, int bit_depth);
+heif_error heif_image_add_plane(heif_image* image,
+                                enum heif_channel channel,
+                                int width, int height, int bit_depth);
 
 /*
  * The security limits should preferably be the limits from a heif_context.
  * The memory allocated will then be registered in the memory budget of that context.
  */
 LIBHEIF_API
-struct heif_error heif_image_add_plane_safe(struct heif_image* image,
-                                            enum heif_channel channel,
-                                            int width, int height, int bit_depth,
-                                            const struct heif_security_limits* limits);
+heif_error heif_image_add_plane_safe(heif_image* image,
+                                     enum heif_channel channel,
+                                     int width, int height, int bit_depth,
+                                     const heif_security_limits* limits);
 
 // Signal that the image is premultiplied by the alpha pixel values.
 LIBHEIF_API
-void heif_image_set_premultiplied_alpha(struct heif_image* image,
+void heif_image_set_premultiplied_alpha(heif_image* image,
                                         int is_premultiplied_alpha);
 
 LIBHEIF_API
-int heif_image_is_premultiplied_alpha(struct heif_image* image);
+int heif_image_is_premultiplied_alpha(heif_image* image);
 
 // This function extends the padding of the image so that it has at least the given physical size.
 // The padding border is filled with the pixels along the right/bottom border.
@@ -342,7 +341,8 @@ int heif_image_is_premultiplied_alpha(struct heif_image* image);
 // The image size will not be modified if it is already larger/equal than the given physical size.
 // I.e. you cannot assume that after calling this function, the stride will be equal to min_physical_width.
 LIBHEIF_API
-struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height);
+heif_error heif_image_extend_padding_to_size(heif_image* image,
+                                             int min_physical_width, int min_physical_height);
 
 
 #ifdef __cplusplus
