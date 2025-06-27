@@ -1087,6 +1087,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     uint32_t plane_top = get_subsampled_size_v(top, channel, m_chroma, scaling_mode::is_divisible); // is always divisible
     uint32_t plane_bottom = get_subsampled_size_v(bottom, channel, m_chroma, scaling_mode::round_up); // keep more chroma
 
+    plane_right = std::min(plane_right, plane.m_width - 1u);
+    plane_bottom = std::min(plane_bottom, plane.m_height - 1u);
+
     auto err = out_img->add_channel(channel,
                                     plane_right - plane_left + 1,
                                     plane_bottom - plane_top + 1,
