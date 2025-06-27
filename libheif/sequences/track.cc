@@ -622,27 +622,28 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
               heif_suberror_Unspecified,
               "Mandatory TAI timestamp missing"};
     }
-
-    if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
-      if (!gimi_contentID.empty()) {
-        auto id = gimi_contentID;
-        const char* id_str = id.c_str();
-        std::vector<uint8_t> id_vector;
-        id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
-        auto err = m_aux_helper_content_ids->add_sample_info(id_vector);
-        if (err) {
-          return err;
-        }
-      } else if (m_track_info.with_sample_content_ids == heif_sample_aux_info_presence_optional) {
-        m_aux_helper_content_ids->add_nonpresent_sample();
-      } else {
-        return {heif_error_Encoding_error,
-                heif_suberror_Unspecified,
-                "Mandatory ContentID missing"};
-      }
-    }
   }
 
+  // --- sample content id
+
+  if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
+    if (!gimi_contentID.empty()) {
+      auto id = gimi_contentID;
+      const char* id_str = id.c_str();
+      std::vector<uint8_t> id_vector;
+      id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
+      auto err = m_aux_helper_content_ids->add_sample_info(id_vector);
+      if (err) {
+        return err;
+      }
+    } else if (m_track_info.with_sample_content_ids == heif_sample_aux_info_presence_optional) {
+      m_aux_helper_content_ids->add_nonpresent_sample();
+    } else {
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              "Mandatory ContentID missing"};
+    }
+  }
 
   m_next_sample_to_be_processed++;
 
