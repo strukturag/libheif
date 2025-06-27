@@ -1441,24 +1441,21 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
   // --- scale all channels
 
-  for (const auto& plane_pair : m_planes) {
-    heif_channel channel = plane_pair.first;
-    const ImagePlane& plane = plane_pair.second;
+  int nInterleaved = num_interleaved_pixels_per_plane(m_chroma);
+  if (nInterleaved > 1) {
+    const ImagePlane& plane = m_planes.find(heif_channel_interleaved)->second;
 
-    if (!out_img->has_channel(channel)) {
-      return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
-    }
-
-
-    uint32_t out_w = out_img->get_width(channel);
-    uint32_t out_h = out_img->get_height(channel);
+    uint32_t out_w = out_img->get_width(heif_channel_interleaved);
+    uint32_t out_h = out_img->get_height(heif_channel_interleaved);
 
     if (plane.m_bit_depth <= 8) {
+      // SDR interleaved
+
       size_t in_stride = plane.stride;
       const auto* in_data = static_cast<const uint8_t*>(plane.mem);
 
       size_t out_stride = 0;
-      auto* out_data = out_img->get_plane(channel, &out_stride);
+      auto* out_data = out_img->get_plane(heif_channel_interleaved, &out_stride);
 
       for (uint32_t y = 0; y < out_h; y++) {
         uint32_t iy = y * m_height / height;
@@ -1466,18 +1463,21 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
-          out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
+          for (int c = 0; c < nInterleaved; c++) {
+            out_data[y * out_stride + x * nInterleaved + c] = in_data[iy * in_stride + ix * nInterleaved + c];
+          }
         }
       }
     }
     else {
-      // HDR
+      // HDR interleaved
+      // TODO: untested
 
       size_t in_stride = plane.stride;
       const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
 
       size_t out_stride = 0;
-      uint16_t* out_data = out_img->get_channel<uint16_t>(channel, &out_stride);
+      uint16_t* out_data = out_img->get_channel<uint16_t>(heif_channel_interleaved, &out_stride);
 
       in_stride /= 2;
 
@@ -1487,7 +1487,64 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
         for (uint32_t x = 0; x < out_w; x++) {
           uint32_t ix = x * m_width / width;
 
-          out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
+          for (int c = 0; c < nInterleaved; c++) {
+            out_data[y * out_stride + x * nInterleaved + c] = in_data[iy * in_stride + ix * nInterleaved + c];
+          }
+        }
+      }
+    }
+  }
+  else {
+    for (const auto& plane_pair : m_planes) {
+      heif_channel channel = plane_pair.first;
+      const ImagePlane& plane = plane_pair.second;
+
+      if (!out_img->has_channel(channel)) {
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
+      }
+
+
+      uint32_t out_w = out_img->get_width(channel);
+      uint32_t out_h = out_img->get_height(channel);
+
+      if (plane.m_bit_depth <= 8) {
+        // SDR planar
+
+        size_t in_stride = plane.stride;
+        const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+
+        size_t out_stride = 0;
+        auto* out_data = out_img->get_plane(channel, &out_stride);
+
+        for (uint32_t y = 0; y < out_h; y++) {
+          uint32_t iy = y * m_height / height;
+
+          for (uint32_t x = 0; x < out_w; x++) {
+            uint32_t ix = x * m_width / width;
+
+            out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
+          }
+        }
+      }
+      else {
+        // HDR planar
+
+        size_t in_stride = plane.stride;
+        const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
+
+        size_t out_stride = 0;
+        uint16_t* out_data = out_img->get_channel<uint16_t>(channel, &out_stride);
+
+        in_stride /= 2;
+
+        for (uint32_t y = 0; y < out_h; y++) {
+          uint32_t iy = y * m_height / height;
+
+          for (uint32_t x = 0; x < out_w; x++) {
+            uint32_t ix = x * m_width / width;
+
+            out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
+          }
         }
       }
     }
