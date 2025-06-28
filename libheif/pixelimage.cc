@@ -1443,7 +1443,9 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
   int nInterleaved = num_interleaved_pixels_per_plane(m_chroma);
   if (nInterleaved > 1) {
-    const ImagePlane& plane = m_planes.find(heif_channel_interleaved)->second;
+    auto plane_iter = m_planes.find(heif_channel_interleaved);
+    assert(plane_iter != m_planes.end()); // the plane must exist since we have an interleaved chroma format
+    const ImagePlane& plane = plane_iter->second;
 
     uint32_t out_w = out_img->get_width(heif_channel_interleaved);
     uint32_t out_h = out_img->get_height(heif_channel_interleaved);
