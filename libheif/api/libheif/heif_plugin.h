@@ -42,7 +42,10 @@ extern "C" {
 //  1.8          1         2          2
 //  1.13         2         3          2
 //  1.15         3         3          2
+//  1.20         4         3          2
 
+#define heif_decoder_plugin_latest_version 4
+#define heif_encoder_plugin_latest_version 3
 
 // ====================================================================================================
 //  Decoder plugin API
@@ -88,7 +91,7 @@ typedef struct heif_decoder_plugin
   heif_error (* decode_image)(void* decoder, heif_image** out_img);
 
 
-  // --- version 2 functions will follow below ... ---
+  // --- version 2 functions ---
 
   void (* set_strict_decoding)(void* decoder, int flag);
 
@@ -104,14 +107,18 @@ typedef struct heif_decoder_plugin
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
 
-  // --- version 3 functions will follow below ... ---
+  // --- version 3 functions ---
 
   const char* id_name;
 
-  // --- version 4 functions will follow below ... ---
+  // --- version 4 functions ---
 
   heif_error (* decode_next_image)(void* decoder, heif_image** out_img,
                                    const heif_security_limits* limits);
+
+  // --- version 5 functions will follow below ... ---
+
+  // --- Note: when adding new versions, also update `heif_decoder_plugin_latest_version`.
 } heif_decoder_plugin;
 
 
@@ -234,6 +241,8 @@ typedef struct heif_encoder_plugin
                               uint32_t* encoded_width, uint32_t* encoded_height);
 
   // --- version 4 functions will follow below ... ---
+
+  // --- Note: when adding new versions, also update `heif_encoder_plugin_latest_version`.
 } heif_encoder_plugin;
 
 
