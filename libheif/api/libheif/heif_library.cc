@@ -75,7 +75,7 @@ struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decode
   if (!decoder_plugin) {
     return error_null_parameter;
   }
-  else if (decoder_plugin->plugin_api_version > 3) {
+  else if (decoder_plugin->plugin_api_version > 4) {
     return error_unsupported_plugin_version;
   }
 
