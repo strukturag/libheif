@@ -29,7 +29,6 @@
 #include <cassert>
 #include <memory>
 #include <string>
-#include <err.h>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;
 static const int OPENJPEG_PLUGIN_PRIORITY_HTJ2K = 90;
