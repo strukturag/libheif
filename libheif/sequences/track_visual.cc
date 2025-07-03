@@ -222,11 +222,7 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
                                 colorConvertedImage->get_sample_duration(),
                                 data.is_sync_frame,
                                 image->get_tai_timestamp(),
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
                                 image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
-#else
-  std::string{});
-#endif
 
   if (err) {
     return err;
