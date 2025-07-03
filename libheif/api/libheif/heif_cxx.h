@@ -552,7 +552,11 @@ namespace heif {
           heif_reader_trampoline_get_position,
           heif_reader_trampoline_read,
           heif_reader_trampoline_seek,
-          heif_reader_trampoline_wait_for_file_size
+          heif_reader_trampoline_wait_for_file_size,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
       };
 
   inline void Context::read_from_reader(Reader& reader, const ReadingOptions& /*opts*/)
