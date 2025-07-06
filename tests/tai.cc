@@ -36,8 +36,8 @@ TEST_CASE( "image-tai" )
   std::string filename = get_tests_output_file_path("tai-1.heic");
 
   heif_image* img = createImage_RGB_planar();
-  heif_encoder* enc = get_encoder_or_skip_test(heif_compression_HEVC);
   heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc = get_encoder_or_skip_test(heif_compression_HEVC);
 
   heif_image_handle* handle;
   err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
