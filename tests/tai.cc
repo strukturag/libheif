@@ -33,6 +33,9 @@ TEST_CASE( "image-tai" )
 {
   heif_error err{};
 
+  err = heif_init(nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
   std::string filename = get_tests_output_file_path("tai-1.heic");
 
   heif_image* img = createImage_RGB_planar();
