@@ -3307,7 +3307,7 @@ void Box_ipma::sort_properties(const std::shared_ptr<Box_ipco>& ipco)
 
     for (size_t n = 0; n < nAssoc - 1; n++)
       for (size_t i = 0; i < nAssoc - 1 - n; i++) {
-        // If transformative property preceds descriptive property, swap them.
+        // If transformative property precedes descriptive property, swap them.
         if (properties[item.associations[i].property_index - 1]->is_transformative_property() &&
             !properties[item.associations[i + 1].property_index - 1]->is_transformative_property()) {
           std::swap(item.associations[i], item.associations[i+1]);

@@ -43,7 +43,7 @@ typedef struct heif_region_item heif_region_item;
 enum heif_region_type
 {
   /**
-   * Point gemetry.
+   * Point geometry.
    *
    * The region is represented by a single point.
    */

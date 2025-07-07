@@ -341,7 +341,7 @@ void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_
 // @param src_data_raw - Newly encoded bytes provided by OpenJPEG
 // @param nb_bytes - The number of bytes or size of src_data_raw
 // @param encoder_raw - Out the new
-// @return - The number of bytes successfuly transfered
+// @return - The number of bytes successfully transferred
 static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw)
 {
   uint8_t* src_data = (uint8_t*) src_data_raw;
