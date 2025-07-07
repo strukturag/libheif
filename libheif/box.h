@@ -1714,7 +1714,7 @@ public:
   /**
    * clock_type.
    * 
-   * 0 = Clock type is unkown
+   * 0 = Clock type is unknown
    * 1 = The clock does not synchronize to an atomic source of absolute TAI time
    * 2 = The clock can synchronize to an atomic source of absolute TAI time
    */

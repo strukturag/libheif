@@ -135,7 +135,7 @@ Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   if (limits->max_components && component_count > limits->max_components) {
     std::stringstream sstr;
-    sstr << "cmpd box should countain " << component_count << " components, but security limit is set to "
+    sstr << "cmpd box should contain " << component_count << " components, but security limit is set to "
          << limits->max_components << " components";
 
     return {heif_error_Invalid_input,
@@ -147,7 +147,7 @@ Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
   for (unsigned int i = 0; i < component_count ; i++) {
     if (range.eof()) {
       std::stringstream sstr;
-      sstr << "cmpd box should countain " << component_count << " components, but box only contained "
+      sstr << "cmpd box should contain " << component_count << " components, but box only contained "
            << i << " components";
 
       return {heif_error_Invalid_input,
