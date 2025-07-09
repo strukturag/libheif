@@ -315,6 +315,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_release);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_has_alpha_channel);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_is_premultiplied_alpha);
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
