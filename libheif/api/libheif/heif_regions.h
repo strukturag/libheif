@@ -420,7 +420,7 @@ int heif_region_get_polygon_num_points(const heif_region* region);
  * The points are returned as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
- * @param region the region to equery, which must be of type #heif_region_type_polygon
+ * @param region the region to query, which must be of type #heif_region_type_polygon
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polygon.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
@@ -442,7 +442,7 @@ heif_error heif_region_get_polygon_points(const heif_region* region,
  * The points are returned as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
- * @param region the region to equery, which must be of type #heif_region_type_polygon
+ * @param region the region to query, which must be of type #heif_region_type_polygon
  * @param image_id the identifier for the image to transform / scale the region to
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polygon.
@@ -484,7 +484,7 @@ int heif_region_get_polyline_num_points(const heif_region* region);
  * }
  * @endcode
  *
- * @param region the region to equery, which must be of type #heif_region_type_polyline
+ * @param region the region to query, which must be of type #heif_region_type_polyline
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polyline.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
