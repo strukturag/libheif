@@ -104,4 +104,11 @@ struct heif_region
   std::shared_ptr<RegionGeometry> region;
 };
 
+struct heif_text_item
+{
+  std::shared_ptr<HeifContext> context;
+  std::shared_ptr<TextItem> text_item;
+};
+
+
 #endif

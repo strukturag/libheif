@@ -377,6 +377,12 @@ public:
 
   virtual std::shared_ptr<class Encoder> get_encoder() const { return nullptr; }
 
+  void add_text_item_id(heif_item_id id) {
+    m_text_item_ids.push_back(id);
+  }
+
+  const std::vector<heif_item_id>& get_text_item_ids() const { return m_text_item_ids; }
+
 private:
   HeifContext* m_heif_context;
   std::vector<std::shared_ptr<Box>> m_properties;
@@ -419,6 +425,8 @@ private:
   Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
 
   std::vector<Error> m_decoding_warnings;
+
+  std::vector<heif_item_id> m_text_item_ids;
 
 protected:
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;

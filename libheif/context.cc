@@ -63,6 +63,7 @@
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
 #endif
+#include "text.h"
 
 
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
@@ -340,6 +341,21 @@ void HeifContext::write(StreamWriter& writer)
     // TODO: err
 
     m_heif_file->append_iloc_data(region->item_id, data_array, 0);
+  }
+
+  // --- serialise text items
+
+  for (auto& image : m_all_images) {
+    for (auto text_item_id : image.second->get_text_item_ids()) {
+      m_heif_file->add_iref_reference(text_item_id, fourcc("text"), {image.first});
+    }
+  }
+
+  for (auto& text_item : m_text_items) {
+    auto encodeResult = text_item->encode();
+    if (encodeResult.error == Error::Ok) {
+      m_heif_file->append_iloc_data(text_item->get_item_id(), encodeResult.value, 1);
+    }
   }
 
   // --- post-process images
@@ -1042,6 +1058,41 @@ Error HeifContext::interpret_heif_file_images()
               mask_index += 1;
               remove_top_level_image(mask_image);
             }
+          }
+        }
+      }
+    }
+  }
+
+  // --- read text item and assign to image(s)
+  for (heif_item_id id : image_IDs) {
+    uint32_t item_type = m_heif_file->get_item_type_4cc(id);
+    if (item_type != fourcc("mime")) { // TODO: && content_type  starts with "text/" ?
+      continue;
+    }
+    std::shared_ptr<TextItem> text_item = std::make_shared<TextItem>();
+    text_item->set_item_id(id);
+    std::vector<uint8_t> text_data;
+    Error err = m_heif_file->get_uncompressed_item_data(id, &text_data);
+    if (err) {
+      return err;
+    }
+    text_item->parse(text_data);
+    if (iref_box) {
+      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+      for (const auto& ref : references) {
+        if (ref.header.get_short_type() == fourcc("text")) {
+          std::vector<uint32_t> refs = ref.to_item_ID;
+          for (uint32_t ref : refs) {
+            uint32_t image_id = ref;
+            auto img_iter = m_all_images.find(image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Text item assigned to non-existing image");
+            }
+            img_iter->second->add_text_item_id(id);
+            m_text_items.push_back(text_item);
           }
         }
       }
@@ -1849,4 +1900,14 @@ Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequ
   m_tracks.insert({trak->get_id(), trak});
 
   return trak;
+}
+
+std::shared_ptr<TextItem> HeifContext::add_text_item(const char* content_type, const char* text)
+{
+  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("mime"));
+  box->set_hidden_item(true);
+  box->set_content_type(std::string(content_type));
+  auto textItem = std::make_shared<TextItem>(box->get_item_ID(), text);
+  add_text_item(textItem);
+  return textItem;
 }

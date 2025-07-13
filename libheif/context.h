@@ -39,6 +39,8 @@
 
 #include "region.h"
 
+#include "text.h"
+
 class HeifFile;
 
 class HeifPixelImage;
@@ -202,6 +204,24 @@ public:
 
   Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const struct TrackOptions*, std::string uri);
 
+  void add_text_item(std::shared_ptr<TextItem> text_item)
+  {
+    m_text_items.push_back(std::move(text_item));
+  }
+
+  std::shared_ptr<TextItem> add_text_item(const char* content_type, const char* text);
+
+  std::shared_ptr<TextItem> get_text_item(heif_item_id id) const
+  {
+    for (auto& item : m_text_items) {
+      if (item->get_item_id() == id)
+        return item;
+    }
+
+    return nullptr;
+  }
+
+
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;
 
@@ -219,6 +239,7 @@ private:
   TotalMemoryTracker m_memory_tracker;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
+  std::vector<std::shared_ptr<TextItem>> m_text_items;
 
   // --- sequences
 
