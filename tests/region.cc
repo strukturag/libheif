@@ -35,6 +35,11 @@
 
 
 TEST_CASE("no regions") {
+  // skip test if we do not have the uncompressed codec
+  if (!heif_have_decoder_for_format(heif_compression_uncompressed)) {
+    SKIP("Skipping test because uncompressed codec is not compiled.");
+  }
+
   auto context = get_context_for_test_file("uncompressed_comp_RGB.heif");
   heif_image_handle *handle = get_primary_image_handle(context);
   int num_region_items = heif_image_handle_get_number_of_region_items(handle);

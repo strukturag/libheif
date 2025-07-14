@@ -35,6 +35,7 @@
 #include "codecs/uncompressed/unc_boxes.h"
 #include "unc_image.h"
 #include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_enc.h"
 #include "codecs/uncompressed/unc_codec.h"
 #include "image_item.h"
 
@@ -58,6 +59,19 @@ static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std
     uncC->set_profile(fourcc("rgb3"));
   }
   uncC->set_version(1);
+}
+
+
+ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx, heif_item_id id)
+    : ImageItem(ctx, id)
+{
+  m_encoder = std::make_shared<Encoder_uncompressed>();
+}
+
+ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx)
+    : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_uncompressed>();
 }
 
 
@@ -139,7 +153,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
     uint64_t offset = 0;
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
-      uint32_t src_stride;
+      size_t src_stride;
       uint32_t src_width = src_image->get_width(channel);
       uint32_t src_height = src_image->get_height(channel);
       const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
@@ -165,7 +179,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
       }
       for (heif_channel channel : channels)
       {
-        uint32_t src_stride;
+        size_t src_stride;
         const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
         uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width();
 
@@ -206,7 +220,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
           assert(false);
       }
 
-      uint32_t src_stride;
+      size_t src_stride;
       const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
       uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
@@ -237,7 +251,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
     }
     for (heif_channel channel : channels)
     {
-      uint32_t src_stride;
+      size_t src_stride;
       const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
       uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_stride;
       data.resize(data.size() + out_size);
@@ -257,28 +271,38 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
+Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
                                                                  struct heif_encoder* encoder,
                                                                  const struct heif_encoding_options& options,
                                                                  enum heif_image_input_class input_class)
 {
-  heif_unci_image_parameters parameters{};
-  parameters.image_width = src_image->get_width();
-  parameters.image_height = src_image->get_height();
-  parameters.tile_width = parameters.image_width;
-  parameters.tile_height = parameters.image_height;
+  return encode_static(src_image, options);
+}
+
+
+Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std::shared_ptr<HeifPixelImage>& src_image,
+                                                               const struct heif_encoding_options& options)
+{
+  auto parameters = std::unique_ptr<heif_unci_image_parameters,
+                                    void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
+                                                                           heif_unci_image_parameters_release);
+
+  parameters->image_width = src_image->get_width();
+  parameters->image_height = src_image->get_height();
+  parameters->tile_width = parameters->image_width;
+  parameters->tile_height = parameters->image_height;
 
 
   // --- generate configuration property boxes
 
-  Result<unciHeaders> genHeadersResult = generate_headers(src_image, &parameters, &options);
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), &options);
   if (genHeadersResult.error) {
     return genHeadersResult.error;
   }
 
   const unciHeaders& headers = *genHeadersResult;
 
-  CodedImageData codedImageData;
+  Encoder::CodedImageData codedImageData;
   if (headers.uncC) {
     codedImageData.properties.push_back(headers.uncC);
   }
@@ -396,7 +420,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   }
 
   // Set Brands
-  ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
+  //ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
 
   return {unci_image};
 }
@@ -505,15 +529,21 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
   return tiling;
 }
 
-std::shared_ptr<Decoder> ImageItem_uncompressed::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_uncompressed::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
+}
+
+std::shared_ptr<Encoder> ImageItem_uncompressed::get_encoder() const
+{
+  return m_encoder;
 }
 
 Error ImageItem_uncompressed::on_load_file()
 {
   std::shared_ptr<Box_cmpd> cmpd = get_property<Box_cmpd>();
   std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
+  std::shared_ptr<Box_ispe> ispe = get_property<Box_ispe>();
 
   if (!uncC) {
     return Error{heif_error_Invalid_input,
@@ -521,7 +551,7 @@ Error ImageItem_uncompressed::on_load_file()
                  "No 'uncC' box found."};
   }
 
-  m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd);
+  m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
@@ -529,4 +559,15 @@ Error ImageItem_uncompressed::on_load_file()
   m_decoder->set_data_extent(std::move(extent));
 
   return Error::Ok;
+}
+
+
+bool ImageItem_uncompressed::has_coded_alpha_channel() const
+{
+  return m_decoder->has_alpha_component();
+}
+
+heif_brand2 ImageItem_uncompressed::get_compatible_brand() const
+{
+  return 0; // TODO: not clear to me what to use
 }

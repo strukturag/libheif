@@ -25,6 +25,7 @@
 #include "box.h"
 #include "bitstream.h"
 #include "unc_types.h"
+#include "sequences/seq_boxes.h"
 
 #include <cstdint>
 #include <string>
@@ -363,5 +364,16 @@ protected:
   uint16_t m_pattern_height = 0;
   std::vector<PatternComponent> m_components;
 };
+
+
+class Box_uncv : public Box_VisualSampleEntry
+{
+public:
+  Box_uncv()
+  {
+    set_short_type(fourcc("uncv"));
+  }
+};
+
 
 #endif //LIBHEIF_UNC_BOXES_H

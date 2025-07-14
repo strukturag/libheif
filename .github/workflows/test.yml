@@ -13,7 +13,7 @@ jobs:
       WITH_AOM: 1
       WITH_LIBDE265: 1
       WITH_X265: 1
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
 

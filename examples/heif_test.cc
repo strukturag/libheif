@@ -105,7 +105,7 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
     }
   }
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
           int height = img.get_height(channel);
           int bytes = (img.get_bits_per_pixel(channel) + 7) / 8;
 
-          int stride;
+          size_t stride;
           const uint8_t* p = img.get_plane(channel, &stride);
           for (int y = 0; y < height; y++) {
             fwrite(p + y * stride, width, bytes, stdout);

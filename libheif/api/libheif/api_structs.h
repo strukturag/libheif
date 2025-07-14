@@ -25,6 +25,8 @@
 #include "context.h"
 
 #include <memory>
+#include <vector>
+#include <string>
 #include "image-items/image_item.h"
 
 struct heif_image_handle
@@ -33,6 +35,29 @@ struct heif_image_handle
 
   // store reference to keep the context alive while we are using the handle (issue #147)
   std::shared_ptr<HeifContext> context;
+};
+
+
+struct heif_track
+{
+  std::shared_ptr<Track> track;
+
+  // store reference to keep the context alive while we are using the handle (issue #147)
+  std::shared_ptr<HeifContext> context;
+};
+
+struct heif_raw_sequence_sample
+{
+  ~heif_raw_sequence_sample()
+  {
+    heif_tai_timestamp_packet_release(timestamp);
+  }
+
+  std::vector<uint8_t> data;
+  uint32_t duration = 0;
+
+  heif_tai_timestamp_packet* timestamp = nullptr;
+  std::string gimi_sample_content_id;
 };
 
 

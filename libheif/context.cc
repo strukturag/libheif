@@ -22,6 +22,7 @@
 #include "error.h"
 #include "libheif/heif.h"
 #include "region.h"
+#include "brands.h"
 #include <cstdint>
 #include <cassert>
 #include <cstring>
@@ -32,6 +33,10 @@
 #include <deque>
 #include "image-items/image_item.h"
 #include <codecs/hevc_boxes.h>
+#include "sequences/track.h"
+#include "sequences/track_visual.h"
+#include "sequences/track_metadata.h"
+#include "libheif/heif_sequences.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -94,8 +99,17 @@ struct heif_error heif_encoder::alloc()
 
 
 HeifContext::HeifContext()
+    : m_memory_tracker(&m_limits)
 {
-  m_limits = global_security_limits;
+  const char* security_limits_variable = getenv("LIBHEIF_SECURITY_LIMITS");
+
+  if (security_limits_variable && (strcmp(security_limits_variable, "off") == 0 ||
+                                   strcmp(security_limits_variable, "OFF") == 0)) {
+    m_limits = disabled_security_limits;
+  }
+  else {
+    m_limits = global_security_limits;
+  }
 
   reset_to_empty_heif();
 }
@@ -113,7 +127,6 @@ HeifContext::~HeifContext()
 
 static void copy_security_limits(heif_security_limits* dst, const heif_security_limits* src)
 {
-  dst->version = 1;
   dst->max_image_size_pixels = src->max_image_size_pixels;
   dst->max_number_of_tiles = src->max_number_of_tiles;
   dst->max_bayer_pattern_pixels = src->max_bayer_pattern_pixels;
@@ -128,11 +141,22 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   dst->max_size_entity_group = src->max_size_entity_group;
 
   dst->max_children_per_box = src->max_children_per_box;
+
+  if (src->version >= 2) {
+    dst->max_sample_description_box_entries = src->max_sample_description_box_entries;
+    dst->max_sample_group_description_box_entries = src->max_sample_group_description_box_entries;
+  }
 }
 
 
 void HeifContext::set_security_limits(const heif_security_limits* limits)
 {
+  // copy default limits
+  if (limits->version < global_security_limits.version) {
+    copy_security_limits(&m_limits, &global_security_limits);
+  }
+
+  // overwrite with input limits
   copy_security_limits(&m_limits, limits);
 }
 
@@ -222,10 +246,18 @@ std::shared_ptr<ImageItem> HeifContext::get_image(heif_item_id id, bool return_e
 
 std::shared_ptr<ImageItem> HeifContext::get_primary_image(bool return_error_image)
 {
-  if (!return_error_image && m_primary_image->get_item_error())
+  if (m_primary_image == nullptr)
+    return nullptr;
+  else if (!return_error_image && m_primary_image->get_item_error())
     return nullptr;
   else
     return m_primary_image;
+}
+
+
+std::shared_ptr<const ImageItem> HeifContext::get_primary_image(bool return_error_image) const
+{
+  return const_cast<HeifContext*>(this)->get_primary_image(return_error_image);
 }
 
 
@@ -251,8 +283,48 @@ void HeifContext::add_region_referenced_mask_ref(heif_item_id region_item_id, he
   m_heif_file->add_iref_reference(region_item_id, fourcc("mask"), {mask_item_id});
 }
 
+
+static uint64_t rescale(uint64_t duration, uint32_t old_base, uint32_t new_base)
+{
+  // prevent division by zero
+  // TODO: we might emit an error in this case
+  if (old_base == 0) {
+    return 0;
+  }
+
+  return duration * new_base / old_base;
+}
+
+
 void HeifContext::write(StreamWriter& writer)
 {
+  // --- finalize some parameters
+
+  uint64_t max_sequence_duration = 0;
+  if (auto mvhd = m_heif_file->get_mvhd_box()) {
+    for (const auto& track : m_tracks) {
+      track.second->finalize_track();
+
+      // rescale track duration to movie timescale units
+
+      uint64_t track_duration_in_media_units = track.second->get_duration_in_media_units();
+      uint32_t media_timescale = track.second->get_timescale();
+
+      uint32_t mvhd_timescale = m_heif_file->get_mvhd_box()->get_time_scale();
+      if (mvhd_timescale == 0) {
+        mvhd_timescale = track.second->get_timescale();
+        m_heif_file->get_mvhd_box()->set_time_scale(mvhd_timescale);
+      }
+
+      uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+      track.second->set_track_duration_in_movie_units(movie_duration);
+
+      max_sequence_duration = std::max(max_sequence_duration, movie_duration);
+    }
+
+    mvhd->set_duration(max_sequence_duration);
+  }
+
   // --- serialize regions
 
   for (auto& image : m_all_images) {
@@ -274,6 +346,40 @@ void HeifContext::write(StreamWriter& writer)
 
   for (auto& img : m_all_images) {
     img.second->process_before_write();
+  }
+
+  // --- sort item properties
+
+  if (auto ipma = m_heif_file->get_ipma_box()) {
+    ipma->sort_properties(m_heif_file->get_ipco_box());
+  }
+
+  // --- derive box versions
+
+  m_heif_file->derive_box_versions();
+
+  // --- determine brands
+
+  heif_brand2 main_brand;
+  std::vector<heif_brand2> compatible_brands;
+  compatible_brands = compute_compatible_brands(this, &main_brand);
+
+  // Note: major brand should be repeated in the compatible brands, according to this:
+  //   ISOBMFF (ISO/IEC 14496-12:2020) § K.4:
+  //   NOTE This document requires that the major brand be repeated in the compatible-brands,
+  //   but this requirement is relaxed in the 'profiles' parameter for compactness.
+  // See https://github.com/strukturag/libheif/issues/478
+
+  auto ftyp = m_heif_file->get_ftyp_box();
+
+  // set major brand if not set manually yet
+  if (ftyp->get_major_brand() == 0) {
+    ftyp->set_major_brand(main_brand);
+  }
+
+  ftyp->set_minor_version(0);
+  for (auto brand : compatible_brands) {
+    ftyp->add_compatible_brand(brand);
   }
 
   // --- write to file
@@ -320,6 +426,26 @@ void HeifContext::remove_top_level_image(const std::shared_ptr<ImageItem>& image
 
 
 Error HeifContext::interpret_heif_file()
+{
+  if (m_heif_file->has_images()) {
+    Error err = interpret_heif_file_images();
+    if (err) {
+      return err;
+    }
+  }
+
+  if (m_heif_file->has_sequences()) {
+    Error err = interpret_heif_file_sequences();
+    if (err) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::interpret_heif_file_images()
 {
   m_all_images.clear();
   m_top_level_images.clear();
@@ -634,16 +760,18 @@ Error HeifContext::interpret_heif_file()
 
               const auto& subtypes = auxC_property->get_subtypes();
 
-              std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-              Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
-              if (err) {
-                return err;
-              }
+              if (!subtypes.empty()) {
+                std::vector<std::shared_ptr<SEIMessage>> sei_messages;
+                Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+                if (err) {
+                  return err;
+                }
 
-              for (auto& msg : sei_messages) {
-                auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
-                if (depth_msg) {
-                  image->set_depth_representation_info(*depth_msg);
+                for (auto& msg : sei_messages) {
+                  auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
+                  if (depth_msg) {
+                    image->set_depth_representation_info(*depth_msg);
+                  }
                 }
               }
             }
@@ -939,6 +1067,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
     return true;
   }
 
+  if (img->has_coded_alpha_channel()) {
+    return true;
+  }
+
   heif_colorspace colorspace;
   heif_chroma chroma;
   Error err = img->get_coded_image_colorspace(&colorspace, &chroma);
@@ -1043,6 +1175,18 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
     }
   }
   else {
+    if (m_all_images.find(id) == m_all_images.end()) {
+      std::stringstream sstr;
+      sstr << "Image item " << id << " referenced, but it does not exist\n";
+
+      return Error(heif_error_Invalid_input,
+        heif_suberror_Nonexisting_item_referenced,
+        sstr.str());
+    }
+    else if (dynamic_cast<ImageItem_Error*>(m_all_images.find(id)->second.get())) {
+      // Should er return an error here or leave it to the follow-up code to detect that?
+    }
+
     out = id;
     return Error::Ok;
   }
@@ -1076,6 +1220,26 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 
   // --- convert to output chroma format
 
+  auto img_result = convert_to_output_colorspace(img, out_colorspace, out_chroma, options);
+  if (img_result.error) {
+    return img_result.error;
+  }
+  else {
+    img = *img_result;
+  }
+
+  img->add_warnings(imgitem->get_decoding_warnings());
+
+  return img;
+}
+
+
+
+Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
+                                                                                  heif_colorspace out_colorspace,
+                                                                                  heif_chroma out_chroma,
+                                                                                  const struct heif_decoding_options& options) const
+{
   heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                        img->get_colorspace() :
                                        out_colorspace);
@@ -1086,22 +1250,21 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   bool different_chroma = (target_chroma != img->get_chroma_format());
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
-  int bpp = options.convert_hdr_to_8bit ? 8 : 0;
-  // TODO: check BPP changed
-  if (different_chroma || different_colorspace) {
+  uint8_t img_bpp = img->get_visual_image_bits_per_pixel();
+  uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
 
-    auto img_result = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options, get_security_limits());
-    if (img_result.error) {
-      return img_result.error;
-    }
-    else {
-      img = *img_result;
-    }
+  if (different_chroma ||
+      different_colorspace ||
+      converted_output_bpp ||
+      (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
+
+    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, converted_output_bpp,
+                                         options.color_conversion_options, options.color_conversion_options_ext,
+                                         get_security_limits());
   }
-
-  img->add_warnings(imgitem->get_decoding_warnings());
-
-  return img;
+  else {
+    return img;
+  }
 }
 
 
@@ -1170,19 +1333,27 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
 
   heif_encoding_options options = in_options;
 
-  if (const auto* nclx = output_image_item->get_forced_output_nclx()) {
-    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+  std::shared_ptr<HeifPixelImage> colorConvertedImage;
+
+  if (output_image_item->get_encoder()) {
+    if (const auto* nclx = output_image_item->get_encoder()->get_forced_output_nclx()) {
+      options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+    }
+
+    Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
+    srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
+                                                                                       encoder,
+                                                                                       options,
+                                                                                       get_security_limits());
+    if (srcImageResult.error) {
+      return srcImageResult.error;
+    }
+
+    colorConvertedImage = srcImageResult.value;
   }
-
-  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = output_image_item->convert_colorspace_for_encoding(pixel_image,
-                                                                                                              encoder,
-                                                                                                              options);
-  if (srcImageResult.error) {
-    return srcImageResult.error;
+  else {
+    colorConvertedImage = pixel_image;
   }
-
-  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
-
 
   Error err = output_image_item->encode_to_item(this,
                                                 colorConvertedImage,
@@ -1237,8 +1408,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
   }
   output_image_item->set_properties(properties);
 
-  m_heif_file->set_brand(encoder->plugin->compression_format,
-                         output_image_item->is_miaf_compatible());
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       output_image_item->is_miaf_compatible());
 
   return output_image_item;
 }
@@ -1433,7 +1604,14 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 
 heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential)
 {
-  heif_property_id id = m_heif_file->add_property(targetItem, property, essential);
+  heif_property_id id;
+
+  if (auto img = get_image(targetItem, false)) {
+    id = img->add_property(property, essential);
+  }
+  else {
+    id = m_heif_file->add_property(targetItem, property, essential);
+  }
 
   return id;
 }
@@ -1527,4 +1705,148 @@ Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_
   }
 
   return {group_id};
+}
+
+
+Error HeifContext::interpret_heif_file_sequences()
+{
+  m_tracks.clear();
+
+
+  // --- reference all non-hidden images
+
+  auto moov = m_heif_file->get_moov_box();
+  assert(moov);
+
+  auto mvhd = moov->get_child_box<Box_mvhd>();
+  if (!mvhd) {
+    assert(false); // TODO
+  }
+
+  auto tracks = moov->get_child_boxes<Box_trak>();
+  for (const auto& track_box : tracks) {
+    auto track = Track::alloc_track(this, track_box);
+    m_tracks.insert({track->get_id(), track});
+
+    if (track->is_visual_track()) {
+      m_visual_track_id = track->get_id();
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+std::vector<uint32_t> HeifContext::get_track_IDs() const
+{
+  std::vector<uint32_t> ids;
+
+  for (const auto& track : m_tracks) {
+    ids.push_back(track.first);
+  }
+
+  return ids;
+}
+
+
+Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
+{
+  assert(has_sequence());
+
+  if (track_id != 0) {
+    auto iter = m_tracks.find(track_id);
+    if (iter == m_tracks.end()) {
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Unspecified,
+                   "Invalid track id"};
+    }
+
+    return iter->second;
+  }
+
+  if (m_visual_track_id != 0) {
+    return m_tracks[m_visual_track_id];
+  }
+
+  return m_tracks.begin()->second;
+}
+
+
+Result<std::shared_ptr<const Track>> HeifContext::get_track(uint32_t track_id) const
+{
+  auto result = const_cast<HeifContext*>(this)->get_track(track_id);
+  if (result.error) {
+    return result.error;
+  }
+  else {
+    Result<std::shared_ptr<const Track>> my_result;
+    my_result.value = result.value;
+    return my_result;
+  }
+}
+
+
+uint32_t HeifContext::get_sequence_timescale() const
+{
+  auto mvhd = m_heif_file->get_mvhd_box();
+  if (!mvhd) {
+    return 0;
+  }
+
+  return mvhd->get_time_scale();
+}
+
+
+void HeifContext::set_sequence_timescale(uint32_t timescale)
+{
+  get_heif_file()->init_for_sequence();
+
+  auto mvhd = m_heif_file->get_mvhd_box();
+
+  /* unnecessary, since mvhd duration is set during writing
+
+  uint32_t old_timescale = mvhd->get_time_scale();
+  if (old_timescale != 0) {
+    uint64_t scaled_duration = mvhd->get_duration() * timescale / old_timescale;
+    mvhd->set_duration(scaled_duration);
+  }
+  */
+
+  mvhd->set_time_scale(timescale);
+}
+
+
+uint64_t HeifContext::get_sequence_duration() const
+{
+  auto mvhd = m_heif_file->get_mvhd_box();
+  if (!mvhd) {
+    return 0;
+  }
+
+  return mvhd->get_duration();
+}
+
+
+Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(const TrackOptions* options,
+                                                                             uint32_t handler_type,
+                                                                             uint16_t width, uint16_t height)
+{
+  m_heif_file->init_for_sequence();
+
+  std::shared_ptr<Track_Visual> trak = std::make_shared<Track_Visual>(this, 0, width, height, options, handler_type);
+  m_tracks.insert({trak->get_id(), trak});
+
+  return trak;
+}
+
+
+Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequence_track(const TrackOptions* options,
+                                                                                           std::string uri)
+{
+  m_heif_file->init_for_sequence();
+
+  std::shared_ptr<Track_Metadata> trak = std::make_shared<Track_Metadata>(this, 0, uri, options);
+  m_tracks.insert({trak->get_id(), trak});
+
+  return trak;
 }

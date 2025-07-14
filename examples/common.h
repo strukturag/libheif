@@ -27,6 +27,21 @@
 #ifndef LIBHEIF_COMMON_H
 #define LIBHEIF_COMMON_H
 
-void show_version();
+#include <libheif/heif.h>
+#include <string>
+
+namespace heif_examples {
+// Note: the same function is also exists in common_utils.h, but is not in the public API.
+  std::string fourcc_to_string(uint32_t fourcc);
+
+  void show_version();
+
+  void list_all_decoders();
+
+  void list_decoders(heif_compression_format format);
+
+// returns 0 on success, or program exit code in case of warning/error
+  int check_for_valid_input_HEIF_file(const std::string& input_filename);
+}
 
 #endif //LIBHEIF_COMMON_H

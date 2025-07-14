@@ -125,10 +125,10 @@ heif_error loadY4M(const char *filename, InputImage *input_image)
   heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
   heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
 
-  int y_stride, cb_stride, cr_stride;
-  uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-  uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-  uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+  size_t y_stride, cb_stride, cr_stride;
+  uint8_t* py = heif_image_get_plane2(image, heif_channel_Y, &y_stride);
+  uint8_t* pcb = heif_image_get_plane2(image, heif_channel_Cb, &cb_stride);
+  uint8_t* pcr = heif_image_get_plane2(image, heif_channel_Cr, &cr_stride);
 
   for (int y = 0; y < h; y++) {
     istr.read((char*) (py + y * y_stride), w);

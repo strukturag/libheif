@@ -30,7 +30,7 @@
 #include <utility>
 
 
-Result<ImageItem::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                         struct heif_encoder* encoder,
                                                         const struct heif_encoding_options& options,
                                                         enum heif_image_input_class input_class)
@@ -120,9 +120,9 @@ Result<ImageItem::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<He
 }
 
 
-std::shared_ptr<Decoder> ImageItem_AVC::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_AVC::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 

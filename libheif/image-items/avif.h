@@ -36,33 +36,31 @@
 class ImageItem_AVIF : public ImageItem
 {
 public:
-  ImageItem_AVIF(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_AVIF(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_AVIF(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("av01"); }
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
-
   heif_compression_format get_compression_format() const override { return heif_compression_AV1; }
 
-  Error on_load_file() override;
+  heif_brand2 get_compatible_brand() const override { return heif_brand2_avif; }
 
-public:
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Error on_load_file() override;
 
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
-  std::shared_ptr<class Decoder> get_decoder() const override;
+  Result<std::shared_ptr<class Decoder>> get_decoder() const override;
+
+  std::shared_ptr<class Encoder> get_encoder() const override;
 
 private:
   std::shared_ptr<class Decoder_AVIF> m_decoder;
+
+  std::shared_ptr<class Encoder_AVIF> m_encoder;
 };
 
 #endif

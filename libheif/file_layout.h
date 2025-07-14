@@ -27,8 +27,11 @@
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
 #include "mini.h"
 #endif
+
 #include <memory>
 #include <vector>
+
+class Box_moov;
 
 
 class FileLayout
@@ -62,6 +65,8 @@ public:
   std::shared_ptr<Box_mini> get_mini_box() { return m_mini_box; }
 #endif
 
+  std::shared_ptr<Box_moov> get_moov_box() { return m_moov_box; }
+
 private:
   WriteMode m_writeMode = WriteMode::Floating;
 
@@ -77,6 +82,7 @@ private:
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
   std::shared_ptr<Box_mini> m_mini_box;
 #endif
+  std::shared_ptr<Box_moov> m_moov_box;
 
 
   uint64_t m_max_length = 0; // Length seen so far. It can grow over time.

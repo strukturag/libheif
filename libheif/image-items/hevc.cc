@@ -32,6 +32,21 @@
 #include <string>
 #include <utility>
 #include "api/libheif/api_structs.h"
+#include "codecs/hevc_enc.h"
+
+
+ImageItem_HEVC::ImageItem_HEVC(HeifContext* ctx, heif_item_id id)
+    : ImageItem(ctx, id)
+{
+  m_encoder = std::make_shared<Encoder_HEVC>();
+}
+
+
+ImageItem_HEVC::ImageItem_HEVC(HeifContext* ctx)
+    : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_HEVC>();
+}
 
 
 Error ImageItem_HEVC::on_load_file()
@@ -53,89 +68,31 @@ Error ImageItem_HEVC::on_load_file()
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
+heif_brand2 ImageItem_HEVC::get_compatible_brand() const
 {
-  CodedImageData codedImage;
+  auto hvcC = get_property<Box_hvcC>();
 
-  auto hvcC = std::make_shared<Box_hvcC>();
-
-  heif_image c_api_image;
-  c_api_image.image = image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
+  if (has_essential_property_other_than(std::set{fourcc("hvcC"),
+                                                 fourcc("irot"),
+                                                 fourcc("imir"),
+                                                 fourcc("clap")})) {
+    return 0;
   }
 
-  int encoded_width = 0;
-  int encoded_height = 0;
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-
-    if (data == nullptr) {
-      break;
-    }
-
-
-    const uint8_t NAL_SPS = 33;
-
-    if ((data[0] >> 1) == NAL_SPS) {
-      Box_hvcC::configuration config;
-
-      parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
-
-      hvcC->set_configuration(config);
-
-      codedImage.encoded_image_width = encoded_width;
-      codedImage.encoded_image_height = encoded_height;
-    }
-
-    switch (data[0] >> 1) {
-      case 0x20:
-      case 0x21:
-      case 0x22:
-        hvcC->append_nal_data(data, size);
-        break;
-
-      default:
-        codedImage.append_with_4bytes_size(data, size);
-        // m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
-    }
+  const auto& config = hvcC->get_configuration();
+  if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
+      config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
+    return heif_brand2_heic;
   }
 
-  if (!encoded_width || !encoded_height) {
-    return Error(heif_error_Encoder_plugin_error,
-                 heif_suberror_Invalid_image_size);
+  if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main10) ||
+      config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_RExt)) {
+    return heif_brand2_heix;
   }
 
-  codedImage.properties.push_back(hvcC);
+  // TODO: what brand should we use for this case?
 
-
-  // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
-
-  if (encoder->plugin->plugin_api_version >= 3 &&
-      encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t check_encoded_width = image->get_width(), check_encoded_height = image->get_height();
-
-    encoder->plugin->query_encoded_size(encoder->encoder,
-                                        image->get_width(), image->get_height(),
-                                        &check_encoded_width,
-                                        &check_encoded_height);
-
-    assert((int)check_encoded_width == encoded_width);
-    assert((int)check_encoded_height == encoded_height);
-  }
-
-  return codedImage;
+  return heif_brand2_heix;
 }
 
 
@@ -145,9 +102,15 @@ Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data()
 }
 
 
-std::shared_ptr<class Decoder> ImageItem_HEVC::get_decoder() const
+Result<std::shared_ptr<class Decoder>> ImageItem_HEVC::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
+}
+
+
+std::shared_ptr<class Encoder> ImageItem_HEVC::get_encoder() const
+{
+  return m_encoder;
 }
 
 

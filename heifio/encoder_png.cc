@@ -93,71 +93,76 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   // --- write ICC profile
 
-  size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
-  if (profile_size > 0) {
-    uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
-    heif_image_handle_get_raw_color_profile(handle, profile_data);
-    char profile_name[] = "unknown";
-    png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
+  if (handle) {
+    size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
+    if (profile_size > 0) {
+      uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
+      heif_image_handle_get_raw_color_profile(handle, profile_data);
+      char profile_name[] = "unknown";
+      png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
 #if PNG_LIBPNG_VER < 10500
-        (png_charp)profile_data,
+              (png_charp)profile_data,
 #else
-                 (png_const_bytep) profile_data,
+                   (png_const_bytep) profile_data,
 #endif
-                 (png_uint_32) profile_size);
-    free(profile_data);
+                   (png_uint_32) profile_size);
+      free(profile_data);
+    }
   }
-
 
   // --- write EXIF metadata
 
 #ifdef PNG_eXIf_SUPPORTED
-  size_t exifsize = 0;
-  uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
-  if (exifdata) {
-    if (exifsize > 4) {
-      uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
-      if (skip < (exifsize - 4)) {
-        skip += 4;
-        uint8_t* ptr = exifdata + skip;
-        size_t size = exifsize - skip;
+  if (handle) {
+    size_t exifsize = 0;
+    uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
+    if (exifdata) {
+      if (exifsize > 4) {
+        uint32_t skip = (exifdata[0] << 24) | (exifdata[1] << 16) | (exifdata[2] << 8) | exifdata[3];
+        if (skip < (exifsize - 4)) {
+          skip += 4;
+          uint8_t* ptr = exifdata + skip;
+          size_t size = exifsize - skip;
 
-        // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-        modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
-        overwrite_exif_image_size_if_it_exists(ptr, (int)size, width, height);
+          // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
+          modify_exif_orientation_tag_if_it_exists(ptr, (int) size, 1);
+          overwrite_exif_image_size_if_it_exists(ptr, (int) size, width, height);
 
-        png_set_eXIf_1(png_ptr, info_ptr, (png_uint_32)size, ptr);
+          png_set_eXIf_1(png_ptr, info_ptr, (png_uint_32) size, ptr);
+        }
       }
-    }
 
-    free(exifdata);
+      free(exifdata);
+    }
   }
 #endif
 
   // --- write XMP metadata
 
 #ifdef PNG_iTXt_SUPPORTED
-  // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
-  std::vector<uint8_t> xmp = get_xmp_metadata(handle);
-  if (!xmp.empty()) {
-    // make sure that XMP string is always null terminated.
-    if (xmp.back() != 0) {
-      xmp.push_back(0);
-    }
+  if (handle) {
+    // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
+    std::vector<uint8_t> xmp = get_xmp_metadata(handle);
+    if (!xmp.empty()) {
+      // make sure that XMP string is always null terminated.
+      if (xmp.back() != 0) {
+        xmp.push_back(0);
+      }
 
-    // compute XMP string length
-    size_t text_length = 0;
-    while (xmp[text_length] != 0) {
-      text_length++;
-    }
+      // compute XMP string length
+      size_t text_length = 0;
+      while (xmp[text_length] != 0) {
+        text_length++;
+      }
 
-    png_text xmp_text{}; // important to zero-initialize the structure so that the remaining fields are NULL !
-    xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
-    xmp_text.key = (char*) "XML:com.adobe.xmp";
-    xmp_text.text = (char*) xmp.data();
-    xmp_text.text_length = 0; // should be 0 for ITXT according the libpng documentation
-    xmp_text.itxt_length = text_length;
-    png_set_text(png_ptr, info_ptr, &xmp_text, 1);
+      png_text xmp_text{}; // important to zero-initialize the structure so that the remaining fields are NULL !
+      xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
+      xmp_text.key = (char*) "XML:com.adobe.xmp";
+      xmp_text.text = (char*) xmp.data();
+      xmp_text.text_length = 0; // should be 0 for ITXT according the libpng documentation
+      xmp_text.itxt_length = text_length;
+      png_set_text(png_ptr, info_ptr, &xmp_text, 1);
+    }
   }
 #endif
 
@@ -165,9 +170,9 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   uint8_t** row_pointers = new uint8_t* [height];
 
-  int stride_rgb;
-  const uint8_t* row_rgb = heif_image_get_plane_readonly(image,
-                                                         heif_channel_interleaved, &stride_rgb);
+  size_t stride_rgb;
+  const uint8_t* row_rgb = heif_image_get_plane_readonly2(image,
+                                                          heif_channel_interleaved, &stride_rgb);
 
   for (int y = 0; y < height; ++y) {
     row_pointers[y] = const_cast<uint8_t*>(&row_rgb[y * stride_rgb]);
@@ -179,7 +184,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
     int shift = 16 - input_bpp;
     if (shift > 0) {
       for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < stride_rgb; x += 2) {
+        for (size_t x = 0; x < stride_rgb; x += 2) {
           uint8_t* p = (&row_pointers[y][x]);
           int v = (p[0] << 8) | p[1];
           v = (v << shift) | (v >> (16 - shift));

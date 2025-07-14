@@ -63,9 +63,9 @@ bool TiffEncoder::Encode(const struct heif_image_handle *handle,
     TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
     TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
 
-    int stride_rgb;
-    const uint8_t *row_rgb = heif_image_get_plane_readonly(image,
-                                                           heif_channel_interleaved, &stride_rgb);
+    size_t stride_rgb;
+    const uint8_t *row_rgb = heif_image_get_plane_readonly2(image,
+                                                            heif_channel_interleaved, &stride_rgb);
 
     for (int i = 0; i < height; i++)
     {

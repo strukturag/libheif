@@ -77,7 +77,25 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
+  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0);
+}
+
+
+Error ImageItem_iden::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return err;
+  }
+
+  auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Nonexisting_item_referenced};
+  }
+
+  return image->get_coded_image_colorspace(out_colorspace, out_chroma);
 }
 
 
@@ -90,6 +108,10 @@ int ImageItem_iden::get_luma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_luma_bits_per_pixel();
 }
 
@@ -103,5 +125,15 @@ int ImageItem_iden::get_chroma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_chroma_bits_per_pixel();
+}
+
+heif_brand2 ImageItem_iden::get_compatible_brand() const
+{
+  assert(false);
+  return 0; // TODO (we never write 'iden' images)
 }

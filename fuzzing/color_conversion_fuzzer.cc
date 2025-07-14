@@ -73,7 +73,7 @@ static bool read_plane(BitstreamRange* range,
   if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
-  uint32_t stride;
+  size_t stride;
   uint8_t* plane = image->get_plane(channel, &stride);
   assert(stride >= width);
   auto stream = range->get_istream();
@@ -99,7 +99,7 @@ static bool read_plane_interleaved(BitstreamRange* range,
   if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
-  uint32_t stride;
+  size_t stride;
   uint8_t* plane = image->get_plane(channel, &stride);
   assert(stride >= width * comps);
   auto stream = range->get_istream();
@@ -250,15 +250,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   int output_bpp = 0; // Same as input.
   heif_encoding_options* options = heif_encoding_options_alloc();
 
+  heif_color_conversion_options_ext* options_ext = heif_color_conversion_options_ext_alloc();
+
   auto out_image_result = convert_colorspace(in_image,
                                              static_cast<heif_colorspace>(out_colorspace),
                                              static_cast<heif_chroma>(out_chroma),
                                              nullptr,
                                              output_bpp,
                                              options->color_conversion_options,
+                                             options_ext,
                                              heif_get_disabled_security_limits());
 
   heif_encoding_options_free(options);
+  heif_color_conversion_options_ext_free(options_ext);
 
   if (out_image_result.error) {
     // Conversion is not supported.

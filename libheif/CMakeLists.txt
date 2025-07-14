@@ -4,11 +4,28 @@ configure_file(api/libheif/heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_ve
 
 set(libheif_headers
         api/libheif/heif.h
-        api/libheif/heif_cxx.h
+        api/libheif/heif_library.h
+        api/libheif/heif_image.h
+        api/libheif/heif_color.h
+        api/libheif/heif_error.h
         api/libheif/heif_plugin.h
         api/libheif/heif_properties.h
         api/libheif/heif_regions.h
         api/libheif/heif_items.h
+        api/libheif/heif_sequences.h
+        api/libheif/heif_tai_timestamps.h
+        api/libheif/heif_brands.h
+        api/libheif/heif_metadata.h
+        api/libheif/heif_aux_images.h
+        api/libheif/heif_entity_groups.h
+        api/libheif/heif_security.h
+        api/libheif/heif_encoding.h
+        api/libheif/heif_decoding.h
+        api/libheif/heif_image_handle.h
+        api/libheif/heif_context.h
+        api/libheif/heif_tiling.h
+        api/libheif/heif_uncompressed.h
+        api/libheif/heif_cxx.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
@@ -43,22 +60,46 @@ set(libheif_sources
         common_utils.h
         region.cc
         region.h
+        brands.cc
+        brands.h
         api/libheif/api_structs.h
         api/libheif/heif.cc
+        api/libheif/heif_library.cc
+        api/libheif/heif_image.cc
+        api/libheif/heif_color.cc
         api/libheif/heif_regions.cc
         api/libheif/heif_plugin.cc
         api/libheif/heif_properties.cc
         api/libheif/heif_items.cc
+        api/libheif/heif_sequences.cc
+        api/libheif/heif_tai_timestamps.cc
+        api/libheif/heif_brands.cc
+        api/libheif/heif_metadata.cc
+        api/libheif/heif_aux_images.cc
+        api/libheif/heif_entity_groups.cc
+        api/libheif/heif_security.cc
+        api/libheif/heif_encoding.cc
+        api/libheif/heif_decoding.cc
+        api/libheif/heif_image_handle.cc
+        api/libheif/heif_context.cc
+        api/libheif/heif_tiling.cc
+        api/libheif/heif_uncompressed.cc
         codecs/decoder.h
         codecs/decoder.cc
+        codecs/encoder.h
+        codecs/encoder.cc
         image-items/hevc.cc
         image-items/hevc.h
         codecs/hevc_boxes.cc
         codecs/hevc_boxes.h
         codecs/hevc_dec.cc
         codecs/hevc_dec.h
+        codecs/hevc_enc.cc
+        codecs/hevc_enc.h
         image-items/avif.cc
         image-items/avif.h
+        codecs/avif_enc.cc
+        codecs/avif_enc.h
         codecs/avif_dec.cc
         codecs/avif_dec.h
         codecs/avif_boxes.cc
@@ -69,16 +110,22 @@ set(libheif_sources
         codecs/jpeg_boxes.cc
         codecs/jpeg_dec.h
         codecs/jpeg_dec.cc
+        codecs/jpeg_enc.h
+        codecs/jpeg_enc.cc
         image-items/jpeg2000.h
         image-items/jpeg2000.cc
         codecs/jpeg2000_dec.h
         codecs/jpeg2000_dec.cc
+        codecs/jpeg2000_enc.h
+        codecs/jpeg2000_enc.cc
         codecs/jpeg2000_boxes.h
         codecs/jpeg2000_boxes.cc
         image-items/vvc.h
         image-items/vvc.cc
         codecs/vvc_dec.h
         codecs/vvc_dec.cc
+        codecs/vvc_enc.h
+        codecs/vvc_enc.cc
         codecs/vvc_boxes.h
         codecs/vvc_boxes.cc
         image-items/avc.h
@@ -121,6 +168,16 @@ set(libheif_sources
         color-conversion/alpha.h
         color-conversion/chroma_sampling.cc
         color-conversion/chroma_sampling.h
+        sequences/seq_boxes.h
+        sequences/seq_boxes.cc
+        sequences/chunk.h
+        sequences/chunk.cc
+        sequences/track.h
+        sequences/track.cc
+        sequences/track_visual.h
+        sequences/track_visual.cc
+        sequences/track_metadata.h
+        sequences/track_metadata.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})
@@ -135,8 +192,7 @@ endif ()
 
 option(ENABLE_EXPERIMENTAL_FEATURES "Compile experimental features and install headers with unstable API" OFF)
 if (ENABLE_EXPERIMENTAL_FEATURES)
-    list(APPEND libheif_sources api/libheif/heif_experimental.h
-            api/libheif/heif_experimental.cc)
+    target_sources(heif PRIVATE api/libheif/heif_experimental.h api/libheif/heif_experimental.cc)
 
     list(APPEND libheif_headers api/libheif/heif_experimental.h)
 
@@ -159,10 +215,26 @@ set_target_properties(heif
         SOVERSION ${PROJECT_VERSION_MAJOR})
 
 if (APPLE)
-    set_target_properties(heif
-            PROPERTIES
+    set_target_properties(heif PROPERTIES
 	    LINK_FLAGS "-Wl,-compatibility_version,${MACOS_COMPATIBLE_VERSION}")
 endif ()
+
+if (BUILD_FRAMEWORK) 
+  set_target_properties(heif PROPERTIES
+    FRAMEWORK TRUE
+    FRAMEWORK_VERSION "${PACKAGE_VERSION}"
+    PRODUCT_BUNDLE_IDENTIFIER "github.com/strukturag/libheif"
+    XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
+    # OUTPUT_NAME "heif"
+    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+    PUBLIC_HEADER "${libheif_headers}"
+    MACOSX_FRAMEWORK_IDENTIFIER "github.com/strukturag/libheif"
+    MACOSX_FRAMEWORK_BUNDLE_VERSION "${PACKAGE_VERSION}"
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
+    MACOSX_RPATH TRUE)
+endif()
 
 target_compile_definitions(heif
         PUBLIC
@@ -217,6 +289,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_codec.cc
             codecs/uncompressed/unc_dec.h
             codecs/uncompressed/unc_dec.cc
+            codecs/uncompressed/unc_enc.h
+            codecs/uncompressed/unc_enc.cc
             codecs/uncompressed/decoder_abstract.h
             codecs/uncompressed/decoder_abstract.cc
             codecs/uncompressed/decoder_component_interleave.h
@@ -244,6 +318,7 @@ install(TARGETS heif EXPORT ${PROJECT_NAME}-config
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FRAMEWORK DESTINATION Library/Frameworks COMPONENT runtime OPTIONAL
         )
 
 install(FILES ${libheif_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})

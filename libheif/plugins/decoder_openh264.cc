@@ -28,11 +28,13 @@
 #include <cstdio>
 
 #include <wels/codec_api.h>
+#include <string>
 
 
 struct openh264_decoder
 {
   std::vector<uint8_t> data;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -118,7 +120,8 @@ struct heif_error openh264_push_data(void* decoder_raw, const void* frame_data, 
 }
 
 
-struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error openh264_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                             const heif_security_limits* limits)
 {
   auto* decoder = (struct openh264_decoder*) decoder_raw;
 
@@ -162,7 +165,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
           scdata.push_back(0);
           scdata.push_back(3);
 
-          scdata.insert(scdata.end(), &indata[idx + 2], &indata[idx + i + 2]);
+          scdata.insert(scdata.end(), &indata[idx + 2], indata.data() + idx + i + 2);
           idx += i + 2;
           size -= (uint32_t)(i + 2);
           found_start_code_emulation = true;
@@ -174,7 +177,8 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
     }
 
     assert(size > 0);
-    scdata.insert(scdata.end(), &indata[idx], &indata[idx + size]);
+    // Note: we cannot write &indata[idx + size] since that would use the operator[] on an element beyond the vector range.
+    scdata.insert(scdata.end(), &indata[idx], indata.data() + idx + size);
 
     idx += size;
   }
@@ -262,16 +266,42 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
 
     *out_img = heif_img;
 
-    heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Y, width, height, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
 
-    int y_stride;
-    int cb_stride;
-    int cr_stride;
-    uint8_t* py = heif_image_get_plane(heif_img, heif_channel_Y, &y_stride);
-    uint8_t* pcb = heif_image_get_plane(heif_img, heif_channel_Cb, &cb_stride);
-    uint8_t* pcr = heif_image_get_plane(heif_img, heif_channel_Cr, &cr_stride);
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, cwidth, cheight, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, cwidth, cheight, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    size_t y_stride;
+    size_t cb_stride;
+    size_t cr_stride;
+    uint8_t* py = heif_image_get_plane2(heif_img, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane2(heif_img, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane2(heif_img, heif_channel_Cr, &cr_stride);
 
     int ystride = sDstBufInfo.UsrData.sSystemBuffer.iStride[0];
     int cstride = sDstBufInfo.UsrData.sSystemBuffer.iStride[1];
@@ -300,9 +330,15 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
   return heif_error_ok;
 }
 
+struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return openh264_decode_next_image(decoder_raw, out_img, limits);
+}
+
 
 static const struct heif_decoder_plugin decoder_openh264{
-        3,
+        4,
         openh264_plugin_name,
         openh264_init_plugin,
         openh264_deinit_plugin,
@@ -312,7 +348,8 @@ static const struct heif_decoder_plugin decoder_openh264{
         openh264_push_data,
         openh264_decode_image,
         openh264_set_strict_decoding,
-        "openh264"
+        "openh264",
+        openh264_decode_next_image
 };
 
 

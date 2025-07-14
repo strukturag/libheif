@@ -30,45 +30,42 @@
 #include <iomanip>
 #include <string>
 #include <utility>
+#include <algorithm>
 #include <libheif/api_structs.h>
 
 
-Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
+Error HEVCDecoderConfigurationRecord::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  //parse_full_box_header(range);
-
   uint8_t byte;
 
-  auto& c = m_configuration; // abbreviation
-
-  c.configuration_version = range.read8();
+  configuration_version = range.read8();
   byte = range.read8();
-  c.general_profile_space = (byte >> 6) & 3;
-  c.general_tier_flag = (byte >> 5) & 1;
-  c.general_profile_idc = (byte & 0x1F);
+  general_profile_space = (byte >> 6) & 3;
+  general_tier_flag = (byte >> 5) & 1;
+  general_profile_idc = (byte & 0x1F);
 
-  c.general_profile_compatibility_flags = range.read32();
+  general_profile_compatibility_flags = range.read32();
 
   for (int i = 0; i < 6; i++) {
     byte = range.read8();
 
     for (int b = 0; b < 8; b++) {
-      c.general_constraint_indicator_flags[i * 8 + b] = (byte >> (7 - b)) & 1;
+      general_constraint_indicator_flags[i * 8 + b] = (byte >> (7 - b)) & 1;
     }
   }
 
-  c.general_level_idc = range.read8();
-  c.min_spatial_segmentation_idc = range.read16() & 0x0FFF;
-  c.parallelism_type = range.read8() & 0x03;
-  c.chroma_format = range.read8() & 0x03;
-  c.bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  c.bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  c.avg_frame_rate = range.read16();
+  general_level_idc = range.read8();
+  min_spatial_segmentation_idc = range.read16() & 0x0FFF;
+  parallelism_type = range.read8() & 0x03;
+  chroma_format = range.read8() & 0x03;
+  bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  avg_frame_rate = range.read16();
 
   byte = range.read8();
-  c.constant_frame_rate = (byte >> 6) & 0x03;
-  c.num_temporal_layers = (byte >> 3) & 0x07;
-  c.temporal_id_nested = (byte >> 2) & 1;
+  constant_frame_rate = (byte >> 6) & 0x03;
+  num_temporal_layers = (byte >> 3) & 0x07;
+  temporal_id_nested = (byte >> 2) & 1;
 
   m_length_size = static_cast<uint8_t>((byte & 0x03) + 1);
 
@@ -112,6 +109,93 @@ Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
+Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
+{
+  writer.write8(configuration_version);
+
+  writer.write8((uint8_t) (((general_profile_space & 3) << 6) |
+                           ((general_tier_flag & 1) << 5) |
+                           (general_profile_idc & 0x1F)));
+
+  writer.write32(general_profile_compatibility_flags);
+
+  for (int i = 0; i < 6; i++) {
+    uint8_t byte = 0;
+
+    for (int b = 0; b < 8; b++) {
+      if (general_constraint_indicator_flags[i * 8 + b]) {
+        byte |= 1;
+      }
+
+      byte = (uint8_t) (byte << 1);
+    }
+
+    writer.write8(byte);
+  }
+
+  writer.write8(general_level_idc);
+  writer.write16((min_spatial_segmentation_idc & 0x0FFF) | 0xF000);
+  writer.write8(parallelism_type | 0xFC);
+  writer.write8(chroma_format | 0xFC);
+  writer.write8((uint8_t) ((bit_depth_luma - 8) | 0xF8));
+  writer.write8((uint8_t) ((bit_depth_chroma - 8) | 0xF8));
+  writer.write16(avg_frame_rate);
+
+  writer.write8((uint8_t) (((constant_frame_rate & 0x03) << 6) |
+                           ((num_temporal_layers & 0x07) << 3) |
+                           ((temporal_id_nested & 1) << 2) |
+                           ((m_length_size - 1) & 0x03)));
+
+  size_t nArrays = m_nal_array.size();
+  if (nArrays > 0xFF) {
+    // TODO: error: too many NAL units
+  }
+
+  writer.write8((uint8_t) nArrays);
+
+  for (const HEVCDecoderConfigurationRecord::NalArray& array : m_nal_array) {
+
+    writer.write8((uint8_t) (((array.m_array_completeness & 1) << 6) |
+                             (array.m_NAL_unit_type & 0x3F)));
+
+    size_t nUnits = array.m_nal_units.size();
+    if (nUnits > 0xFFFF) {
+      // TODO: error: too many NAL units
+    }
+
+    writer.write16((uint16_t) nUnits);
+
+    for (const std::vector<uint8_t>& nal_unit : array.m_nal_units) {
+      writer.write16((uint16_t) nal_unit.size());
+      writer.write(nal_unit);
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+bool HEVCDecoderConfigurationRecord::get_general_profile_compatibility_flag(int idx) const
+{
+  return general_profile_compatibility_flags & (UINT32_C(0x80000000) >> idx);
+}
+
+
+bool HEVCDecoderConfigurationRecord::is_profile_compatibile(Profile profile) const
+{
+  return (general_profile_idc == profile ||
+          get_general_profile_compatibility_flag(profile));
+}
+
+
+Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  //parse_full_box_header(range);
+
+  return m_configuration.parse(range, limits);
+}
+
+
 std::string Box_hvcC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -134,7 +218,7 @@ std::string Box_hvcC::dump(Indent& indent) const
 
   sstr << indent << "general_constraint_indicator_flags: ";
   int cnt = 0;
-  for (int i = 0; i < configuration::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+  for (int i = 0; i < HEVCDecoderConfigurationRecord::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
     bool b = c.general_constraint_indicator_flags[i];
 
     sstr << (b ? 1 : 0);
@@ -171,9 +255,9 @@ std::string Box_hvcC::dump(Indent& indent) const
        << indent << "constant_frame_rate: " << ((int) c.constant_frame_rate) << "\n"
        << indent << "num_temporal_layers: " << ((int) c.num_temporal_layers) << "\n"
        << indent << "temporal_id_nested: " << ((int) c.temporal_id_nested) << "\n"
-       << indent << "length_size: " << ((int) m_length_size) << "\n";
+       << indent << "length_size: " << ((int) c.m_length_size) << "\n";
 
-  for (const auto& array : m_nal_array) {
+  for (const auto& array : c.m_nal_array) {
     sstr << indent << "<array>\n";
 
     indent++;
@@ -199,7 +283,7 @@ std::string Box_hvcC::dump(Indent& indent) const
 
 bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 {
-  for (const auto& array : m_nal_array) {
+  for (const auto& array : m_configuration.m_nal_array) {
     for (const auto& unit : array.m_nal_units) {
 
       dest->push_back((unit.size() >> 24) & 0xFF);
@@ -223,12 +307,12 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 
 void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
 {
-  NalArray array;
+  HEVCDecoderConfigurationRecord::NalArray array;
   array.m_array_completeness = 0;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
   array.m_nal_units.push_back(nal);
 
-  m_nal_array.push_back(array);
+  m_configuration.m_nal_array.push_back(array);
 }
 
 void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
@@ -237,12 +321,61 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
   nal.resize(size);
   memcpy(nal.data(), data, size);
 
-  NalArray array;
-  array.m_array_completeness = 0;
+  for (auto& nal_array : m_configuration.m_nal_array) {
+    if (nal_array.m_NAL_unit_type == uint8_t(nal[0] >> 1)) {
+
+      // kvazaar may send the same headers multiple times. Filter out the identical copies.
+
+      for (auto& nal_unit : nal_array.m_nal_units) {
+
+        // Note: sometimes kvazaar even sends the same packet twice, but with an extra zero byte.
+        //       We detect this by comparing only the common length. This is correct since each NAL
+        //       packet must be complete and thus, if a packet is longer than another complete packet,
+        //       its extra data must be superfluous.
+        //
+        // Example:
+        //| | | <array>
+        //| | | | array_completeness: 1
+        //| | | | NAL_unit_type: 34
+        //| | | | 44 01 c1 71 82 99 20 00
+        //| | | | 44 01 c1 71 82 99 20
+
+        // Check whether packets have similar content.
+
+        size_t common_length = std::min(nal_unit.size(), nal.size());
+        bool similar = true;
+        for (size_t i = 0; i < common_length; i++) {
+          if (nal_unit[i] != nal[i]) {
+            similar = false;
+            break;
+          }
+        }
+
+        if (similar) {
+          // If they are similar, keep the smaller one.
+
+          if (nal_unit.size() > nal.size()) {
+            nal_unit = std::move(nal);
+          }
+
+          // Exit. Do not add a copy of the packet.
+
+          return;
+        }
+      }
+
+      nal_array.m_nal_units.push_back(std::move(nal));
+
+      return;
+    }
+  }
+
+  HEVCDecoderConfigurationRecord::NalArray array;
+  array.m_array_completeness = 1;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
   array.m_nal_units.push_back(std::move(nal));
 
-  m_nal_array.push_back(array);
+  m_configuration.m_nal_array.push_back(array);
 }
 
 
@@ -252,64 +385,9 @@ Error Box_hvcC::write(StreamWriter& writer) const
 
   const auto& c = m_configuration; // abbreviation
 
-  writer.write8(c.configuration_version);
-
-  writer.write8((uint8_t) (((c.general_profile_space & 3) << 6) |
-                           ((c.general_tier_flag & 1) << 5) |
-                           (c.general_profile_idc & 0x1F)));
-
-  writer.write32(c.general_profile_compatibility_flags);
-
-  for (int i = 0; i < 6; i++) {
-    uint8_t byte = 0;
-
-    for (int b = 0; b < 8; b++) {
-      if (c.general_constraint_indicator_flags[i * 8 + b]) {
-        byte |= 1;
-      }
-
-      byte = (uint8_t) (byte << 1);
-    }
-
-    writer.write8(byte);
-  }
-
-  writer.write8(c.general_level_idc);
-  writer.write16((c.min_spatial_segmentation_idc & 0x0FFF) | 0xF000);
-  writer.write8(c.parallelism_type | 0xFC);
-  writer.write8(c.chroma_format | 0xFC);
-  writer.write8((uint8_t) ((c.bit_depth_luma - 8) | 0xF8));
-  writer.write8((uint8_t) ((c.bit_depth_chroma - 8) | 0xF8));
-  writer.write16(c.avg_frame_rate);
-
-  writer.write8((uint8_t) (((c.constant_frame_rate & 0x03) << 6) |
-                           ((c.num_temporal_layers & 0x07) << 3) |
-                           ((c.temporal_id_nested & 1) << 2) |
-                           ((m_length_size - 1) & 0x03)));
-
-  size_t nArrays = m_nal_array.size();
-  if (nArrays > 0xFF) {
-    // TODO: error: too many NAL units
-  }
-
-  writer.write8((uint8_t) nArrays);
-
-  for (const NalArray& array : m_nal_array) {
-
-    writer.write8((uint8_t) (((array.m_array_completeness & 1) << 6) |
-                             (array.m_NAL_unit_type & 0x3F)));
-
-    size_t nUnits = array.m_nal_units.size();
-    if (nUnits > 0xFFFF) {
-      // TODO: error: too many NAL units
-    }
-
-    writer.write16((uint16_t) nUnits);
-
-    for (const std::vector<uint8_t>& nal_unit : array.m_nal_units) {
-      writer.write16((uint16_t) nal_unit.size());
-      writer.write(nal_unit);
-    }
+  Error err = c.write(writer);
+  if (err) {
+    return err;
   }
 
   prepend_header(writer, box_start);
@@ -519,7 +597,7 @@ static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size
 
 
 Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
-                                       Box_hvcC::configuration* config,
+                                       HEVCDecoderConfigurationRecord* config,
                                        int* width, int* height)
 {
   // remove start-code emulation bytes from SPS header stream

@@ -55,7 +55,8 @@ static uint16_t Shift(uint16_t v, int input_bits, int output_bits)
 std::vector<ColorStateWithCost>
 Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     const ColorState& input_state, const ColorState& target_state,
-    const heif_color_conversion_options& options) const
+    const heif_color_conversion_options& options,
+    const heif_color_conversion_options_ext& options_ext) const
 {
 #ifdef HAVE_LIBSHARPYUV
   // this Op only implements the sharp_yuv algorithm
@@ -127,6 +128,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const ColorState& input_state,
     const ColorState& target_state,
     const heif_color_conversion_options& options,
+    const heif_color_conversion_options_ext& options_ext,
     const heif_security_limits* limits) const
 {
 #ifdef HAVE_LIBSHARPYUV
@@ -176,12 +178,12 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
       : 2;
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  uint32_t in_stride = 0;
-  uint32_t in_a_stride = 0;
+  size_t in_stride = 0;
+  size_t in_a_stride = 0;
   bool planar_input = input_chroma == heif_chroma_444;
   int input_bits = 0;
   if (planar_input) {
-    uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
+    size_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
     in_r = input->get_plane(heif_channel_R, &in_r_stride);
     in_g = input->get_plane(heif_channel_G, &in_g_stride);
     in_b = input->get_plane(heif_channel_B, &in_b_stride);
@@ -212,7 +214,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     }
   }
 
-  uint32_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
+  size_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
   uint8_t* out_y = outimg->get_plane(heif_channel_Y, &out_y_stride);
   uint8_t* out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   uint8_t* out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
@@ -233,14 +235,14 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   int rgb_step = planar_input ? input_bytes_per_sample : input_bytes_per_pixel;
 
   int sharpyuv_ok =
-      SharpYuvConvert(in_r, in_g, in_b, rgb_step, in_stride,
-                      input_bits, out_y, out_y_stride, out_cb, out_cb_stride,
-                      out_cr, out_cr_stride, output_bits,
+      SharpYuvConvert(in_r, in_g, in_b, rgb_step, (int)in_stride,
+                      input_bits, out_y, (int)out_y_stride, out_cb, (int)out_cb_stride,
+                      out_cr, (int)out_cr_stride, output_bits,
                       input->get_width(), input->get_height(), &yuv_matrix);
   if (!sharpyuv_ok) {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_color_conversion,
-                 "SharpYuv color convertion failed"};
+                 "SharpYuv color conversion failed"};
   }
 
   if (want_alpha) {
@@ -249,7 +251,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
               (planar_input && !PlatformIsBigEndian()))
              ? 1
              : 0;
-    uint32_t out_a_stride;
+    size_t out_a_stride;
 
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
     uint16_t alpha_max = static_cast<uint16_t>((1 << input_bits) - 1);

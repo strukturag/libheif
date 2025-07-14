@@ -68,7 +68,7 @@ Error Box_jpgC::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   size_t nBytes = range.get_remaining_bytes();
-  if (nBytes > limits->max_memory_block_size) {
+  if (limits->max_memory_block_size && nBytes > limits->max_memory_block_size) {
     return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "jpgC block exceeds maximum size"};
   }
 
@@ -76,4 +76,3 @@ Error Box_jpgC::parse(BitstreamRange& range, const heif_security_limits* limits)
   range.read(m_data.data(), nBytes);
   return range.get_error();
 }
-

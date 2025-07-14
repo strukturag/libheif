@@ -21,6 +21,7 @@
 #include "pixelimage.h"
 #include "avif.h"
 #include "codecs/avif_dec.h"
+#include "codecs/avif_enc.h"
 #include "codecs/avif_boxes.h"
 #include "bitstream.h"
 #include "common_utils.h"
@@ -34,6 +35,16 @@
 
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
+
+ImageItem_AVIF::ImageItem_AVIF(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id)
+{
+  m_encoder = std::make_shared<Encoder_AVIF>();
+}
+
+ImageItem_AVIF::ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_AVIF>();
+}
 
 
 Error ImageItem_AVIF::on_load_file()
@@ -55,60 +66,19 @@ Error ImageItem_AVIF::on_load_file()
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
-{
-  CodedImageData codedImage;
-
-  Box_av1C::configuration config;
-
-  // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
-  // TODO: maybe we can remove this later.
-  fill_av1C_configuration(&config, image);
-
-  heif_image c_api_image;
-  c_api_image.image = image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
-  }
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-
-    bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
-    (void) found_config;
-
-    if (data == nullptr) {
-      break;
-    }
-
-    codedImage.append(data, size);
-  }
-
-  auto av1C = std::make_shared<Box_av1C>();
-  av1C->set_configuration(config);
-  codedImage.properties.push_back(av1C);
-
-  return codedImage;
-}
-
-
 Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();
 }
 
 
-std::shared_ptr<class Decoder> ImageItem_AVIF::get_decoder() const
+Result<std::shared_ptr<class Decoder>> ImageItem_AVIF::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
+}
+
+
+std::shared_ptr<class Encoder> ImageItem_AVIF::get_encoder() const
+{
+  return m_encoder;
 }

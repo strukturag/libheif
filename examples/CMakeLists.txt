@@ -64,6 +64,25 @@ if (PNG_FOUND)
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()
 
+
+
+if (WITH_EXAMPLE_HEIF_VIEW)
+    find_package(SDL2 NO_MODULE)
+
+    if (SDL2_FOUND)
+        add_executable(heif-view ${getopt_sources}
+                heif_view.cc
+                sdl.cc
+                sdl.hh
+                common.cc
+                common.h)
+        target_link_libraries(heif-view PRIVATE heif ${SDL2_LIBRARIES})
+        target_include_directories(heif-view PRIVATE ${libheif_SOURCE_DIR} ${SDL2_INCLUDE_DIRS})
+        install(TARGETS heif-view RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif ()
+endif ()
+
+
 add_executable(heif-test ${getopt_sources}
         heif_test.cc
         common.cc

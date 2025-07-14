@@ -62,25 +62,71 @@ uint8_t chroma_v_subsampling(heif_chroma c)
 }
 
 
+uint32_t get_subsampled_size_h(uint32_t width,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode)
+{
+  if (channel == heif_channel_Cb ||
+      channel == heif_channel_Cr) {
+    uint8_t chromaSubH = chroma_h_subsampling(chroma);
+
+    switch (mode) {
+      case scaling_mode::round_up:
+        // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+        return (width + chromaSubH - 1) / chromaSubH;
+      case scaling_mode::round_down:
+        // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+        return width / chromaSubH;
+      case scaling_mode::is_divisible:
+        assert(width % chromaSubH == 0);
+        return width / chromaSubH;
+      default:
+        assert(false);
+        return 0;
+    }
+  } else {
+    return width;
+  }
+}
+
+
+uint32_t get_subsampled_size_v(uint32_t height,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode)
+{
+  if (channel == heif_channel_Cb ||
+      channel == heif_channel_Cr) {
+    uint8_t chromaSubV = chroma_v_subsampling(chroma);
+
+    switch (mode) {
+      case scaling_mode::round_up:
+        // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+        return (height + chromaSubV - 1) / chromaSubV;
+      case scaling_mode::round_down:
+        // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+        return height / chromaSubV;
+      case scaling_mode::is_divisible:
+        assert(height % chromaSubV == 0);
+        return height / chromaSubV;
+      default:
+        assert(false);
+        return 0;
+    }
+  } else {
+    return height;
+  }
+}
+
+
 void get_subsampled_size(uint32_t width, uint32_t height,
                          heif_channel channel,
                          heif_chroma chroma,
                          uint32_t* subsampled_width, uint32_t* subsampled_height)
 {
-  if (channel == heif_channel_Cb ||
-      channel == heif_channel_Cr) {
-    uint8_t chromaSubH = chroma_h_subsampling(chroma);
-    uint8_t chromaSubV = chroma_v_subsampling(chroma);
-
-    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
-    *subsampled_width = (width + chromaSubH - 1) / chromaSubH;
-    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
-    *subsampled_height = (height + chromaSubV - 1) / chromaSubV;
-  }
-  else {
-    *subsampled_width = width;
-    *subsampled_height = height;
-  }
+  *subsampled_width = get_subsampled_size_h(width, channel, chroma, scaling_mode::round_up);
+  *subsampled_height = get_subsampled_size_v(height, channel, chroma, scaling_mode::round_up);
 }
 
 
@@ -111,4 +157,30 @@ std::string fourcc_to_string(uint32_t code)
   str[3] = static_cast<char>((code >> 0) & 0xFF);
 
   return str;
+}
+
+
+Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
+{
+  if (vec.empty()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Null length string"};
+  }
+
+  if (vec.back() != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "utf8string not null-terminated"};
+  }
+
+  for (size_t i=0;i<vec.size()-1;i++) {
+    if (vec[i] == 0) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "utf8string with null character"};
+    }
+  }
+
+  return std::string(vec.begin(), vec.end()-1);
 }

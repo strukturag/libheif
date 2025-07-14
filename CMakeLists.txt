@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.19.5)
+project(libheif LANGUAGES C CXX VERSION 1.20.1)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -25,7 +25,9 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
-set(CMAKE_COMPILE_WARNING_AS_ERROR ON CACHE BOOL "Treat compilation warning as error")
+if (APPLE)
+  option(BUILD_FRAMEWORK "Build as Apple Frameworks" OFF)
+endif()
 
 if(NOT MSVC)
   # cmake 3.24 introduces this variable, but for backward compatibility, we set it explicitly
@@ -248,6 +250,16 @@ plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
     find_package(OpenJPEG 2)
+
+    # Since the above does not work with Ubuntu 22.04 and Ubuntu 24.04, check again without version number
+    if (NOT OpenJPEG_FOUND)
+      find_package(OpenJPEG)
+
+      if (OpenJPEG_FOUND AND NOT OPENJPEG_MAJOR_VERSION STREQUAL "2")
+          message("OpenJPEG found, but we need version 2.x.x")
+          set(OpenJPEG_FOUND FALSE)
+      endif()
+    endif()
 endif()
 
 # ffmpeg
@@ -483,6 +495,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
+option(WITH_EXAMPLE_HEIF_VIEW "Build heif-view tool" ON)
 option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
@@ -572,6 +585,7 @@ if (WITH_FUZZERS)
     separate_arguments(FUZZING_COMPILE_OPTIONS UNIX_COMMAND "${FUZZING_COMPILE_OPTIONS}")
     separate_arguments(FUZZING_LINKER UNIX_COMMAND "${FUZZING_LINKER_OPTIONS}")
     add_compile_options(${FUZZING_COMPILE_OPTIONS})
+    add_definitions(-DAVOID_FUZZER_FALSE_POSITIVE=1)
     add_link_options(${FUZZING_COMPILE_OPTIONS} ${FUZZING_LINKER_OPTIONS})
 
     add_subdirectory(fuzzing)

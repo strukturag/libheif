@@ -103,7 +103,7 @@ public:
 
   uint64_t request_range(uint64_t start, uint64_t end_pos) override {
     // std::cout << "[istream] request_range " << start << " - " << end_pos << "\n";
-    return end_pos;
+    return std::min(end_pos, m_length);
   }
 
   void release_range(uint64_t start, uint64_t end_pos) override {
@@ -206,7 +206,32 @@ public:
       }
     }
     else {
-      return std::numeric_limits<uint64_t>::max();
+      auto result = m_func_table->wait_for_file_size(end_pos, m_userdata);
+      if (result == heif_reader_grow_status_size_reached) {
+        return end_pos;
+      }
+      else {
+        uint64_t pos = m_func_table->get_position(m_userdata);
+        return bisect_filesize(pos,end_pos);
+      }
+    }
+  }
+
+  uint64_t bisect_filesize(uint64_t mini, uint64_t maxi) {
+    // mini - <= filesize
+    // maxi - >  filesize
+
+    if (maxi == mini + 1) {
+      return mini;
+    }
+
+    uint64_t pos = (mini + maxi) / 2;
+    auto result = m_func_table->wait_for_file_size(pos, m_userdata);
+    if (result == heif_reader_grow_status_size_reached) {
+      return bisect_filesize(pos, maxi);
+    }
+    else {
+      return bisect_filesize(mini, pos);
     }
   }
 
@@ -277,6 +302,10 @@ public:
   int64_t read64s();
 
   std::string read_string();
+
+  // A string stored with a fixed number of bytes. The first byte contains the string length and the extra bytes
+  // are filled with a padding 0.
+  std::string read_fixed_string(int len);
 
   bool read(uint8_t* data, size_t n);
 
@@ -460,6 +489,8 @@ public:
   void write(int size, uint64_t value);
 
   void write(const std::string&);
+
+  void write_fixed_string(std::string s, size_t len);
 
   void write(const std::vector<uint8_t>&);
 

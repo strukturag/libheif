@@ -143,20 +143,23 @@ std::string ImageGrid::dump() const
 }
 
 
-extern void set_default_encoding_options(heif_encoding_options& options);
-
-
 ImageItem_Grid::ImageItem_Grid(HeifContext* ctx)
     : ImageItem(ctx)
 {
-  set_default_encoding_options(m_encoding_options);
+  m_encoding_options = heif_encoding_options_alloc();
 }
 
 
 ImageItem_Grid::ImageItem_Grid(HeifContext* ctx, heif_item_id id)
     : ImageItem(ctx, id)
 {
-  set_default_encoding_options(m_encoding_options);
+  m_encoding_options = heif_encoding_options_alloc();
+}
+
+
+ImageItem_Grid::~ImageItem_Grid()
+{
+  heif_encoding_options_free(m_encoding_options);
 }
 
 
@@ -468,6 +471,8 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
         grid_image->fill_plane(heif_channel_Alpha, alpha_default_value);
       }
 
+      grid_image->forward_all_metadata_from(tile_img);
+
       inout_image = grid_image; // We have to set this at the very end because of the unlocked check to `inout_image` above.
     }
   }
@@ -537,7 +542,7 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
   if (!tile_ids.empty() && tile_ids[0] != 0) {
     heif_item_id tile0_id = tile_ids[0];
     auto tile0 = get_context()->get_image(tile0_id, true);
-    if (tile0->get_item_error()) {
+    if (tile0 == nullptr || tile0->get_item_error()) {
       return tiling;
     }
 
@@ -596,17 +601,21 @@ int ImageItem_Grid::get_chroma_bits_per_pixel() const
   return image->get_chroma_bits_per_pixel();
 }
 
-std::shared_ptr<Decoder> ImageItem_Grid::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_Grid::get_decoder() const
 {
   heif_item_id child;
   Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
   if (err) {
-    return nullptr;
+    return {err};
   }
 
   auto image = get_context()->get_image(child, true);
-  if (image->get_item_error()) {
-    return nullptr;
+  if (!image) {
+    return Error{heif_error_Invalid_input,
+      heif_suberror_Nonexisting_item_referenced};
+  }
+  else if (auto err = image->get_item_error()) {
+    return err;
   }
 
   return image->get_decoder();
@@ -631,7 +640,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
   ImageGrid grid;
   grid.set_num_tiles(tile_columns, tile_rows);
-  grid.set_output_size(output_width, output_height);
+  grid.set_output_size(output_width, output_height); // TODO: MIAF restricts the output size to be a multiple of the chroma subsampling (7.3.11.4.2)
   std::vector<uint8_t> grid_data = grid.write();
 
   // Create Grid Item
@@ -775,8 +784,19 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   // Set Brands
 
-  file->set_brand(encoder->plugin->compression_format,
-                  griditem->is_miaf_compatible());
+  //file->set_brand(encoder->plugin->compression_format,
+  //                griditem->is_miaf_compatible());
 
   return griditem;
+}
+
+heif_brand2 ImageItem_Grid::get_compatible_brand() const
+{
+  if (m_grid_tile_ids.empty()) { return 0; }
+
+  heif_item_id child_id = m_grid_tile_ids[0];
+  auto child = get_context()->get_image(child_id, false);
+  if (!child) { return 0; }
+
+  return child->get_compatible_brand();
 }

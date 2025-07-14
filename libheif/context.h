@@ -47,6 +47,8 @@ class StreamWriter;
 
 class ImageItem;
 
+class Track;
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -94,6 +96,8 @@ public:
 
   std::shared_ptr<ImageItem> get_primary_image(bool return_error_image);
 
+  std::shared_ptr<const ImageItem> get_primary_image(bool return_error_image) const;
+
   bool is_image(heif_item_id ID) const;
 
   bool has_alpha(heif_item_id ID) const;
@@ -103,6 +107,11 @@ public:
                                                        heif_chroma out_chroma,
                                                        const struct heif_decoding_options& options,
                                                        bool decode_only_tile, uint32_t tx, uint32_t ty) const;
+
+  Result<std::shared_ptr<HeifPixelImage>> convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
+                                                                       heif_colorspace out_colorspace,
+                                                                       heif_chroma out_chroma,
+                                                                       const struct heif_decoding_options& options) const;
 
   Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
@@ -168,6 +177,31 @@ public:
 
   void add_region_referenced_mask_ref(heif_item_id region_item_id, heif_item_id mask_item_id);
 
+
+  // === sequences ==
+
+  bool has_sequence() const { return !m_tracks.empty(); }
+
+  int get_number_of_tracks() const { return static_cast<int>(m_tracks.size()); }
+
+  std::vector<uint32_t> get_track_IDs() const;
+
+  // If 0 is passed as track_id, the main visual track is returned (we assume that there is only one visual track).
+  Result<std::shared_ptr<Track>> get_track(uint32_t track_id);
+
+  Result<std::shared_ptr<const Track>> get_track(uint32_t track_id) const;
+
+  uint32_t get_sequence_timescale() const;
+
+  uint64_t get_sequence_duration() const;
+
+  void set_sequence_timescale(uint32_t timescale);
+
+  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const struct TrackOptions*, uint32_t handler_type,
+                                                                        uint16_t width, uint16_t height);
+
+  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const struct TrackOptions*, std::string uri);
+
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;
 
@@ -182,10 +216,20 @@ private:
   int m_max_decoding_threads = 4;
 
   heif_security_limits m_limits;
+  TotalMemoryTracker m_memory_tracker;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
 
+  // --- sequences
+
+  std::map<uint32_t, std::shared_ptr<Track>> m_tracks;
+  uint32_t m_visual_track_id = 0;
+
   Error interpret_heif_file();
+
+  Error interpret_heif_file_images();
+
+  Error interpret_heif_file_sequences();
 
   void remove_top_level_image(const std::shared_ptr<ImageItem>& image);
 };

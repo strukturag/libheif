@@ -608,12 +608,12 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   // if (input_class == heif_image_input_class_alpha) {
   //} else
   {
-    int strideY;
-    const uint8_t* Y = heif_image_get_plane_readonly(image, heif_channel_Y, &strideY);
-    int strideCb;
-    const uint8_t* Cb = heif_image_get_plane_readonly(image, heif_channel_Cb, &strideCb);
-    int strideCr;
-    const uint8_t* Cr = heif_image_get_plane_readonly(image, heif_channel_Cr, &strideCr);
+    size_t strideY;
+    const uint8_t* Y = heif_image_get_plane_readonly2(image, heif_channel_Y, &strideY);
+    size_t strideCb;
+    const uint8_t* Cb = heif_image_get_plane_readonly2(image, heif_channel_Cb, &strideCb);
+    size_t strideCr;
+    const uint8_t* Cr = heif_image_get_plane_readonly2(image, heif_channel_Cr, &strideCr);
 
 
     uint32_t height = heif_image_get_height(image, heif_channel_Y);

@@ -28,7 +28,10 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <set>
 #include "api/libheif/heif_plugin.h"
+#include "codecs/encoder.h"
+
 
 class HeifContext;
 
@@ -49,9 +52,9 @@ public:
 class ImageItem : public ErrorBuffer
 {
 public:
-  ImageItem(HeifContext* file);
+  ImageItem(HeifContext* ctx);
 
-  ImageItem(HeifContext* file, heif_item_id id);
+  ImageItem(HeifContext* ctx, heif_item_id id);
 
   virtual ~ImageItem() = default;
 
@@ -63,10 +66,6 @@ public:
 
   static uint32_t compression_format_to_fourcc_infe_type(heif_compression_format);
 
-  Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
-                                                                          struct heif_encoder* encoder,
-                                                                          const struct heif_encoding_options& options);
-
   virtual uint32_t get_infe_type() const { return 0; }
 
   virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
@@ -74,9 +73,6 @@ public:
   virtual bool is_ispe_essential() const { return false; }
 
   virtual Error get_item_error() const { return Error::Ok; }
-
-  // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
-  virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
 
@@ -192,6 +188,8 @@ public:
 
   bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
 
+  // Whether the image has an alpha channel coded in the main image (not as an auxiliary image)
+  virtual bool has_coded_alpha_channel() const { return false; }
 
   // --- depth channel
 
@@ -275,10 +273,13 @@ public:
 
   // --- miaf
 
+  // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.
   void mark_not_miaf_compatible() { m_miaf_compatible = false; }
 
   bool is_miaf_compatible() const { return m_miaf_compatible; }
 
+  // return 0 if we don't know the brand
+  virtual heif_brand2 get_compatible_brand() const { return 0; }
 
   // === decoding ===
 
@@ -292,30 +293,16 @@ public:
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 
-  virtual Result<std::vector<uint8_t>> get_compressed_image_data() const;
-
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
+
+  bool has_essential_property_other_than(const std::set<uint32_t>&) const;
 
   // === encoding ===
 
-  struct CodedImageData
-  {
-    std::vector<std::shared_ptr<Box>> properties;
-    std::vector<uint8_t> bitstream;
-
-    // If 0, the encoded size is equal to the input size.
-    uint32_t encoded_image_width = 0;
-    uint32_t encoded_image_height = 0;
-
-    void append(const uint8_t* data, size_t size);
-
-    void append_with_4bytes_size(const uint8_t* data, size_t size);
-  };
-
-  Result<CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                       struct heif_encoder* encoder,
-                                                       const struct heif_encoding_options& options,
-                                                       enum heif_image_input_class input_class);
+  Result<Encoder::CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+                                                                struct heif_encoder* encoder,
+                                                                const struct heif_encoding_options& options,
+                                                                enum heif_image_input_class input_class);
 
   Error encode_to_item(HeifContext* ctx,
                        const std::shared_ptr<HeifPixelImage>& image,
@@ -379,7 +366,16 @@ public:
 
   Error transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const;
 
-  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
+  virtual Result<std::shared_ptr<class Decoder>> get_decoder() const
+  {
+    return Error{
+      heif_error_Unsupported_feature,
+      heif_suberror_No_matching_decoder_installed,
+      "No decoder for this image format"
+    };
+  }
+
+  virtual std::shared_ptr<class Encoder> get_encoder() const { return nullptr; }
 
 private:
   HeifContext* m_heif_context;
@@ -427,10 +423,10 @@ private:
 protected:
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
-  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class) { return {}; }
+  virtual Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                 struct heif_encoder* encoder,
+                                                 const struct heif_encoding_options& options,
+                                                 enum heif_image_input_class input_class);
 
   // --- encoding utility functions
 
@@ -438,7 +434,7 @@ protected:
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class,
                                 const heif_color_profile_nclx* target_heif_nclx,
-                                ImageItem::CodedImageData& inout_codedImage);
+                                Encoder::CodedImageData& inout_codedImage);
 };
 
 

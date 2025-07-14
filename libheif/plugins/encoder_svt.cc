@@ -26,6 +26,7 @@
 #include <cassert>
 #include <algorithm>
 #include <memory>
+#include <limits>
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
@@ -41,13 +42,25 @@ struct encoder_struct_svt
   int max_q = 63;
   int qp = -1;
   bool qp_set = false;
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  bool lossless = false;
+#endif
 
   int threads = 4;
 
   int tile_rows = 1; // 1,2,4,8,16,32,64
   int tile_cols = 1; // 1,2,4,8,16,32,64
 
-  heif_chroma chroma = heif_chroma_420;
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+  enum Tune {
+    Tune_VQ = 0,
+    Tune_PSNR = 1,
+    Tune_SSIM = 2
+  };
+  uint8_t tune = Tune_PSNR;
+#endif
+
+  heif_chroma chroma = heif_chroma_420;  // SVT-AV1 only supports 4:2:0 as of v3.0.0
 
   // --- output
 
@@ -63,10 +76,17 @@ static const char* kParam_qp = "qp";
 static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+static const char* kParam_tune = "tune";
+static const char* const kParam_tune_valid_values[] = {"vq","psnr","ssim", nullptr};
+#endif
+
+/*
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
     "420", "422", "444", nullptr
 };
+*/
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
@@ -109,7 +129,7 @@ int int_log2(int pow2_value)
   return v;
 }
 
-#define MAX_NPARAMETERS 10
+#define MAX_NPARAMETERS 11
 
 static struct heif_encoder_parameter svt_encoder_params[MAX_NPARAMETERS];
 static const struct heif_encoder_parameter* svt_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
@@ -182,7 +202,7 @@ static void svt_init_parameters()
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
-  /*
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = heif_encoder_parameter_name_lossless;
@@ -190,8 +210,9 @@ static void svt_init_parameters()
   p->boolean.default_value = false;
   p->has_default = true;
   d[i++] = p++;
-*/
+#endif
 
+#if 0
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_chroma;
@@ -200,6 +221,7 @@ static void svt_init_parameters()
   p->has_default = true;
   p->string.valid_values = kParam_chroma_valid_values;
   d[i++] = p++;
+#endif
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
@@ -239,6 +261,17 @@ static void svt_init_parameters()
   p->integer.valid_values = nullptr;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
+
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_tune;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "psnr";
+  p->has_default = true;
+  p->string.valid_values = kParam_tune_valid_values;
+  d[i++] = p++;
+#endif
 
   d[i++] = nullptr;
 }
@@ -307,6 +340,9 @@ struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  encoder->lossless = enable;
+#else
   if (enable) {
     encoder->min_q = 0;
     encoder->max_q = 0;
@@ -314,6 +350,7 @@ struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
     encoder->qp_set = true;
     encoder->quality = 100; // not really required, but to be consistent
   }
+#endif
 
   return heif_error_ok;
 }
@@ -322,8 +359,12 @@ struct heif_error svt_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  *enable = encoder->lossless;
+#else
   *enable = (encoder->min_q == 0 && encoder->max_q == 0 &&
              ((encoder->qp_set && encoder->qp == 0) || encoder->quality == 100));
+#endif
 
   return heif_error_ok;
 }
@@ -439,7 +480,9 @@ struct heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name,
 struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  (void)encoder;
 
+#if 0
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
       encoder->chroma = heif_chroma_420;
@@ -457,23 +500,45 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
       return heif_error_invalid_parameter_value;
     }
   }
+#endif
+
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+  if (strcmp(name, kParam_tune) == 0) {
+    if (strcmp(value, "vq") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_VQ;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "psnr") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_PSNR;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "ssim") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_SSIM;
+      return heif_error_ok;
+    }
+  }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
 
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
 static void save_strcpy(char* dst, int dst_size, const char* src)
 {
   strncpy(dst, src, dst_size - 1);
   dst[dst_size - 1] = 0;
 }
+#endif
 
 
 struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
                                            char* value, int value_size)
 {
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  (void)encoder;
 
+#if 0
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
       case heif_chroma_420:
@@ -491,6 +556,28 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
     }
     return heif_error_ok;
   }
+#endif
+
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+  if (strcmp(name, kParam_tune) == 0) {
+    switch (encoder->tune) {
+      case encoder_struct_svt::Tune_VQ:
+        save_strcpy(value, value_size, "vq");
+      break;
+      case encoder_struct_svt::Tune_PSNR:
+        save_strcpy(value, value_size, "psnr");
+      break;
+      case encoder_struct_svt::Tune_SSIM:
+        save_strcpy(value, value_size, "ssim");
+      break;
+      default:
+        assert(false);
+
+      return heif_error_invalid_parameter_value;
+    }
+    return heif_error_ok;
+  }
+#endif
 
   return heif_error_unsupported_parameter;
 }
@@ -528,10 +615,10 @@ void svt_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma
 
 void svt_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  //auto* encoder = (struct encoder_struct_svt*) encoder_raw;
 
   *colorspace = heif_colorspace_YCbCr;
-  *chroma = encoder->chroma;
+  *chroma = heif_chroma_420;
 }
 
 
@@ -625,7 +712,11 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   EbSvtAv1EncConfiguration svt_config;
   memset(&svt_config, 0, sizeof(EbSvtAv1EncConfiguration));
 
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  res = svt_av1_enc_init_handle(&svt_encoder, &svt_config);
+#else
   res = svt_av1_enc_init_handle(&svt_encoder, nullptr, &svt_config);
+#endif
   if (res != EB_ErrorNone) {
     //goto cleanup;
     return heif_error_codec_library_error;
@@ -634,6 +725,10 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.encoder_color_format = color_format;
   svt_config.encoder_bit_depth = (uint8_t) bitdepth_y;
   //svt_config.is_16bit_pipeline = bitdepth_y > 8;
+
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  svt_config.lossless = encoder->lossless;
+#endif
 
   struct heif_color_profile_nclx* nclx = nullptr;
   err = heif_image_get_nclx_color_profile(image, &nclx);
@@ -645,7 +740,9 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
   if (nclx) {
+#if !SVT_AV1_CHECK_VERSION(3, 0, 0)
     svt_config.color_description_present_flag = true;
+#endif
 #if SVT_AV1_VERSION_MAJOR >= 1
     svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->color_primaries);
     svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->transfer_characteristics);
@@ -659,20 +756,28 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 #endif
 
 
+#if !SVT_AV1_CHECK_VERSION(3, 0, 0)
     // Follow comment in svt header: set if input is HDR10 BT2020 using SMPTE ST2084.
     svt_config.high_dynamic_range_input = (bitdepth_y == 10 && // TODO: should this be >8 ?
                                            nclx->color_primaries == heif_color_primaries_ITU_R_BT_2020_2_and_2100_0 &&
                                            nclx->transfer_characteristics == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ &&
                                            nclx->matrix_coefficients == heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance);
+#endif
   }
   else {
+#if !SVT_AV1_CHECK_VERSION(3, 0, 0)
     svt_config.color_description_present_flag = false;
+#endif
   }
 
 
   svt_config.source_width = encoded_width;
   svt_config.source_height = encoded_height;
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  svt_config.level_of_parallelism = encoder->threads;
+#else
   svt_config.logical_processors = encoder->threads;
+#endif
 
   // disable 2-pass
   svt_config.rc_stats_buffer = SvtAv1FixedBuf {nullptr, 0};
@@ -692,6 +797,10 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 
   svt_config.tile_rows = int_log2(encoder->tile_rows);
   svt_config.tile_columns = int_log2(encoder->tile_cols);
+
+#if SVT_AV1_CHECK_VERSION(0, 9, 1)
+  svt_config.tune = encoder->tune;
+#endif
 
   svt_config.enc_mode = (int8_t) encoder->speed;
 
@@ -731,26 +840,78 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto* input_picture_buffer = (EbSvtIOFormat*) input_buffer.p_buffer;
 
   int bytesPerPixel = bitdepth_y > 8 ? 2 : 1;
+  std::vector<uint8_t> dummy_color_plane;
   if (input_class == heif_image_input_class_alpha) {
-    int stride;
-    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
-    input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * encoded_height;
+    size_t stride64;
+    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride64);
+
+    uint32_t stride32;
+    if (stride64 > std::numeric_limits<uint32_t>::max()) {
+      return {heif_error_Encoder_plugin_error,
+              heif_suberror_Unspecified,
+              "Image too wide for encoder"};
+    }
+    else {
+      stride32 = static_cast<uint32_t>(stride64);
+    }
+
+    input_picture_buffer->y_stride = stride32 / bytesPerPixel;
+    input_buffer.n_filled_len = stride32 * encoded_height;
+
+    uint32_t uvWidth = get_subsampled_size_h(encoded_width, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
+    uint32_t uvHeight = get_subsampled_size_v(encoded_height, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
+    dummy_color_plane.resize(uvWidth * uvHeight);
+
+    if (bitdepth_y <= 8) {
+      uint8_t val = 1 << (bitdepth_y - 1);
+      memset(dummy_color_plane.data(), val, uvWidth * uvHeight * bytesPerPixel);
+    }
+    else {
+      assert(bitdepth_y > 8 && bitdepth_y <= 16);
+      uint16_t val = 1 << (bitdepth_y - 1);
+      uint8_t high = static_cast<uint8_t>((val >> 8) & 0xFF);
+      uint8_t low  = static_cast<uint8_t>(val & 0xFF);
+
+      for (uint32_t i=0;i<uvWidth*uvHeight;i++) {
+        dummy_color_plane[2*i  ] = low;
+        dummy_color_plane[2*i+1] = high;
+      }
+    }
+
+    input_buffer.n_filled_len += 2* uvWidth * uvHeight;
+    input_picture_buffer->cb_stride = uvWidth;
+    input_picture_buffer->cr_stride = uvWidth;
+
+    input_picture_buffer->cb = dummy_color_plane.data();
+    input_picture_buffer->cr = dummy_color_plane.data();
   }
   else {
-    int stride;
-    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
-    input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * encoded_height;
+    size_t stride64;
+    input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride64);
 
-    uint32_t uvHeight = (h + yShift) >> yShift;
-    input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
-    input_buffer.n_filled_len += stride * uvHeight;
-    input_picture_buffer->cb_stride = stride / bytesPerPixel;
+    uint32_t stride32;
+    if (stride64 > std::numeric_limits<uint32_t>::max()) {
+      return {heif_error_Encoder_plugin_error,
+              heif_suberror_Unspecified,
+              "Image too wide for encoder"};
+    }
+    else {
+      stride32 = static_cast<uint32_t>(stride64);
+    }
 
-    input_picture_buffer->cr = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Cr, &stride);
-    input_buffer.n_filled_len += stride * uvHeight;
-    input_picture_buffer->cr_stride = stride / bytesPerPixel;
+    input_picture_buffer->y_stride = stride32 / bytesPerPixel;
+    input_buffer.n_filled_len = stride32 * encoded_height;
+
+    uint32_t uvHeight = (encoded_height + yShift) >> yShift;
+    input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride64);
+    stride32 = static_cast<uint32_t>(stride64); // chroma stride should always be smaller than luma stride
+    input_buffer.n_filled_len += stride32 * uvHeight;
+    input_picture_buffer->cb_stride = stride32 / bytesPerPixel;
+
+    input_picture_buffer->cr = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride64);
+    stride32 = static_cast<uint32_t>(stride64); // chroma stride should always be smaller than luma stride
+    input_buffer.n_filled_len += stride32 * uvHeight;
+    input_picture_buffer->cr_stride = stride32 / bytesPerPixel;
   }
 
   input_buffer.flags = 0;
@@ -767,7 +928,6 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
-
 
 
   // --- flush encoder
@@ -860,7 +1020,11 @@ static const struct heif_encoder_plugin encoder_plugin_svt
         /* id_name */ "svt",
         /* priority */ SVT_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+        /* supports_lossless_compression */ true,
+#else
         /* supports_lossless_compression */ false,
+#endif
         /* get_plugin_name */ svt_plugin_name,
         /* init_plugin */ svt_init_plugin,
         /* cleanup_plugin */ svt_cleanup_plugin,

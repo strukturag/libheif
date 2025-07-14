@@ -122,8 +122,8 @@ class AbstractDecoder
 public:
   virtual ~AbstractDecoder() = default;
 
-  virtual Error decode_tile(const HeifContext* context,
-                            heif_item_id item_id,
+  virtual Error decode_tile(const DataExtent& dataExtent,
+                            const UncompressedImageCodec::unci_properties& properties,
                             std::shared_ptr<HeifPixelImage>& img,
                             uint32_t out_x0, uint32_t out_y0,
                             uint32_t image_width, uint32_t image_height,
@@ -133,13 +133,13 @@ public:
 
 protected:
   AbstractDecoder(uint32_t width, uint32_t height,
-                  const std::shared_ptr<Box_cmpd> cmpd,
-                  const std::shared_ptr<Box_uncC> uncC);
+                  const std::shared_ptr<const Box_cmpd> cmpd,
+                  const std::shared_ptr<const Box_uncC> uncC);
 
   const uint32_t m_width;
   const uint32_t m_height;
-  const std::shared_ptr<Box_cmpd> m_cmpd;
-  const std::shared_ptr<Box_uncC> m_uncC;
+  const std::shared_ptr<const Box_cmpd> m_cmpd;
+  const std::shared_ptr<const Box_uncC> m_uncC;
   // TODO: see if we can make this const
   uint32_t m_tile_height;
   uint32_t m_tile_width;
@@ -161,8 +161,8 @@ protected:
     heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane = nullptr;
     uint8_t* other_chroma_dst_plane = nullptr;
-    uint32_t dst_plane_stride;
-    uint32_t other_chroma_dst_plane_stride;
+    size_t dst_plane_stride;
+    size_t other_chroma_dst_plane_stride;
     uint32_t tile_width;
     uint32_t tile_height;
     uint32_t bytes_per_component_sample;
@@ -191,7 +191,8 @@ protected:
   void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset);
 
   // generic compression and uncompressed, per 23001-17
-  const Error get_compressed_image_data_uncompressed(const HeifContext* context, heif_item_id ID,
+  const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
+                                                     const UncompressedImageCodec::unci_properties& properties,
                                                      std::vector<uint8_t>* data,
                                                      uint64_t range_start_offset, uint64_t range_size,
                                                      uint32_t tile_idx,

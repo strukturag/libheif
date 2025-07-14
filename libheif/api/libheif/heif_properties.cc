@@ -207,6 +207,21 @@ struct heif_error heif_item_add_property_user_description(const struct heif_cont
 }
 
 
+void heif_property_user_description_release(struct heif_property_user_description* udes)
+{
+  if (udes == nullptr) {
+    return;
+  }
+
+  delete[] udes->lang;
+  delete[] udes->name;
+  delete[] udes->description;
+  delete[] udes->tags;
+
+  delete udes;
+}
+
+
 enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(const struct heif_context* context,
                                                                              heif_item_id itemId,
                                                                              heif_property_id propertyId)
@@ -287,21 +302,6 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 }
 
 
-void heif_property_user_description_release(struct heif_property_user_description* udes)
-{
-  if (udes == nullptr) {
-    return;
-  }
-
-  delete[] udes->lang;
-  delete[] udes->name;
-  delete[] udes->description;
-  delete[] udes->tags;
-
-  delete udes;
-}
-
-
 struct heif_error heif_item_add_raw_property(const struct heif_context* context,
                                               heif_item_id itemId,
                                               uint32_t short_type,
@@ -356,172 +356,6 @@ struct heif_error find_property(const struct heif_context* context,
   *box_casted = std::dynamic_pointer_cast<T>(box);
   return heif_error_success;
 }
-
-
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-const uint64_t heif_tai_clock_info_unknown_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
-const uint64_t heif_unknown_tai_timestamp = 0xFFFFFFFFFFFFFFFF;
-const int32_t heif_tai_clock_info_unknown_drift_rate = 0x7FFFFFFF;
-
-
-int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
-{
-  if (drift_rate == heif_tai_clock_info_unknown_drift_rate) {
-    return 1;
-  }
-  return 0;
-}
-
-
-struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
-                                               heif_item_id itemId,
-                                               const heif_tai_clock_info* clock,
-                                               heif_property_id* out_propertyId)
-{
-  if (!ctx || !clock) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
-  }
-
-  // Check if itemId exists
-  auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
-  }
-
-  // Create new taic if one doesn't exist for the itemId.
-  auto taic = ctx->context->get_heif_file()->get_property_for_item<Box_taic>(itemId);
-  if (!taic) {
-    taic = std::make_shared<Box_taic>();
-  }
-
-  taic->set_time_uncertainty(clock->time_uncertainty);
-  taic->set_clock_resolution(clock->clock_resolution);
-  taic->set_clock_drift_rate(clock->clock_drift_rate);
-  taic->set_clock_type(clock->clock_type);
-
-  bool essential = false;
-  heif_property_id id = ctx->context->add_property(itemId, taic, essential);
-
-  if (out_propertyId) {
-    *out_propertyId = id;
-  }
-
-  return heif_error_success;
-}
-
-
-struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
-                                               heif_item_id itemId,
-                                               heif_tai_clock_info* out_clock)
-{
-  if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL heif_context passed in"};
-  } else if (!out_clock) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_clock_info passed in"};
-  }
-
-  // Check if itemId exists
-  auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
-  }
-
-  // Check if taic exists for itemId
-  auto taic = file->get_property_for_item<Box_taic>(itemId);
-  if (!taic) {
-    out_clock = nullptr;
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "TAI Clock property not found for itemId"};
-
-  }
-
-  if (out_clock->version >= 1) {
-    out_clock->version = 1;
-    out_clock->time_uncertainty = taic->get_time_uncertainty();
-    out_clock->clock_resolution = taic->get_clock_resolution();
-    out_clock->clock_drift_rate = taic->get_clock_drift_rate();
-    out_clock->clock_type = taic->get_clock_type();
-  }
-
-  return heif_error_success;
-}
-
-
-struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
-                                                  heif_item_id itemId,
-                                                  heif_tai_timestamp_packet* timestamp,
-                                                  heif_property_id* out_propertyId)
-{
-  if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
-  }
-
-  // Check if itemId exists
-  auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
-  }
-
-  // Create new itai if one doesn't exist for the itemId.
-  auto itai = file->get_property_for_item<Box_itai>(itemId);
-  if (!itai) {
-    itai = std::make_shared<Box_itai>();
-  }
-
-  // Set timestamp values
-  itai->set_tai_timestamp(timestamp->tai_timestamp);
-  itai->set_synchronization_state(timestamp->synchronization_state);
-  itai->set_timestamp_generation_failure(timestamp->timestamp_generation_failure);
-  itai->set_timestamp_is_modified(timestamp->timestamp_is_modified);
-  heif_property_id id = ctx->context->add_property(itemId, itai, false);
-  
-  // Create new taic if one doesn't exist for the itemId.
-  auto taic = file->get_property_for_item<Box_taic>(itemId);
-  if (!taic) {
-    taic = std::make_shared<Box_taic>();
-    ctx->context->add_property(itemId, taic, false);
-    // Should we output taic_id?
-  }
-    
-
-  if (out_propertyId) {
-    *out_propertyId = id;
-  }
-
-  return heif_error_success;
-}
-
-struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
-                                                  heif_item_id itemId,
-                                                  heif_tai_timestamp_packet* out_timestamp)
-{
-  if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
-  }
-
-  // Check if itemId exists
-  auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
-  }
-
-  //Check if itai exists for itemId
-  auto itai = file->get_property_for_item<Box_itai>(itemId);
-  if (!itai) {
-    out_timestamp = nullptr;
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "Timestamp property not found for itemId"};
-  }
-
-  if (out_timestamp) {
-    out_timestamp->version = 1;
-    out_timestamp->tai_timestamp = itai->get_tai_timestamp();
-    out_timestamp->synchronization_state = itai->get_synchronization_state();
-    out_timestamp->timestamp_generation_failure = itai->get_timestamp_generation_failure();
-    out_timestamp->timestamp_is_modified = itai->get_timestamp_is_modified();
-  }
-
-  return heif_error_success;
-}
-#endif
 
 
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
@@ -579,6 +413,7 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
   return heif_error_success;
 }
 
+
 struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
@@ -604,3 +439,104 @@ struct heif_error heif_item_get_property_uuid_type(const struct heif_context* co
 
   return heif_error_success;
 }
+
+
+
+// ------------------------- intrinsic and extrinsic matrices -------------------------
+
+
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_intrinsic_matrix();
+}
+
+
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_intrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_intrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  const auto& m = handle->image->get_intrinsic_matrix();
+  out_matrix->focal_length_x = m.focal_length_x;
+  out_matrix->focal_length_y = m.focal_length_y;
+  out_matrix->principal_point_x = m.principal_point_x;
+  out_matrix->principal_point_y = m.principal_point_y;
+  out_matrix->skew = m.skew;
+
+  return heif_error_success;
+}
+
+
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_extrinsic_matrix();
+}
+
+
+struct heif_camera_extrinsic_matrix
+{
+  Box_cmex::ExtrinsicMatrix matrix;
+};
+
+
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_extrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_extrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = new heif_camera_extrinsic_matrix;
+  (*out_matrix)->matrix = handle->image->get_extrinsic_matrix();
+
+  return heif_error_success;
+}
+
+
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+                                                                   double* out_matrix_row_major)
+{
+  if (matrix == nullptr || out_matrix_row_major == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  auto m3x3 = matrix->matrix.calculate_rotation_matrix();
+
+  for (int i=0;i<9;i++) {
+    out_matrix_row_major[i] = m3x3[i];
+  }
+
+  return heif_error_success;
+}
+

@@ -28,6 +28,7 @@
 #include <vector>
 #include <cassert>
 #include <memory>
+#include <string>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;
 static const int OPENJPEG_PLUGIN_PRIORITY_HTJ2K = 90;
@@ -36,6 +37,7 @@ struct openjpeg_decoder
 {
   std::vector<uint8_t> encoded_data;
   size_t read_position = 0;
+  std::string error_message;
 };
 
 
@@ -253,7 +255,8 @@ opj_stream_t* opj_stream_create_default_memory_stream(openjpeg_decoder* p_decode
 //**************************************************************************
 
 
-struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                             const heif_security_limits* limits)
 {
   auto* decoder = (struct openjpeg_decoder*) decoder_raw;
 
@@ -367,24 +370,36 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     int cwidth = opj_comp.w;
     int cheight = opj_comp.h;
 
-    error = heif_image_add_plane(*out_img, channels[c], cwidth, cheight, bit_depth);
+    error = heif_image_add_plane_safe(*out_img, channels[c], cwidth, cheight, bit_depth, limits);
+    if (error.code) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = error.message;
+      error.message = decoder->error_message.c_str();
 
-    int stride = -1;
-    uint8_t* p = heif_image_get_plane(*out_img, channels[c], &stride);
+      heif_image_release(*out_img);
+      *out_img = nullptr;
+      return error;
+    }
+
+    size_t stride = 0;
+    uint8_t* p = heif_image_get_plane2(*out_img, channels[c], &stride);
 
 
     // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
     // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
 
-    if (stride == cwidth) {
-      for (int i = 0; i < cwidth * cheight; i++) {
-        p[i] = (uint8_t) opj_comp.data[i];
-      }
-    }
-    else {
+    if (bit_depth <= 8) {
       for (int y = 0; y < cheight; y++) {
         for (int x = 0; x < cwidth; x++) {
           p[y * stride + x] = (uint8_t) opj_comp.data[y * cwidth + x];
+        }
+      }
+    }
+    else {
+      uint16_t* p16 = (uint16_t*)p;
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          p16[y * stride/2 + x] = (uint16_t) opj_comp.data[y * cwidth + x];
         }
       }
     }
@@ -393,9 +408,15 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   return heif_error_ok;
 }
 
+struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return openjpeg_decode_next_image(decoder_raw, out_img, limits);
+}
+
 
 static const struct heif_decoder_plugin decoder_openjpeg{
-    3,
+    4,
     openjpeg_plugin_name,
     openjpeg_init_plugin,
     openjpeg_deinit_plugin,
@@ -405,7 +426,8 @@ static const struct heif_decoder_plugin decoder_openjpeg{
     openjpeg_push_data,
     openjpeg_decode_image,
     openjpeg_set_strict_decoding,
-    "openjpeg"
+    "openjpeg",
+    openjpeg_decode_next_image
 };
 
 const struct heif_decoder_plugin* get_decoder_plugin_openjpeg()

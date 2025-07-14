@@ -30,8 +30,9 @@
 #include "codecs/vvc_boxes.h"
 #include "codecs/avc_boxes.h"
 #include "codecs/avif_boxes.h"
-#include "image-items/tiled.h"
 #include "codecs/evc_boxes.h"
+#include "image-items/tiled.h"
+#include "sequences/seq_boxes.h"
 
 #include <iomanip>
 #include <utility>
@@ -391,7 +392,15 @@ Error Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit)
 std::string BoxHeader::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << indent << "Box: " << get_type_string() << " -----\n";
+  sstr << indent << "Box: " << get_type_string();
+  const char* debug_name = debug_box_name();
+  if (debug_name) {
+    sstr << " ----- (" << debug_name << ")\n";
+  }
+  else {
+    sstr << " -----\n";
+  }
+
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
   return sstr.str();
@@ -530,12 +539,24 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_hvcC>();
       break;
 
+    case fourcc("hvc1"):
+      box = std::make_shared<Box_hvc1>();
+      break;
+
     case fourcc("av1C"):
       box = std::make_shared<Box_av1C>();
       break;
 
+    case fourcc("av01"):
+      box = std::make_shared<Box_av01>();
+      break;
+
     case fourcc("vvcC"):
       box = std::make_shared<Box_vvcC>();
+      break;
+
+    case fourcc("vvc1"):
+      box = std::make_shared<Box_vvc1>();
       break;
 
     case fourcc("idat"):
@@ -622,6 +643,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_jpgC>();
       break;
 
+    case fourcc("mjpg"):
+      box = std::make_shared<Box_mjpg>();
+      break;
+
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>();
@@ -642,10 +667,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
     case fourcc("cpat"):
       box = std::make_shared<Box_cpat>();
       break;
+
+    case fourcc("uncv"):
+      box = std::make_shared<Box_uncv>();
+      break;
 #endif
 
     // --- JPEG 2000
-      
+
     case fourcc("j2kH"):
       box = std::make_shared<Box_j2kH>();
       break;
@@ -666,15 +695,18 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_j2kL>();
       break;
 
+    case fourcc("j2ki"):
+      box = std::make_shared<Box_j2ki>();
+      break;
+
 
     // --- mski
-      
+
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
       break;
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-      // --- TAI timestamps
+    // --- TAI timestamps
 
     case fourcc("itai"):
       box = std::make_shared<Box_itai>();
@@ -683,12 +715,15 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
     case fourcc("taic"):
       box = std::make_shared<Box_taic>();
       break;
-#endif
 
     // --- AVC (H.264)
 
     case fourcc("avcC"):
       box = std::make_shared<Box_avcC>();
+      break;
+
+    case fourcc("avc1"):
+      box = std::make_shared<Box_avc1>();
       break;
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -725,6 +760,108 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
       }
+      break;
+
+    // --- sequences
+
+    case fourcc("moov"):
+      box = std::make_shared<Box_moov>();
+      break;
+
+    case fourcc("mvhd"):
+      box = std::make_shared<Box_mvhd>();
+      break;
+
+    case fourcc("trak"):
+      box = std::make_shared<Box_trak>();
+      break;
+
+    case fourcc("tkhd"):
+      box = std::make_shared<Box_tkhd>();
+      break;
+
+    case fourcc("mdia"):
+      box = std::make_shared<Box_mdia>();
+      break;
+
+    case fourcc("mdhd"):
+      box = std::make_shared<Box_mdhd>();
+      break;
+
+    case fourcc("minf"):
+      box = std::make_shared<Box_minf>();
+      break;
+
+    case fourcc("vmhd"):
+      box = std::make_shared<Box_vmhd>();
+      break;
+
+    case fourcc("stbl"):
+      box = std::make_shared<Box_stbl>();
+      break;
+
+    case fourcc("stsd"):
+      box = std::make_shared<Box_stsd>();
+      break;
+
+    case fourcc("stts"):
+      box = std::make_shared<Box_stts>();
+      break;
+
+    case fourcc("stsc"):
+      box = std::make_shared<Box_stsc>();
+      break;
+
+    case fourcc("stco"):
+      box = std::make_shared<Box_stco>();
+      break;
+
+    case fourcc("stsz"):
+      box = std::make_shared<Box_stsz>();
+      break;
+
+    case fourcc("stss"):
+      box = std::make_shared<Box_stss>();
+      break;
+
+    case fourcc("ccst"):
+      box = std::make_shared<Box_ccst>();
+      break;
+
+    case fourcc("sbgp"):
+      box = std::make_shared<Box_sbgp>();
+      break;
+
+    case fourcc("sgpd"):
+      box = std::make_shared<Box_sgpd>();
+      break;
+
+    case fourcc("btrt"):
+      box = std::make_shared<Box_btrt>();
+      break;
+
+    case fourcc("saiz"):
+      box = std::make_shared<Box_saiz>();
+      break;
+
+    case fourcc("saio"):
+      box = std::make_shared<Box_saio>();
+      break;
+
+    case fourcc("urim"):
+      box = std::make_shared<Box_URIMetaSampleEntry>();
+      break;
+
+    case fourcc("uri "):
+      box = std::make_shared<Box_uri>();
+      break;
+
+    case fourcc("nmhd"):
+      box = std::make_shared<Box_nmhd>();
+      break;
+
+    case fourcc("tref"):
+      box = std::make_shared<Box_tref>();
       break;
 
     default:
@@ -996,6 +1133,16 @@ void Box::derive_box_version_recursive()
 }
 
 
+void Box::patch_file_pointers_recursively(StreamWriter& writer, size_t offset)
+{
+  patch_file_pointers(writer, offset);
+
+  for (auto& child : m_children) {
+    child->patch_file_pointers_recursively(writer, offset);
+  }
+}
+
+
 Error Box_other::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   if (has_fixed_box_size()) {
@@ -1061,8 +1208,8 @@ std::string Box_other::dump(Indent& indent) const
   }
 
   sstr << write_raw_data_as_hex(m_data.data(), len,
-                                "data: ",
-                                "      ");
+                                indent.get_string() + "data: ",
+                                indent.get_string() + "      ");
 
   return sstr.str();
 }
@@ -2004,6 +2151,8 @@ Error Box_iloc::write(StreamWriter& writer) const
   writer.skip(nSkip);
   prepend_header(writer, box_start);
 
+  patch_iloc_header(writer); // Write iloc box. If there is an mdat, it will later be overwritten.
+
   return Error::Ok;
 }
 
@@ -2588,7 +2737,7 @@ Error Box_clli::write(StreamWriter& writer) const
 Box_mdcv::Box_mdcv()
 {
   set_short_type(fourcc("mdcv"));
-  
+
   memset(&mdcv, 0, sizeof(heif_mastering_display_colour_volume));
 }
 
@@ -3152,6 +3301,27 @@ void Box_ipma::insert_entries_from_other_ipma_box(const Box_ipma& b)
   m_entries.insert(m_entries.end(),
                    b.m_entries.begin(),
                    b.m_entries.end());
+}
+
+
+void Box_ipma::sort_properties(const std::shared_ptr<Box_ipco>& ipco)
+{
+  auto properties = ipco->get_all_child_boxes();
+
+  for (auto& item : m_entries) {
+    size_t nAssoc = item.associations.size();
+
+    // simple Bubble sort as a stable sorting algorithm
+
+    for (size_t n = 0; n < nAssoc - 1; n++)
+      for (size_t i = 0; i < nAssoc - 1 - n; i++) {
+        // If transformative property precedes descriptive property, swap them.
+        if (properties[item.associations[i].property_index - 1]->is_transformative_property() &&
+            !properties[item.associations[i + 1].property_index - 1]->is_transformative_property()) {
+          std::swap(item.associations[i], item.associations[i+1]);
+        }
+      }
+  }
 }
 
 
@@ -3857,6 +4027,9 @@ Error Box_EntityToGroup::parse(BitstreamRange& range, const heif_security_limits
     std::stringstream sstr;
     sstr << "entity group box contains " << nEntities << " entities, but the security limit is set to " << limits->max_size_entity_group << " entities.";
 
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
   }
 
   entity_ids.resize(nEntities);
@@ -4626,30 +4799,44 @@ Error Box_cmex::write(StreamWriter& writer) const
 }
 
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-std::string Box_taic::dump(Indent& indent) const {
+std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
+{
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
-  sstr << indent << "clock_resolution: " << m_clock_resolution << "\n";
+  sstr << indent << "time_uncertainty: " << info.time_uncertainty << "\n";
+  sstr << indent << "clock_resolution: " << info.clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
-  if (heif_is_tai_clock_info_drift_rate_undefined(m_clock_drift_rate)) {
+  if (info.clock_drift_rate == heif_tai_clock_info_clock_drift_rate_unknown) {
     sstr << "undefined\n";
   }
   else {
-    sstr << m_clock_drift_rate << "\n";
+    sstr << info.clock_drift_rate << "\n";
   }
 
-  sstr << indent << "clock_type: " << static_cast<int>(m_clock_type) << "\n";
+  sstr << indent << "clock_type: " << int(info.clock_type) << " ";
+  switch (info.clock_type) {
+    case heif_tai_clock_info_clock_type_unknown: sstr << "(unknown)\n"; break;
+    case heif_tai_clock_info_clock_type_synchronized_to_atomic_source: sstr << "(synchronized to atomic source)\n"; break;
+    case heif_tai_clock_info_clock_type_not_synchronized_to_atomic_source: sstr << "(not synchronized to atomic source)\n"; break;
+    default: sstr << "(illegal value)\n"; break;;
+  }
+  return sstr.str();
+}
+
+
+std::string Box_taic::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << dump(m_info, indent);
+
   return sstr.str();
 }
 
 Error Box_taic::write(StreamWriter& writer) const {
   size_t box_start = reserve_box_header_space(writer);
-  writer.write64(m_time_uncertainty);
-  writer.write32(m_clock_resolution);
-  writer.write32(m_clock_drift_rate);
-  writer.write8(m_clock_type);
+  writer.write64(m_info.time_uncertainty);
+  writer.write32(m_info.clock_resolution);
+  writer.write32(m_info.clock_drift_rate);
+  writer.write8(m_info.clock_type);
 
   prepend_header(writer, box_start);
 
@@ -4659,34 +4846,127 @@ Error Box_taic::write(StreamWriter& writer) const {
 Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
-  m_time_uncertainty = range.read64();
-  m_clock_resolution = range.read32();
+  m_info.time_uncertainty = range.read64();
+  m_info.clock_resolution = range.read32();
 
-  m_clock_drift_rate = range.read32s();
-  m_clock_type = range.read8();
+  m_info.clock_drift_rate = range.read32s();
+  m_info.clock_type = range.read8();
   return range.get_error();
 }
+
+
+bool operator==(const heif_tai_clock_info& a,
+                const heif_tai_clock_info& b)
+{
+  return a.version == b.version &&
+         a.time_uncertainty == b.time_uncertainty &&
+         a.clock_resolution == b.clock_resolution &&
+         a.clock_drift_rate == b.clock_drift_rate &&
+         a.clock_type == b.clock_type;
+}
+
+bool Box_taic::operator==(const Box& other) const
+{
+  const auto* other_taic = dynamic_cast<const Box_taic*>(&other);
+  if (other_taic == nullptr) {
+    return false;
+  }
+
+  return m_info == other_taic->m_info;
+}
+
 
 std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "tai_timestamp: " << m_tai_timestamp << "\n";
-  sstr << indent << "synchronization_state: " << m_synchronization_state << "\n";
-  sstr << indent << "timestamp_generation_failure: " << m_timestamp_generation_failure << "\n";
-  sstr << indent << "timestamp_is_modified: " << m_timestamp_is_modified << "\n";
+  sstr << indent << "tai_timestamp: " << m_timestamp.tai_timestamp << "\n";
+  sstr << indent << "synchronization_state: " << int(m_timestamp.synchronization_state) << "\n";
+  sstr << indent << "timestamp_generation_failure: " << int(m_timestamp.timestamp_generation_failure) << "\n";
+  sstr << indent << "timestamp_is_modified: " << int(m_timestamp.timestamp_is_modified) << "\n";
   return sstr.str();
 }
 
-Error Box_itai::write(StreamWriter& writer) const {
-  size_t box_start = reserve_box_header_space(writer);
-  writer.write64(m_tai_timestamp);
+
+std::vector<uint8_t> Box_itai::encode_tai_to_bitstream(const heif_tai_timestamp_packet* tai)
+{
+  StreamWriter writer;
+  writer.write64(tai->tai_timestamp);
 
   uint8_t status_bits = 0;
-  status_bits |= m_synchronization_state ? (1 << 7) : 0;
-  status_bits |= m_timestamp_generation_failure ? (1 << 6) : 0;
-  status_bits |= m_timestamp_is_modified ? (1 << 5) : 0;
+  status_bits |= tai->synchronization_state ? (1 << 7) : 0;
+  status_bits |= tai->timestamp_generation_failure ? (1 << 6) : 0;
+  status_bits |= tai->timestamp_is_modified ? (1 << 5) : 0;
 
   writer.write8(status_bits);
+
+  return writer.get_data();
+}
+
+bool operator==(const heif_tai_timestamp_packet& a,
+                const heif_tai_timestamp_packet& b)
+{
+  return a.version == b.version &&
+         a.tai_timestamp == b.tai_timestamp &&
+         a.synchronization_state == b.synchronization_state &&
+         a.timestamp_generation_failure == b.timestamp_generation_failure &&
+         a.timestamp_is_modified == b.timestamp_is_modified;
+}
+
+bool Box_itai::operator==(const Box& other) const
+{
+  const auto* other_itai = dynamic_cast<const Box_itai*>(&other);
+  if (other_itai == nullptr) {
+    return false;
+  }
+
+  return m_timestamp == other_itai->m_timestamp;
+}
+
+
+
+uint64_t uint8_vector_to_uint64_BE(const uint8_t* data)
+{
+  uint64_t value = ((static_cast<uint64_t>(data[0]) << 56) |
+                    (static_cast<uint64_t>(data[1]) << 48) |
+                    (static_cast<uint64_t>(data[2]) << 40) |
+                    (static_cast<uint64_t>(data[3]) << 32) |
+                    (static_cast<uint64_t>(data[4]) << 24) |
+                    (static_cast<uint64_t>(data[5]) << 16) |
+                    (static_cast<uint64_t>(data[6]) << 8) |
+                    (static_cast<uint64_t>(data[7]) << 0));
+
+  return value;
+}
+
+
+Result<heif_tai_timestamp_packet> Box_itai::decode_tai_from_vector(const std::vector<uint8_t>& data)
+{
+  if (data.size() != 9) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Wrong size of TAI timestamp data"};
+  }
+
+  uint8_t status_bits = data[8];
+
+  heif_tai_timestamp_packet tai;
+  tai.version = 1;
+  tai.tai_timestamp = uint8_vector_to_uint64_BE(data.data());
+  tai.synchronization_state = !!(status_bits & 0x80);
+  tai.timestamp_generation_failure = !!(status_bits & 0x40);
+  tai.timestamp_is_modified = !!(status_bits & 0x20);
+
+  return tai;
+}
+
+
+Error Box_itai::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+
+  std::vector<uint8_t> tai_data = encode_tai_to_bitstream(&m_timestamp);
+
+  writer.write(tai_data);
+
   prepend_header(writer, box_start);
   return Error::Ok;
 }
@@ -4694,14 +4974,15 @@ Error Box_itai::write(StreamWriter& writer) const {
 Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
-  m_tai_timestamp = range.read64();
+  m_timestamp.version = 1;
+  m_timestamp.tai_timestamp = range.read64();
 
   uint8_t status_bits = range.read8();
 
-  m_synchronization_state = !!(status_bits & 0x80);
-  m_timestamp_generation_failure = !!(status_bits & 0x40);
-  m_timestamp_is_modified = !!(status_bits & 0x20);
+  m_timestamp.synchronization_state = !!(status_bits & 0x80);
+  m_timestamp.timestamp_generation_failure = !!(status_bits & 0x40);
+  m_timestamp.timestamp_is_modified = !!(status_bits & 0x20);
 
   return range.get_error();
 }
-#endif
+

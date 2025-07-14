@@ -22,6 +22,7 @@
 #include "libheif/heif_plugin.h"
 #include "decoder_ffmpeg.h"
 #include "nalu_utils.h"
+#include <string>
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -31,7 +32,7 @@
 #include <memory>
 #include <utility>
 
-extern "C" 
+extern "C"
 {
     #include <libavcodec/avcodec.h>
 }
@@ -41,6 +42,7 @@ struct ffmpeg_decoder
 {
     NalMap nalMap;
     bool strict_decoding = false;
+    std::string error_message;
 };
 
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
@@ -118,25 +120,37 @@ static struct heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data
 
 
 static heif_chroma ffmpeg_get_chroma_format(enum AVPixelFormat pix_fmt) {
-    if (pix_fmt == AV_PIX_FMT_GRAY8)
-    {
-        return heif_chroma_monochrome;
-    }
-    else if ((pix_fmt == AV_PIX_FMT_YUV420P) || (pix_fmt == AV_PIX_FMT_YUVJ420P) ||
-        (pix_fmt == AV_PIX_FMT_YUV420P10LE))
-    {
-        return heif_chroma_420;
-    }
-    else if (pix_fmt == AV_PIX_FMT_YUV422P)
-    {
-        return heif_chroma_422;
-    }
-    else if (pix_fmt == AV_PIX_FMT_YUV444P)
-    {
-        return heif_chroma_444;
-    }
-    // Unsupported pix_fmt
-    return heif_chroma_undefined;
+  switch (pix_fmt) {
+    case AV_PIX_FMT_GRAY8:
+    case AV_PIX_FMT_GRAY10LE:
+      return heif_chroma_monochrome;
+
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUV420P10LE:
+    case AV_PIX_FMT_YUV420P12LE:
+    case AV_PIX_FMT_YUV420P14LE:
+    case AV_PIX_FMT_YUV420P16LE:
+      return heif_chroma_420;
+
+    case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUV422P10LE:
+    case AV_PIX_FMT_YUV422P12LE:
+    case AV_PIX_FMT_YUV422P14LE:
+    case AV_PIX_FMT_YUV422P16LE:
+      return heif_chroma_422;
+
+    case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUV444P10LE:
+    case AV_PIX_FMT_YUV444P12LE:
+    case AV_PIX_FMT_YUV444P14LE:
+    case AV_PIX_FMT_YUV444P16LE:
+      return heif_chroma_444;
+
+    default:
+      // Unsupported pix_fmt
+      return heif_chroma_undefined;
+  }
 }
 
 static int ffmpeg_get_chroma_width(const AVFrame* frame, heif_channel channel, heif_chroma chroma)
@@ -171,7 +185,42 @@ static int ffmpeg_get_chroma_height(const AVFrame* frame, heif_channel channel, 
     }
 }
 
-static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
+static int get_ffmpeg_format_bpp(enum AVPixelFormat pix_fmt)
+{
+  switch (pix_fmt) {
+    case AV_PIX_FMT_GRAY8:
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUV444P:
+      return 8;
+    case AV_PIX_FMT_GRAY10LE:
+    case AV_PIX_FMT_YUV420P10LE:
+    case AV_PIX_FMT_YUV422P10LE:
+    case AV_PIX_FMT_YUV444P10LE:
+      return 10;
+    case AV_PIX_FMT_GRAY12LE:
+    case AV_PIX_FMT_YUV420P12LE:
+    case AV_PIX_FMT_YUV422P12LE:
+    case AV_PIX_FMT_YUV444P12LE:
+      return 12;
+    case AV_PIX_FMT_GRAY14LE:
+    case AV_PIX_FMT_YUV420P14LE:
+    case AV_PIX_FMT_YUV422P14LE:
+    case AV_PIX_FMT_YUV444P14LE:
+      return 14;
+    case AV_PIX_FMT_GRAY16LE:
+    case AV_PIX_FMT_YUV420P16LE:
+    case AV_PIX_FMT_YUV422P16LE:
+    case AV_PIX_FMT_YUV444P16LE:
+      return 16;
+    default:
+      return 0;
+  }
+}
+
+static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image,
+                                     const heif_security_limits* limits)
 {
     int ret;
 
@@ -218,7 +267,15 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
 
         for (int channel = 0; channel < nPlanes; channel++) {
 
-            int bpp = (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P10LE) ? 10 : 8;
+            int bpp = get_ffmpeg_format_bpp(hevc_dec_ctx->pix_fmt);
+            if (bpp == 0) {
+              heif_image_release(*image);
+              err = { heif_error_Decoder_plugin_error,
+                      heif_suberror_Unsupported_color_conversion,
+                      "Pixel format not implemented" };
+              return err;
+            }
+
             int stride = hevc_frame->linesize[channel];
             const uint8_t* data = hevc_frame->data[channel];
 
@@ -232,14 +289,18 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
                 return err;
             }
 
-            err = heif_image_add_plane(*image, channel2plane[channel], w, h, bpp);
+            err = heif_image_add_plane_safe(*image, channel2plane[channel], w, h, bpp, limits);
             if (err.code) {
+              // copy error message to decoder object because heif_image will be released
+              decoder->error_message = err.message;
+              err.message = decoder->error_message.c_str();
+
                 heif_image_release(*image);
                 return err;
             }
 
-            int dst_stride;
-            uint8_t* dst_mem = heif_image_get_plane(*image, channel2plane[channel], &dst_stride);
+            size_t dst_stride;
+            uint8_t* dst_mem = heif_image_get_plane2(*image, channel2plane[channel], &dst_stride);
 
             int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -259,8 +320,9 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
     }
 }
 
-static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
+                                                     struct heif_image** out_img,
+                                                     const heif_security_limits* limits)
 {
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
@@ -411,7 +473,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   while (parse_hevc_data_size > 0) {
       hevc_parser->flags = PARSER_FLAG_COMPLETE_FRAMES;
       ret = av_parser_parse2(hevc_parser, hevc_codecContext, &hevc_pkt->data, &hevc_pkt->size, parse_hevc_data, parse_hevc_data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
- 
+
       if (ret < 0) {
 	err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "av_parser_parse2 returned error" };
 	goto errexit;
@@ -421,7 +483,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 
       if (hevc_pkt->size)
       {
-	err = hevc_decode(hevc_codecContext, hevc_frame, hevc_pkt, out_img);
+	err = hevc_decode(decoder, hevc_codecContext, hevc_frame, hevc_pkt, out_img, limits);
 	if (err.code != heif_error_Ok)
 	  goto errexit;
       }
@@ -462,9 +524,17 @@ errexit:
   return err;
 }
 
+static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
+                                                struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return ffmpeg_v1_decode_next_image(decoder_raw, out_img, limits);
+}
+
+
 static const struct heif_decoder_plugin decoder_ffmpeg
     {
-        3,
+        4,
         ffmpeg_plugin_name,
         ffmpeg_init_plugin,
         ffmpeg_deinit_plugin,
@@ -474,7 +544,8 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_v1_push_data,
         ffmpeg_v1_decode_image,
         ffmpeg_set_strict_decoding,
-        "ffmpeg"
+        "ffmpeg",
+        ffmpeg_v1_decode_next_image
     };
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()

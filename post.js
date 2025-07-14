@@ -50,7 +50,15 @@ HeifImage.prototype.get_height = function() {
 };
 
 HeifImage.prototype.is_primary = function() {
-    return !!heif_image_handle_is_primary_image(this.handle);
+    return !!Module.heif_image_handle_is_primary_image(this.handle);
+}
+
+HeifImage.prototype.has_alpha_channel = function() {
+    return !!Module.heif_image_handle_has_alpha_channel(this.handle);
+}
+
+HeifImage.prototype.is_premultiplied_alpha = function() {
+    return !!Module.heif_image_handle_is_premultiplied_alpha(this.handle);
 }
 
 HeifImage.prototype.display = function(image_data, callback) {

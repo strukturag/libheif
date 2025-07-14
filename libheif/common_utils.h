@@ -22,8 +22,11 @@
 #define LIBHEIF_COMMON_UTILS_H
 
 #include <cinttypes>
-#include "libheif/heif.h"
 #include <string>
+#include <vector>
+
+#include "libheif/heif.h"
+#include "error.h"
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED
@@ -48,6 +51,22 @@ std::string fourcc_to_string(uint32_t code);
 uint8_t chroma_h_subsampling(heif_chroma c);
 
 uint8_t chroma_v_subsampling(heif_chroma c);
+
+enum class scaling_mode : uint8_t {
+  round_down,
+  round_up,
+  is_divisible
+};
+
+uint32_t get_subsampled_size_h(uint32_t width,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode);
+
+uint32_t get_subsampled_size_v(uint32_t height,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode);
 
 void get_subsampled_size(uint32_t width, uint32_t height,
                          heif_channel channel,
@@ -81,5 +100,7 @@ inline uint8_t clip_f_u8(float fx)
   if (x > 255) return 255;
   return static_cast<uint8_t>(x);
 }
+
+Result<std::string> vector_to_string(const std::vector<uint8_t>& vec);
 
 #endif //LIBHEIF_COMMON_UTILS_H

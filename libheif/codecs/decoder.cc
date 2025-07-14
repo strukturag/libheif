@@ -32,21 +32,34 @@
 #include "codecs/vvc_dec.h"
 #include "codecs/jpeg_dec.h"
 #include "codecs/jpeg2000_dec.h"
+#include "codecs/evc_dec.h"
 #include "avc_boxes.h"
 #include "avif_boxes.h"
 #include "hevc_boxes.h"
 #include "vvc_boxes.h"
 #include "jpeg_boxes.h"
 #include "jpeg2000_boxes.h"
-#include "codecs/uncompressed/unc_dec.h"
-#include "codecs/evc_dec.h"
 #include "evc_boxes.h"
+
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_boxes.h"
+#endif
 
 void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
 {
   m_file = std::move(file);
   m_item_id = item;
   m_source = Source::Image;
+}
+
+
+void DataExtent::set_file_range(std::shared_ptr<HeifFile> file, uint64_t offset, uint32_t size)
+{
+  m_file = std::move(file);
+  m_source = Source::FileRange;
+  m_offset = offset;
+  m_size = size;
 }
 
 
@@ -65,8 +78,11 @@ Result<std::vector<uint8_t>*> DataExtent::read_data() const
     }
   }
   else {
-    // sequence
-    assert(false); // TODO
+    // file range
+    Error err = m_file->append_data_from_file_range(m_raw, m_offset, m_size);
+    if (err) {
+      return err;
+    }
   }
 
   return &m_raw;
@@ -85,16 +101,20 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
     // TODO: cache data
 
     // image
-    Error err = m_file->append_data_from_iloc(m_item_id, m_raw, 0, size);
+    Error err = m_file->append_data_from_iloc(m_item_id, data, offset, size);
     if (err) {
       return err;
     }
     return data;
   }
   else {
-    // sequence
-    assert(false); // TODO
-    return Error::Ok;
+    // file range
+    Error err = m_file->append_data_from_file_range(data, m_offset, m_size);
+    if (err) {
+      return err;
+    }
+
+    return data;
   }
 }
 
@@ -132,7 +152,8 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     case fourcc("unci"): {
       auto uncC = item->get_property<Box_uncC>();
       auto cmpd = item->get_property<Box_cmpd>();
-      return std::make_shared<Decoder_uncompressed>(uncC,cmpd);
+      auto ispe = item->get_property<Box_ispe>();
+      return std::make_shared<Decoder_uncompressed>(uncC,cmpd,ispe);
     }
 #endif
     case fourcc("evc1"): {
@@ -142,6 +163,59 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     case fourcc("mski"): {
       return nullptr; // do we need a decoder for this?
     }
+    default:
+      return nullptr;
+  }
+}
+
+
+std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std::shared_ptr<const Box_VisualSampleEntry> sample_description_box)
+{
+  std::string compressor = sample_description_box->get_VisualSampleEntry_const().compressorname;
+  uint32_t sampleType = sample_description_box->get_short_type();
+
+  switch (sampleType) {
+    case fourcc("hvc1"): {
+      auto hvcC = sample_description_box->get_child_box<Box_hvcC>();
+      return std::make_shared<Decoder_HEVC>(hvcC);
+    }
+
+    case fourcc("av01"): {
+      auto av1C = sample_description_box->get_child_box<Box_av1C>();
+      return std::make_shared<Decoder_AVIF>(av1C);
+    }
+
+    case fourcc("vvc1"): {
+      auto vvcC = sample_description_box->get_child_box<Box_vvcC>();
+      return std::make_shared<Decoder_VVC>(vvcC);
+    }
+
+    case fourcc("avc1"): {
+      auto avcC = sample_description_box->get_child_box<Box_avcC>();
+      return std::make_shared<Decoder_AVC>(avcC);
+    }
+
+#if WITH_UNCOMPRESSED_CODEC
+    case fourcc("uncv"): {
+      auto uncC = sample_description_box->get_child_box<Box_uncC>();
+      auto cmpd = sample_description_box->get_child_box<Box_cmpd>();
+      auto ispe = std::make_shared<Box_ispe>();
+      ispe->set_size(sample_description_box->get_VisualSampleEntry_const().width,
+                     sample_description_box->get_VisualSampleEntry_const().height);
+      return std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
+    }
+#endif
+
+    case fourcc("j2ki"): {
+      auto j2kH = sample_description_box->get_child_box<Box_j2kH>();
+      return std::make_shared<Decoder_JPEG2000>(j2kH);
+    }
+
+    case fourcc("mjpg"): {
+      auto jpgC = sample_description_box->get_child_box<Box_jpgC>();
+      return std::make_shared<Decoder_JPEG>(jpgC);
+    }
+
     default:
       return nullptr;
   }
@@ -175,7 +249,8 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options)
+Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                                  const struct heif_security_limits* limits)
 {
   const struct heif_decoder_plugin* decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
   if (!decoder_plugin) {
@@ -187,7 +262,7 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   if (decoder_plugin->new_decoder == nullptr) {
     return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
-                 "Cannot decode with a dummy decoder plugins.");
+                 "Cannot decode with a dummy decoder plugin.");
   }
 
   void* decoder;
@@ -217,9 +292,19 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   heif_image* decoded_img = nullptr;
 
-  err = decoder_plugin->decode_image(decoder, &decoded_img);
-  if (err.code != heif_error_Ok) {
-    return Error(err.code, err.subcode, err.message);
+  if (decoder_plugin->plugin_api_version >= 4 &&
+      decoder_plugin->decode_next_image != nullptr) {
+
+    err = decoder_plugin->decode_next_image(decoder, &decoded_img, limits);
+    if (err.code != heif_error_Ok) {
+      return Error::from_heif_error(err);
+    }
+  }
+  else {
+    err = decoder_plugin->decode_image(decoder, &decoded_img);
+    if (err.code != heif_error_Ok) {
+      return Error::from_heif_error(err);
+    }
   }
 
   if (!decoded_img) {

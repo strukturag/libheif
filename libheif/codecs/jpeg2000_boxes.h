@@ -516,4 +516,14 @@ private:
     size_t cursor = 0;
 };
 
+
+class Box_j2ki : public Box_VisualSampleEntry
+{
+public:
+  Box_j2ki()
+  {
+    set_short_type(fourcc("j2ki"));
+  }
+};
+
 #endif // LIBHEIF_JPEG2000_BOXES_H

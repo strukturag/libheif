@@ -26,6 +26,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_properties.h"
+#include "libheif/heif_tai_timestamps.h"
 #include <cinttypes>
 #include <cstddef>
 
@@ -127,6 +128,8 @@ public:
 
   std::string get_type_string() const;
 
+  virtual const char* debug_box_name() const { return nullptr; }
+
   void set_short_type(uint32_t type) { m_type = type; }
 
 
@@ -192,6 +195,10 @@ public:
   virtual void derive_box_version() {}
 
   void derive_box_version_recursive();
+
+  virtual void patch_file_pointers(StreamWriter&, size_t offset) {}
+
+  void patch_file_pointers_recursively(StreamWriter&, size_t offset);
 
   std::string dump(Indent&) const override;
 
@@ -259,6 +266,8 @@ public:
   virtual bool is_essential() const { return m_is_essential; } // only used for properties
 
   void set_is_essential(bool flag) { m_is_essential = flag; }
+
+  virtual bool is_transformative_property() const { return false; } // only used for properties
 
 protected:
   virtual Error parse(BitstreamRange& range, const heif_security_limits* limits);
@@ -397,6 +406,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "File Type"; }
+
   bool has_compatible_brand(uint32_t brand) const;
 
   std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
@@ -435,6 +446,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Free Space"; }
+
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -452,6 +465,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Metadata"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
@@ -466,6 +481,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Handler Reference"; }
 
   uint32_t get_handler_type() const { return m_handler_type; }
 
@@ -496,6 +513,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Primary Item"; }
+
   heif_item_id get_item_ID() const { return m_item_ID; }
 
   void set_item_ID(heif_item_id id) { m_item_ID = id; }
@@ -522,6 +541,8 @@ public:
   void set_use_tmp_file(bool flag);
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Item Location"; }
 
   struct Extent
   {
@@ -622,6 +643,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item Info Entry"; }
+
   bool is_hidden_item() const { return m_hidden_item; }
 
   void set_hidden_item(bool hidden);
@@ -682,6 +705,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item Information"; }
+
   void derive_box_version() override;
 
   Error write(StreamWriter& writer) const override;
@@ -703,6 +728,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Item Properties"; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -733,6 +760,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item Property Container"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
@@ -757,6 +786,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Image Spatial Extents"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -783,6 +814,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item Property Association"; }
+
   struct PropertyAssociation
   {
     bool essential;
@@ -801,6 +834,9 @@ public:
   Error write(StreamWriter& writer) const override;
 
   void insert_entries_from_other_ipma_box(const Box_ipma& b);
+
+  // sorts properties such that descriptive properties precede the transformative properties
+  void sort_properties(const std::shared_ptr<Box_ipco>&);
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -833,6 +869,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Image Properties for Auxiliary Images"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -854,7 +892,11 @@ public:
 
   bool is_essential() const override { return true; }
 
+  bool is_transformative_property() const override { return true; }
+
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Image Rotation"; }
 
   int get_rotation_ccw() const { return m_rotation; }
 
@@ -883,11 +925,15 @@ public:
 
   bool is_essential() const override { return true; }
 
+  bool is_transformative_property() const override { return true; }
+
   heif_transform_mirror_direction get_mirror_direction() const { return m_axis; }
 
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Image Mirroring"; }
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
@@ -911,7 +957,11 @@ public:
 
   bool is_essential() const override { return true; }
 
+  bool is_transformative_property() const override { return true; }
+
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Clean Aperture"; }
 
   int left_rounded(uint32_t image_width) const;  // first column
   int right_rounded(uint32_t image_width) const; // last column that is part of the cropped image
@@ -962,6 +1012,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item Reference"; }
+
   bool has_references(heif_item_id itemID) const;
 
   std::vector<heif_item_id> get_references(heif_item_id itemID, uint32_t ref_type) const;
@@ -990,6 +1042,8 @@ class Box_idat : public Box
 {
 public:
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Item Data"; }
 
   Error read_data(const std::shared_ptr<StreamReader>& istr,
                   uint64_t start, uint64_t length,
@@ -1027,6 +1081,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Groups List"; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1068,6 +1124,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Stereo pair"; }
+
   heif_item_id get_left_image() const { return entity_ids[0]; }
   heif_item_id get_right_image() const { return entity_ids[1]; }
 
@@ -1086,6 +1144,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Image pyramid group"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1127,6 +1187,8 @@ class Box_dinf : public Box
 public:
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Data Information"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
@@ -1137,6 +1199,8 @@ class Box_dref : public FullBox
 public:
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Data Reference"; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
@@ -1146,6 +1210,8 @@ class Box_url : public FullBox
 {
 public:
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Data Entry URL"; }
 
   bool is_same_file() const { return m_location.empty(); }
 
@@ -1174,6 +1240,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Pixel Information"; }
+
   Error write(StreamWriter& writer) const override;
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
@@ -1199,6 +1267,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Pixel Aspect Ratio"; }
+
   Error write(StreamWriter& writer) const override;
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
@@ -1219,6 +1289,8 @@ public:
   uint16_t layer_id = 0;
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Layer Selection"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1244,6 +1316,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Content Light Level Information"; }
+
   Error write(StreamWriter& writer) const override;
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
@@ -1262,6 +1336,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Master Display Colour Volume"; }
+
   Error write(StreamWriter& writer) const override;
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
@@ -1279,6 +1355,8 @@ public:
   heif_ambient_viewing_environment amve;
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Ambient Viewing Environment"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1316,6 +1394,8 @@ public:
   void set_avg_luminance(uint32_t luminance) { m_ccv_avg_luminance_value = luminance; }
 
   std::string dump(Indent&) const override;
+
+  // TODO const char* debug_box_name() const override { return ""; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1396,6 +1476,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Camera Intrinsic Matrix"; }
+
   RelativeIntrinsicMatrix get_intrinsic_matrix() const { return m_matrix; }
 
   void set_intrinsic_matrix(RelativeIntrinsicMatrix matrix);
@@ -1451,6 +1533,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Camera Extrinsic Matrix"; }
+
   ExtrinsicMatrix get_extrinsic_matrix() const { return m_matrix; }
 
   Error set_extrinsic_matrix(ExtrinsicMatrix matrix);
@@ -1502,6 +1586,8 @@ public:
   }
 
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "User Description"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1580,16 +1666,24 @@ private:
 };
 
 
-#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+void initialize_heif_tai_clock_info(heif_tai_clock_info* taic);
+void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai);
+
+
 class Box_taic : public FullBox
 {
 public:
   Box_taic()
   {
     set_short_type(fourcc("taic"));
+    initialize_heif_tai_clock_info(&m_info);
   }
 
+  static std::string dump(const heif_tai_clock_info& info, Indent&);
+
   std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "TAI Clock Information"; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -1599,7 +1693,7 @@ public:
    * The standard deviation measurement uncertainty in nanoseconds
    * for the timestamp generation process. 
    */
-  void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
+  void set_time_uncertainty(uint64_t time_uncertainty) { m_info.time_uncertainty = time_uncertainty;}
   
   /**
    * clock_resolution.
@@ -1607,7 +1701,7 @@ public:
    * Specifies the resolution of the receptor clock in nanoseconds.
    * For example, a microsecond clock has a clock_resolution of 1000.
    */
-  void set_clock_resolution(uint32_t clock_resolution) { m_clock_resolution = clock_resolution; }
+  void set_clock_resolution(uint32_t clock_resolution) { m_info.clock_resolution = clock_resolution; }
   
   /**
    * clock_drift_rate.
@@ -1615,85 +1709,113 @@ public:
    * The difference between the synchronized and unsynchronized
    * time, over a period of one second. 
    */
-  void set_clock_drift_rate(int32_t clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  void set_clock_drift_rate(int32_t clock_drift_rate) { m_info.clock_drift_rate = clock_drift_rate; }
   
   /**
    * clock_type.
    * 
-   * 0 = Clock type is unkown
+   * 0 = Clock type is unknown
    * 1 = The clock does not synchronize to an atomic source of absolute TAI time
    * 2 = The clock can synchronize to an atomic source of absolute TAI time
    */
-  void set_clock_type(uint8_t clock_type) { m_clock_type = clock_type; }
+  void set_clock_type(uint8_t clock_type) { m_info.clock_type = clock_type; }
 
-  uint64_t get_time_uncertainty() const { return m_time_uncertainty; }
+  uint64_t get_time_uncertainty() const { return m_info.time_uncertainty; }
   
-  uint32_t get_clock_resolution() const { return m_clock_resolution; }
+  uint32_t get_clock_resolution() const { return m_info.clock_resolution; }
   
-  int32_t get_clock_drift_rate() const { return m_clock_drift_rate; }
+  int32_t get_clock_drift_rate() const { return m_info.clock_drift_rate; }
   
-  uint8_t get_clock_type() const { return m_clock_type; }
+  uint8_t get_clock_type() const { return m_info.clock_type; }
+
+  void set_from_tai_clock_info(const heif_tai_clock_info* info) {
+    heif_tai_clock_info_copy(&m_info, info);
+  }
+
+  const heif_tai_clock_info* get_tai_clock_info() const
+  {
+    return &m_info;
+  }
+
+  bool operator==(const Box& other) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
-  uint32_t m_clock_resolution = 0;
-  int32_t m_clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
-  uint8_t m_clock_type = 0;
+  heif_tai_clock_info m_info;
 };
 
+bool operator==(const heif_tai_clock_info& a,
+                const heif_tai_clock_info& b);
 
-class Box_itai : public FullBox 
+
+class Box_itai : public FullBox
 {
 public:
   Box_itai()
   {
     set_short_type(fourcc("itai"));
+    initialize_heif_tai_timestamp_packet(&m_timestamp);
   }
 
   std::string dump(Indent&) const override;
 
+  const char* debug_box_name() const override { return "Item TAI Timestamp"; }
+
   Error write(StreamWriter& writer) const override;
+
+  static std::vector<uint8_t> encode_tai_to_bitstream(const heif_tai_timestamp_packet*);
+
+  static Result<heif_tai_timestamp_packet> decode_tai_from_vector(const std::vector<uint8_t>&);
 
   /**
    * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
    */
-  void set_tai_timestamp(uint64_t timestamp) { m_tai_timestamp = timestamp; }
+  void set_tai_timestamp(uint64_t timestamp) { m_timestamp.tai_timestamp = timestamp; }
 
   /**
   * synchronization_state (0=unsynchronized, 1=synchronized)
   */
-  void set_synchronization_state(bool state) { m_synchronization_state = state; }
+  void set_synchronization_state(bool state) { m_timestamp.synchronization_state = state; }
 
   /**
   * timestamp_generation_failure (0=generated, 1=failed)
   */
-  void set_timestamp_generation_failure(bool failure) { m_timestamp_generation_failure = failure; }
+  void set_timestamp_generation_failure(bool failure) { m_timestamp.timestamp_generation_failure = failure; }
 
   /**
    * timestamp_is_modified (0=original 1=modified)
    */
-  void set_timestamp_is_modified(bool is_modified) { m_timestamp_is_modified = is_modified; }
+  void set_timestamp_is_modified(bool is_modified) { m_timestamp.timestamp_is_modified = is_modified; }
 
-  uint64_t get_tai_timestamp() const { return m_tai_timestamp; }
+  uint64_t get_tai_timestamp() const { return m_timestamp.tai_timestamp; }
 
-  bool get_synchronization_state() const { return m_synchronization_state; }
+  bool get_synchronization_state() const { return m_timestamp.synchronization_state; }
 
-  bool get_timestamp_generation_failure() const { return m_timestamp_generation_failure; }
+  bool get_timestamp_generation_failure() const { return m_timestamp.timestamp_generation_failure; }
 
-  bool get_timestamp_is_modified() const { return m_timestamp_is_modified; }
+  bool get_timestamp_is_modified() const { return m_timestamp.timestamp_is_modified; }
+
+  void set_from_tai_timestamp_packet(const heif_tai_timestamp_packet* tai) {
+    heif_tai_timestamp_packet_copy(&m_timestamp, tai);
+  }
+
+  const heif_tai_timestamp_packet* get_tai_timestamp_packet() const
+  {
+    return &m_timestamp;
+  }
+
+  bool operator==(const Box& other) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_tai_timestamp = 0;
-  bool m_synchronization_state = false;
-  bool m_timestamp_generation_failure = false;
-  bool m_timestamp_is_modified = false;
+  heif_tai_timestamp_packet m_timestamp;
 };
-#endif
+
+bool operator==(const heif_tai_timestamp_packet& a,
+                const heif_tai_timestamp_packet& b);
 
 #endif

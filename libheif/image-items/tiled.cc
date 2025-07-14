@@ -667,7 +667,8 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
 
-  Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
+  Result<std::shared_ptr<HeifPixelImage>> colorConversionResult;
+  colorConversionResult = item->get_encoder()->convert_colorspace_for_encoding(image, encoder, *options, get_context()->get_security_limits());
   if (colorConversionResult.error) {
     heif_encoding_options_free(options);
     return colorConversionResult.error;
@@ -675,7 +676,7 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = colorConversionResult.value;
 
-  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
+  Result<Encoder::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
   heif_encoding_options_free(options);
 
   if (encodeResult.error) {
@@ -689,11 +690,6 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   if (image->get_width() != header.get_parameters().tile_width ||
       image->get_height() != header.get_parameters().tile_height) {
-
-    std::cout << "tx:" << tile_x << " ty:" << tile_y << "\n";
-    std::cout << image->get_width() << " " << header.get_parameters().tile_width << " | "
-              << image->get_height() << " " << header.get_parameters().tile_height <<"\n";
-
     return {heif_error_Usage_error,
             heif_suberror_Unspecified,
             "Tile image size does not match the specified tile size."};
@@ -740,8 +736,8 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
     }
   }
 
-  get_file()->set_brand(encoder->plugin->compression_format,
-                        true); // TODO: out_grid_image->is_miaf_compatible());
+  //get_file()->set_brand(encoder->plugin->compression_format,
+  //                      true); // TODO: out_grid_image->is_miaf_compatible());
 
   return Error::Ok;
 }
@@ -835,7 +831,8 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
 
   m_tile_decoder->set_data_extent(std::move(*extentResult));
 
-  return m_tile_decoder->decode_single_frame_from_compressed_data(options);
+  return m_tile_decoder->decode_single_frame_from_compressed_data(options,
+                                                                  get_context()->get_security_limits());
 }
 
 
@@ -914,4 +911,18 @@ int ImageItem_Tiled::get_chroma_bits_per_pixel() const
   m_tile_decoder->set_data_extent(std::move(any_tile_extent));
 
   return m_tile_decoder->get_chroma_bits_per_pixel();
+}
+
+heif_brand2 ImageItem_Tiled::get_compatible_brand() const
+{
+  return 0;
+
+  // TODO: it is not clear to me what brand to use here.
+
+  /*
+  switch (m_tild_header.get_parameters().compression_format_fourcc) {
+    case heif_compression_HEVC:
+      return heif_brand2_heic;
+  }
+   */
 }

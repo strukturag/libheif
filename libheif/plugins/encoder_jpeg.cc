@@ -360,7 +360,7 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
   }
 
   uint8_t* outbuffer = nullptr;
-#ifdef LIBJPEG_TURBO_VERSION
+#if defined(LIBJPEG_TURBO_VERSION) || (JPEG_LIB_VERSION_MAJOR < 9 || (JPEG_LIB_VERSION_MAJOR == 9 && JPEG_LIB_VERSION_MINOR < 4))
   unsigned long outlength = 0;
 #else
   size_t outlength = 0;
@@ -381,15 +381,15 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
 
 
 
-  int stride_y;
-  const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
-                                                       &stride_y);
-  int stride_u;
-  const uint8_t* row_u = heif_image_get_plane_readonly(image, heif_channel_Cb,
-                                                       &stride_u);
-  int stride_v;
-  const uint8_t* row_v = heif_image_get_plane_readonly(image, heif_channel_Cr,
-                                                       &stride_v);
+  size_t stride_y;
+  const uint8_t* row_y = heif_image_get_plane_readonly2(image, heif_channel_Y,
+                                                        &stride_y);
+  size_t stride_u;
+  const uint8_t* row_u = heif_image_get_plane_readonly2(image, heif_channel_Cb,
+                                                        &stride_u);
+  size_t stride_v;
+  const uint8_t* row_v = heif_image_get_plane_readonly2(image, heif_channel_Cr,
+                                                        &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,

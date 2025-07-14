@@ -32,6 +32,7 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <array>
 #include "decoder_jpeg.h"
 #include "exif.h"
 
@@ -227,7 +228,7 @@ bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
 heif_error loadJPEG(const char *filename, InputImage *input_image)
 {
   struct heif_image* image = nullptr;
-
+  struct heif_error err = heif_error_ok;
 
   // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
 
@@ -291,17 +292,19 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
     // create destination image
 
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_monochrome,
-                                              heif_chroma_monochrome,
-                                              &image);
-    (void) err;
-    // TODO: handle error
+    err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                            heif_colorspace_monochrome,
+                            heif_chroma_monochrome,
+                            &image);
+    if (err.code) {
+      goto cleanup;
+    }
 
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    err = heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) { goto cleanup; }
 
-    int y_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    size_t y_stride;
+    uint8_t* py = heif_image_get_plane2(image, heif_channel_Y, &y_stride);
 
 
     // read the image
@@ -371,17 +374,22 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
                                               heif_colorspace_YCbCr,
                                               output_chroma,
                                               &image);
-    (void) err;
+    if (err.code) { goto cleanup; }
 
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-    heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
-    heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
+    err = heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) { goto cleanup; }
 
-    int stride[3];
+    err = heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
+    if (err.code) { goto cleanup; }
+
+    err = heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
+    if (err.code) { goto cleanup; }
+
+    size_t stride[3];
     uint8_t* p[3];
-    p[0] = heif_image_get_plane(image, heif_channel_Y, &stride[0]);
-    p[1] = heif_image_get_plane(image, heif_channel_Cb, &stride[1]);
-    p[2] = heif_image_get_plane(image, heif_channel_Cr, &stride[2]);
+    p[0] = heif_image_get_plane2(image, heif_channel_Y, &stride[0]);
+    p[1] = heif_image_get_plane2(image, heif_channel_Cb, &stride[1]);
+    p[2] = heif_image_get_plane2(image, heif_channel_Cr, &stride[2]);
 
     // read the image
 
@@ -413,6 +421,21 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
       int alreadyRead[3] = { 0, 0, 0 };
       int width[3] = { (int)cinfo.output_width, cw, cw};
 
+      std::array<int,3> targetChannel{0,1,2};
+
+      if (cinfo.jpeg_color_space == JCS_RGB) {
+        targetChannel = {2, 0, 1};
+      }
+      else if (cinfo.jpeg_color_space == JCS_YCbCr ||
+               cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+        targetChannel = {0, 1, 2};
+      }
+      else {
+        return heif_error{heif_error_Unsupported_filetype,
+                          heif_suberror_Unsupported_image_type,
+                          "JPEG with unsupported colorspace"};
+      }
+
       while (cinfo.output_scanline < cinfo.output_height) {
         jpeg_read_raw_data(&cinfo, buffer, readLines);
 
@@ -420,11 +443,11 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
         for (int i = 0; i < workComponents; ++i) {
           int linesRead = std::min(targetRead[i] - alreadyRead[i], linesPerCall[i]);
-          int targetChannel = i; // Note: might have to be remapped when we want support other colorspaces
+
           for (int j = 0; j < linesRead; ++j) {
-            memcpy(p[targetChannel] + stride[targetChannel] * (alreadyRead[i] + j),
+            memcpy(p[targetChannel[i]] + ((size_t)stride[targetChannel[i]]) * (alreadyRead[i] + j),
                    buffer[i][j],
-                   width[targetChannel]);
+                   width[targetChannel[i]]);
           }
           alreadyRead[i] += linesPerCall[i];
         }
@@ -442,7 +465,7 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
 
         bufp = buffer[0];
 
-        int y = cinfo.output_scanline - 1;
+        size_t y = cinfo.output_scanline - 1;
 
         for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
           p[0][y * stride[0] + x] = *bufp++;
@@ -480,15 +503,16 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
     heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
   }
 
+  input_image->image = std::shared_ptr<heif_image>(image,
+                                                   [](heif_image* img) { heif_image_release(img); });
+
   // cleanup
+cleanup:
   free(iccBuffer);
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
 
   fclose(infile);
 
-  input_image->image = std::shared_ptr<heif_image>(image,
-                                          [](heif_image* img) { heif_image_release(img); });
-
-  return heif_error_ok;
+  return err;
 }

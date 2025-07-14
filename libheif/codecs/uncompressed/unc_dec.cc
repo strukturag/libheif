@@ -140,12 +140,46 @@ Error Decoder_uncompressed::get_coded_image_colorspace(heif_colorspace* out_colo
     return Error::Ok;
   }
   else if (m_cmpd) {
-    UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, out_chroma, out_colorspace);
+    UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, out_chroma, out_colorspace, nullptr);
     return Error::Ok;
   }
   else {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Missing 'cmpd' box."};
+  }
+}
+
+
+bool Decoder_uncompressed::has_alpha_component() const
+{
+  heif_colorspace dummy_colorspace;
+  heif_chroma dummy_chroma;
+  bool has_alpha;
+
+  UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, &dummy_chroma, &dummy_colorspace, &has_alpha);
+
+  return has_alpha;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                                               const struct heif_security_limits* limits)
+{
+  UncompressedImageCodec::unci_properties properties;
+  properties.uncC = m_uncC;
+  properties.cmpd = m_cmpd;
+  properties.ispe = m_ispe;
+
+  auto decodeResult = UncompressedImageCodec::decode_uncompressed_image(properties,
+                                                          get_data_extent(),
+                                                          limits);
+
+  if (decodeResult.error) {
+    return decodeResult.error;
+  }
+  else {
+    return decodeResult.value;
   }
 }

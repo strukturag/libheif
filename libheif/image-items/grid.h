@@ -80,6 +80,8 @@ public:
 
   ImageItem_Grid(HeifContext* ctx);
 
+  ~ImageItem_Grid() override;
+
   uint32_t get_infe_type() const override { return fourcc("grid"); }
 
   static Result<std::shared_ptr<ImageItem_Grid>> add_new_grid_item(HeifContext* ctx,
@@ -113,15 +115,16 @@ public:
   int get_chroma_bits_per_pixel() const override;
 
   void set_encoding_options(const heif_encoding_options* options) {
-    m_encoding_options = *options;
+    heif_encoding_options_copy(m_encoding_options, options);
   }
 
-  const heif_encoding_options* get_encoding_options() const { return &m_encoding_options; }
+  const heif_encoding_options* get_encoding_options() const { return m_encoding_options; }
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override {
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override
+  {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unspecified, "Cannot encode image to 'grid'"};
   }
@@ -129,8 +132,10 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
+  heif_brand2 get_compatible_brand() const override;
+
 protected:
-  std::shared_ptr<Decoder> get_decoder() const override;
+  Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
 public:
 
@@ -152,7 +157,7 @@ private:
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;
 
-  heif_encoding_options m_encoding_options;
+  heif_encoding_options* m_encoding_options = nullptr;
 
   Error read_grid_spec();
 

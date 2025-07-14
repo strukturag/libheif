@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <thread>
@@ -73,7 +74,7 @@ struct encoder_struct_aom
   bool lossless;
   bool lossless_alpha;
   bool auto_tiles;
-  bool intra_block_copy;
+  bool enable_intra_block_copy;
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   std::vector<custom_option> custom_options;
@@ -163,7 +164,7 @@ static const char* kParam_alpha_min_q = "alpha-min-q";
 static const char* kParam_alpha_max_q = "alpha-max-q";
 static const char* kParam_lossless_alpha = "lossless-alpha";
 static const char* kParam_auto_tiles = "auto-tiles";
-static const char* kParam_intra_block_copy = "intra-block-copy";
+static const char* kParam_enable_intra_block_copy = "enable-intrabc";
 static const char* kParam_threads = "threads";
 static const char* kParam_realtime = "realtime";
 static const char* kParam_speed = "speed";
@@ -175,7 +176,7 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static const char* kParam_tune = "tune";
 static const char* const kParam_tune_valid_values[] = {
-    "psnr", "ssim", nullptr
+    "psnr", "ssim", "iq", nullptr
 };
 
 static const int AOM_PLUGIN_PRIORITY = 60;
@@ -375,15 +376,13 @@ static void aom_init_parameters()
   p->has_default = true;
   d[i++] = p++;
 
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = kParam_intra_block_copy;
+  p->name = kParam_enable_intra_block_copy;
   p->type = heif_encoder_parameter_type_boolean;
   p->boolean.default_value = true;
   p->has_default = true;
   d[i++] = p++;
-#endif
 
   assert(i < MAX_NPARAMETERS + 1);
   d[i++] = nullptr;
@@ -597,11 +596,9 @@ struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name,
   } else if (strcmp(name, kParam_auto_tiles) == 0) {
       encoder->auto_tiles = value;
       return heif_error_ok;
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
-  } else if (strcmp(name, kParam_intra_block_copy) == 0) {
-      encoder->intra_block_copy = value;
+  } else if (strcmp(name, kParam_enable_intra_block_copy) == 0) {
+      encoder->enable_intra_block_copy = value;
       return heif_error_ok;
-#endif
   }
 
   set_value(kParam_realtime, realtime_mode);
@@ -619,6 +616,8 @@ struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name,
 
   get_value(kParam_realtime, realtime_mode);
   get_value(kParam_lossless_alpha, lossless_alpha);
+  get_value(kParam_auto_tiles, auto_tiles);
+  get_value(kParam_enable_intra_block_copy, enable_intra_block_copy);
 
   return heif_error_unsupported_parameter;
 }
@@ -655,6 +654,12 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
       encoder->tune = AOM_TUNE_SSIM;
       return heif_error_ok;
     }
+#if defined(AOM_HAVE_TUNE_IQ)
+    else if (strcmp(value, "iq") == 0) {
+      encoder->tune = AOM_TUNE_IQ;
+      return heif_error_ok;
+    }
+#endif
     else {
       return heif_error_invalid_parameter_value;
     }
@@ -708,6 +713,11 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
       case AOM_TUNE_SSIM:
         save_strcpy(value, value_size, "ssim");
         break;
+#if defined(AOM_HAVE_TUNE_IQ)
+      case AOM_TUNE_IQ:
+        save_strcpy(value, value_size, "iq");
+        break;
+#endif
       default:
         assert(false);
         return heif_error_invalid_parameter_value;
@@ -759,6 +769,29 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
     *colorspace = heif_colorspace_YCbCr;
     *chroma = encoder->chroma;
   }
+}
+
+// returns 'true' when an error was detected
+// Note: some older AOM versions take a non-const pointer to aom_codec_error(). Thus, we also have to use a non-const pointer here.
+static bool check_aom_error(aom_codec_err_t aom_error, /*const*/ aom_codec_ctx_t* codec, encoder_struct_aom* encoder, struct heif_error* heif_error)
+{
+  if (aom_error == AOM_CODEC_OK) {
+    return false;
+  }
+
+  std::stringstream sstr;
+  sstr << "AOM encoder error: " << aom_codec_error(codec) << " - " << aom_codec_error_detail(codec);
+
+  heif_error->code = heif_error_Encoder_plugin_error;
+  heif_error->subcode = heif_suberror_Unsupported_parameter;
+  heif_error->message = encoder->set_aom_error(sstr.str().c_str());
+
+  return true;
+}
+
+#define CHECK_ERROR \
+if (check_aom_error(aom_error, &codec, encoder, &err)) { \
+  return err; \
 }
 
 
@@ -864,8 +897,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     const int h = aom_img_plane_height(img, plane);
     */
 
-    int in_stride = 0;
-    const uint8_t* in_p = heif_image_get_plane_readonly(image, (heif_channel) plane, &in_stride);
+    size_t in_stride = 0;
+    const uint8_t* in_p = heif_image_get_plane_readonly2(image, (heif_channel) plane, &in_stride);
 
     int w = source_width;
     int h = source_height;
@@ -991,29 +1024,35 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     encoder_flags = (aom_codec_flags_t) (encoder_flags | AOM_CODEC_USE_HIGHBITDEPTH);
   }
 
+  // allocate aom_codec_ctx_t
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     // AOM makes sure that the error text returned by aom_codec_error_detail() is always a static
-    // text that is valid even through the codec allocation failed (#788).
+    // text that is valid even though the codec allocation failed (#788).
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
     return err;
   }
 
-  aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used);
+  // automatically destroy aom_codec_ctx_t when we leave the function
+  auto codec_ctx_deleter = std::unique_ptr<aom_codec_ctx_t, aom_codec_err_t (*)(aom_codec_ctx_t*)>(&codec, aom_codec_destroy);
 
-  aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level);
+  aom_codec_err_t aom_error;
+
+  aom_error = aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used); CHECK_ERROR;
+
+  aom_error = aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level); CHECK_ERROR;
 
   if (encoder->threads > 1) {
 #if defined(AOM_CTRL_AV1E_SET_ROW_MT)
     // aom 2.0
-    aom_codec_control(&codec, AV1E_SET_ROW_MT, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_ROW_MT, 1); CHECK_ERROR;
 #endif
   }
 
 #if defined(AOM_CTRL_AV1E_SET_AUTO_TILES)
   // aom 3.10.0
-  aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles);
+  aom_error = aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles); CHECK_ERROR;
 #endif
 
   // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
@@ -1029,40 +1068,49 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
   // In aom, color_range defaults to limited range (0). Set it to full range (1).
-  aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1);
-  aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position);
+  aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1); CHECK_ERROR;
+  aom_error = aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position); CHECK_ERROR;
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries);
-    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients);
-    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics);
+    aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries); CHECK_ERROR
+    aom_error = aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients); CHECK_ERROR;
+    aom_error = aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics); CHECK_ERROR;
   }
 
-  aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
+  aom_error = aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune); CHECK_ERROR;
 
   if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
-    aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1); CHECK_ERROR;
   }
 
 #if defined(AOM_CTRL_AV1E_SET_SKIP_POSTPROC_FILTERING)
   if (cfg.g_usage == AOM_USAGE_ALL_INTRA) {
     // Enable AV1E_SET_SKIP_POSTPROC_FILTERING for still-picture encoding,
     // which is disabled by default.
-    aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1); CHECK_ERROR;
   }
 #endif
 
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
-  aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->intra_block_copy);
-#endif
+  aom_error = aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy); CHECK_ERROR;
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   // Apply the custom AOM encoder options.
   // These should always be applied last as they can override the values that were set above.
   for (const auto& p : encoder->custom_options) {
-    aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str());
+    if (aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str()) != AOM_CODEC_OK) {
+      std::stringstream sstr;
+      sstr << "Cannot set AOM encoder option (name: " << p.name << ", value: " << p.value << "): "
+           << aom_codec_error(&codec) << " - " << aom_codec_error_detail(&codec);
+
+      err = {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unsupported_parameter,
+        encoder->set_aom_error(sstr.str().c_str())
+      };
+      return err;
+    }
   }
 #endif
 
@@ -1079,7 +1127,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
         heif_suberror_Encoder_encoding,
         encoder->set_aom_error(aom_codec_error_detail(&codec))
     };
-    aom_codec_destroy(&codec);
     return err;
   }
 
@@ -1116,7 +1163,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_encoding,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    aom_codec_destroy(&codec);
     return err;
   }
 
@@ -1143,17 +1189,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
       encoder->data_read = false;
     }
-  }
-
-
-  // --- clean up
-
-  if (aom_codec_destroy(&codec)) {
-    // Note: do not call aom_codec_error_detail(), because it is not set in aom_codec_destroy(). (see #788)
-    err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Encoder_cleanup,
-           kError_undefined_error};
-    return err;
   }
 
   return heif_error_ok;

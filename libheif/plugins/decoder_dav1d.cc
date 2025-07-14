@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits>
 #include <utility>
+#include <string>
 
 #include <dav1d/version.h>
 #include <dav1d/dav1d.h>
@@ -39,6 +40,7 @@ struct dav1d_decoder
   Dav1dContext* context;
   Dav1dData data;
   bool strict_decoding = false;
+  std::string error_message;
 };
 
 static const char kEmptyString[] = "";
@@ -161,7 +163,8 @@ struct heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, siz
 }
 
 
-struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error dav1d_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+                                          const heif_security_limits* limits)
 {
   auto* decoder = (struct dav1d_decoder*) decoder_raw;
 
@@ -273,14 +276,18 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     get_subsampled_size(frame.p.w, frame.p.h,
                         channel2plane[c], chroma, &w, &h);
 
-    err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
+    err = heif_image_add_plane_safe(heif_img, channel2plane[c], w, h, bpp, limits);
     if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(heif_img);
       return err;
     }
 
-    int dst_stride;
-    uint8_t* dst_mem = heif_image_get_plane(heif_img, channel2plane[c], &dst_stride);
+    size_t dst_stride;
+    uint8_t* dst_mem = heif_image_get_plane2(heif_img, channel2plane[c], &dst_stride);
 
     int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -299,9 +306,16 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 }
 
 
+struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return dav1d_decode_next_image(decoder_raw, out_img, limits);
+}
+
+
 static const struct heif_decoder_plugin decoder_dav1d
     {
-        3,
+        4,
         dav1d_plugin_name,
         dav1d_init_plugin,
         dav1d_deinit_plugin,
@@ -311,7 +325,8 @@ static const struct heif_decoder_plugin decoder_dav1d
         dav1d_push_data,
         dav1d_decode_image,
         dav1d_set_strict_decoding,
-        "dav1d"
+        "dav1d",
+        dav1d_decode_next_image
     };
 
 

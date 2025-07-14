@@ -26,6 +26,7 @@
 #include "error.h"
 #include "nclx.h"
 #include <libheif/heif_experimental.h>
+#include "security_limits.h"
 
 #include <vector>
 #include <memory>
@@ -33,7 +34,7 @@
 #include <set>
 #include <utility>
 #include <cassert>
-
+#include <string>
 
 heif_chroma chroma_from_subsampling(int h, int v);
 
@@ -120,16 +121,22 @@ public:
 
   uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
+  // Get the maximum bit depth of a visual channel (YCbCr or RGB).
+  uint8_t get_visual_image_bits_per_pixel() const;
+
   heif_channel_datatype get_datatype(enum heif_channel channel) const;
 
   int get_number_of_interleaved_components(heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+  // Note: we are using size_t as stride type since the stride is usually involved in a multiplication with the line number.
+  //       For very large images (e.g. >2 GB), this can result in an integer overflow and corresponding illegal memory access.
+  //       (see https://github.com/strukturag/libheif/issues/1419)
+  uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
 
-  const uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+  const uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
 
   template <typename T>
-  T* get_channel(enum heif_channel channel, uint32_t* out_stride)
+  T* get_channel(enum heif_channel channel, size_t* out_stride)
   {
     auto iter = m_planes.find(channel);
     if (iter == m_planes.end()) {
@@ -149,7 +156,7 @@ public:
   }
 
   template <typename T>
-  const T* get_channel(enum heif_channel channel, uint32_t* out_stride) const
+  const T* get_channel(enum heif_channel channel, size_t* out_stride) const
   {
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
   }
@@ -193,12 +200,18 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+  void forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image);
+
   void debug_dump() const;
 
   Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
                                const heif_security_limits* limits);
 
   Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
+
+  Result<std::shared_ptr<HeifPixelImage>> extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                                             const heif_security_limits* limits) const;
+
 
   // --- pixel aspect ratio
 
@@ -226,17 +239,42 @@ public:
 
   // --- mdcv
 
-  bool has_mdcv() const { return m_mdcv_set; }
+  bool has_mdcv() const { return m_mdcv.has_value(); }
 
-  heif_mastering_display_colour_volume get_mdcv() const { return m_mdcv; }
+  heif_mastering_display_colour_volume get_mdcv() const { return *m_mdcv; }
 
   void set_mdcv(const heif_mastering_display_colour_volume& mdcv)
   {
     m_mdcv = mdcv;
-    m_mdcv_set = true;
   }
 
-  void unset_mdcv() { m_mdcv_set = false; }
+  void unset_mdcv() { m_mdcv.reset(); }
+
+  Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
+    delete m_tai_timestamp;
+
+    m_tai_timestamp = heif_tai_timestamp_packet_alloc();
+    heif_tai_timestamp_packet_copy(m_tai_timestamp, tai);
+    return Error::Ok;
+  }
+
+  const heif_tai_timestamp_packet* get_tai_timestamp() const {
+    return m_tai_timestamp;
+  }
+
+
+  void set_gimi_sample_content_id(std::string id) { m_gimi_sample_content_id = id; }
+
+  bool has_gimi_sample_content_id() const { return m_gimi_sample_content_id.has_value(); }
+
+  std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
+
+
+  // --- sequences
+
+  void set_sample_duration(uint32_t d) { m_sample_duration = d; }
+
+  uint32_t get_sample_duration() const { return m_sample_duration; }
 
   // --- warnings
 
@@ -250,8 +288,10 @@ private:
   struct ImagePlane
   {
     // limits=nullptr disables the limits
-    Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components,
-                const heif_security_limits* limits);
+    Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+                int num_interleaved_components,
+                const heif_security_limits* limits,
+                MemoryHandle& memory_handle);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
@@ -267,6 +307,7 @@ private:
 
     void* mem = nullptr; // aligned memory start
     uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
+    size_t   allocation_size = 0;
     uint32_t stride = 0; // bytes per line
 
     int get_bytes_per_pixel() const;
@@ -288,12 +329,18 @@ private:
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   std::map<heif_channel, ImagePlane> m_planes;
+  MemoryHandle m_memory_handle;
 
   uint32_t m_PixelAspectRatio_h = 1;
   uint32_t m_PixelAspectRatio_v = 1;
   heif_content_light_level m_clli{};
-  heif_mastering_display_colour_volume m_mdcv{};
-  bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17
+  std::optional<heif_mastering_display_colour_volume> m_mdcv;
+
+  uint32_t m_sample_duration = 0; // duration of a sequence frame
+
+  heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
+
+  std::optional<std::string> m_gimi_sample_content_id;
 
   std::vector<Error> m_warnings;
 };

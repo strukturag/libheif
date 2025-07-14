@@ -26,7 +26,7 @@
 #include "image-items/avif.h"
 #include "image-items/hevc.h"
 #include "image-items/vvc.h"
-#include "codecs/uncompressed/unc_boxes.h"
+//#include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
 #include <map>
@@ -37,6 +37,7 @@
 #include <unordered_set>
 #include <limits>
 #include <utility>
+#include "mdat_data.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 
@@ -48,6 +49,11 @@
 class HeifPixelImage;
 
 class Box_j2kH;
+
+class Box_moov;
+
+class Box_mvhd;
+
 
 
 class HeifFile
@@ -67,13 +73,23 @@ public:
 
   Error read_from_memory(const void* data, size_t size, bool copy);
 
+  bool has_images() const { return m_meta_box != nullptr; }
+
+  bool has_sequences() const { return m_moov_box != nullptr; }
+
   std::shared_ptr<StreamReader> get_reader() { return m_input_stream; }
 
   void new_empty_file();
 
-  void set_brand(heif_compression_format format, bool miaf_compatible);
+  void init_for_image();
+
+  void init_for_sequence();
 
   void set_hdlr_box(std::shared_ptr<Box_hdlr> box) { m_hdlr_box = std::move(box); }
+
+  size_t append_mdat_data(const std::vector<uint8_t>& data);
+
+  void derive_box_versions();
 
   void write(StreamWriter& writer);
 
@@ -85,7 +101,7 @@ public:
 
   std::vector<heif_item_id> get_item_IDs() const;
 
-  bool image_exists(heif_item_id ID) const;
+  bool item_exists(heif_item_id ID) const;
 
   bool has_item_with_id(heif_item_id ID) const;
 
@@ -96,6 +112,8 @@ public:
   std::string get_item_uri_type(heif_item_id ID) const;
 
   Error get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const;
+
+  Error append_data_from_file_range(std::vector<uint8_t>& out_data, uint64_t offset, uint32_t size) const;
 
   Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
 
@@ -132,6 +150,8 @@ public:
   std::shared_ptr<Box_ipma> get_ipma_box() const { return m_ipma_box; }
 
   std::shared_ptr<Box_grpl> get_grpl_box() const { return m_grpl_box; }
+
+  std::shared_ptr<Box_meta> get_meta_box() const { return m_meta_box; }
 
   std::shared_ptr<Box_EntityToGroup> get_entity_group(heif_entity_group_id id);
 
@@ -214,6 +234,13 @@ public:
   static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);
 #endif
 
+
+  // --- sequences
+
+  std::shared_ptr<Box_moov> get_moov_box() { return m_moov_box; }
+
+  std::shared_ptr<Box_mvhd> get_mvhd_box() { return m_mvhd_box; }
+
 private:
 #if ENABLE_PARALLEL_TILE_DECODING
   mutable std::mutex m_read_mutex;
@@ -245,9 +272,23 @@ private:
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
 
+  std::unique_ptr<MdatData> m_mdat_data;
+
+  // returns the position of the first data byte in the file
+  Result<size_t> write_mdat(StreamWriter& writer);
+
+  // --- sequences
+
+  std::shared_ptr<Box_moov> m_moov_box;
+  std::shared_ptr<Box_mvhd> m_mvhd_box;
+
   const heif_security_limits* m_limits = nullptr;
 
   Error parse_heif_file();
+
+  Error parse_heif_images();
+
+  Error parse_heif_sequences();
 
   Error check_for_ref_cycle(heif_item_id ID,
                             const std::shared_ptr<Box_iref>& iref_box) const;

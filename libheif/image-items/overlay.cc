@@ -38,7 +38,7 @@ void writevec(uint8_t* data, size_t& idx, I value, int len)
 
 static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int len)
 {
-  const uint32_t high_bit = 0x80 << ((len - 1) * 8);
+  const uint32_t high_bit = UINT32_C(0x80) << ((len - 1) * 8);
 
   uint32_t val = 0;
   while (len--) {
@@ -345,7 +345,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
 
     if (overlay_img->get_colorspace() != heif_colorspace_RGB ||
         overlay_img->get_chroma_format() != heif_chroma_444) {
-      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options,
+      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options, options.color_conversion_options_ext,
                                                    get_context()->get_security_limits());
       if (overlay_img_result.error) {
         return overlay_img_result.error;
@@ -456,4 +456,15 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
   //                       out_grid_image->is_miaf_compatible());
 
   return iovl_image;
+}
+
+heif_brand2 ImageItem_Overlay::get_compatible_brand() const
+{
+  if (m_overlay_image_ids.empty()) { return 0; }
+
+  heif_item_id child_id = m_overlay_image_ids[0];
+  auto child = get_context()->get_image(child_id, false);
+  if (!child) { return 0; }
+
+  return child->get_compatible_brand();
 }
