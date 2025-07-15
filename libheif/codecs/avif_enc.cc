@@ -22,7 +22,7 @@
 #include "avif_boxes.h"
 #include "error.h"
 #include "context.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 
 #include <string>
 

@@ -19,7 +19,7 @@
  */
 
 #include "jpeg2000_boxes.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include <cstdint>
 #include <iostream>
 #include <cstdio>

@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include <algorithm>
-#include <libheif/api_structs.h>
+#include "api_structs.h"
 
 
 Error HEVCDecoderConfigurationRecord::parse(BitstreamRange& range, const heif_security_limits* limits)

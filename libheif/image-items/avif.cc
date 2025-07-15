@@ -25,7 +25,7 @@
 #include "codecs/avif_boxes.h"
 #include "bitstream.h"
 #include "common_utils.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "file.h"
 #include <iomanip>
 #include <limits>

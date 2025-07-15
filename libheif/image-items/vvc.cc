@@ -25,7 +25,7 @@
 #include <cstring>
 #include <string>
 #include <cassert>
-#include "api/libheif/api_structs.h"
+#include "api_structs.h"
 #include <utility>
 
 

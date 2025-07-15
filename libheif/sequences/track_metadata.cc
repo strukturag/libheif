@@ -21,7 +21,7 @@
 #include "track_metadata.h"
 #include "chunk.h"
 #include "context.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include <utility>
 
 

@@ -24,7 +24,7 @@
 #include "error.h"
 #include "context.h"
 #include "plugin_registry.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 
 #include "codecs/hevc_dec.h"
 #include "codecs/avif_dec.h"

@@ -19,7 +19,7 @@
  */
 
 #include "jpeg2000.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "codecs/jpeg2000_dec.h"
 #include "codecs/jpeg2000_enc.h"
 #include "codecs/jpeg2000_boxes.h"

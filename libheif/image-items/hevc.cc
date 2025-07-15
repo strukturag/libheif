@@ -31,7 +31,7 @@
 #include <iomanip>
 #include <string>
 #include <utility>
-#include "api/libheif/api_structs.h"
+#include "api_structs.h"
 #include "codecs/hevc_enc.h"
 
 

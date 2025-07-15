@@ -24,7 +24,7 @@
 #include <algorithm>
 #include "security_limits.h"
 #include "codecs/hevc_dec.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)

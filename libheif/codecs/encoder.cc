@@ -23,7 +23,7 @@
 #include "error.h"
 #include "context.h"
 #include "plugin_registry.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "color-conversion/colorconversion.h"
 
 

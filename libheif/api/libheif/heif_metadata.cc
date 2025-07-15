@@ -20,7 +20,7 @@
 
 #include "heif_metadata.h"
 #include "libheif/heif.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 
 #include "box.h"
 

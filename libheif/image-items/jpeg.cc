@@ -24,7 +24,7 @@
 #include "codecs/jpeg_boxes.h"
 #include "security_limits.h"
 #include "pixelimage.h"
-#include "api/libheif/api_structs.h"
+#include "api_structs.h"
 #include <cstring>
 #include <utility>
 

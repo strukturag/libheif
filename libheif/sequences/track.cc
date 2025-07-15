@@ -25,7 +25,7 @@
 #include "sequences/chunk.h"
 #include "sequences/track_visual.h"
 #include "sequences/track_metadata.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include <limits>
 
 

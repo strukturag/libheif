@@ -24,7 +24,7 @@
 #include "chunk.h"
 #include "pixelimage.h"
 #include "context.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "codecs/hevc_boxes.h"
 
 

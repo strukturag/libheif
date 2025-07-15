@@ -45,7 +45,7 @@
 #include "context.h"
 #include "file.h"
 #include "pixelimage.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "security_limits.h"
 #include "compression.h"
 #include "color-conversion/colorconversion.h"

@@ -33,7 +33,7 @@
 #include "tiled.h"
 #include "codecs/decoder.h"
 #include "color-conversion/colorconversion.h"
-#include "api/libheif/api_structs.h"
+#include "api_structs.h"
 #include "plugin_registry.h"
 #include "security_limits.h"
 

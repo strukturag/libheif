@@ -22,7 +22,7 @@
 #define LIBHEIF_TRACK_H
 
 #include "error.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_sequences.h"
 #include <string>

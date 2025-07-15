@@ -26,7 +26,7 @@
 #include <future>
 #include <set>
 #include <algorithm>
-#include <libheif/api_structs.h>
+#include "api_structs.h"
 #include "security_limits.h"
 
 

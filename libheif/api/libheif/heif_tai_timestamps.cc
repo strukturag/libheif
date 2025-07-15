@@ -19,7 +19,7 @@
  */
 
 #include <libheif/heif_tai_timestamps.h>
-#include <libheif/api_structs.h>
+#include "api_structs.h"
 #include "box.h"
 #include "file.h"
 #include <memory>

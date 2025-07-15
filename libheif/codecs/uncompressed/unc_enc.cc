@@ -22,7 +22,7 @@
 #include "unc_boxes.h"
 #include "error.h"
 #include "context.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include <cstring>
 #include <image-items/unc_image.h>
 
