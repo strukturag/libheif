@@ -242,35 +242,50 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
 }
 
 
+Decoder::~Decoder()
+{
+  if (m_decoder) {
+    assert(m_decoder_plugin);
+    m_decoder_plugin->free_decoder(m_decoder);
+  }
+
+  //std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(m_decoder, m_decoder_plugin->free_decoder);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>>
 Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
                                                   const struct heif_security_limits* limits)
 {
-  const struct heif_decoder_plugin* decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
-  if (!decoder_plugin) {
-    return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
+  if (!m_decoder_plugin) {
+    m_decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
+    if (!m_decoder_plugin) {
+      return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
+    }
   }
-
 
   // --- decode image with the plugin
 
-  if (decoder_plugin->new_decoder == nullptr) {
-    return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
-                 "Cannot decode with a dummy decoder plugin.");
-  }
+  struct heif_error err;
 
-  void* decoder;
-  struct heif_error err = decoder_plugin->new_decoder(&decoder);
-  if (err.code != heif_error_Ok) {
-    return Error(err.code, err.subcode, err.message);
-  }
+  if (!m_decoder) {
+    if (m_decoder_plugin->new_decoder == nullptr) {
+      return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
+                   "Cannot decode with a dummy decoder plugin.");
+    }
 
-  // automatically delete decoder plugin when we leave the scope
-  std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(decoder, decoder_plugin->free_decoder);
+    err = m_decoder_plugin->new_decoder(&m_decoder);
+    if (err.code != heif_error_Ok) {
+      return Error(err.code, err.subcode, err.message);
+    }
 
-  if (decoder_plugin->plugin_api_version >= 2) {
-    if (decoder_plugin->set_strict_decoding) {
-      decoder_plugin->set_strict_decoding(decoder, options.strict_decoding);
+    // automatically delete decoder plugin when we leave the scope
+    //std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(m_decoder, m_decoder_plugin->free_decoder);
+
+    if (m_decoder_plugin->plugin_api_version >= 2) {
+      if (m_decoder_plugin->set_strict_decoding) {
+        m_decoder_plugin->set_strict_decoding(m_decoder, options.strict_decoding);
+      }
     }
   }
 
@@ -279,23 +294,23 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
     return dataResult.error;
   }
 
-  err = decoder_plugin->push_data(decoder, dataResult.value.data(), dataResult.value.size());
+  err = m_decoder_plugin->push_data(m_decoder, dataResult.value.data(), dataResult.value.size());
   if (err.code != heif_error_Ok) {
     return Error(err.code, err.subcode, err.message);
   }
 
   heif_image* decoded_img = nullptr;
 
-  if (decoder_plugin->plugin_api_version >= 4 &&
-      decoder_plugin->decode_next_image != nullptr) {
+  if (m_decoder_plugin->plugin_api_version >= 4 &&
+      m_decoder_plugin->decode_next_image != nullptr) {
 
-    err = decoder_plugin->decode_next_image(decoder, &decoded_img, limits);
+    err = m_decoder_plugin->decode_next_image(m_decoder, &decoded_img, limits);
     if (err.code != heif_error_Ok) {
       return Error::from_heif_error(err);
     }
   }
   else {
-    err = decoder_plugin->decode_image(decoder, &decoded_img);
+    err = m_decoder_plugin->decode_image(m_decoder, &decoded_img);
     if (err.code != heif_error_Ok) {
       return Error::from_heif_error(err);
     }
