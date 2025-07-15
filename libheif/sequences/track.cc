@@ -461,6 +461,7 @@ std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_pt
   switch (hdlr->get_handler_type()) {
     case fourcc("pict"):
     case fourcc("vide"):
+    case fourcc("auxv"):
       return std::make_shared<Track_Visual>(ctx, trak);
     case fourcc("meta"):
       return std::make_shared<Track_Metadata>(ctx, trak);

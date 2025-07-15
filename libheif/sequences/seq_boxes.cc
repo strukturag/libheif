@@ -1175,6 +1175,42 @@ Error Box_ccst::write(StreamWriter& writer) const
 }
 
 
+Error Box_auxi::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("auxi");
+  }
+
+  m_aux_track_type = range.read_string();
+
+  return range.get_error();
+}
+
+
+std::string Box_auxi::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << FullBox::dump(indent);
+  sstr << indent << "aux track info type: " << m_aux_track_type << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_auxi::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_aux_track_type);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 Error Box_VisualSampleEntry::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);

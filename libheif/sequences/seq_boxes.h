@@ -516,6 +516,31 @@ private:
 };
 
 
+class Box_auxi : public FullBox {
+public:
+  Box_auxi()
+  {
+    set_short_type(fourcc("auxi"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Auxiliary Info Type"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  void set_aux_track_type_urn(const std::string& t) { m_aux_track_type = t; }
+
+  std::string get_aux_track_type_urn() const { return m_aux_track_type; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::string m_aux_track_type;
+};
+
+
 struct VisualSampleEntry {
   // from SampleEntry
   //const unsigned int(8)[6] reserved = 0;
