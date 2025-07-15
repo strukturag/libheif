@@ -463,21 +463,21 @@ Error HeifContext::interpret_heif_file_images()
       continue;
     }
 
-    auto image = ImageItem::alloc_for_infe_box(this, infe_box);
-    if (!image) {
-      // It is no image item, skip it.
+    auto imageItem = ImageItem::alloc_for_infe_box(this, infe_box);
+    if (!imageItem) {
+      // It is no imageItem item, skip it.
       continue;
     }
 
-    m_all_images.insert(std::make_pair(id, image));
+    m_all_images.insert(std::make_pair(id, imageItem));
 
     if (!infe_box->is_hidden_item()) {
       if (id == m_heif_file->get_primary_image_ID()) {
-        image->set_primary(true);
-        m_primary_image = image;
+        imageItem->set_primary(true);
+        m_primary_image = imageItem;
       }
 
-      m_top_level_images.push_back(image);
+      m_top_level_images.push_back(imageItem);
     }
 
     std::vector<std::shared_ptr<Box>> properties;
@@ -486,9 +486,9 @@ Error HeifContext::interpret_heif_file_images()
       return err;
     }
 
-    image->set_properties(properties);
+    imageItem->set_properties(properties);
 
-    err = image->on_load_file();
+    err = imageItem->on_load_file();
     if (err) {
       return err;
     }
