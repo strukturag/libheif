@@ -796,7 +796,7 @@ ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
 {
   // --- get compressed data
 
-  Error err = m_tile_item->init_decoder_from_item(0);
+  Error err = m_tile_item->on_load_file();
   if (err) {
     return err;
   }

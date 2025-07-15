@@ -285,8 +285,6 @@ public:
 
   virtual Error on_load_file() { return Error::Ok; }
 
-  Error init_decoder_from_item(heif_item_id id);
-
   Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 

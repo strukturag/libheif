@@ -82,15 +82,6 @@ heif_property_id ImageItem::add_property_without_deduplication(std::shared_ptr<B
 }
 
 
-Error ImageItem::init_decoder_from_item(heif_item_id id)
-{
-  m_id = id;
-
-  Error err = on_load_file();
-  return err;
-}
-
-
 heif_compression_format ImageItem::compression_format_from_fourcc_infe_type(uint32_t type)
 {
   switch (type) {
