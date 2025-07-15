@@ -559,11 +559,6 @@ Error HeifContext::interpret_heif_file_images()
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
 
-        Error sizeError = check_for_valid_image_size(get_security_limits(), width, height);
-        if (sizeError) {
-          return sizeError;
-        }
-
         image->set_resolution(width, height);
         ispe_read = true;
       }
