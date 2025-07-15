@@ -174,7 +174,7 @@ heif_error heif_context_get_region_item(const heif_context* context,
  * Get the item identifier for a region item.
  *
  * @param region_item the region item to query
- * @return the region item identifier (or -1 if the region_item is null)
+ * @return the region item identifier (or 0 if the region_item is null)
  */
 LIBHEIF_API
 heif_item_id heif_region_item_get_id(heif_region_item* region_item);
