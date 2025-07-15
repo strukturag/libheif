@@ -73,7 +73,7 @@ std::shared_ptr<class Encoder> ImageItem_JPEG2000::get_encoder() const
 }
 
 
-Error ImageItem_JPEG2000::on_load_file()
+Error ImageItem_JPEG2000::initialize_decoder()
 {
   auto j2kH = get_property<Box_j2kH>();
   if (!j2kH) {
@@ -84,12 +84,16 @@ Error ImageItem_JPEG2000::on_load_file()
 
   m_decoder = std::make_shared<Decoder_JPEG2000>(j2kH);
 
+  return Error::Ok;
+}
+
+
+void ImageItem_JPEG2000::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
 
 heif_brand2 ImageItem_JPEG2000::get_compatible_brand() const

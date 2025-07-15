@@ -499,7 +499,7 @@ heif_compression_format ImageItem_Tiled::get_compression_format() const
 }
 
 
-Error ImageItem_Tiled::on_load_file()
+Error ImageItem_Tiled::initialize_decoder()
 {
   auto heif_file = get_context()->get_heif_file();
 
@@ -796,7 +796,7 @@ ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
 {
   // --- get compressed data
 
-  Error err = m_tile_item->on_load_file();
+  Error err = m_tile_item->initialize_decoder();
   if (err) {
     return err;
   }

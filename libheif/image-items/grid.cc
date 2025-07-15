@@ -163,7 +163,7 @@ ImageItem_Grid::~ImageItem_Grid()
 }
 
 
-Error ImageItem_Grid::on_load_file()
+Error ImageItem_Grid::initialize_decoder()
 {
   Error err = read_grid_spec();
   if (err) {

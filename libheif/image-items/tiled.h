@@ -161,7 +161,7 @@ public:
                        struct heif_encoder* encoder);
 
 
-  Error on_load_file() override;
+  Error initialize_decoder() override;
 
   void process_before_write() override;
 

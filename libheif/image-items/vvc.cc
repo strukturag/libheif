@@ -75,7 +75,7 @@ std::shared_ptr<class Encoder> ImageItem_VVC::get_encoder() const
 }
 
 
-Error ImageItem_VVC::on_load_file()
+Error ImageItem_VVC::initialize_decoder()
 {
   auto vvcC_box = get_property<Box_vvcC>();
   if (!vvcC_box) {
@@ -85,12 +85,15 @@ Error ImageItem_VVC::on_load_file()
 
   m_decoder = std::make_shared<Decoder_VVC>(vvcC_box);
 
+  return Error::Ok;
+}
+
+void ImageItem_VVC::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
 
 heif_brand2 ImageItem_VVC::get_compatible_brand() const

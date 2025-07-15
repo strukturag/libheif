@@ -283,7 +283,9 @@ public:
 
   // === decoding ===
 
-  virtual Error on_load_file() { return Error::Ok; }
+  virtual Error initialize_decoder() { return Error::Ok; }
+
+  virtual void set_decoder_input_data() { }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;

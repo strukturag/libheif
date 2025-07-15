@@ -39,8 +39,9 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG; }
 
+  Error initialize_decoder() override;
 
-  Error on_load_file() override;
+  void set_decoder_input_data() override;
 
   heif_brand2 get_compatible_brand() const override;
 

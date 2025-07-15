@@ -539,7 +539,7 @@ std::shared_ptr<Encoder> ImageItem_uncompressed::get_encoder() const
   return m_encoder;
 }
 
-Error ImageItem_uncompressed::on_load_file()
+Error ImageItem_uncompressed::initialize_decoder()
 {
   std::shared_ptr<Box_cmpd> cmpd = get_property<Box_cmpd>();
   std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
@@ -553,12 +553,15 @@ Error ImageItem_uncompressed::on_load_file()
 
   m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
+  return Error::Ok;
+}
+
+void ImageItem_uncompressed::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
 
 

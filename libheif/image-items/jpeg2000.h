@@ -51,7 +51,9 @@ protected:
   std::shared_ptr<Encoder> get_encoder() const override;
 
 public:
-  Error on_load_file() override;
+  Error initialize_decoder() override;
+
+  void set_decoder_input_data() override;
 
 private:
   std::shared_ptr<class Decoder_JPEG2000> m_decoder;

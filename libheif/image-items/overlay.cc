@@ -216,7 +216,7 @@ ImageItem_Overlay::ImageItem_Overlay(HeifContext* ctx, heif_item_id id)
 }
 
 
-Error ImageItem_Overlay::on_load_file()
+Error ImageItem_Overlay::initialize_decoder()
 {
   Error err = read_overlay_spec();
   if (err) {

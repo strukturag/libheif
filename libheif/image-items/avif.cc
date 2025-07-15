@@ -47,7 +47,7 @@ ImageItem_AVIF::ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx)
 }
 
 
-Error ImageItem_AVIF::on_load_file()
+Error ImageItem_AVIF::initialize_decoder()
 {
   auto av1C_box = get_property<Box_av1C>();
   if (!av1C_box) {
@@ -57,12 +57,15 @@ Error ImageItem_AVIF::on_load_file()
 
   m_decoder = std::make_shared<Decoder_AVIF>(av1C_box);
 
+  return Error::Ok;
+}
+
+void ImageItem_AVIF::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
 
 

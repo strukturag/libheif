@@ -60,20 +60,25 @@ std::shared_ptr<Encoder> ImageItem_JPEG::get_encoder() const
 }
 
 
-Error ImageItem_JPEG::on_load_file()
+Error ImageItem_JPEG::initialize_decoder()
 {
   // Note: jpgC box is optional. NULL is a valid value.
   auto jpgC_box = get_property<Box_jpgC>();
 
   m_decoder = std::make_shared<Decoder_JPEG>(jpgC_box);
 
+  return Error::Ok;
+}
+
+
+void ImageItem_JPEG::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
+
 
 heif_brand2 ImageItem_JPEG::get_compatible_brand() const
 {

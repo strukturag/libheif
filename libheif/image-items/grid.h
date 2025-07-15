@@ -108,7 +108,7 @@ public:
 
   // heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
 
-  Error on_load_file() override;
+  Error initialize_decoder() override;
 
   int get_luma_bits_per_pixel() const override;
 

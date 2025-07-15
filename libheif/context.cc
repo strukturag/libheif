@@ -488,10 +488,12 @@ Error HeifContext::interpret_heif_file_images()
 
     imageItem->set_properties(properties);
 
-    err = imageItem->on_load_file();
+    err = imageItem->initialize_decoder();
     if (err) {
       return err;
     }
+
+    imageItem->set_decoder_input_data();
   }
 
   if (!m_primary_image) {

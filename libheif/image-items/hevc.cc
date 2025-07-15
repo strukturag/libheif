@@ -49,7 +49,7 @@ ImageItem_HEVC::ImageItem_HEVC(HeifContext* ctx)
 }
 
 
-Error ImageItem_HEVC::on_load_file()
+Error ImageItem_HEVC::initialize_decoder()
 {
   auto hvcC_box = get_property<Box_hvcC>();
   if (!hvcC_box) {
@@ -59,12 +59,16 @@ Error ImageItem_HEVC::on_load_file()
 
   m_decoder = std::make_shared<Decoder_HEVC>(hvcC_box);
 
+  return Error::Ok;
+}
+
+
+void ImageItem_HEVC::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }
 
 

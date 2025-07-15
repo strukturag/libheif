@@ -64,7 +64,9 @@ public:
 
   heif_image_tiling get_heif_image_tiling() const override;
 
-  Error on_load_file() override;
+  Error initialize_decoder() override;
+
+  void set_decoder_input_data() override;
 
   heif_brand2 get_compatible_brand() const override;
 
