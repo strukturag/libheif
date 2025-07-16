@@ -138,6 +138,14 @@ public:
 
   uint32_t get_handler() const { return m_handler_type; }
 
+  heif_auxiliary_track_info_type get_auxiliary_info_type() const;
+
+  std::string get_auxiliary_info_type_urn() const { return m_auxiliary_info_type; }
+
+  void set_auxiliary_info_type(heif_auxiliary_track_info_type);
+
+  void set_auxiliary_info_type_urn(std::string t) { m_auxiliary_info_type = t; }
+
   bool is_visual_track() const;
 
   uint32_t get_first_cluster_sample_entry_type() const;
@@ -196,6 +204,8 @@ protected:
   std::shared_ptr<class Box_stsz> m_stsz;
 
   std::shared_ptr<class Box_tref> m_tref; // optional
+
+  std::string m_auxiliary_info_type; // only for auxiliary tracks
 
   // --- sample auxiliary information
 

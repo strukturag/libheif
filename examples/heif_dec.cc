@@ -789,7 +789,8 @@ int main(int argc, char** argv)
       std::cout << "#" << id << " : " << heif_examples::fourcc_to_string(heif_track_get_track_handler_type(track));
 
       if (heif_track_get_track_handler_type(track) == heif_track_type_image_sequence ||
-          heif_track_get_track_handler_type(track) == heif_track_type_video) {
+          heif_track_get_track_handler_type(track) == heif_track_type_video ||
+          heif_track_get_track_handler_type(track) == heif_track_type_auxiliary) {
         uint16_t w,h;
         heif_track_get_image_resolution(track, &w, &h);
         std::cout << " " << w << "x" << h;

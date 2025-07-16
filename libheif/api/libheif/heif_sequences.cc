@@ -102,6 +102,25 @@ uint32_t heif_track_get_track_handler_type(const struct heif_track* track)
   return track->track->get_handler();
 }
 
+heif_auxiliary_track_info_type heif_track_get_auxiliary_info_type(const heif_track* track)
+{
+  return track->track->get_auxiliary_info_type();
+}
+
+const char* heif_track_get_auxiliary_info_type_urn(const heif_track* track)
+{
+  std::string type = track->track->get_auxiliary_info_type_urn();
+
+  if (type.empty()) {
+    return nullptr;
+  }
+  else {
+    char* type_c = new char[type.length() + 1];
+    strcpy(type_c, type.c_str());
+    return type_c;
+  }
+}
+
 
 uint32_t heif_track_get_timescale(const struct heif_track* track)
 {

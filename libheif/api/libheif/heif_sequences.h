@@ -115,6 +115,7 @@ enum heif_track_type_4cc
 {
   heif_track_type_video = heif_fourcc('v', 'i', 'd', 'e'),
   heif_track_type_image_sequence = heif_fourcc('p', 'i', 'c', 't'),
+  heif_track_type_auxiliary = heif_fourcc('a', 'u', 'x', 'v'),
   heif_track_type_metadata = heif_fourcc('m', 'e', 't', 'a')
 };
 
@@ -127,6 +128,19 @@ enum heif_track_type_4cc
  */
 LIBHEIF_API
 heif_track_type heif_track_get_track_handler_type(const heif_track*);
+
+
+enum heif_auxiliary_track_info_type
+{
+  heif_auxiliary_track_info_type_unknown = 0,
+  heif_auxiliary_track_info_type_alpha = 1
+};
+
+LIBHEIF_API
+heif_auxiliary_track_info_type heif_track_get_auxiliary_info_type(const heif_track*);
+
+LIBHEIF_API
+const char* heif_track_get_auxiliary_info_type_urn(const heif_track*);
 
 /**
  * Get the timescale (clock ticks per second) for this track.

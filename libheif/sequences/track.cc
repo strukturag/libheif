@@ -251,6 +251,10 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       return;
     }
 
+    if (auto auxi = sample_description->get_child_box<Box_auxi>()) {
+      m_auxiliary_info_type = auxi->get_aux_track_type_urn();
+    }
+
     if (m_first_taic == nullptr) {
       auto taic = sample_description->get_child_box<Box_taic>();
       if (taic) {
@@ -473,7 +477,34 @@ std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_pt
 
 bool Track::is_visual_track() const
 {
-  return m_handler_type == fourcc("pict");
+  return (m_handler_type == fourcc("pict") ||
+          m_handler_type == fourcc("vide"));
+}
+
+
+static const char* cAuxInfoType_alpha = "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
+
+heif_auxiliary_track_info_type Track::get_auxiliary_info_type() const
+{
+  if (m_auxiliary_info_type == cAuxInfoType_alpha) {
+    return heif_auxiliary_track_info_type_alpha;
+  }
+  else {
+    return heif_auxiliary_track_info_type_unknown;
+  }
+}
+
+
+void Track::set_auxiliary_info_type(heif_auxiliary_track_info_type type)
+{
+  switch (type) {
+    case heif_auxiliary_track_info_type_alpha:
+      m_auxiliary_info_type = cAuxInfoType_alpha;
+      break;
+    default:
+      m_auxiliary_info_type.clear();
+      break;
+  }
 }
 
 

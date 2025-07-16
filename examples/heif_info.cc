@@ -784,6 +784,23 @@ int main(int argc, char** argv)
         case heif_track_type_video:
           std::cout << "video\n";
           break;
+        case heif_track_type_auxiliary:
+          std::cout << "auxiliary ";
+          {
+            heif_auxiliary_track_info_type type = heif_track_get_auxiliary_info_type(track);
+            switch (type) {
+              case heif_auxiliary_track_info_type_unknown: {
+                const char* s = heif_track_get_auxiliary_info_type_urn(track);
+                std::cout << "(unknown: " << s << ")\n";
+                heif_string_release(s);
+                break;
+              }
+              case heif_auxiliary_track_info_type_alpha:
+                std::cout << "(alpha)\n";
+                break;
+            }
+          }
+          break;
         case heif_track_type_metadata:
           std::cout << "metadata\n";
           break;
