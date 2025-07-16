@@ -135,7 +135,7 @@ Error Box_mvhd::write(StreamWriter& writer) const
   if (get_version() == 1) {
     writer.write64(m_creation_time);
     writer.write64(m_modification_time);
-    writer.write64(m_timescale);
+    writer.write32(m_timescale);
     writer.write64(m_duration);
   }
   else {
