@@ -911,6 +911,10 @@ public:
     set_short_type(fourcc("elst"));
   }
 
+  enum Flags {
+    Repeat_EditList = 0x01
+  };
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Edit List"; }

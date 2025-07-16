@@ -2106,6 +2106,8 @@ std::string Box_elst::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << FullBox::dump(indent);
 
+  sstr << indent << "repeat list: " << ((get_flags() & Flags::Repeat_EditList) ? "yes" : "no") << "\n";
+
   for (const auto& entry : m_entries) {
     sstr << indent << "media duration: " << entry.segment_duration << "\n";
     sstr << indent << "media time: " << entry.media_time << "\n";
