@@ -30,6 +30,11 @@ Track_Metadata::Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>
 {
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
 
+  // Metadata tracks are not meant for display
+
+  m_tkhd->set_flags(m_tkhd->get_flags() & ~(Box_tkhd::Flags::Track_in_movie |
+                                            Box_tkhd::Flags::Track_in_preview));
+
   // Find sequence resolution
 
   if (!chunk_offsets.empty())  {

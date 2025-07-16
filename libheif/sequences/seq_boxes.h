@@ -116,7 +116,17 @@ public:
   Box_tkhd()
   {
     set_short_type(fourcc("tkhd"));
+
+    // set default flags according to ISO 14496-12
+    set_flags(Track_enabled | Track_in_movie | Track_in_preview);
   }
+
+  enum Flags {
+    Track_enabled = 0x01,
+    Track_in_movie = 0x02,
+    Track_in_preview = 0x04,
+    Track_size_is_aspect_ratio = 0x08
+  };
 
   std::string dump(Indent&) const override;
 
