@@ -132,6 +132,10 @@ public:
   // Allocate a Track of the correct sub-class (visual or metadata)
   static std::shared_ptr<Track> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
 
+  // This is called after creating all Track objects when reading a HEIF file.
+  // We can now do initializations that require access to all tracks.
+  virtual void initialize_after_parsing(HeifContext*, const std::vector<std::shared_ptr<Track>>& all_tracks) { }
+
   heif_item_id get_id() const { return m_id; }
 
   std::shared_ptr<class HeifFile> get_file() const;
@@ -147,6 +151,8 @@ public:
   void set_auxiliary_info_type_urn(std::string t) { m_auxiliary_info_type = t; }
 
   bool is_visual_track() const;
+
+  virtual bool has_alpha_channel() const { return false; }
 
   uint32_t get_first_cluster_sample_entry_type() const;
 

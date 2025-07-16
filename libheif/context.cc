@@ -1735,6 +1735,17 @@ Error HeifContext::interpret_heif_file_sequences()
     }
   }
 
+  // --- post-parsing initialization
+
+  std::vector<std::shared_ptr<Track>> all_tracks;
+  for (auto& track : m_tracks) {
+   all_tracks.push_back(track.second);
+  }
+
+  for (auto& track : m_tracks) {
+    track.second->initialize_after_parsing(this, all_tracks);
+  }
+
   return Error::Ok;
 }
 

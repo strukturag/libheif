@@ -122,6 +122,12 @@ const char* heif_track_get_auxiliary_info_type_urn(const heif_track* track)
 }
 
 
+int heif_track_has_alpha_channel(const heif_track* track)
+{
+  return track->track->has_alpha_channel();
+}
+
+
 uint32_t heif_track_get_timescale(const struct heif_track* track)
 {
   return track->track->get_timescale();

@@ -142,6 +142,9 @@ heif_auxiliary_track_info_type heif_track_get_auxiliary_info_type(const heif_tra
 LIBHEIF_API
 const char* heif_track_get_auxiliary_info_type_urn(const heif_track*);
 
+LIBHEIF_API
+int heif_track_has_alpha_channel(const heif_track*);
+
 /**
  * Get the timescale (clock ticks per second) for this track.
  * Note that this can be different from the timescale used at sequence level.

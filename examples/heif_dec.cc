@@ -849,12 +849,14 @@ int main(int argc, char** argv)
                 << taic->clock_drift_rate << " / " << int(taic->clock_type) << "\n";
     }
 
+    int with_alpha = heif_track_has_alpha_channel(track);
+
     for (int i=0; ;i++) {
       heif_image* out_image = nullptr;
       int bit_depth = 8; // TODO
       err = heif_track_decode_next_image(track, &out_image,
                                          encoder->colorspace(false),
-                                         encoder->chroma(false, bit_depth),
+                                         encoder->chroma(with_alpha, bit_depth),
                                          decode_options.get());
       if (err.code == heif_error_End_of_sequence) {
         break;

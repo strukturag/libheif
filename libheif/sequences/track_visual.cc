@@ -35,7 +35,7 @@ Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& tr
 
   // Find sequence resolution
 
-  if (!chunk_offsets.empty())  {
+  if (!chunk_offsets.empty()) {
     auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(1));
     if (!s2c) {
       return;
@@ -55,6 +55,40 @@ Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& tr
 
     m_width = visual_sample_description->get_VisualSampleEntry_const().width;
     m_height = visual_sample_description->get_VisualSampleEntry_const().height;
+  }
+}
+
+
+void Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track>>& all_tracks)
+{
+  // --- check whether there is an auxiliary alpha track assigned to this track
+
+  // Only assign to image-sequence tracks (TODO: are there also alpha tracks allowed for video tracks 'heif_track_type_video'?)
+
+  if (get_handler() == heif_track_type_image_sequence) {
+    for (auto track : all_tracks) {
+
+      // skip ourselves
+      if (track->get_id() != get_id()) {
+
+        // Is this an aux alpha track?
+        auto h = fourcc_to_string(track->get_handler());
+        if (track->get_handler() == heif_track_type_auxiliary &&
+            track->get_auxiliary_info_type() == heif_auxiliary_track_info_type_alpha) {
+
+          // Is it assigned to the current track
+          auto tref = track->get_tref_box();
+          auto references = tref->get_references(fourcc("auxl"));
+          if (std::any_of(references.begin(), references.end(), [this](uint32_t id) { return id == get_id(); })) {
+
+            // Assign it
+
+            m_aux_alpha_track = std::dynamic_pointer_cast<Track_Visual>(track);
+            std::cout << "alpha track assigned " << m_aux_alpha_track.get() << "\n";
+          }
+        }
+      }
+    }
   }
 }
 
@@ -108,6 +142,19 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
   if (m_stts) {
     image->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_processed));
   }
+
+  // --- assign alpha if we have an assigned alpha track
+
+  if (m_aux_alpha_track) {
+    auto alphaResult = m_aux_alpha_track->decode_next_image_sample(options);
+    if (alphaResult.error) {
+      return alphaResult.error;
+    }
+
+    auto alphaImage = alphaResult.value;
+    image->transfer_plane_from_image_as(alphaImage, heif_channel_Y, heif_channel_Alpha);
+  }
+
 
   // --- read sample auxiliary data
 

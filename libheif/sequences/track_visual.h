@@ -38,9 +38,13 @@ public:
 
   ~Track_Visual() override = default;
 
+  void initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track>>& all_tracks) override;
+
   uint16_t get_width() const { return m_width; }
 
   uint16_t get_height() const { return m_height; }
+
+  bool has_alpha_channel() const override { return m_aux_alpha_track != nullptr; }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
 
@@ -54,6 +58,9 @@ public:
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;
+
+  // If there is an alpha-channel track associated with this color track, we reference it from here
+  std::shared_ptr<Track_Visual> m_aux_alpha_track;
 };
 
 
