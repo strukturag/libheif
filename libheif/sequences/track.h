@@ -165,6 +165,8 @@ public:
   // The context will compute the duration in global movie units and set this.
   void set_track_duration_in_movie_units(uint64_t total_duration);
 
+  void enable_edit_list_repeat_mode(bool enable);
+
   std::shared_ptr<class Box_taic> get_first_cluster_taic() { return m_first_taic; }
 
   bool end_of_sequence_reached() const;
@@ -208,6 +210,7 @@ protected:
   std::shared_ptr<class Box_stts> m_stts;
   std::shared_ptr<class Box_stss> m_stss;
   std::shared_ptr<class Box_stsz> m_stsz;
+  std::shared_ptr<class Box_elst> m_elst;
 
   std::shared_ptr<class Box_tref> m_tref; // optional
 

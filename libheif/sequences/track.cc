@@ -560,7 +560,7 @@ void Track::finalize_track()
   if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
   if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
-  uint64_t duration = m_stts->get_total_duration(false);
+  uint64_t duration = m_stts->get_total_duration(true);
   m_mdhd->set_duration(duration);
 }
 
@@ -580,6 +580,31 @@ uint32_t Track::get_timescale() const
 void Track::set_track_duration_in_movie_units(uint64_t total_duration)
 {
   m_tkhd->set_duration(total_duration);
+
+  if (m_elst) {
+    Box_elst::Entry entry;
+    entry.segment_duration = total_duration;
+
+    m_elst->add_entry(entry);
+  }
+}
+
+
+void Track::enable_edit_list_repeat_mode(bool enable)
+{
+  if (!m_elst) {
+    if (!enable) {
+      return;
+    }
+
+    auto edts = std::make_shared<Box_edts>();
+    m_trak->append_child_box(edts);
+
+    m_elst = std::make_shared<Box_elst>();
+    edts->append_child_box(m_elst);
+
+    m_elst->enable_repeat_mode(enable);
+  }
 }
 
 

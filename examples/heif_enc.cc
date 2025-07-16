@@ -84,6 +84,7 @@ int nclx_full_range = true;
 // default to 30 fps
 uint32_t sequence_timebase = 30;
 uint32_t sequence_durations = 1;
+uint32_t sequence_repetitions = 1;
 std::string vmt_metadata_file;
 
 int quality = 50;
@@ -136,6 +137,7 @@ const int OPTION_SEQUENCES_TIMEBASE = 1016;
 const int OPTION_SEQUENCES_DURATIONS = 1017;
 const int OPTION_SEQUENCES_FPS = 1018;
 const int OPTION_VMT_METADATA_FILE = 1019;
+const int OPTION_SEQUENCES_REPETITIONS = 1020;
 
 
 static struct option long_options[] = {
@@ -184,6 +186,7 @@ static struct option long_options[] = {
     {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
     {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
+    {(char* const) "repetitions",                 required_argument,       nullptr, OPTION_SEQUENCES_REPETITIONS},
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
 #endif
@@ -280,6 +283,7 @@ void show_help(const char* argv0)
             << "      --timebase #          set clock ticks/second for sequence\n"
             << "      --duration #          set frame duration (default: 1)\n"
             << "      --fps #               set timebase and duration based on fps\n"
+            << "      --repetitions #       set how often the sequence should be played back (default=1), special value: 'infinite'\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
 #endif
@@ -1172,6 +1176,18 @@ int main(int argc, char** argv)
           sequence_durations = (uint32_t)(90000 / fps + 0.5);
         }
         break;
+      case OPTION_SEQUENCES_REPETITIONS:
+        if (strcmp(optarg, "infinite")==0) {
+          sequence_repetitions = heif_sequence_maximum_number_of_repetitions;
+        }
+        else {
+          sequence_repetitions = atoi(optarg);
+          if (sequence_repetitions == 0) {
+            std::cerr << "Sequence repetitions may not be 0.\n";
+            return 5;
+          }
+        }
+        break;
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
         break;
@@ -1805,6 +1821,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       heif_track_options_set_timescale(track_options, sequence_timebase);
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
+      heif_context_set_number_of_sequence_repetitions(context, sequence_repetitions);
 
       image_width = static_cast<uint16_t>(w);
       image_height = static_cast<uint16_t>(h);

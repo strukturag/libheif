@@ -304,6 +304,12 @@ void heif_context_set_sequence_timescale(heif_context* ctx, uint32_t timescale)
 }
 
 
+void heif_context_set_number_of_sequence_repetitions(heif_context* ctx, uint32_t repetitions)
+{
+  ctx->context->set_number_of_sequence_repetitions(repetitions);
+}
+
+
 struct heif_track_options {
   TrackOptions options;
 };

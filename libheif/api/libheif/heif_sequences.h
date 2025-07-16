@@ -262,6 +262,12 @@ uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample*);
 LIBHEIF_API
 void heif_context_set_sequence_timescale(heif_context*, uint32_t timescale);
 
+// Number of times the sequence should be played in total (default = 1).
+// Can be set to heif_sequence_maximum_number_of_repetitions.
+LIBHEIF_API
+void heif_context_set_number_of_sequence_repetitions(heif_context*, uint32_t number_of_repetitions);
+
+#define heif_sequence_maximum_number_of_repetitions 0
 
 /**
  * Specifies whether a 'sample auxiliary info' is stored with the samples.
@@ -342,6 +348,7 @@ typedef struct heif_sequence_encoding_options
 
   heif_color_conversion_options color_conversion_options;
 } heif_sequence_encoding_options;
+
 
 LIBHEIF_API
 heif_sequence_encoding_options* heif_sequence_encoding_options_alloc(void);

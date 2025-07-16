@@ -197,6 +197,8 @@ public:
 
   void set_sequence_timescale(uint32_t timescale);
 
+  void set_number_of_sequence_repetitions(uint32_t repetitions);
+
   Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const struct TrackOptions*, uint32_t handler_type,
                                                                         uint16_t width, uint16_t height);
 
@@ -224,6 +226,7 @@ private:
 
   std::map<uint32_t, std::shared_ptr<Track>> m_tracks;
   uint32_t m_visual_track_id = 0;
+  uint32_t m_sequence_repetitions = 1;
 
   Error interpret_heif_file();
 

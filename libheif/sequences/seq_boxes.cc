@@ -2136,3 +2136,23 @@ void Box_elst::derive_box_version()
     set_version(0);
   }
 }
+
+
+void Box_elst::enable_repeat_mode(bool enable)
+{
+  uint32_t flags = get_flags();
+  if (enable) {
+    flags |= Flags::Repeat_EditList;
+  }
+  else {
+    flags &= ~Flags::Repeat_EditList;
+  }
+
+  set_flags(flags);
+}
+
+
+void Box_elst::add_entry(const Entry& entry)
+{
+  m_entries.push_back(entry);
+}

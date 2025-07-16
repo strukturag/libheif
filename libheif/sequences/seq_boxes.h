@@ -919,6 +919,17 @@ public:
 
   const char* debug_box_name() const override { return "Edit List"; }
 
+  void enable_repeat_mode(bool enable);
+
+  struct Entry {
+    uint64_t segment_duration = 0;
+    int64_t media_time = 0;
+    int16_t media_rate_integer = 1;
+    int16_t media_rate_fraction = 0;
+  };
+
+  void add_entry(const Entry&);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -928,13 +939,6 @@ public:
   void derive_box_version() override;
 
 private:
-  struct Entry {
-    uint64_t segment_duration;
-    int64_t media_time;
-    int16_t media_rate_integer;
-    int16_t media_rate_fraction;
-  };
-
   std::vector<Entry> m_entries;
 };
 

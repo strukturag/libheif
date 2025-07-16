@@ -317,6 +317,25 @@ void HeifContext::write(StreamWriter& writer)
       }
 
       uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+
+      // sequence repetitions
+
+      if (m_sequence_repetitions == heif_sequence_maximum_number_of_repetitions) {
+        movie_duration = std::numeric_limits<uint64_t>::max();
+      }
+      else {
+        if (std::numeric_limits<uint64_t>::max() / movie_duration < m_sequence_repetitions) {
+          movie_duration = std::numeric_limits<uint64_t>::max();
+        }
+        else {
+          movie_duration *= m_sequence_repetitions;
+        }
+      }
+
+      if (m_sequence_repetitions != 1) {
+        track.second->enable_edit_list_repeat_mode(true);
+      }
+
       track.second->set_track_duration_in_movie_units(movie_duration);
 
       max_sequence_duration = std::max(max_sequence_duration, movie_duration);
@@ -1826,6 +1845,12 @@ void HeifContext::set_sequence_timescale(uint32_t timescale)
   */
 
   mvhd->set_time_scale(timescale);
+}
+
+
+void HeifContext::set_number_of_sequence_repetitions(uint32_t repetitions)
+{
+  m_sequence_repetitions = repetitions;
 }
 
 
