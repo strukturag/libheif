@@ -440,14 +440,9 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
   heif_encoding_options* encoding_options = heif_encoding_options_alloc();
   heif_color_profile_nclx nclx;
   if (sequence_encoding_options) {
-    if (sequence_encoding_options->version >= 4) {
-      // the const_cast<> is ok, because output_nclx_profile will not be changed. It should actually be const, but we cannot change that.
-      encoding_options->output_nclx_profile = const_cast<heif_color_profile_nclx*>(sequence_encoding_options->output_nclx_profile);
-    }
-
-    if (sequence_encoding_options->version >= 6) {
-      encoding_options->color_conversion_options = sequence_encoding_options->color_conversion_options;
-    }
+    // the const_cast<> is ok, because output_nclx_profile will not be changed. It should actually be const, but we cannot change that.
+    encoding_options->output_nclx_profile = const_cast<heif_color_profile_nclx*>(sequence_encoding_options->output_nclx_profile);
+    encoding_options->color_conversion_options = sequence_encoding_options->color_conversion_options;
 
     if (encoding_options->output_nclx_profile == nullptr) {
       auto input_nclx = input_image->image->get_color_profile_nclx();
