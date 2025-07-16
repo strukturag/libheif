@@ -894,4 +894,44 @@ private:
 };
 
 
+// Edit List container
+class Box_edts : public Box_container {
+public:
+  Box_edts() : Box_container("edts") {}
+
+  const char* debug_box_name() const override { return "Edit List Container"; }
+};
+
+
+class Box_elst : public FullBox
+{
+public:
+  Box_elst()
+  {
+    set_short_type(fourcc("elst"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Edit List"; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+public:
+  void derive_box_version() override;
+
+private:
+  struct Entry {
+    uint64_t segment_duration;
+    int64_t media_time;
+    int16_t media_rate_integer;
+    int16_t media_rate_fraction;
+  };
+
+  std::vector<Entry> m_entries;
+};
+
 #endif //SEQ_BOXES_H

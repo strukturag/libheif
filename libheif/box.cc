@@ -824,6 +824,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_auxi>();
       break;
 
+    case fourcc("edts"):
+      box = std::make_shared<Box_edts>();
+      break;
+
+    case fourcc("elst"):
+      box = std::make_shared<Box_elst>();
+      break;
+
     case fourcc("sbgp"):
       box = std::make_shared<Box_sbgp>();
       break;

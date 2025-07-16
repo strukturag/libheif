@@ -2019,3 +2019,118 @@ void Box_tref::add_references(uint32_t to_track_id, uint32_t type)
 
   m_references.push_back(ref);
 }
+
+
+Error Box_elst::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  Error err = parse_full_box_header(range);
+  if (err != Error::Ok) {
+    return err;
+  }
+
+  if (get_version() > 1) {
+    return unsupported_version_error("edts");
+  }
+
+  uint32_t nEntries = range.read32();
+  m_entries.clear();
+
+  for (uint64_t i = 0; i < nEntries; i++) {
+    if (range.eof()) {
+      std::stringstream sstr;
+      sstr << "edts box should contain " << nEntries << " entries, but we can only read " << i << " entries.";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              sstr.str()};
+    }
+
+    Entry entry{};
+    if (get_version() == 1) {
+      entry.segment_duration = range.read64();
+      entry.media_time = range.read64s();
+    }
+    else {
+      entry.segment_duration = range.read32();
+      entry.media_time = range.read32s();
+    }
+
+    entry.media_rate_integer = range.read16s();
+    entry.media_rate_fraction = range.read16s();
+
+    m_entries.push_back(entry);
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_elst::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_entries.size() > std::numeric_limits<uint32_t>::max()) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Too many entries in edit list"};
+  }
+
+  writer.write32(static_cast<uint32_t>(m_entries.size()));
+
+
+  for (const auto& entry : m_entries) {
+    if (get_version() == 1) {
+      writer.write64(entry.segment_duration);
+      writer.write64s(entry.media_time);
+    }
+    else {
+      // The cast is valid because we check in derive_box_version() whether everything
+      // fits into 32bit. If not, version 1 is used.
+
+      writer.write32(static_cast<uint32_t>(entry.segment_duration));
+      writer.write32s(static_cast<int32_t>(entry.media_time));
+    }
+
+    writer.write16s(entry.media_rate_integer);
+    writer.write16s(entry.media_rate_fraction);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_elst::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << FullBox::dump(indent);
+
+  for (const auto& entry : m_entries) {
+    sstr << indent << "media duration: " << entry.segment_duration << "\n";
+    sstr << indent << "media time: " << entry.media_time << "\n";
+    sstr << indent << "media rate integer: " << entry.media_rate_integer << "\n";
+    sstr << indent << "media rate fraction: " << entry.media_rate_fraction << "\n";
+  }
+
+  return sstr.str();
+}
+
+void Box_elst::derive_box_version()
+{
+  // check whether we need 64bit values
+
+  bool need_64bit = std::any_of(m_entries.begin(),
+                                m_entries.end(),
+                                [](const Entry& entry) {
+                                  return (entry.segment_duration > std::numeric_limits<uint32_t>::max() ||
+                                          entry.media_time > std::numeric_limits<int32_t>::max());
+                                });
+
+  if (need_64bit) {
+    set_version(1);
+  }
+  else {
+    set_version(0);
+  }
+}

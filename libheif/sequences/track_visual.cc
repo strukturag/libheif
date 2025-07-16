@@ -84,7 +84,6 @@ void Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<
             // Assign it
 
             m_aux_alpha_track = std::dynamic_pointer_cast<Track_Visual>(track);
-            std::cout << "alpha track assigned " << m_aux_alpha_track.get() << "\n";
           }
         }
       }
