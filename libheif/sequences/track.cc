@@ -483,10 +483,12 @@ bool Track::is_visual_track() const
 
 
 static const char* cAuxInfoType_alpha = "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
+static const char* cAuxInfoType_alpha_2015_1 = "urn:mpeg:hevc:2015:auxid:1";
 
 heif_auxiliary_track_info_type Track::get_auxiliary_info_type() const
 {
-  if (m_auxiliary_info_type == cAuxInfoType_alpha) {
+  if (m_auxiliary_info_type == cAuxInfoType_alpha ||
+      m_auxiliary_info_type == cAuxInfoType_alpha_2015_1) {
     return heif_auxiliary_track_info_type_alpha;
   }
   else {
