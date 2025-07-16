@@ -482,13 +482,15 @@ bool Track::is_visual_track() const
 }
 
 
-static const char* cAuxInfoType_alpha = "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
-static const char* cAuxInfoType_alpha_2015_1 = "urn:mpeg:hevc:2015:auxid:1";
+static const char* cAuxType_alpha_miaf = "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
+static const char* cAuxType_alpha_hevc = "urn:mpeg:hevc:2015:auxid:1";
+static const char* cAuxType_alpha_avc = "urn:mpeg:avc:2015:auxid:1";
 
 heif_auxiliary_track_info_type Track::get_auxiliary_info_type() const
 {
-  if (m_auxiliary_info_type == cAuxInfoType_alpha ||
-      m_auxiliary_info_type == cAuxInfoType_alpha_2015_1) {
+  if (m_auxiliary_info_type == cAuxType_alpha_miaf ||
+      m_auxiliary_info_type == cAuxType_alpha_hevc ||
+      m_auxiliary_info_type == cAuxType_alpha_avc) {
     return heif_auxiliary_track_info_type_alpha;
   }
   else {
@@ -501,7 +503,7 @@ void Track::set_auxiliary_info_type(heif_auxiliary_track_info_type type)
 {
   switch (type) {
     case heif_auxiliary_track_info_type_alpha:
-      m_auxiliary_info_type = cAuxInfoType_alpha;
+      m_auxiliary_info_type = cAuxType_alpha_miaf;
       break;
     default:
       m_auxiliary_info_type.clear();
