@@ -180,7 +180,7 @@ public:
 
   std::shared_ptr<const class Box_tref> get_tref_box() const { return m_tref; }
 
-  Result<heif_raw_sequence_sample*> get_next_sample_raw_data();
+  Result<heif_raw_sequence_sample*> get_next_sample_raw_data(const struct heif_decoding_options* options);
 
   std::vector<heif_sample_aux_info_type> get_sample_aux_info_types() const;
 
@@ -192,8 +192,23 @@ protected:
   TrackOptions m_track_info;
 
   uint32_t m_num_samples = 0;
-  uint32_t m_current_chunk = 0;
+
+  struct SampleTiming {
+    uint32_t sampleIdx = 0;
+    uint32_t chunkIdx = 0;
+    uint64_t presentation_time = 0; // TODO
+    uint64_t media_composition_time = 0; // TODO
+    uint64_t media_decoding_time = 0;
+    uint32_t sample_duration_media_time = 0;
+    uint32_t sample_duration_presentation_time = 0; // TODO
+  };
+  std::vector<SampleTiming> m_presentation_timeline;
+  uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
+
+  // Index into SampleTiming table
   uint32_t m_next_sample_to_be_processed = 0;
+
+  void init_sample_timing_table();
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 

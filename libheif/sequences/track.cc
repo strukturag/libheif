@@ -182,6 +182,11 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
   m_id = tkhd->get_track_id();
 
+  auto edts = trak_box->get_child_box<Box_edts>();
+  if (edts) {
+    m_elst = edts->get_child_box<Box_elst>();
+  }
+
   auto mdia = trak_box->get_child_box<Box_mdia>();
   if (!mdia) {
     return;
@@ -333,6 +338,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       }
     }
   }
+
+  init_sample_timing_table();
 }
 
 
@@ -551,7 +558,8 @@ Result<std::string> Track::get_first_cluster_urim_uri() const
 
 bool Track::end_of_sequence_reached() const
 {
-  return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());
+  //return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());
+  return m_next_sample_to_be_processed >= m_num_output_samples;
 }
 
 
@@ -723,27 +731,83 @@ void Track::add_reference_to_track(uint32_t referenceType, uint32_t to_track_id)
 }
 
 
-Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
+void Track::init_sample_timing_table()
 {
-  if (m_current_chunk > m_chunks.size()) {
+  m_num_samples = m_stsz->num_samples();
+
+  // --- build media timeline
+
+  std::vector<SampleTiming> media_timeline;
+
+  uint64_t current_decoding_time = 0;
+  uint32_t current_chunk = 0;
+
+  for (uint32_t i = 0; i<m_num_samples; i++) {
+    SampleTiming timing;
+    timing.sampleIdx = i;
+    timing.media_decoding_time = current_decoding_time;
+    timing.sample_duration_media_time = m_stts->get_sample_duration(i);
+    current_decoding_time += timing.sample_duration_media_time;
+
+    while (i > m_chunks[current_chunk]->last_sample_number()) {
+      current_chunk++;
+
+      if (current_chunk > m_chunks.size()) {
+        timing.chunkIdx = 0; // TODO: error
+      }
+    }
+
+
+    media_timeline.push_back(timing);
+  }
+
+  // --- build presentation timeline from editlist
+
+  bool fallback = false;
+
+  if (m_heif_context->get_sequence_timescale() != get_timescale()) {
+    fallback = true;
+  }
+  else if (m_elst &&
+           m_elst->num_entries() == 1 &&
+           m_elst->get_entry(0).media_time == 0 &&
+           m_elst->get_entry(0).segment_duration == m_mdhd->get_duration() &&
+           m_elst->is_repeat_mode()) {
+    m_presentation_timeline = media_timeline;
+    m_num_output_samples = m_heif_context->get_sequence_duration() / get_duration_in_media_units() * media_timeline.size();
+  }
+  else {
+    fallback = true;
+  }
+
+  // Fallback: just play the media timeline
+  if (fallback) {
+    m_presentation_timeline = media_timeline;
+    m_num_output_samples = media_timeline.size();
+  }
+}
+
+
+Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const struct heif_decoding_options* options)
+{
+  uint64_t num_output_samples = m_num_output_samples;
+  if (options && options->ignore_sequence_editlist) {
+    num_output_samples = m_num_samples;
+  }
+
+  if (m_next_sample_to_be_processed >= num_output_samples) {
     return Error{heif_error_End_of_sequence,
                  heif_suberror_Unspecified,
                  "End of sequence"};
   }
 
-  while (m_next_sample_to_be_processed > m_chunks[m_current_chunk]->last_sample_number()) {
-    m_current_chunk++;
+  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_processed % m_presentation_timeline.size()];
+  uint32_t sample_idx = sampleTiming.sampleIdx;
+  uint32_t chunk_idx = sampleTiming.chunkIdx;
 
-    if (m_current_chunk > m_chunks.size()) {
-      return Error{heif_error_End_of_sequence,
-                   heif_suberror_Unspecified,
-                   "End of sequence"};
-    }
-  }
+  const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
 
-  const std::shared_ptr<Chunk>& chunk = m_chunks[m_current_chunk];
-
-  DataExtent extent = chunk->get_data_extent_for_sample(m_next_sample_to_be_processed);
+  DataExtent extent = chunk->get_data_extent_for_sample(sample_idx);
   auto readResult = extent.read_data();
   if (readResult.error) {
     return readResult.error;
@@ -755,13 +819,13 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
   // read sample duration
 
   if (m_stts) {
-    sample->duration = m_stts->get_sample_duration(m_next_sample_to_be_processed);
+    sample->duration = m_stts->get_sample_duration(sample_idx);
   }
 
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx);
     if (readResult.error) {
       return readResult.error;
     }
@@ -777,7 +841,7 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
   }
 
   if (m_aux_reader_tai_timestamps) {
-    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx);
     if (readResult.error) {
       return readResult.error;
     }

@@ -101,6 +101,11 @@ typedef struct heif_decoding_options
 
   // When set to NULL, default options will be used
   heif_color_conversion_options_ext* color_conversion_options_ext;
+
+  // version 8 options
+
+  // If enabled, it will decode the media timeline, ignoring the sequence tracks edit-list.
+  int ignore_sequence_editlist; // bool
 } heif_decoding_options;
 
 

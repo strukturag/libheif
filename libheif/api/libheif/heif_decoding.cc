@@ -43,7 +43,7 @@ int heif_have_decoder_for_format(enum heif_compression_format format)
 
 static void fill_default_decoding_options(heif_decoding_options& options)
 {
-  options.version = 7;
+  options.version = 8;
 
   options.ignore_transformations = false;
 
@@ -78,6 +78,10 @@ static void fill_default_decoding_options(heif_decoding_options& options)
   // version 7
 
   options.color_conversion_options_ext = nullptr;
+
+  // version 8
+
+  options.ignore_sequence_editlist = false;
 }
 
 
@@ -102,6 +106,9 @@ void heif_decoding_options_copy(struct heif_decoding_options* dst,
   int min_version = std::min(dst->version, src->version);
 
   switch (min_version) {
+    case 8:
+      dst->ignore_sequence_editlist = src->ignore_sequence_editlist;
+      [[fallthrough]];
     case 7:
       dst->color_conversion_options_ext = src->color_conversion_options_ext;
       [[fallthrough]];

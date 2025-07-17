@@ -107,6 +107,7 @@ static void show_help(const char* argv0)
                "      --tiles                    output all image tiles as separate images\n"
                "      --quiet                    do not output status messages to console\n"
                "  -S, --sequence                 decode image sequence instead of still image\n"
+               "      --ignore-editlist          show the raw media sequence timeline without repetitions\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
                "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
@@ -142,6 +143,7 @@ int option_png_compression_level = -1; // use zlib default
 int option_output_tiles = 0;
 int option_disable_limits = 0;
 int option_sequence = 0;
+int option_ignore_editlist = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -170,6 +172,7 @@ static struct option long_options[] = {
     {(char* const) "transparency-composition-mode", required_argument, 0,  OPTION_TRANSPARENCY_COMPOSITION_MODE},
     {(char* const) "version",          no_argument,       0,                        'v'},
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
+    {(char* const) "ignore-editlist", no_argument, &option_ignore_editlist, 1},
     {nullptr, no_argument, nullptr, 0}
 };
 
@@ -834,6 +837,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
     encoder->UpdateDecodingOptions(nullptr, decode_options.get());
+    decode_options->ignore_sequence_editlist = option_ignore_editlist;
 
     struct heif_track* track = heif_context_get_track(ctx, 0);
 

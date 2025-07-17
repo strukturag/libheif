@@ -258,7 +258,8 @@ struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* tra
 
   // --- get next raw sample
 
-  auto decodingResult = track->get_next_sample_raw_data();
+  // TODO: pass decoding options. We currently have no way to ignore the edit-list.
+  auto decodingResult = track->get_next_sample_raw_data(nullptr);
   if (!decodingResult) {
     return decodingResult.error.error_struct(track_ptr->context.get());
   }

@@ -453,6 +453,8 @@ public:
 
   uint32_t get_fixed_sample_size() const { return m_fixed_sample_size; }
 
+  uint32_t num_samples() const { return m_sample_count; }
+
   const std::vector<uint32_t>& get_sample_sizes() const { return m_sample_sizes; }
 
   void append_sample_size(uint32_t size);
@@ -921,6 +923,8 @@ public:
 
   void enable_repeat_mode(bool enable);
 
+  bool is_repeat_mode() const { return get_flags() & Flags::Repeat_EditList; }
+
   struct Entry {
     uint64_t segment_duration = 0;
     int64_t media_time = 0;
@@ -929,6 +933,10 @@ public:
   };
 
   void add_entry(const Entry&);
+
+  size_t num_entries() const { return m_entries.size(); }
+
+  Entry get_entry(uint32_t entry) const { return m_entries[entry]; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;

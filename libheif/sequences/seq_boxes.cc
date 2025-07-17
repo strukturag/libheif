@@ -2109,7 +2109,7 @@ std::string Box_elst::dump(Indent& indent) const
   sstr << indent << "repeat list: " << ((get_flags() & Flags::Repeat_EditList) ? "yes" : "no") << "\n";
 
   for (const auto& entry : m_entries) {
-    sstr << indent << "media duration: " << entry.segment_duration << "\n";
+    sstr << indent << "segment duration: " << entry.segment_duration << "\n";
     sstr << indent << "media time: " << entry.media_time << "\n";
     sstr << indent << "media rate integer: " << entry.media_rate_integer << "\n";
     sstr << indent << "media rate fraction: " << entry.media_rate_fraction << "\n";

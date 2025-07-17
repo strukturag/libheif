@@ -80,7 +80,8 @@ static void show_help(const char* argv0)
                "      --show-track-metadata      show metadata attached to the track (e.g. TAI config)\n"
                "      --show-metadata-text       show data in metadata track as text\n"
                "      --show-metadata-hex        show data in metadata track as hex bytes\n"
-               "      --show-all                 show all extra information\n";
+               "      --show-all                 show all extra information\n"
+               "      --ignore-editlist          show the raw media timeline without repetitions\n";
 }
 
 
@@ -103,6 +104,7 @@ double option_speedup = 1.0;
 bool option_show_sai = false;
 bool option_show_frame_duration = false;
 bool option_show_track_metadata = false;
+bool option_ignore_editlist = false;
 enum {
   metadata_output_none,
   metadata_output_text,
@@ -116,6 +118,7 @@ const int OPTION_SHOW_TRACK_METADATA = 1003;
 const int OPTION_SHOW_ALL = 1004;
 const int OPTION_SHOW_METADATA_TEXT = 1005;
 const int OPTION_SHOW_METADATA_HEX = 1006;
+const int OPTION_IGNORE_EDITLIST = 1007;
 
 static struct option long_options[] = {
     {(char* const) "decoder",             required_argument, 0,                     'd'},
@@ -129,6 +132,7 @@ static struct option long_options[] = {
     {(char* const) "show-metadata-text",  no_argument,       0,                     OPTION_SHOW_METADATA_TEXT},
     {(char* const) "show-metadata-hex",   no_argument,       0,                     OPTION_SHOW_METADATA_HEX},
     {(char* const) "show-all",            no_argument,       0,                     OPTION_SHOW_ALL},
+    {(char* const) "ignore-editlist",     no_argument,       0,                     OPTION_IGNORE_EDITLIST},
     {nullptr,                             no_argument,       nullptr,               0}
 };
 
@@ -222,6 +226,9 @@ int main(int argc, char** argv)
         break;
       case OPTION_SHOW_METADATA_HEX:
         option_metadata_output = metadata_output_hex;
+        break;
+      case OPTION_IGNORE_EDITLIST:
+        option_ignore_editlist = true;
         break;
     }
   }
@@ -321,6 +328,7 @@ int main(int argc, char** argv)
   std::unique_ptr<heif_decoding_options, void (*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
   decode_options->convert_hdr_to_8bit = true;
   decode_options->decoder_id = decoder_id;
+  decode_options->ignore_sequence_editlist = option_ignore_editlist;
 
 
   // --- decoding loop
