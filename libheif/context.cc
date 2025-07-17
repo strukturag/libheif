@@ -580,6 +580,12 @@ Error HeifContext::interpret_heif_file_images()
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
 
+        if (width == 0 || height == 0) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_Invalid_image_size,
+                  "Zero image width or height"};
+        }
+
         image->set_resolution(width, height);
         ispe_read = true;
       }
