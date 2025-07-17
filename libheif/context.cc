@@ -324,7 +324,7 @@ void HeifContext::write(StreamWriter& writer)
         movie_duration = std::numeric_limits<uint64_t>::max();
       }
       else {
-        if (std::numeric_limits<uint64_t>::max() / movie_duration < m_sequence_repetitions) {
+        if (std::numeric_limits<uint64_t>::max() / m_sequence_repetitions < movie_duration) {
           movie_duration = std::numeric_limits<uint64_t>::max();
         }
         else {
