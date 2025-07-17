@@ -405,6 +405,9 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
     }
   }
 
+  decoder->encoded_data.clear();
+  decoder->read_position = 0;
+
   return heif_error_ok;
 }
 
