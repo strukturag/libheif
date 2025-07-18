@@ -162,7 +162,7 @@ plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
 if (WITH_VVDEC)
     # TODO: how to do configure vvdec cleanly?
     find_package(Threads REQUIRED)
-    find_package(vvdec 2.3.0)
+    find_package(vvdec 3.0.0)
     if (vvdec_FOUND)
         set(vvdec_LIBRARIES vvdec::vvdec)
     endif()
