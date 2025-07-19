@@ -32,12 +32,14 @@
 #include "codecs/vvc_dec.h"
 #include "codecs/jpeg_dec.h"
 #include "codecs/jpeg2000_dec.h"
+#include "codecs/evc_dec.h"
 #include "avc_boxes.h"
 #include "avif_boxes.h"
 #include "hevc_boxes.h"
 #include "vvc_boxes.h"
 #include "jpeg_boxes.h"
 #include "jpeg2000_boxes.h"
+#include "evc_boxes.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed/unc_dec.h"
@@ -154,6 +156,10 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
       return std::make_shared<Decoder_uncompressed>(uncC,cmpd,ispe);
     }
 #endif
+    case fourcc("evc1"): {
+      auto evcC = item->get_property<Box_evcC>();
+      return std::make_shared<Decoder_EVC>(evcC);
+    }
     case fourcc("mski"): {
       return nullptr; // do we need a decoder for this?
     }
