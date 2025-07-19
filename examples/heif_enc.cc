@@ -264,7 +264,7 @@ void show_help(const char* argv0)
             << "  -e, --encoder ID               select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR     load all codec plugins in the directory\n"
             << "  -P, --params                   show all encoder parameters and exit, input file not required or used.\n"
-            << "  -p                             set encoder parameter (NAME=VALUE)\n"
+            << "  -p NAME=VALUE                  set encoder parameter\n"
             << "\n"
             << "color profile:\n"
             << "      --color-profile NAME       use a color profile preset for the output. Valid values are:\n"
