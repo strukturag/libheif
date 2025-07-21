@@ -626,12 +626,11 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
   // --- decompress data
 
   Error error;
-  bool read_uncompressed = true;
+
   if (item_type == fourcc("mime")) {
     std::string encoding = infe_box->get_content_encoding();
     if (encoding == "compress_zlib") {
 #if HAVE_ZLIB
-      read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
       error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
@@ -647,7 +646,6 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
     }
     else if (encoding == "deflate") {
 #if HAVE_ZLIB
-      read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
       error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
@@ -662,7 +660,6 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
     }
     else if (encoding == "br") {
 #if HAVE_BROTLI
-      read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
       error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
@@ -675,20 +672,22 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
                    encoding);
 #endif
     }
-  }
-
-  if (read_uncompressed) {
-    std::vector<uint8_t> data;
-    Error error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &data, m_limits);
-    if (error) {
-      return error;
-    }
-    else {
-      return data;
+    else if (!encoding.empty()) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
     }
   }
 
-  return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
+
+  // --- read uncompressed
+
+  std::vector<uint8_t> data;
+  error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &data, m_limits);
+  if (error) {
+    return error;
+  }
+  else {
+    return data;
+  }
 }
 
 
