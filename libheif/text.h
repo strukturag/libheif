@@ -47,12 +47,7 @@ public:
     m_item_id = id;
   }
 
-  const char* get_item_text() const {
-    char* text = new char[m_text.length() + 1];
-    strcpy(text, m_text.c_str());
-
-    return text;
-  }
+  std::string get_item_text() const { return m_text; }
 
 private:
   heif_item_id m_item_id = 0;

@@ -101,7 +101,15 @@ heif_item_id heif_text_item_get_id(struct heif_text_item* text_item)
 const char* heif_text_item_get_content(struct heif_text_item* text_item)
 {
   if (text_item == nullptr) {
-    return NULL;
+    return nullptr;
   }
-  return text_item->text_item->get_item_text();
+
+  // return text as c-string
+
+  std::string txt = text_item->text_item->get_item_text();
+
+  char* text_c = new char[txt.length() + 1];
+  strcpy(text_c, txt.c_str());
+
+  return text_c;
 }
