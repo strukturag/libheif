@@ -26,6 +26,7 @@
 #include <cstring>
 #include <memory>
 #include <utility>
+#include <string>
 
 struct heif_error heif_image_handle_add_text_item(heif_image_handle *image_handle,
                                            const char *content_type,
