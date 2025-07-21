@@ -209,10 +209,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     const std::vector<uint8_t>& compressed_bytes = readingResult.value;
 
     // decompress only the unit
-    Error err = do_decompress_data(cmpC_box, compressed_bytes, data);
-    if (err) {
-      return err;
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    if (dataResult.error) {
+      return dataResult.error;
     }
+
+    *data = std::move(*dataResult);
   }
   else if (icef_box) {
     // get all data and decode all
@@ -227,11 +229,13 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
       auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
-      std::vector<uint8_t> uncompressed_unit_data;
-      Error err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
-      if (err) {
-        return err;
+
+      auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data));
+      if (dataResult.error) {
+        return dataResult.error;
       }
+
+      const std::vector<uint8_t>& uncompressed_unit_data= dataResult.value;
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
     }
 
@@ -249,10 +253,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     std::vector<uint8_t> compressed_bytes = *readResult.value;
 
     // Decode as a single blob
-    Error err = do_decompress_data(cmpC_box, compressed_bytes, data);
-    if (err) {
-      return err;
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    if (dataResult.error) {
+      return dataResult.error;
     }
+
+    *data = std::move(*dataResult);
 
     // cut out the range that we actually need
     memcpy(data->data(), data->data() + range_start_offset, range_size);
@@ -263,13 +269,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
 }
 
 
-const Error AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                std::vector<uint8_t> compressed_data,
-                                                std::vector<uint8_t>* data) const
+Result<std::vector<uint8_t>> AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+                                                                 std::vector<uint8_t> compressed_data) const
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
 #if HAVE_BROTLI
-    return decompress_brotli(compressed_data, data);
+    return decompress_brotli(compressed_data);
 #else
     std::stringstream sstr;
   sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
@@ -280,7 +285,7 @@ const Error AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>&
   }
   else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
 #if HAVE_ZLIB
-    return decompress_zlib(compressed_data, data);
+    return decompress_zlib(compressed_data);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
@@ -291,7 +296,7 @@ const Error AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>&
   }
   else if (cmpC_box->get_compression_type() == fourcc("defl")) {
 #if HAVE_ZLIB
-    return decompress_deflate(compressed_data, data);
+    return decompress_deflate(compressed_data);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;

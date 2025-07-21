@@ -178,13 +178,12 @@ Error ImageItem_Grid::read_grid_spec()
 {
   auto heif_file = get_context()->get_heif_file();
 
-  std::vector<uint8_t> grid_data;
-  Error err = heif_file->get_uncompressed_item_data(get_id(), &grid_data);
-  if (err) {
-    return err;
+  auto gridDataResult = heif_file->get_uncompressed_item_data(get_id());
+  if (gridDataResult.error) {
+    return gridDataResult.error;
   }
 
-  err = m_grid_spec.parse(grid_data);
+  Error err = m_grid_spec.parse(*gridDataResult);
   if (err) {
     return err;
   }

@@ -149,24 +149,23 @@ struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
   }
 
-  std::vector<uint8_t> data;
-  Error err = ctx->context->get_heif_file()->get_item_data(item_id, &data, out_compression_format);
-  if (err) {
+  auto dataResult = ctx->context->get_heif_file()->get_item_data(item_id, out_compression_format);
+  if (dataResult.error) {
     *out_data_size = 0;
     if (out_data) {
       *out_data = 0;
     }
 
-    return err.error_struct(ctx->context.get());
+    return dataResult.error.error_struct(ctx->context.get());
   }
 
   if (out_data_size) {
-    *out_data_size = data.size();
+    *out_data_size = dataResult.value.size();
   }
 
   if (out_data) {
-    *out_data = new uint8_t[data.size()];
-    memcpy(*out_data, data.data(), data.size());
+    *out_data = new uint8_t[dataResult.value.size()];
+    memcpy(*out_data, dataResult.value.data(), dataResult.value.size());
   }
 
   return heif_error_success;

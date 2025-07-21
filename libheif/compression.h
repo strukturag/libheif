@@ -61,7 +61,7 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
  * @sa decompress_deflate
  * @sa compress_zlib
  */
-Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
+Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input);
 
 /**
  * Decompress "deflate" compressed data.
@@ -75,7 +75,7 @@ Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<
  * @sa decompress_zlib
  * @sa compress_deflate
  */
-Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
+Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input);
 
 #endif
 
@@ -89,7 +89,7 @@ Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vect
  * @param output pointer to the resulting vector of decompressed data
  * @return success (Ok) or an error on failure (usually corrupt data)
  */
-Error decompress_brotli(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
+Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t>& compressed_input);
 
 std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size);
 #endif

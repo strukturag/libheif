@@ -111,7 +111,7 @@ public:
 
   std::string get_item_uri_type(heif_item_id ID) const;
 
-  Error get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const;
+  Result<std::vector<uint8_t>> get_uncompressed_item_data(heif_item_id ID) const;
 
   Error append_data_from_file_range(std::vector<uint8_t>& out_data, uint64_t offset, uint32_t size) const;
 
@@ -121,7 +121,9 @@ public:
     return append_data_from_iloc(ID, out_data, 0, std::numeric_limits<uint64_t>::max());
   }
 
-  Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
+  // If `out_compression` is not NULL, the compression method is returned there and the compressed data is returned.
+  // If `out_compression` is NULL, the data is returned decompressed.
+  Result<std::vector<uint8_t>> get_item_data(heif_item_id ID, heif_metadata_compression* out_compression) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 

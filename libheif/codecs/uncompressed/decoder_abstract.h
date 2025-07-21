@@ -198,9 +198,8 @@ protected:
                                                      uint32_t tile_idx,
                                                      const Box_iloc::Item* item) const;
 
-  const Error do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                 std::vector<uint8_t> compressed_data,
-                                 std::vector<uint8_t>* data) const;
+  Result<std::vector<uint8_t>> do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+                                                  std::vector<uint8_t> compressed_data) const;
 
 protected:
   void memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample);

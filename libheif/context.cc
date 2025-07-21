@@ -953,18 +953,20 @@ Error HeifContext::interpret_heif_file_images()
     metadata->content_type = content_type;
     metadata->item_uri_type = std::move(item_uri_type);
 
-    Error err = m_heif_file->get_uncompressed_item_data(id, &(metadata->m_data));
-    if (err) {
+    auto metadataResult = m_heif_file->get_uncompressed_item_data(id);
+    if (metadataResult.error) {
       if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
-        return err;
+        return metadataResult.error;
       }
       else {
         // anything else is probably something that we don't understand yet
         continue;
       }
     }
-
+    else {
+      metadata->m_data = *metadataResult;
+    }
 
     // --- assign metadata to the image
 
@@ -1017,12 +1019,13 @@ Error HeifContext::interpret_heif_file_images()
 
     std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
     region_item->item_id = id;
-    std::vector<uint8_t> region_data;
-    Error err = m_heif_file->get_uncompressed_item_data(id, &region_data);
-    if (err) {
-      return err;
+
+    Result regionDataResult = m_heif_file->get_uncompressed_item_data(id);
+    if (regionDataResult.error) {
+      return regionDataResult.error;
     }
-    region_item->parse(region_data);
+    region_item->parse(*regionDataResult);
+
     if (iref_box) {
       std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
       for (const auto& ref : references) {
@@ -1094,12 +1097,13 @@ Error HeifContext::interpret_heif_file_images()
     }
     std::shared_ptr<TextItem> text_item = std::make_shared<TextItem>();
     text_item->set_item_id(id);
-    std::vector<uint8_t> text_data;
-    Error err = m_heif_file->get_uncompressed_item_data(id, &text_data);
-    if (err) {
-      return err;
+
+    auto textDataResult = m_heif_file->get_uncompressed_item_data(id);
+    if (textDataResult.error) {
+      return textDataResult.error;
     }
-    text_item->parse(text_data);
+
+    text_item->parse(*textDataResult);
     if (iref_box) {
       std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
       for (const auto& ref : references) {
@@ -1163,14 +1167,14 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
   uint32_t image_type = m_heif_file->get_item_type_4cc(ID);
   if (image_type == fourcc("grid")) {
-    std::vector<uint8_t> grid_data;
-    Error error = m_heif_file->get_uncompressed_item_data(ID, &grid_data);
-    if (error) {
+
+    Result gridDataResult = m_heif_file->get_uncompressed_item_data(ID);
+    if (gridDataResult.error) {
       return false;
     }
 
     ImageGrid grid;
-    err = grid.parse(grid_data);
+    err = grid.parse(*gridDataResult);
     if (err) {
       return false;
     }

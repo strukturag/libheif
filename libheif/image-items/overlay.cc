@@ -252,13 +252,12 @@ Error ImageItem_Overlay::read_overlay_spec()
   */
 
 
-  std::vector<uint8_t> overlay_data;
-  Error err = heif_file->get_uncompressed_item_data(get_id(), &overlay_data);
-  if (err) {
-    return err;
+  auto overlayDataResult = heif_file->get_uncompressed_item_data(get_id());
+  if (overlayDataResult.error) {
+    return overlayDataResult.error;
   }
 
-  err = m_overlay_spec.parse(m_overlay_image_ids.size(), overlay_data);
+  Error err = m_overlay_spec.parse(m_overlay_image_ids.size(), *overlayDataResult);
   if (err) {
     return err;
   }

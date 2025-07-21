@@ -600,7 +600,7 @@ Error HeifFile::get_properties(heif_item_id imageID,
 }
 
 
-Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
+Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id ID) const
 {
   assert(m_limits);
 
@@ -637,10 +637,8 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
       if (error) {
         return error;
       }
-      error = decompress_zlib(compressed_data, data);
-      if (error) {
-        return error;
-      }
+
+      return decompress_zlib(compressed_data);
 #else
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_header_compression_method,
@@ -655,10 +653,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
       if (error) {
         return error;
       }
-      error = decompress_deflate(compressed_data, data);
-      if (error) {
-        return error;
-      }
+      return decompress_deflate(compressed_data);
 #else
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_header_compression_method,
@@ -673,10 +668,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
       if (error) {
         return error;
       }
-      error = decompress_brotli(compressed_data, data);
-      if (error) {
-        return error;
-      }
+      return decompress_brotli(compressed_data);
 #else
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_header_compression_method,
@@ -686,7 +678,14 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
   }
 
   if (read_uncompressed) {
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data, m_limits);
+    std::vector<uint8_t> data;
+    Error error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &data, m_limits);
+    if (error) {
+      return error;
+    }
+    else {
+      return data;
+    }
   }
 
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
@@ -735,7 +734,7 @@ Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out
 }
 
 
-Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const
+Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metadata_compression* out_compression) const
 {
   Error error;
 
@@ -743,8 +742,8 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 
   auto infe_box = get_infe_box(ID);
   if (!infe_box) {
-    return {heif_error_Usage_error,
-            heif_suberror_Nonexisting_item_referenced};
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Nonexisting_item_referenced};
   }
 
   uint32_t item_type = infe_box->get_item_type_4cc();
@@ -757,7 +756,14 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data, m_limits);
+    std::vector<uint8_t> out_data;
+    Error err = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, m_limits);
+    if (err) {
+      return err;
+    }
+    else {
+      return out_data;
+    }
   }
 
 
@@ -774,7 +780,14 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data, m_limits);
+    std::vector<uint8_t> out_data;
+    Error err = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, m_limits);
+    if (err) {
+      return err;
+    }
+    else {
+      return out_data;
+    }
   }
   else if (encoding == "compress_zlib") {
     compression = heif_metadata_compression_zlib;
@@ -799,11 +812,10 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 
   // return compressed data, if we do not want to have it uncompressed
 
-  const bool do_decode = (out_compression == nullptr);
-  if (!do_decode) {
+  const bool return_compressed = (out_compression != nullptr);
+  if (return_compressed) {
     *out_compression = compression;
-    *out_data = std::move(compressed_data);
-    return Error::Ok;
+    return compressed_data;
   }
 
   // decompress the data
@@ -811,16 +823,16 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   switch (compression) {
 #if HAVE_ZLIB
     case heif_metadata_compression_zlib:
-      return decompress_zlib(compressed_data, out_data);
+      return decompress_zlib(compressed_data);
     case heif_metadata_compression_deflate:
-      return decompress_deflate(compressed_data, out_data);
+      return decompress_deflate(compressed_data);
 #endif
 #if HAVE_BROTLI
     case heif_metadata_compression_brotli:
-      return decompress_brotli(compressed_data, out_data);
+      return decompress_brotli(compressed_data);
 #endif
     default:
-      return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
+      return Error{heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
   }
 }
 
