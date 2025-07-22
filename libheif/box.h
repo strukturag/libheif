@@ -1818,4 +1818,51 @@ private:
 bool operator==(const heif_tai_timestamp_packet& a,
                 const heif_tai_timestamp_packet& b);
 
+
+/**
+ * Extended language property.
+ *
+ * Permits the association of language information with an item.
+ *
+ * See ISO/IEC 23008-12:2025(E) Section 6.10.2.2 and ISO/IEC 14496-12:2022(E) Section 8.4.6.
+ */
+class Box_elng : public FullBox
+{
+public:
+  Box_elng()
+  {
+    set_short_type(fourcc("elng"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Extended language"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * Language.
+   *
+   * An RFC 5646 (IETF BCP 47) compliant language identifier for the language of the text.
+   * Examples: "en-AU", "de-DE", or "zh-CN“.
+   */
+  std::string get_extended_language() const { return m_lang; }
+
+  /**
+   * Set the language.
+   *
+   * An RFC 5646 (IETF BCP 47) compliant language identifier for the language of the text.
+   * Examples: "en-AU", "de-DE", or "zh-CN“.
+   */
+  void set_lang(const std::string lang) { m_lang = lang; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::string m_lang;
+};
+
 #endif
