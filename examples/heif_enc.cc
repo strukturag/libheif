@@ -103,6 +103,19 @@ bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
 
+enum heif_output_nclx_color_profile_preset
+{
+  heif_output_nclx_color_profile_preset_custom,  // Default. Use the values provided by the user.
+  heif_output_nclx_color_profile_preset_automatic,  // Choose the profile depending on the input.
+  heif_output_nclx_color_profile_preset_compatible, // Choose a profile that is decoded correctly by most systems.
+  heif_output_nclx_color_profile_preset_Rec_601,  // SD / JPEG / MPEG
+  heif_output_nclx_color_profile_preset_Rec_709,  // HDTV / (sRGB)
+  heif_output_nclx_color_profile_preset_Rec_2020  // UHDTV
+};
+
+heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_nclx_color_profile_preset_custom;
+
+
 std::string property_pitm_description;
 
 // for benchmarking
@@ -138,6 +151,7 @@ const int OPTION_SEQUENCES_DURATIONS = 1017;
 const int OPTION_SEQUENCES_FPS = 1018;
 const int OPTION_VMT_METADATA_FILE = 1019;
 const int OPTION_SEQUENCES_REPETITIONS = 1020;
+const int OPTION_COLOR_PROFILE_PRESET = 1021;
 
 
 static struct option long_options[] = {
@@ -164,6 +178,7 @@ static struct option long_options[] = {
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
     {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
 #endif
+    {(char* const) "color-profile",               required_argument, 0,                     OPTION_COLOR_PROFILE_PRESET},
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
     {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
     {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
@@ -216,56 +231,67 @@ void show_help(const char* argv0)
             << "Note that when using the prefix, libheif cannot tell you which parameters and values are supported.\n"
             << "\n"
             << "Options:\n"
-            << "  -h, --help        show help\n"
-            << "  -v, --version     show version\n"
-            << "  -q, --quality     set output quality (0-100) for lossy compression\n"
-            << "  -L, --lossless    generate lossless output (-q has no effect). Image will be encoded as RGB (matrix_coefficients=0).\n"
-            << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
-            << "      --no-alpha    do not save alpha channel\n"
-            << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
-            << "  -o, --output          output filename (optional)\n"
-            << "      --verbose         enable logging output (more will increase logging level)\n"
-            << "  -P, --params          show all encoder parameters and exit, input file not required or used.\n"
-            << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
-            << "  -p                    set encoder parameter (NAME=VALUE)\n"
-            << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
-            << "      --vvc             encode as VVC (experimental)\n"
-            << "      --jpeg            encode as JPEG\n"
-            << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
-            << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
-#if WITH_UNCOMPRESSED_CODEC
+            << "  -h, --help                     show help\n"
+            << "  -v, --version                  show version\n"
+            << "  -o, --output                   output filename (optional)\n"
+            << "  -q, --quality                  set output quality (0-100) for lossy compression\n"
+            << "  -L, --lossless                 generate lossless output (-q has no effect). Image will be encoded as RGB (matrix_coefficients=0).\n"
+            << "  -t, --thumb #                  generate thumbnail with maximum size # (default: off)\n"
+            << "      --no-alpha                 do not save alpha channel\n"
+            << "      --no-thumb-alpha           do not save alpha channel in thumbnail image\n"
+            << "      --verbose                  enable logging output (more will increase logging level)\n"
+            << "  -b, --bit-depth #              bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
+            << "      --premultiplied-alpha      input image has premultiplied alpha\n"
+#if WITH_HEADER_COMPRESSION
+            << "      --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+#endif
+            << "  -C, --chroma-downsampling ALGO force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
+            << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
+            << "      --benchmark                measure encoding time, PSNR, and output file size\n"
+            << "      --pitm-description TEXT    (experimental) set user description for primary image\n"
+            << "\n"
+            << "codecs:\n"
+            << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --vvc                      encode as VVC (experimental)\n"
+            << "      --jpeg                     encode as JPEG\n"
+            << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
+            << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
+            #if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
             << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
-#endif
-            << "      --list-encoders         list all available encoders for all compression formats\n"
-            << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
-            << "      --plugin-directory DIR  load all codec plugins in the directory\n"
-            << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
-            << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
-            << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
-            << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
-            << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
-            << "  --premultiplied-alpha     input image has premultiplied alpha\n"
-#if WITH_HEADER_COMPRESSION
-            << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
-#endif
-            << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
-            << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
-            << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
+            #endif
+            << "      --list-encoders            list all available encoders for all compression formats\n"
+            << "  -e, --encoder ID               select encoder to use (the IDs can be listed with --list-encoders)\n"
+            << "      --plugin-directory DIR     load all codec plugins in the directory\n"
+            << "  -P, --params                   show all encoder parameters and exit, input file not required or used.\n"
+            << "  -p NAME=VALUE                  set encoder parameter\n"
+            << "\n"
+            << "color profile:\n"
+            << "      --color-profile NAME       use a color profile preset for the output. Valid values are:\n"
+            << "                                    custom:     (default) use the provided matrix_coefficients, colour_primaries, transfer_characteristic\n"
+            << "                                    auto:       automatically guess suitable values from the input image characteristics\n"
+            << "                                    compatible: use a profile that is decoded correctly by most applications by avoiding incomplete implementations\n"
+            << "                                    601:        use Rec.601 (SD), close to JPEG\n"
+            << "                                    709:        use Rec.709 (HDTV), close to sRGB\n"
+            << "                                    2020:       use Rec.2020 (UHDTV), transfer curve will be selected based on bits per pixel\n"
+            << "      --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
+            << "      --colour_primaries        nclx profile: color primaries (see h.273)\n"
+            << "      --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
+            << "      --full_range_flag         nclx profile: full range flag, default: 1\n"
+            << "      --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "\n"
             << "tiling:\n"
-            << "  --cut-tiles #             cuts the input image into square tiles of the given width\n"
-            << "  -T,--tiled-input          input is a set of tile images (only provide one filename with two tile position numbers).\n"
-            << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
-            << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
-            << "                            for the other tiles and determine the range of tiles automatically.\n"
-            << "  --tiled-image-width #     override image width of tiled image\n"
-            << "  --tiled-image-height #    override image height of tiled image\n"
-            << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
-            << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+            << "      --cut-tiles #             cuts the input image into square tiles of the given width\n"
+            << "  -T, --tiled-input             input is a set of tile images (only provide one filename with two tile position numbers).\n"
+            << "                                For example, 'tile-01-05.jpg' would be a valid input filename.\n"
+            << "                                You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
+            << "                                for the other tiles and determine the range of tiles automatically.\n"
+            << "      --tiled-image-width #     override image width of tiled image\n"
+            << "      --tiled-image-height #    override image height of tiled image\n"
+            << "      --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
+            << "                                With this option, this can be swapped so that the first number is x, the second number y.\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES || WITH_UNCOMPRESSED_CODEC
-            << "  --tiling-method METHOD    choose one of these methods: grid"
+            << "      --tiling-method METHOD    choose one of these methods: grid"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
                ", tili"
 #endif
@@ -275,7 +301,7 @@ void show_help(const char* argv0)
                ". The default is 'grid'.\n"
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
+            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
 #endif
             << "\n"
             << "sequences:\n"
@@ -622,7 +648,8 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encoder,
                                                             heif_color_profile_nclx** out_nclx,
                                                             std::shared_ptr<heif_image> input_image,
-                                                            bool lossless)
+                                                            bool lossless,
+                                                            heif_output_nclx_color_profile_preset profile_preset)
 {
   *out_nclx = heif_nclx_color_profile_alloc();
   if (!*out_nclx) {
@@ -630,6 +657,105 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
   }
 
   heif_color_profile_nclx* nclx = *out_nclx; // abbreviation;
+
+
+  // set NCLX based on preset
+
+  switch (profile_preset) {
+    case heif_output_nclx_color_profile_preset_custom: {
+      heif_error error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
+      if (error.code) {
+        std::cerr << "Invalid matrix coefficients specified.\n";
+        exit(5);
+      }
+
+      error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
+      if (error.code) {
+        std::cerr << "Invalid transfer characteristics specified.\n";
+        exit(5);
+      }
+
+      error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
+      if (error.code) {
+        std::cerr << "Invalid color primaries specified.\n";
+        exit(5);
+      }
+
+      nclx->full_range_flag = (uint8_t) nclx_full_range;
+      break;
+    }
+
+    case heif_output_nclx_color_profile_preset_automatic: {
+      heif_color_profile_nclx* input_nclx = nullptr;
+
+      // --- use input image color profile, if it exists
+
+      heif_error error = heif_image_get_nclx_color_profile(input_image.get(), &input_nclx);
+      if (error.code == heif_error_Color_profile_does_not_exist) {
+
+        // input image has not color profile, guess one
+
+        if (heif_image_get_colorspace(input_image.get()) == heif_colorspace_RGB) {
+          // sRGB
+          nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5; // will be overwritten below if lossless
+          nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+          nclx->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
+        }
+        else {
+          // BT.709
+          nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5; // will be overwritten below if lossless
+          nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+          nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_709_5;
+        }
+      }
+      else if (error.code) {
+        std::cerr << "Cannot get input NCLX color profile.\n";
+        return error;
+      }
+      else {
+        // no error, we have an input color profile that we can use for output too
+
+        nclx->matrix_coefficients = input_nclx->matrix_coefficients;
+        nclx->transfer_characteristics = input_nclx->transfer_characteristics;
+        nclx->color_primaries = input_nclx->color_primaries;
+        nclx->full_range_flag = input_nclx->full_range_flag;
+
+        heif_nclx_color_profile_free(input_nclx);
+        input_nclx = nullptr;
+      }
+
+      assert(!input_nclx);
+      break;
+    }
+
+    case heif_output_nclx_color_profile_preset_Rec_601:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_601_6;
+      nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_601_6;
+      break;
+
+    case heif_output_nclx_color_profile_preset_compatible:
+    case heif_output_nclx_color_profile_preset_Rec_709:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+      nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_709_5;
+      break;
+
+    case heif_output_nclx_color_profile_preset_Rec_2020:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_2020_2_and_2100_0;
+
+      if (heif_image_has_channel(input_image.get(), heif_channel_Y) &&
+          heif_image_get_bits_per_pixel(input_image.get(), heif_channel_Y) <= 10) {
+        nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_2020_2_10bit;
+      }
+      else {
+        nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_2020_2_12bit;
+      }
+      break;
+  }
+
+  // modify NCLX depending on input image
 
   if (lossless) {
       heif_encoder_set_lossless(encoder, true);
@@ -644,27 +770,7 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
         }
       }
       else {
-        heif_color_profile_nclx* input_nclx = nullptr;
-
-        heif_error error = heif_image_get_nclx_color_profile(input_image.get(), &input_nclx);
-        if (error.code == heif_error_Color_profile_does_not_exist) {
-          // NOP, use default NCLX profile
-        }
-        else if (error.code) {
-          std::cerr << "Cannot get input NCLX color profile.\n";
-          return error;
-        }
-        else {
-          nclx->matrix_coefficients = input_nclx->matrix_coefficients;
-          nclx->transfer_characteristics = input_nclx->transfer_characteristics;
-          nclx->color_primaries = input_nclx->color_primaries;
-          nclx->full_range_flag = input_nclx->full_range_flag;
-
-          heif_nclx_color_profile_free(input_nclx);
-          input_nclx = nullptr;
-        }
-
-        assert(!input_nclx);
+        heif_error error;
 
         // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
         switch (heif_image_get_chroma_format(input_image.get())) {
@@ -687,25 +793,6 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
           return error;
         }
       }
-  }
-
-  if (!lossless) {
-    heif_error error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
-    if (error.code) {
-      std::cerr << "Invalid matrix coefficients specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
-    if (error.code) {
-      std::cerr << "Invalid transfer characteristics specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
-    if (error.code) {
-      std::cerr << "Invalid color primaries specified.\n";
-      exit(5);
-    }
-    nclx->full_range_flag = (uint8_t) nclx_full_range;
   }
 
   return {heif_error_Ok};
@@ -1188,6 +1275,30 @@ int main(int argc, char** argv)
           }
         }
         break;
+      case OPTION_COLOR_PROFILE_PRESET:
+        if (strcmp(optarg, "auto")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_automatic;
+        }
+        else if (strcmp(optarg, "custom")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_custom;
+        }
+        else if (strcmp(optarg, "compatible")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_compatible;
+        }
+        else if (strcmp(optarg, "601")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_601;
+        }
+        else if (strcmp(optarg, "709")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_709;
+        }
+        else if (strcmp(optarg, "2020")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_2020;
+        }
+        else {
+          std::cerr << "Invalid color-profile preset.\n";
+          return 5;
+        }
+        break;
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
         break;
@@ -1486,7 +1597,8 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 #endif
 
     heif_color_profile_nclx* nclx;
-    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, primary_image, lossless);
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, primary_image,
+                                                                        lossless, output_color_profile_preset);
     if (error.code) {
       std::cerr << error.message << "\n";
       return 5;
@@ -1846,7 +1958,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     }
 
     heif_color_profile_nclx* nclx;
-    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless);
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless, output_color_profile_preset);
     if (error.code) {
       std::cerr << error.message << "\n";
       return 5;
