@@ -102,6 +102,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   heif_get_file_mime_type(data, clip_int(size));
 
   ctx = heif_context_alloc();
+  heif_context_get_security_limits(ctx)->max_total_memory = UINT64_C(2) * 1024 * 1024 * 1024;
   assert(ctx);
 
   auto* limits = heif_context_get_security_limits(ctx);
