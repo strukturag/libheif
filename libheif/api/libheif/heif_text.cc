@@ -21,12 +21,14 @@
 
 #include "heif_text.h"
 #include "api_structs.h"
+#include "file.h"
 #include "text.h"
 #include <algorithm>
 #include <cstring>
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
+#include <vector>
 
 struct heif_error heif_image_handle_add_text_item(heif_image_handle *image_handle,
                                            const char *content_type,
@@ -113,4 +115,62 @@ const char* heif_text_item_get_content(struct heif_text_item* text_item)
   strcpy(text_c, txt.c_str());
 
   return text_c;
+}
+
+struct heif_error heif_item_get_property_extended_language(const heif_context* context,
+                                                           heif_item_id itemId,
+                                                           heif_property_id propertyId,
+                                                           char** out_language)
+{
+  if (!out_language || !context) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto elng = std::dynamic_pointer_cast<Box_elng>(properties[propertyId - 1]);
+  if (!elng) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
+  }
+
+  std::string lang = elng->get_extended_language();
+  *out_language = new char[lang.length() + 1];
+  strcpy(*out_language, lang.c_str());
+
+  return heif_error_success;
+}
+
+struct heif_error heif_text_item_add_extended_language(heif_text_item* text_item, const char *language, heif_property_id* out_optional_propertyId)
+{
+  if (!text_item || !language) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  if (auto img = text_item->context->get_image(text_item->text_item->get_item_id(), false)) {
+    auto existing_elng = img->get_property<Box_elng>();
+    if (existing_elng) {
+      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item already has an elng property"};
+    }
+  }
+
+  auto elng = std::make_shared<Box_elng>();
+  elng->set_lang(std::string(language));
+
+  heif_property_id id = text_item->context->add_property(text_item->text_item->get_item_id(), elng, false);
+
+  if (out_optional_propertyId) {
+    *out_optional_propertyId = id;
+  }
+
+  return heif_error_success;
 }
