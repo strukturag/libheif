@@ -36,7 +36,7 @@
 #include "bitstream.h"
 
 #include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
-
+#include "file.h"
 #include "region.h"
 
 #include "text.h"
@@ -223,6 +223,41 @@ public:
     return nullptr;
   }
 
+  template<typename T>
+  Result<std::shared_ptr<T>> find_property(heif_item_id itemId, heif_property_id propertyId)
+  {
+    auto file = this->get_heif_file();
+
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = file->get_properties(itemId, properties);
+    if (err) {
+      return err;
+    }
+
+    if (propertyId < 1 || propertyId - 1 >= properties.size()) {
+      Error(heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range");
+    }
+
+    auto box = properties[propertyId - 1];
+    auto box_casted = std::dynamic_pointer_cast<T>(box);
+    if (!box_casted) {
+      return Error(heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type");
+    }
+
+    return box_casted;
+  }
+
+  template<typename T>
+  Result<std::shared_ptr<T>> find_property(heif_item_id itemId) {
+    auto file = this->get_heif_file();
+    auto result = file->get_property_for_item<T>(itemId);
+    if (!result) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_properties_assigned_to_item,
+                   "property not found on item");
+    }
+    return result;
+  }
 
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;
