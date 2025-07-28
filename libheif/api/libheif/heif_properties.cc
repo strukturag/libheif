@@ -153,15 +153,15 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
   }
   auto udes = context->context->find_property<Box_udes>(itemId, propertyId);
   if (!udes) {
-    return udes.error.error_struct(context->context.get());
+    return udes.error_struct(context->context.get());
   }
 
   auto* udes_c = new heif_property_user_description();
   udes_c->version = 1;
-  udes_c->lang = create_c_string_copy(udes.value->get_lang());
-  udes_c->name = create_c_string_copy(udes.value->get_name());
-  udes_c->description = create_c_string_copy(udes.value->get_description());
-  udes_c->tags = create_c_string_copy(udes.value->get_tags());
+  udes_c->lang = create_c_string_copy((*udes)->get_lang());
+  udes_c->name = create_c_string_copy((*udes)->get_name());
+  udes_c->description = create_c_string_copy((*udes)->get_description());
+  udes_c->tags = create_c_string_copy((*udes)->get_tags());
 
   *out = udes_c;
 
@@ -218,18 +218,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
     return heif_transform_mirror_direction_invalid;
   }
 
-  return imir.value->get_mirror_direction();
-}
-
-enum heif_transform_mirror_direction heif_item_get_property_transform_mirror2(const struct heif_context* context,
-                                                                             heif_item_id itemId)
-{
-  auto imir = context->context->find_property<Box_imir>(itemId);
-  if (!imir) {
-    return heif_transform_mirror_direction_invalid;
-  }
-
-  return imir.value->get_mirror_direction();
+  return (*imir)->get_mirror_direction();
 }
 
 
@@ -242,19 +231,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
     return -1;
   }
 
-  return irot.value->get_rotation_ccw();
-}
-
-
-int heif_item_get_property_transform_rotation_ccw2(const struct heif_context* context,
-                                                   heif_item_id itemId)
-{
-  auto irot = context->context->find_property<Box_irot>(itemId);
-  if (!irot) {
-    return -1;
-  }
-
-  return irot.value->get_rotation_ccw();
+  return (*irot)->get_rotation_ccw();
 }
 
 void heif_item_get_property_transform_crop_borders(const struct heif_context* context,
@@ -268,28 +245,12 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
     return;
   }
 
-  if (left) *left = clap.value->left_rounded(image_width);
-  if (right) *right = image_width - 1 - clap.value->right_rounded(image_width);
-  if (top) *top = clap.value->top_rounded(image_height);
-  if (bottom) *bottom = image_height - 1 - clap.value->bottom_rounded(image_height);
+  if (left) *left = (*clap)->left_rounded(image_width);
+  if (right) *right = image_width - 1 - (*clap)->right_rounded(image_width);
+  if (top) *top = (*clap)->top_rounded(image_height);
+  if (bottom) *bottom = image_height - 1 - (*clap)->bottom_rounded(image_height);
 }
 
-
-void heif_item_get_property_transform_crop_borders2(const struct heif_context* context,
-                                                    heif_item_id itemId,
-                                                    int image_width, int image_height,
-                                                    int* left, int* top, int* right, int* bottom)
-{
-  auto clap = context->context->find_property<Box_clap>(itemId);
-  if (!clap) {
-    return;
-  }
-
-  if (left) *left = clap.value->left_rounded(image_width);
-  if (right) *right = image_width - 1 - clap.value->right_rounded(image_width);
-  if (top) *top = clap.value->top_rounded(image_height);
-  if (bottom) *bottom = image_height - 1 - clap.value->bottom_rounded(image_height);
-}
 
 struct heif_error heif_item_add_raw_property(const struct heif_context* context,
                                               heif_item_id itemId,
@@ -333,15 +294,15 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
   }
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
   if (!box_other) {
-    return box_other.error.error_struct(context->context.get());
+    return box_other.error_struct(context->context.get());
   }
 
   // TODO: every Box (not just Box_other) should have a get_raw_data() method.
-  if (box_other.value == nullptr) {
+  if (*box_other == nullptr) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
-  const auto& data = box_other.value->get_raw_data();
+  const auto& data = (*box_other)->get_raw_data();
 
   *size_out = data.size();
 
@@ -360,16 +321,15 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
 
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
   if (!box_other) {
-    return box_other.error.error_struct(context->context.get());
+    return box_other.error_struct(context->context.get());
   }
 
   // TODO: every Box (not just Box_other) should have a get_raw_data() method.
-  if (box_other.value == nullptr) {
+  if (*box_other == nullptr) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
-  auto data = box_other.value->get_raw_data();
-
+  auto data = (*box_other)->get_raw_data();
 
   std::copy(data.begin(), data.end(), data_out);
 
@@ -388,14 +348,14 @@ struct heif_error heif_item_get_property_uuid_type(const struct heif_context* co
 
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
   if (!box_other) {
-    return box_other.error.error_struct(context->context.get());
+    return box_other.error_struct(context->context.get());
   }
 
-  if (box_other.value == nullptr) {
+  if (*box_other == nullptr) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
-  auto uuid = box_other.value->get_uuid_type();
+  auto uuid = (*box_other)->get_uuid_type();
 
   std::copy(uuid.begin(), uuid.end(), extended_type);
 

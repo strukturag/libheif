@@ -228,13 +228,18 @@ public:
   {
     auto file = this->get_heif_file();
 
+    // For propertyId == 0, return the first property with this type.
+    if (propertyId == 0) {
+      return find_property<T>(itemId);
+    }
+
     std::vector<std::shared_ptr<Box>> properties;
     Error err = file->get_properties(itemId, properties);
     if (err) {
       return err;
     }
 
-    if (propertyId < 1 || propertyId - 1 >= properties.size()) {
+    if (propertyId - 1 >= properties.size()) {
       Error(heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range");
     }
 
