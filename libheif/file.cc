@@ -242,12 +242,12 @@ void HeifFile::write(StreamWriter& writer)
 
   if (m_mdat_data) {
     Result<size_t> mdatResult = write_mdat(writer);
-    if (mdatResult.error) {
+    if (!mdatResult) {
       return; // TODO: error ?
     }
 
     for (auto& box : m_top_level_boxes) {
-      box->patch_file_pointers_recursively(writer, mdatResult.value);
+      box->patch_file_pointers_recursively(writer, *mdatResult);
     }
   }
 }
@@ -974,19 +974,16 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
 Result<heif_item_id> HeifFile::add_infe(uint32_t item_type, const uint8_t* data, size_t size)
 {
-  Result<heif_item_id> result;
-
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
   auto infe_box = add_new_infe_box(item_type);
   infe_box->set_hidden_item(true);
 
   heif_item_id metadata_id = infe_box->get_item_ID();
-  result.value = metadata_id;
 
   set_item_data(infe_box, data, size, heif_metadata_compression_off);
 
-  return result;
+  return metadata_id;
 }
 
 
@@ -998,8 +995,6 @@ void HeifFile::add_infe_box(heif_item_id id, std::shared_ptr<Box_infe> infe)
 
 Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size)
 {
-  Result<heif_item_id> result;
-
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
   auto infe_box = add_new_infe_box(fourcc("mime"));
@@ -1007,18 +1002,15 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
   infe_box->set_content_type(content_type);
 
   heif_item_id metadata_id = infe_box->get_item_ID();
-  result.value = metadata_id;
 
   set_item_data(infe_box, data, size, content_encoding);
 
-  return result;
+  return metadata_id;
 }
 
 
 Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size)
 {
-  Result<heif_item_id> result;
-
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
   auto infe_box = add_new_infe_box(fourcc("mime"));
@@ -1026,18 +1018,15 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
   infe_box->set_content_type(content_type);
 
   heif_item_id metadata_id = infe_box->get_item_ID();
-  result.value = metadata_id;
 
   set_precompressed_item_data(infe_box, data, size, std::move(content_encoding));
 
-  return result;
+  return metadata_id;
 }
 
 
 Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size)
 {
-  Result<heif_item_id> result;
-
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
   auto infe_box = add_new_infe_box(fourcc("uri "));
@@ -1045,11 +1034,10 @@ Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uin
   infe_box->set_item_uri_type(item_uri_type);
 
   heif_item_id metadata_id = infe_box->get_item_ID();
-  result.value = metadata_id;
 
   set_item_data(infe_box, data, size, heif_metadata_compression_off);
 
-  return result;
+  return metadata_id;
 }
 
 

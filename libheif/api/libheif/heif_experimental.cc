@@ -315,12 +315,12 @@ struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx
 
   if (result) {
     if (out_group_id) {
-      *out_group_id = result.value;
+      *out_group_id = result;
     }
     return heif_error_success;
   }
   else {
-    return result.error.error_struct(ctx->context.get());
+    return result.error_struct(ctx->context.get());
   }
 }
 
@@ -487,13 +487,13 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
   Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
   gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
 
-  if (gridImageResult.error != Error::Ok) {
-    return gridImageResult.error.error_struct(ctx->context.get());
+  if (!gridImageResult) {
+    return gridImageResult.error_struct(ctx->context.get());
   }
 
   if (out_grid_image_handle) {
     *out_grid_image_handle = new heif_image_handle;
-    (*out_grid_image_handle)->image = gridImageResult.value;
+    (*out_grid_image_handle)->image = *gridImageResult;
     (*out_grid_image_handle)->context = ctx->context;
   }
 

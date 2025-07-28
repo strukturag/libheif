@@ -200,8 +200,8 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                        bbox_size);
   heif_encoding_options_free(options);
 
-  if (encodingResult.error != Error::Ok) {
-    return encodingResult.error.error_struct(ctx->context.get());
+  if (!encodingResult) {
+    return encodingResult.error_struct(ctx->context.get());
   }
 
   std::shared_ptr<ImageItem> thumbnail_image = *encodingResult;

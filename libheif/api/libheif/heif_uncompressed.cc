@@ -98,13 +98,13 @@ struct heif_error heif_context_add_empty_unci_image(struct heif_context* ctx,
   Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
   unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
 
-  if (unciImageResult.error != Error::Ok) {
-    return unciImageResult.error.error_struct(ctx->context.get());
+  if (!unciImageResult) {
+    return unciImageResult.error_struct(ctx->context.get());
   }
 
   assert(out_unci_image_handle);
   *out_unci_image_handle = new heif_image_handle;
-  (*out_unci_image_handle)->image = unciImageResult.value;
+  (*out_unci_image_handle)->image = *unciImageResult;
   (*out_unci_image_handle)->context = ctx->context;
 
   return heif_error_success;

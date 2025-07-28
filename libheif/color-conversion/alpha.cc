@@ -160,11 +160,11 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                                    input_state.bits_per_pixel,
                                                                                    options, &options_ext_skip_alpha,
                                                                                    limits);
-    if (convInput.error) {
-      return convInput.error;
+    if (!convInput) {
+      return convInput.error();
     }
     else {
-      input = convInput.value;
+      input = *convInput;
     }
   }
 
@@ -273,11 +273,11 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                               input_state.bits_per_pixel,
                                                                               options, &options_ext_skip_alpha,
                                                                               limits);
-    if (convOutput.error) {
-      return convOutput.error;
+    if (!convOutput) {
+      return convOutput.error();
     }
     else {
-      return convOutput.value;
+      return convOutput;
     }
   }
   else {

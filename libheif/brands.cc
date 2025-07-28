@@ -147,9 +147,9 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
     compatible_brands.push_back(heif_brand2_iso8);
 
     auto track_result = ctx->get_track(0);
-    assert(!track_result.error);
+    assert(track_result);
 
-    std::shared_ptr<const Track> track = track_result.value;
+    std::shared_ptr<const Track> track = *track_result;
     std::shared_ptr<const Track_Visual> visual_track = std::dynamic_pointer_cast<const Track_Visual>(track);
 
     heif_brand2 track_brand = visual_track->get_compatible_brand();

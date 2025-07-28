@@ -130,12 +130,12 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
   Result<std::shared_ptr<HeifPixelImage>> decodingResult = decoder->decode_single_frame_from_compressed_data(options,
                                                                                                              m_heif_context->get_security_limits());
-  if (decodingResult.error) {
+  if (!decodingResult) {
     m_next_sample_to_be_processed++;
-    return decodingResult.error;
+    return decodingResult.error();
   }
 
-  auto image = decodingResult.value;
+  auto image = *decodingResult;
 
   if (m_stts) {
     image->set_sample_duration(m_stts->get_sample_duration(sample_idx));
@@ -145,11 +145,11 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
   if (m_aux_alpha_track) {
     auto alphaResult = m_aux_alpha_track->decode_next_image_sample(options);
-    if (alphaResult.error) {
-      return alphaResult.error;
+    if (!alphaResult) {
+      return alphaResult.error();
     }
 
-    auto alphaImage = alphaResult.value;
+    auto alphaImage = *alphaResult;
     image->transfer_plane_from_image_as(alphaImage, heif_channel_Y, heif_channel_Alpha);
   }
 
@@ -158,30 +158,30 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
   if (m_aux_reader_content_ids) {
     auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx);
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    Result<std::string> convResult = vector_to_string(readResult.value);
-    if (convResult.error) {
-      return convResult.error;
+    Result<std::string> convResult = vector_to_string(*readResult);
+    if (!convResult) {
+      return convResult.error();
     }
 
-    image->set_gimi_sample_content_id(convResult.value);
+    image->set_gimi_sample_content_id(*convResult);
   }
 
   if (m_aux_reader_tai_timestamps) {
     auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx);
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    auto resultTai = Box_itai::decode_tai_from_vector(readResult.value);
-    if (resultTai.error) {
-      return resultTai.error;
+    auto resultTai = Box_itai::decode_tai_from_vector(*readResult);
+    if (!resultTai) {
+      return resultTai.error();
     }
 
-    image->set_tai_timestamp(&resultTai.value);
+    image->set_tai_timestamp(&*resultTai);
   }
 
   m_next_sample_to_be_processed++;
@@ -230,20 +230,20 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
                                                                                                     h_encoder,
                                                                                                     options,
                                                                                                     m_heif_context->get_security_limits());
-  if (srcImageResult.error) {
-    return srcImageResult.error;
+  if (!srcImageResult) {
+    return srcImageResult.error();
   }
 
-  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = *srcImageResult;
 
   // --- encode image
 
   Result<Encoder::CodedImageData> encodeResult = encoder->encode(colorConvertedImage, h_encoder, options, input_class);
-  if (encodeResult.error) {
-    return encodeResult.error;
+  if (!encodeResult) {
+    return encodeResult.error();
   }
 
-  const Encoder::CodedImageData& data = encodeResult.value;
+  const Encoder::CodedImageData& data = *encodeResult;
 
 
   // --- generate SampleDescriptionBox

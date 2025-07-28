@@ -445,8 +445,8 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 #endif
 
     auto outResult = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options, m_options_ext, limits);
-    if (outResult.error) {
-      return outResult.error;
+    if (!outResult) {
+      return outResult.error();
     }
     else {
       out = *outResult;
@@ -640,8 +640,8 @@ Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shar
   std::shared_ptr<HeifPixelImage> non_const_input = std::const_pointer_cast<HeifPixelImage>(input);
 
   auto result = convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options, options_ext, limits);
-  if (result.error) {
-    return result.error;
+  if (!result) {
+    return result.error();
   }
   else {
     // TODO: can we simplify this? It's a bit awkward to do these assignments just to get a "const HeifPixelImage".

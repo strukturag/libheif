@@ -372,8 +372,8 @@ void HeifContext::write(StreamWriter& writer)
 
   for (auto& text_item : m_text_items) {
     auto encodeResult = text_item->encode();
-    if (encodeResult.error == Error::Ok) {
-      m_heif_file->append_iloc_data(text_item->get_item_id(), encodeResult.value, 1);
+    if (encodeResult) {
+      m_heif_file->append_iloc_data(text_item->get_item_id(), *encodeResult, 1);
     }
   }
 
@@ -954,10 +954,10 @@ Error HeifContext::interpret_heif_file_images()
     metadata->item_uri_type = std::move(item_uri_type);
 
     auto metadataResult = m_heif_file->get_uncompressed_item_data(id);
-    if (metadataResult.error) {
+    if (!metadataResult) {
       if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
-        return metadataResult.error;
+        return metadataResult.error();
       }
       else {
         // anything else is probably something that we don't understand yet
@@ -1021,8 +1021,8 @@ Error HeifContext::interpret_heif_file_images()
     region_item->item_id = id;
 
     Result regionDataResult = m_heif_file->get_uncompressed_item_data(id);
-    if (regionDataResult.error) {
-      return regionDataResult.error;
+    if (!regionDataResult) {
+      return regionDataResult.error();
     }
     region_item->parse(*regionDataResult);
 
@@ -1099,8 +1099,8 @@ Error HeifContext::interpret_heif_file_images()
     text_item->set_item_id(id);
 
     auto textDataResult = m_heif_file->get_uncompressed_item_data(id);
-    if (textDataResult.error) {
-      return textDataResult.error;
+    if (!textDataResult) {
+      return textDataResult.error();
     }
 
     text_item->parse(*textDataResult);
@@ -1169,7 +1169,7 @@ bool HeifContext::has_alpha(heif_item_id ID) const
   if (image_type == fourcc("grid")) {
 
     Result gridDataResult = m_heif_file->get_uncompressed_item_data(ID);
-    if (gridDataResult.error) {
+    if (!gridDataResult) {
       return false;
     }
 
@@ -1288,18 +1288,18 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 
 
   auto decodingResult = imgitem->decode_image(options, decode_only_tile, tx, ty);
-  if (decodingResult.error) {
-    return decodingResult.error;
+  if (!decodingResult) {
+    return decodingResult.error();
   }
 
-  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+  std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
 
   // --- convert to output chroma format
 
   auto img_result = convert_to_output_colorspace(img, out_colorspace, out_chroma, options);
-  if (img_result.error) {
-    return img_result.error;
+  if (!img_result) {
+    return img_result.error();
   }
   else {
     img = *img_result;
@@ -1422,11 +1422,11 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
                                                                                        encoder,
                                                                                        options,
                                                                                        get_security_limits());
-    if (srcImageResult.error) {
-      return srcImageResult.error;
+    if (!srcImageResult) {
+      return srcImageResult.error();
     }
 
-    colorConvertedImage = srcImageResult.value;
+    colorConvertedImage = *srcImageResult;
   }
   else {
     colorConvertedImage = pixel_image;
@@ -1454,7 +1454,7 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     std::shared_ptr<HeifPixelImage> alpha_image;
     auto alpha_image_result = create_alpha_image_from_image_alpha_channel(colorConvertedImage, get_security_limits());
     if (!alpha_image_result) {
-      return alpha_image_result.error;
+      return alpha_image_result.error();
     }
 
     alpha_image = *alpha_image_result;
@@ -1464,8 +1464,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
 
     auto alphaEncodingResult = encode_image(alpha_image, encoder, options,
                          heif_image_input_class_alpha);
-    if (alphaEncodingResult.error) {
-      return alphaEncodingResult.error;
+    if (!alphaEncodingResult) {
+      return alphaEncodingResult.error();
     }
 
     std::shared_ptr<ImageItem> heif_alpha_image = *alphaEncodingResult;
@@ -1560,8 +1560,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shar
   auto encodingResult = encode_image(thumbnail_image,
                        encoder, options,
                        heif_image_input_class_thumbnail);
-  if (encodingResult.error) {
-    return encodingResult.error;
+  if (!encodingResult) {
+    return encodingResult.error();
   }
 
   return *encodingResult;
@@ -1868,12 +1868,11 @@ Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
 Result<std::shared_ptr<const Track>> HeifContext::get_track(uint32_t track_id) const
 {
   auto result = const_cast<HeifContext*>(this)->get_track(track_id);
-  if (result.error) {
-    return result.error;
+  if (!result) {
+    return result.error();
   }
   else {
-    Result<std::shared_ptr<const Track>> my_result;
-    my_result.value = result.value;
+    Result<std::shared_ptr<const Track>> my_result(*result);
     return my_result;
   }
 }

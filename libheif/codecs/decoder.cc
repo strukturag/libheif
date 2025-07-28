@@ -223,20 +223,20 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
   // data from configuration blocks
 
   Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data();
-  if (confData.error) {
-    return confData.error;
+  if (!confData) {
+    return confData.error();
   }
 
-  std::vector<uint8_t> data = confData.value;
+  std::vector<uint8_t> data = *confData;
 
   // append image data
 
-  Result dataResult = m_data_extent.read_data();
-  if (dataResult.error) {
-    return dataResult.error;
+  auto dataResult = m_data_extent.read_data();
+  if (!dataResult) {
+    return dataResult.error();
   }
 
-  data.insert(data.end(), dataResult.value->begin(), dataResult.value->end());
+  data.insert(data.end(), (*dataResult)->begin(), (*dataResult)->end());
 
   return data;
 }
@@ -290,11 +290,11 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
   }
 
   auto dataResult = get_compressed_data();
-  if (dataResult.error) {
-    return dataResult.error;
+  if (!dataResult) {
+    return dataResult.error();
   }
 
-  err = m_decoder_plugin->push_data(m_decoder, dataResult.value.data(), dataResult.value.size());
+  err = m_decoder_plugin->push_data(m_decoder, dataResult->data(), dataResult->size());
   if (err.code != heif_error_Ok) {
     return Error(err.code, err.subcode, err.message);
   }

@@ -85,12 +85,12 @@ uint32_t heif_track_get_id(const struct heif_track* track)
 struct heif_track* heif_context_get_track(const struct heif_context* ctx, uint32_t track_id)
 {
   auto trackResult = ctx->context->get_track(track_id);
-  if (trackResult.error) {
+  if (!trackResult) {
     return nullptr;
   }
 
   auto* track = new heif_track;
-  track->track = trackResult.value;
+  track->track = *trackResult;
   track->context = ctx->context;
 
   return track;
@@ -188,7 +188,7 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
 
   auto decodingResult = visual_track->decode_next_image_sample(*opts);
   if (!decodingResult) {
-    return decodingResult.error.error_struct(track_ptr->context.get());
+    return decodingResult.error_struct(track_ptr->context.get());
   }
 
   std::shared_ptr<HeifPixelImage> img = *decodingResult;
@@ -197,8 +197,8 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
   // --- convert to output colorspace
 
   auto conversion_result = track_ptr->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
-  if (conversion_result.error) {
-    return conversion_result.error.error_struct(track_ptr->context.get());
+  if (!conversion_result) {
+    return conversion_result.error_struct(track_ptr->context.get());
   }
   else {
     img = *conversion_result;
@@ -227,12 +227,12 @@ heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const struct he
 {
   Result<std::string> uriResult = track->track->get_first_cluster_urim_uri();
 
-  if (uriResult.error.error_code) {
-    return uriResult.error.error_struct(track->context.get());
+  if (!uriResult) {
+    return uriResult.error_struct(track->context.get());
   }
 
   if (out_uri) {
-    const std::string& uri = uriResult.value;
+    const std::string uri = std::move(*uriResult);
 
     char* s = new char[uri.size() + 1];
     strncpy(s, uri.c_str(), uri.size());
@@ -261,10 +261,10 @@ struct heif_error heif_track_get_next_raw_sequence_sample(struct heif_track* tra
   // TODO: pass decoding options. We currently have no way to ignore the edit-list.
   auto decodingResult = track->get_next_sample_raw_data(nullptr);
   if (!decodingResult) {
-    return decodingResult.error.error_struct(track_ptr->context.get());
+    return decodingResult.error_struct(track_ptr->context.get());
   }
 
-  *out_sample = decodingResult.value;
+  *out_sample = *decodingResult;
 
   return heif_error_success;
 }
@@ -430,8 +430,8 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx,
   }
 
   Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(track_info, track_type, width,height);
-  if (addResult.error) {
-    return addResult.error.error_struct(ctx->context.get());
+  if (!addResult) {
+    return addResult.error_struct(ctx->context.get());
   }
 
   if (out_track) {
@@ -517,8 +517,8 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx
   }
 
   Result<std::shared_ptr<Track_Metadata>> addResult = ctx->context->add_uri_metadata_sequence_track(track_info, uri);
-  if (addResult.error) {
-    return addResult.error.error_struct(ctx->context.get());
+  if (!addResult) {
+    return addResult.error_struct(ctx->context.get());
   }
 
   if (out_track) {
@@ -761,11 +761,11 @@ size_t heif_track_find_referring_tracks(const heif_track* track, uint32_t refere
     // get the other track object
 
     auto other_trackResult = track->context->get_track(id);
-    if (other_trackResult.error) {
+    if (!other_trackResult) {
       continue; // TODO: should we return an error in this case?
     }
 
-    auto other_track = other_trackResult.value;
+    auto other_track = *other_trackResult;
 
     // get the references of the other track
 

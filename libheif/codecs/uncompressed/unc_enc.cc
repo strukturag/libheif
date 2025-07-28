@@ -37,11 +37,11 @@ Result<Encoder::CodedImageData> Encoder_uncompressed::encode(const std::shared_p
   Encoder::CodedImageData codedImage;
 
   Result<Encoder::CodedImageData> codingResult = ImageItem_uncompressed::encode_static(image, options);
-  if (codingResult.error) {
-    return codingResult;
+  if (!codingResult) {
+    return codingResult.error();
   }
 
-  codedImage = std::move(codingResult.value);
+  codedImage = *codingResult;
 
   // codedImage.bitstream = std::move(vec);
 

@@ -117,11 +117,11 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
                                                                                             true, x0,y0);
   heif_decoding_options_free(dec_options);
 
-  if (decodingResult.error.error_code != heif_error_Ok) {
-    return decodingResult.error.error_struct(in_handle->image.get());
+  if (!decodingResult) {
+    return decodingResult.error_struct(in_handle->image.get());
   }
 
-  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+  std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
   *out_img = new heif_image();
   (*out_img)->image = std::move(img);
@@ -184,11 +184,11 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
                                                                 *options);
   heif_encoding_options_free(options);
 
-  if (addGridResult.error) {
-    return addGridResult.error.error_struct(ctx->context.get());
+  if (!addGridResult) {
+    return addGridResult.error_struct(ctx->context.get());
   }
 
-  out_grid = addGridResult.value;
+  out_grid = *addGridResult;
 
   // Mark as primary image
   if (ctx->context->is_primary_image_set() == false) {
@@ -229,13 +229,13 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                                                                   static_cast<uint16_t>(tile_rows),
                                                                   static_cast<uint16_t>(tile_columns),
                                                                   encoding_options);
-  if (generateGridItemResult.error) {
-    return generateGridItemResult.error.error_struct(ctx->context.get());
+  if (!generateGridItemResult) {
+    return generateGridItemResult.error_struct(ctx->context.get());
   }
 
   if (out_grid_image_handle) {
     *out_grid_image_handle = new heif_image_handle;
-    (*out_grid_image_handle)->image = generateGridItemResult.value;
+    (*out_grid_image_handle)->image = *generateGridItemResult;
     (*out_grid_image_handle)->context = ctx->context;
   }
 

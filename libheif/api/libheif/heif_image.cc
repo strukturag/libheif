@@ -113,11 +113,11 @@ heif_error heif_image_crop(struct heif_image* img,
   }
 
   auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, nullptr);
-  if (cropResult.error) {
-    return cropResult.error.error_struct(img->image.get());
+  if (!cropResult) {
+    return cropResult.error_struct(img->image.get());
   }
 
-  img->image = cropResult.value;
+  img->image = *cropResult;
 
   return heif_error_success;
 }
@@ -129,12 +129,12 @@ struct heif_error heif_image_extract_area(const heif_image* srcimg,
                                           struct heif_image** out_image)
 {
   auto extractResult = srcimg->image->extract_image_area(x0,y0,w,h, limits);
-  if (extractResult.error) {
-    return extractResult.error.error_struct(srcimg->image.get());
+  if (!extractResult) {
+    return extractResult.error_struct(srcimg->image.get());
   }
 
   heif_image* area = new heif_image;
-  area->image = extractResult.value;
+  area->image = *extractResult;
 
   *out_image = area;
 

@@ -228,11 +228,11 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
   // === generate compressed image bitstream
 
   Result<Encoder::CodedImageData> encodeResult = encode(image, encoder, options, input_class);
-  if (encodeResult.error) {
+  if (!encodeResult) {
     return encodeResult;
   }
 
-  Encoder::CodedImageData& codedImage = encodeResult.value;
+  Encoder::CodedImageData& codedImage = *encodeResult;
 
   // === generate properties
 
@@ -384,11 +384,11 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // compress image and assign data to item
 
   Result<Encoder::CodedImageData> codingResult = encode_to_bitstream_and_boxes(image, encoder, options, input_class);
-  if (codingResult.error) {
-    return codingResult.error;
+  if (!codingResult) {
+    return codingResult.error();
   }
 
-  Encoder::CodedImageData& codedImage = codingResult.value;
+  Encoder::CodedImageData& codedImage = *codingResult;
 
   auto infe_box = ctx->get_heif_file()->add_new_infe_box(get_infe_type());
   heif_item_id image_id = infe_box->get_item_ID();
@@ -399,7 +399,7 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   // set item properties
 
-  for (auto& propertyBox : codingResult.value.properties) {
+  for (auto& propertyBox : codingResult->properties) {
     int index = ctx->get_heif_file()->get_ipco_box()->find_or_append_child_box(propertyBox);
     ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{propertyBox->is_essential(),
                                                                                                            uint16_t(index + 1)});
@@ -488,11 +488,11 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   auto decoderResult = get_decoder();
-  if (decoderResult.error) {
-    return decoderResult.error;
+  if (!decoderResult) {
+    return decoderResult.error();
   }
 
-  auto decoder = decoderResult.value;
+  auto decoder = *decoderResult;
 
   Error err = decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
@@ -508,11 +508,11 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
 int ImageItem::get_luma_bits_per_pixel() const
 {
   auto decoderResult = get_decoder();
-  if (decoderResult.error) {
-    return decoderResult.error;
+  if (!decoderResult) {
+    return decoderResult.error();
   }
 
-  auto decoder = decoderResult.value;
+  auto decoder = *decoderResult;
 
   return decoder->get_luma_bits_per_pixel();
 }
@@ -521,11 +521,11 @@ int ImageItem::get_luma_bits_per_pixel() const
 int ImageItem::get_chroma_bits_per_pixel() const
 {
   auto decoderResult = get_decoder();
-  if (decoderResult.error) {
-    return decoderResult.error;
+  if (!decoderResult) {
+    return decoderResult.error();
   }
 
-  auto decoder = decoderResult.value;
+  auto decoder = *decoderResult;
 
   return decoder->get_chroma_bits_per_pixel();
 }
@@ -586,14 +586,14 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
 Error ImageItem::transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const
 {
   Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-  if (propertiesResult.error) {
-    return propertiesResult.error;
+  if (!propertiesResult) {
+    return propertiesResult.error();
   }
 
   heif_image_tiling tiling = get_heif_image_tiling();
 
   //for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
-  for (auto propIter = propertiesResult.value.rbegin(); propIter != propertiesResult.value.rend(); propIter++) {
+  for (auto propIter = propertiesResult->rbegin(); propIter != propertiesResult->rend(); propIter++) {
     if (auto irot = std::dynamic_pointer_cast<Box_irot>(*propIter)) {
       switch (irot->get_rotation_ccw()) {
         case 90: {
@@ -669,11 +669,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // --- decode image
 
   Result<std::shared_ptr<HeifPixelImage>> decodingResult = decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
-  if (decodingResult.error) {
-    return decodingResult.error;
+  if (!decodingResult) {
+    return decodingResult.error();
   }
 
-  auto img = decodingResult.value;
+  auto img = *decodingResult;
 
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
 
@@ -684,8 +684,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
   if (options.ignore_transformations == false) {
     Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-    if (propertiesResult.error) {
-      return propertiesResult.error;
+    if (!propertiesResult) {
+      return propertiesResult.error();
     }
 
     const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
@@ -693,21 +693,21 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
         auto rotateResult = img->rotate_ccw(rot->get_rotation_ccw(), m_heif_context->get_security_limits());
-        if (rotateResult.error) {
+        if (!rotateResult) {
           return error;
         }
 
-        img = rotateResult.value;
+        img = *rotateResult;
       }
 
 
       if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
         auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction(),
                                                 get_context()->get_security_limits());
-        if (mirrorResult.error) {
+        if (!mirrorResult) {
           return error;
         }
-        img = mirrorResult.value;
+        img = *mirrorResult;
       }
 
 
@@ -738,11 +738,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
           }
 
           auto cropResult = img->crop(left, right, top, bottom, m_heif_context->get_security_limits());
-          if (cropResult.error) {
-            return cropResult.error;
+          if (!cropResult) {
+            return cropResult.error();
           }
 
-          img = cropResult.value;
+          img = *cropResult;
         }
       }
     }
@@ -763,11 +763,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     }
 
     auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0);
-    if (alphaDecodingResult.error) {
-      return alphaDecodingResult.error;
+    if (!alphaDecodingResult) {
+      return alphaDecodingResult.error();
     }
 
-    std::shared_ptr<HeifPixelImage> alpha = alphaDecodingResult.value;
+    std::shared_ptr<HeifPixelImage> alpha = *alphaDecodingResult;
 
     // TODO: check that sizes are the same and that we have an Y channel
     // BUT: is there any indication in the standard that the alpha channel should have the same size?
@@ -886,11 +886,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
   extent.set_from_image_item(get_file(), get_id());
 
   auto decoderResult = get_decoder();
-  if (decoderResult.error) {
-    return decoderResult.error;
+  if (!decoderResult) {
+    return decoderResult.error();
   }
 
-  auto decoder = decoderResult.value;
+  auto decoder = *decoderResult;
 
   decoder->set_data_extent(std::move(extent));
 
@@ -943,7 +943,7 @@ Result<std::vector<std::shared_ptr<Box>>> ImageItem::get_properties() const
 bool ImageItem::has_essential_property_other_than(const std::set<uint32_t>& props) const
 {
   Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-  if (propertiesResult.error) {
+  if (!propertiesResult) {
     return false;
   }
 
@@ -961,8 +961,8 @@ bool ImageItem::has_essential_property_other_than(const std::set<uint32_t>& prop
 Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tiling) const
 {
   Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-  if (propertiesResult.error) {
-    return propertiesResult.error;
+  if (!propertiesResult) {
+    return propertiesResult.error();
   }
 
   const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;

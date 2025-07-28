@@ -682,8 +682,8 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                                    encoder,
                                                    options,
                                                    heif_image_input_class_normal);
-  if (encodingResult.error != Error::Ok) {
-    return encodingResult.error.error_struct(ctx->context.get());
+  if (!encodingResult) {
+    return encodingResult.error_struct(ctx->context.get());
   }
 
   std::shared_ptr<ImageItem> image = *encodingResult;
@@ -741,11 +741,11 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 
   Result<std::shared_ptr<ImageItem_Overlay>> addImageResult = ImageItem_Overlay::add_new_overlay_item(ctx->context.get(), overlay);
 
-  if (addImageResult.error != Error::Ok) {
-    return addImageResult.error.error_struct(ctx->context.get());
+  if (!addImageResult) {
+    return addImageResult.error_struct(ctx->context.get());
   }
 
-  std::shared_ptr<ImageItem> iovlimage = addImageResult.value;
+  std::shared_ptr<ImageItem> iovlimage = *addImageResult;
 
 
   if (out_iovl_image_handle) {

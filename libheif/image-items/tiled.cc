@@ -541,8 +541,8 @@ Error ImageItem_Tiled::initialize_decoder()
   // TODO: remove when spec is final and old test images have been converted
   if (tilC_box->get_version() == 1) {
     auto propertiesResult = get_properties();
-    if (propertiesResult.error) {
-      return propertiesResult.error;
+    if (!propertiesResult) {
+      return propertiesResult.error();
     }
 
     m_tile_item->set_properties(*propertiesResult);
@@ -669,22 +669,22 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult;
   colorConversionResult = item->get_encoder()->convert_colorspace_for_encoding(image, encoder, *options, get_context()->get_security_limits());
-  if (colorConversionResult.error) {
+  if (!colorConversionResult) {
     heif_encoding_options_free(options);
-    return colorConversionResult.error;
+    return colorConversionResult.error();
   }
 
-  std::shared_ptr<HeifPixelImage> colorConvertedImage = colorConversionResult.value;
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = *colorConversionResult;
 
   Result<Encoder::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
   heif_encoding_options_free(options);
 
-  if (encodeResult.error) {
-    return encodeResult.error;
+  if (!encodeResult) {
+    return encodeResult.error();
   }
 
   const int construction_method = 0; // 0=mdat 1=idat
-  get_file()->append_iloc_data(get_id(), encodeResult.value.bitstream, construction_method);
+  get_file()->append_iloc_data(get_id(), encodeResult->bitstream, construction_method);
 
   auto& header = m_tild_header;
 
@@ -696,19 +696,19 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   }
 
   uint64_t offset = get_next_tild_position();
-  size_t dataSize = encodeResult.value.bitstream.size();
+  size_t dataSize = encodeResult->bitstream.size();
   if (dataSize > 0xFFFFFFFF) {
     return {heif_error_Encoding_error, heif_suberror_Unspecified, "Compressed tile size exceeds maximum tile size."};
   }
   header.set_tild_tile_range(tile_x, tile_y, offset, static_cast<uint32_t>(dataSize));
-  set_next_tild_position(offset + encodeResult.value.bitstream.size());
+  set_next_tild_position(offset + encodeResult->bitstream.size());
 
   auto tilC = get_property<Box_tilC>();
   assert(tilC);
 
   std::vector<std::shared_ptr<Box>>& tile_properties = tilC->get_tile_properties();
 
-  for (auto& propertyBox : encodeResult.value.properties) {
+  for (auto& propertyBox : encodeResult->properties) {
 
     // we do not have to save ispe boxes in the tile properties as this is automatically synthesized
 
@@ -802,11 +802,11 @@ ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
   }
 
   Result<std::vector<uint8_t>> dataResult = m_tile_item->read_bitstream_configuration_data();
-  if (dataResult.error) {
-    return dataResult.error;
+  if (!dataResult) {
+    return dataResult.error();
   }
 
-  std::vector<uint8_t>& data = dataResult.value;
+  std::vector<uint8_t> data = std::move(*dataResult);
   err = append_compressed_tile_data(data, tx, ty);
   if (err) {
     return err;
@@ -825,8 +825,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
 {
   Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
-  if (extentResult.error) {
-    return extentResult.error;
+  if (!extentResult) {
+    return extentResult.error();
   }
 
   m_tile_decoder->set_data_extent(std::move(*extentResult));
@@ -878,8 +878,8 @@ Error ImageItem_Tiled::get_coded_image_colorspace(heif_colorspace* out_colorspac
   uint32_t tx=0, ty=0; // TODO: find a tile that is defined.
 
   Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
-  if (extentResult.error) {
-    return extentResult.error;
+  if (!extentResult) {
+    return extentResult.error();
   }
 
   m_tile_decoder->set_data_extent(std::move(*extentResult));

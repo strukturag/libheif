@@ -150,22 +150,22 @@ struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
   }
 
   auto dataResult = ctx->context->get_heif_file()->get_item_data(item_id, out_compression_format);
-  if (dataResult.error) {
+  if (!dataResult) {
     *out_data_size = 0;
     if (out_data) {
       *out_data = 0;
     }
 
-    return dataResult.error.error_struct(ctx->context.get());
+    return dataResult.error_struct(ctx->context.get());
   }
 
   if (out_data_size) {
-    *out_data_size = dataResult.value.size();
+    *out_data_size = dataResult->size();
   }
 
   if (out_data) {
-    *out_data = new uint8_t[dataResult.value.size()];
-    memcpy(*out_data, dataResult.value.data(), dataResult.value.size());
+    *out_data = new uint8_t[dataResult->size()];
+    memcpy(*out_data, dataResult->data(), dataResult->size());
   }
 
   return heif_error_success;
@@ -272,11 +272,11 @@ struct heif_error heif_context_add_item(struct heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result.value;
+    *out_item_id = result;
     return heif_error_success;
   }
   else {
-    return result.error.error_struct(ctx->context.get());
+    return result.error_struct(ctx->context.get());
   }
 }
 
@@ -289,11 +289,11 @@ struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result.value;
+    *out_item_id = result;
     return heif_error_success;
   }
   else {
-    return result.error.error_struct(ctx->context.get());
+    return result.error_struct(ctx->context.get());
   }
 }
 
@@ -307,11 +307,11 @@ struct heif_error heif_context_add_precompressed_mime_item(struct heif_context* 
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_precompressed_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result.value;
+    *out_item_id = result;
     return heif_error_success;
   }
   else {
-    return result.error.error_struct(ctx->context.get());
+    return result.error_struct(ctx->context.get());
   }
 }
 
@@ -323,12 +323,10 @@ struct heif_error heif_context_add_uri_item(struct heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_uri(item_uri_type, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result.value;
+    *out_item_id = result;
     return heif_error_success;
   }
   else {
-    return result.error.error_struct(ctx->context.get());
+    return result.error_struct(ctx->context.get());
   }
 }
-
-

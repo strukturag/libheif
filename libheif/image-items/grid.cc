@@ -179,8 +179,8 @@ Error ImageItem_Grid::read_grid_spec()
   auto heif_file = get_context()->get_heif_file();
 
   auto gridDataResult = heif_file->get_uncompressed_item_data(get_id());
-  if (gridDataResult.error) {
-    return gridDataResult.error;
+  if (!gridDataResult) {
+    return gridDataResult.error();
   }
 
   Error err = m_grid_spec.parse(*gridDataResult);
@@ -436,11 +436,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   }
 
   auto decodeResult = tileItem->decode_image(options, false, 0, 0);
-  if (decodeResult.error) {
-    return decodeResult.error;
+  if (!decodeResult) {
+    return decodeResult.error();
   }
 
-  tile_img = decodeResult.value;
+  tile_img = *decodeResult;
 
   uint32_t w = get_grid_spec().get_width();
   uint32_t h = get_grid_spec().get_height();
@@ -685,8 +685,8 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                             encoder,
                                             *encoding_options,
                                             heif_image_input_class_normal);
-  if (encodingResult.error != Error::Ok) {
-    return encodingResult.error;
+  if (!encodingResult) {
+    return encodingResult.error();
   }
 
   std::shared_ptr<ImageItem> encoded_image = *encodingResult;
@@ -740,8 +740,8 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
                                             encoder,
                                             options,
                                             heif_image_input_class_normal);
-    if (encodingResult.error) {
-      return encodingResult.error;
+    if (!encodingResult) {
+      return encodingResult.error();
     }
     else {
       out_tile = *encodingResult;

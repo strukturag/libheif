@@ -181,11 +181,11 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
   if (!cmpC_box) {
     // assume no generic compression
     auto readResult = dataExtent.read_data(range_start_offset, range_size);
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    data->insert(data->end(), readResult.value.begin(), readResult.value.end());
+    data->insert(data->end(), readResult->begin(), readResult->end());
 
     return Error::Ok;
   }
@@ -202,16 +202,16 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
 
     // get data needed for one tile
     Result<std::vector<uint8_t>> readingResult = dataExtent.read_data(unit.unit_offset, unit.unit_size);
-    if (readingResult.error) {
-      return readingResult.error;
+    if (!readingResult) {
+      return readingResult.error();
     }
 
-    const std::vector<uint8_t>& compressed_bytes = readingResult.value;
+    const std::vector<uint8_t>& compressed_bytes = *readingResult;
 
     // decompress only the unit
     auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
-    if (dataResult.error) {
-      return dataResult.error;
+    if (!dataResult) {
+      return dataResult.error();
     }
 
     *data = std::move(*dataResult);
@@ -219,11 +219,11 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
   else if (icef_box) {
     // get all data and decode all
     Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    const std::vector<uint8_t>& compressed_bytes = *readResult.value;
+    const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
       auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
@@ -231,11 +231,11 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
 
       auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data));
-      if (dataResult.error) {
-        return dataResult.error;
+      if (!dataResult) {
+        return dataResult.error();
       }
 
-      const std::vector<uint8_t>& uncompressed_unit_data= dataResult.value;
+      const std::vector<uint8_t> uncompressed_unit_data = std::move(*dataResult);
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
     }
 
@@ -246,16 +246,16 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
   else {
     // get all data and decode all
     Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    std::vector<uint8_t> compressed_bytes = *readResult.value;
+    std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     // Decode as a single blob
     auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
-    if (dataResult.error) {
-      return dataResult.error;
+    if (!dataResult) {
+      return dataResult.error();
     }
 
     *data = std::move(*dataResult);

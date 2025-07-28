@@ -239,11 +239,11 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                                                                             chroma,
                                                                                             dec_options,
                                                                                             false, 0, 0);
-  if (decodingResult.error.error_code != heif_error_Ok) {
-    return decodingResult.error.error_struct(in_handle->image.get());
+  if (!decodingResult) {
+    return decodingResult.error_struct(in_handle->image.get());
   }
 
-  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+  std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
   *out_img = new heif_image();
   (*out_img)->image = std::move(img);

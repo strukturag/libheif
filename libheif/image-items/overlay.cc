@@ -253,8 +253,8 @@ Error ImageItem_Overlay::read_overlay_spec()
 
 
   auto overlayDataResult = heif_file->get_uncompressed_item_data(get_id());
-  if (overlayDataResult.error) {
-    return overlayDataResult.error;
+  if (!overlayDataResult) {
+    return overlayDataResult.error();
   }
 
   Error err = m_overlay_spec.parse(m_overlay_image_ids.size(), *overlayDataResult);
@@ -333,11 +333,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
     }
 
     auto decodeResult = imgItem->decode_image(options, false, 0,0);
-    if (decodeResult.error) {
-      return decodeResult.error;
+    if (!decodeResult) {
+      return decodeResult.error();
     }
 
-    std::shared_ptr<HeifPixelImage> overlay_img = decodeResult.value;
+    std::shared_ptr<HeifPixelImage> overlay_img = *decodeResult;
 
 
     // process overlay in RGB space
@@ -346,8 +346,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
         overlay_img->get_chroma_format() != heif_chroma_444) {
       auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options, options.color_conversion_options_ext,
                                                    get_context()->get_security_limits());
-      if (overlay_img_result.error) {
-        return overlay_img_result.error;
+      if (!overlay_img_result) {
+        return overlay_img_result.error();
       }
       else {
         overlay_img = *overlay_img_result;

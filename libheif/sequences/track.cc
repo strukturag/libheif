@@ -329,11 +329,11 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
           }
 
           Result contentIdResult = vector_to_string(data);
-          if (contentIdResult.error) {
+          if (!contentIdResult) {
             // TODO
           }
 
-          m_track_info.gimi_track_content_id = contentIdResult.value;
+          m_track_info.gimi_track_content_id = *contentIdResult;
         }
       }
     }
@@ -809,12 +809,12 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const struct h
 
   DataExtent extent = chunk->get_data_extent_for_sample(sample_idx);
   auto readResult = extent.read_data();
-  if (readResult.error) {
-    return readResult.error;
+  if (!readResult) {
+    return readResult.error();
   }
 
   heif_raw_sequence_sample* sample = new heif_raw_sequence_sample();
-  sample->data = *readResult.value;
+  sample->data = **readResult;
 
   // read sample duration
 
@@ -826,34 +826,34 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const struct h
 
   if (m_aux_reader_content_ids) {
     auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx);
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    if (!readResult.value.empty()) {
-      Result<std::string> convResult = vector_to_string(readResult.value);
-      if (convResult.error) {
-        return convResult.error;
+    if (!readResult->empty()) {
+      Result<std::string> convResult = vector_to_string(*readResult);
+      if (!convResult) {
+        return convResult.error();
       }
 
-      sample->gimi_sample_content_id = convResult.value;
+      sample->gimi_sample_content_id = *convResult;
     }
   }
 
   if (m_aux_reader_tai_timestamps) {
     auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx);
-    if (readResult.error) {
-      return readResult.error;
+    if (!readResult) {
+      return readResult.error();
     }
 
-    if (!readResult.value.empty()) {
-      auto resultTai = Box_itai::decode_tai_from_vector(readResult.value);
-      if (resultTai.error) {
-        return resultTai.error;
+    if (!readResult->empty()) {
+      auto resultTai = Box_itai::decode_tai_from_vector(*readResult);
+      if (!resultTai) {
+        return resultTai.error();
       }
 
       sample->timestamp = heif_tai_timestamp_packet_alloc();
-      heif_tai_timestamp_packet_copy(sample->timestamp, &resultTai.value);
+      heif_tai_timestamp_packet_copy(sample->timestamp, &*resultTai);
     }
   }
 

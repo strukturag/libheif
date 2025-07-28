@@ -296,8 +296,8 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
   // --- generate configuration property boxes
 
   Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), &options);
-  if (genHeadersResult.error) {
-    return genHeadersResult.error;
+  if (!genHeadersResult) {
+    return genHeadersResult.error();
   }
 
   const unciHeaders& headers = *genHeadersResult;
@@ -314,8 +314,8 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
   // --- encode image
 
   Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(src_image);
-  if (codedBitstreamResult.error) {
-    return codedBitstreamResult.error;
+  if (!codedBitstreamResult) {
+    return codedBitstreamResult.error();
   }
 
   codedImageData.bitstream = *codedBitstreamResult;
@@ -351,8 +351,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   // Generate headers
 
   Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, encoding_options);
-  if (genHeadersResult.error) {
-    return genHeadersResult.error;
+  if (!genHeadersResult) {
+    return genHeadersResult.error();
   }
 
   const unciHeaders& headers = *genHeadersResult;
@@ -437,8 +437,8 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
   uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
 
   Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image);
-  if (codedBitstreamResult.error) {
-    return codedBitstreamResult.error;
+  if (!codedBitstreamResult) {
+    return codedBitstreamResult.error();
   }
 
   std::shared_ptr<Box_cmpC> cmpC = get_property<Box_cmpC>();
@@ -456,7 +456,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
   }
   else {
     std::vector<uint8_t> compressed_data;
-    const std::vector<uint8_t>& raw_data = codedBitstreamResult.value;
+    const std::vector<uint8_t>& raw_data = std::move(*codedBitstreamResult);
     (void)raw_data;
 
     uint32_t compr = cmpC->get_compression_type();
