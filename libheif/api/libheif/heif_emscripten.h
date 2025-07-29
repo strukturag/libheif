@@ -43,7 +43,7 @@ static emscripten::val heif_js_context_get_image_handle(
     return emscripten::val(err);
   }
 
-  return emscripten::val(handle);
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
 }
 
 static emscripten::val heif_js_context_get_primary_image_handle(
@@ -61,7 +61,7 @@ static emscripten::val heif_js_context_get_primary_image_handle(
     return emscripten::val(err);
   }
 
-  return emscripten::val(handle);
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
 }
 
 
