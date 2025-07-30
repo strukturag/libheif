@@ -44,9 +44,9 @@ static emscripten::val heif_js_context_get_image_handle(
     return emscripten::val(err);
   }
 
-#if __EMSCRIPTEN_major__ > 4 || \
+#if __EMSCRIPTEN_major__ > 4 ||   \
     (__EMSCRIPTEN_major__ == 4 && \
-    __EMSCRIPTEN_tiny__ >= 9)
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
   return emscripten::val(handle, emscripten::allow_raw_pointers());
 #else
   return emscripten::val(handle);
@@ -68,9 +68,9 @@ static emscripten::val heif_js_context_get_primary_image_handle(
     return emscripten::val(err);
   }
 
-#if __EMSCRIPTEN_major__ > 4 || \
+#if __EMSCRIPTEN_major__ > 4 ||   \
     (__EMSCRIPTEN_major__ == 4 && \
-    __EMSCRIPTEN_tiny__ >= 9)
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
   return emscripten::val(handle, emscripten::allow_raw_pointers());
 #else
   return emscripten::val(handle);
