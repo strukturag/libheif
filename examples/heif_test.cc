@@ -150,7 +150,7 @@ int main(int argc, char** argv)
           int bytes = (img.get_bits_per_pixel(channel) + 7) / 8;
 
           size_t stride;
-          const uint8_t* p = img.get_plane(channel, &stride);
+          const uint8_t* p = img.get_plane2(channel, &stride);
           for (int y = 0; y < height; y++) {
             fwrite(p + y * stride, width, bytes, stdout);
           }
