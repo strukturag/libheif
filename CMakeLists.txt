@@ -521,8 +521,10 @@ endif()
 # --- API documentation
 
 # check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
+option(BUILD_DOCUMENTATION "Build doxygen documentation" ON)
+if (BUILD_DOCUMENTATION)
+  find_package(Doxygen)
+  if (DOXYGEN_FOUND)
     # set input and output files
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/libheif/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
@@ -537,9 +539,10 @@ if (DOXYGEN_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM )
-else (DOXYGEN_FOUND)
-  message("Doxygen tool needs to be installed to generate the API documentation")
-endif (DOXYGEN_FOUND)
+  else (DOXYGEN_FOUND)
+    message("Doxygen tool needs to be installed to generate the API documentation")
+  endif (DOXYGEN_FOUND)
+endif(BUILD_DOCUMENTATION)
 
 # --- Testing
 
