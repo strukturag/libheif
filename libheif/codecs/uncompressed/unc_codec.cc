@@ -586,7 +586,7 @@ Error UncompressedImageCodec::check_header_validity(std::optional<const std::sha
 
   if (cmpd) {
     for (const auto& comp : uncC->get_components()) {
-      if (comp.component_index > cmpd->get_components().size()) {
+      if (comp.component_index >= cmpd->get_components().size()) {
         return {heif_error_Invalid_input,
                 heif_suberror_Unspecified,
                 "Invalid component index in uncC box"};
