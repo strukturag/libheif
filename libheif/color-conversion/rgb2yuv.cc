@@ -51,7 +51,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
   }
 
   int matrix = target_state.nclx_profile.get_matrix_coefficients();
-  if (matrix == 8 || matrix == 11 || matrix == 14) {
+  if (matrix == 11 || matrix == 14) {
     return {};
   }
 
@@ -197,6 +197,11 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           out_y[y * out_y_stride + x] = (Pixel) clip_f_u16(v, fullRange);
         }
       }
+      else if (matrix_coeffs == 8) {
+        // Note: this is the YCgCo transform for equal Y/C bit depths, H.273(2024) Eq.51-57.
+        // To avoid a loss in accuracy, input bit-depth must be extended by two bits.
+        out_y[y * out_y_stride + x] = static_cast<Pixel>(in_g[y * in_g_stride + x] / 2 + (in_r[y * in_r_stride + x] + in_b[y * in_b_stride + x]) / 4);
+      }
       else {
         float r = in_r[y * in_r_stride + x];
         float g = in_g[y * in_g_stride + x];
@@ -227,6 +232,15 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           out_cr[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
               ((in_r[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
         }
+      }
+      else if (matrix_coeffs == 8) {
+        // Note: this is the YCgCo transform for equal Y/C bit depths, H.273(2024) Eq.51-57.
+        // To avoid a loss in accuracy, input bit-depth must be extended by two bits.
+        out_cb[(y / subV) * out_cb_stride + (x / subH)] = static_cast<Pixel>(clip_int_u16(in_g[y * in_g_stride + x] / 2
+                                                                                          - (in_r[y * in_r_stride + x] + in_b[y * in_b_stride + x]) / 4
+                                                                                          + halfRange, (uint16_t) fullRange));
+        out_cr[(y / subV) * out_cr_stride + (x / subH)] = static_cast<Pixel>(clip_int_u16((in_r[y * in_r_stride + x] - in_b[y * in_b_stride + x]) / 2
+                                                                                          + halfRange, (uint16_t) fullRange));
       }
       else {
         float r = in_r[y * in_r_stride + x];
