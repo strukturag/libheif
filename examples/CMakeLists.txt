@@ -76,7 +76,7 @@ if (WITH_EXAMPLE_HEIF_VIEW)
                 sdl.hh
                 common.cc
                 common.h)
-        target_link_libraries(heif-view PRIVATE heif SDL2::SDL2 SDL2::SDL2main)
+        target_link_libraries(heif-view PRIVATE heif SDL2::SDL2)
         install(TARGETS heif-view RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif ()
 endif ()
