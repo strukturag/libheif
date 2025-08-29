@@ -236,6 +236,12 @@ int main(int argc, char** argv)
 
   if (dump_boxes) {
     heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+
+    if (err.code != 0) {
+      std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
+      return 1;
+    }
+
     return 0;
   }
 
