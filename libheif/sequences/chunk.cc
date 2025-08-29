@@ -68,7 +68,7 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format
 }
 
 
-Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box> sample_description_box,
+Chunk::Chunk(HeifContext* ctx, uint32_t track_id,
              uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& stsz)
 {
   m_ctx = ctx;
@@ -92,10 +92,6 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box> sam
     m_sample_ranges.push_back(range);
 
     file_offset += range.size;
-  }
-
-  if (auto visualSampleDescription = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description_box)) {
-    m_decoder = Decoder::alloc_for_sequence_sample_description_box(visualSampleDescription);
   }
 }
 

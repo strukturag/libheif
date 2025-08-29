@@ -242,6 +242,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 
   uint32_t current_sample_idx = 0;
+  int32_t previous_sample_description_index = -1;
 
   for (size_t chunk_idx = 0; chunk_idx < chunk_offsets.size(); chunk_idx++) {
     auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(chunk_idx + 1));
@@ -267,14 +268,26 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       }
     }
 
-    auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
+    auto chunk = std::make_shared<Chunk>(ctx, m_id,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
                                          m_stco->get_offsets()[chunk_idx],
                                          m_stsz);
 
+    if (auto visualSampleDescription = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description)) {
+      if (chunk_idx > 0 && (int32_t) sampleToChunk.sample_description_index == previous_sample_description_index) {
+        // reuse decoder from previous chunk if it uses the sample sample_description_index
+        chunk->set_decoder(m_chunks[chunk_idx - 1]->get_decoder());
+      }
+      else {
+        // use a new decoder
+        chunk->set_decoder(Decoder::alloc_for_sequence_sample_description_box(visualSampleDescription));
+      }
+    }
+
     m_chunks.push_back(chunk);
 
     current_sample_idx += sampleToChunk.samples_per_chunk;
+    previous_sample_description_index = sampleToChunk.sample_description_index;
   }
 
   // --- read sample auxiliary information boxes
