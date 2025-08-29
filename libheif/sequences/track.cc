@@ -757,6 +757,7 @@ void Track::init_sample_timing_table()
       }
     }
 
+    timing.chunkIdx = current_chunk;
 
     media_timeline.push_back(timing);
   }
