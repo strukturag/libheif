@@ -1625,14 +1625,21 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
       }
       break;
     case heif_colorspace_RGB:
-      if (auto err = add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R), limits)) {
-        return err;
+      if (chroma == heif_chroma_444) {
+        if (auto err = add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R), limits)) {
+          return err;
+        }
+        if (auto err = add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G), limits)) {
+          return err;
+        }
+        if (auto err = add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B), limits)) {
+          return err;
+        }
       }
-      if (auto err = add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G), limits)) {
-        return err;
-      }
-      if (auto err = add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B), limits)) {
-        return err;
+      else {
+        if (auto err = add_plane(heif_channel_interleaved, w, h, source->get_bits_per_pixel(heif_channel_interleaved), limits)) {
+          return err;
+        }
       }
       break;
     default:
@@ -1640,7 +1647,7 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
       break;
   }
 
-  if (source->has_alpha()) {
+  if (source->has_channel(heif_channel_Alpha)) {
       if (auto err = add_plane(heif_channel_Alpha, w, h, source->get_bits_per_pixel(heif_channel_Alpha), limits)) {
         return err;
       }

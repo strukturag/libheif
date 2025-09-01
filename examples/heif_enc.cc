@@ -917,8 +917,8 @@ public:
   {
     mImage = load_image(filename, output_bit_depth);
 
-    mWidth = heif_image_get_width(mImage.image.get(), heif_channel_Y);
-    mHeight = heif_image_get_height(mImage.image.get(), heif_channel_Y);
+    mWidth = heif_image_get_primary_width(mImage.image.get());
+    mHeight = heif_image_get_primary_height(mImage.image.get());
 
     mTileSize = tile_size;
   }
@@ -943,8 +943,8 @@ public:
     return tile;
   }
 
-  uint32_t get_image_width() const { return heif_image_get_width(mImage.image.get(), heif_channel_Y); }
-  uint32_t get_image_height() const { return heif_image_get_height(mImage.image.get(), heif_channel_Y); }
+  uint32_t get_image_width() const { return heif_image_get_primary_width(mImage.image.get()); }
+  uint32_t get_image_height() const { return heif_image_get_primary_height(mImage.image.get()); }
 
 private:
   InputImage mImage;
