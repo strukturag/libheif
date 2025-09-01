@@ -67,7 +67,7 @@ endif()
 
 
 if (WITH_EXAMPLE_HEIF_VIEW)
-    find_package(SDL2 NO_MODULE)
+    find_package(SDL2 COMPONENTS SDL2 SDL2main NO_MODULE)
 
     if (SDL2_FOUND)
         add_executable(heif-view ${getopt_sources}
@@ -76,7 +76,17 @@ if (WITH_EXAMPLE_HEIF_VIEW)
                 sdl.hh
                 common.cc
                 common.h)
-        target_link_libraries(heif-view PRIVATE heif SDL2::SDL2main SDL2::SDL2)
+        target_link_libraries(heif-view PRIVATE heif)
+        target_include_directories(heif-view PRIVATE ${libheif_SOURCE_DIR})
+        if (TARGET SDL2::SDL2main)
+                target_link_libraries(heif-view PRIVATE SDL2::SDL2main)
+        endif()
+        if (TARGET SDL2::SDL2)
+                target_link_libraries(heif-view PRIVATE SDL2::SDL2)
+        else()
+                target_include_directories(heif-view PRIVATE ${SDL2_INCLUDE_DIRS})
+                target_link_libraries(heif-view PRIVATE ${SDL2_LIBRARIES})
+        endif()
         install(TARGETS heif-view RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif ()
 endif ()
