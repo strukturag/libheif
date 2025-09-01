@@ -518,14 +518,24 @@ Error HeifContext::interpret_heif_file_images()
     std::vector<std::shared_ptr<Box>> properties;
     Error err = m_heif_file->get_properties(id, properties);
     if (err) {
-      return err;
+      if (imageItem == m_primary_image) {
+        m_primary_image.reset();
+      }
+      // Defer error until image is actually decoded.
+      m_all_images[id] = std::make_shared<ImageItem_Error>(infe_box->get_item_type_4cc(), id, err);
+      continue;
     }
 
     imageItem->set_properties(properties);
 
     err = imageItem->initialize_decoder();
     if (err) {
-      return err;
+      if (imageItem == m_primary_image) {
+        m_primary_image.reset();
+      }
+      // Defer error until image is actually decoded.
+      m_all_images[id] = std::make_shared<ImageItem_Error>(infe_box->get_item_type_4cc(), id, err);
+      continue;
     }
 
     imageItem->set_decoder_input_data();
@@ -687,6 +697,10 @@ Error HeifContext::interpret_heif_file_images()
 
     for (auto& pair : m_all_images) {
       auto& image = pair.second;
+
+      if (image->get_item_error()) {
+        continue;
+      }
 
       std::vector<Box_iref::Reference> references = iref_box->get_references_from(image->get_id());
 
