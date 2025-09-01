@@ -239,6 +239,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
     }
 
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
+    }
+
     // cut out the range that we actually need
     memcpy(data->data(), data->data() + range_start_offset, range_size);
     data->resize(range_size);
@@ -259,6 +265,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     }
 
     *data = std::move(*dataResult);
+
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
+    }
 
     // cut out the range that we actually need
     memcpy(data->data(), data->data() + range_start_offset, range_size);
