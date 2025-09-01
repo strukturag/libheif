@@ -15,12 +15,15 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# Check for unistd.h
+# Check for header files.
+include (${CMAKE_ROOT}/Modules/CheckIncludeFileCXX.cmake)
 
-include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+CHECK_INCLUDE_FILE_CXX(bit HAVE_BIT)
+if (HAVE_BIT)
+  add_definitions(-DHAVE_BIT)
+endif()
 
-CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
-
+CHECK_INCLUDE_FILE_CXX(unistd.h HAVE_UNISTD_H)
 if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
