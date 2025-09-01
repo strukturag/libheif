@@ -1964,17 +1964,23 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       return 5;
     }
 
-    options->save_alpha_channel = false; // TODO: sequences with alpha ?
-    options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
+    auto* seq_options = heif_sequence_encoding_options_alloc();
+
+    //seq_options->save_alpha_channel = false; // TODO: sequences with alpha ?
+    seq_options->output_nclx_profile = nclx;
+    //seq_options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
 
     heif_image_set_duration(image.get(), sequence_durations);
 
-    error = heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, seq_options);
     if (error.code) {
+      heif_nclx_color_profile_free(nclx);
+      heif_sequence_encoding_options_release(seq_options);
       std::cerr << "Cannot encode sequence image: " << error.message << "\n";
       return 5;
     }
 
+    heif_sequence_encoding_options_release(seq_options);
     heif_nclx_color_profile_free(nclx);
   }
 
