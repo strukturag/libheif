@@ -1811,7 +1811,7 @@ Error HeifContext::interpret_heif_file_sequences()
     }
     m_tracks.insert({track->get_id(), track});
 
-    if (track->is_visual_track()) {
+    if (track->is_visual_track() && m_visual_track_id == 0) {
       m_visual_track_id = track->get_id();
     }
   }
