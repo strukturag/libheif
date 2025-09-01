@@ -504,6 +504,20 @@ Error HeifContext::interpret_heif_file_images()
       continue;
     }
 
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_heif_file->get_properties(id, properties);
+    if (err) {
+      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+    }
+
+    imageItem->set_properties(properties);
+
+    err = imageItem->initialize_decoder();
+    if (err) {
+      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem->set_properties(properties);
+    }
+
     m_all_images.insert(std::make_pair(id, imageItem));
 
     if (!infe_box->is_hidden_item()) {
@@ -513,19 +527,6 @@ Error HeifContext::interpret_heif_file_images()
       }
 
       m_top_level_images.push_back(imageItem);
-    }
-
-    std::vector<std::shared_ptr<Box>> properties;
-    Error err = m_heif_file->get_properties(id, properties);
-    if (err) {
-      return err;
-    }
-
-    imageItem->set_properties(properties);
-
-    err = imageItem->initialize_decoder();
-    if (err) {
-      return err;
     }
 
     imageItem->set_decoder_input_data();

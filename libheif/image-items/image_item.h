@@ -287,11 +287,13 @@ public:
 
   virtual void set_decoder_input_data() { }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
-                                                       bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
+  virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
+                                                               bool decode_tile_only, uint32_t tile_x0,
+                                                               uint32_t tile_y0) const;
 
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
-                                                                          bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
+                                                                          bool decode_tile_only, uint32_t tile_x0,
+                                                                          uint32_t tile_y0) const;
 
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
 
@@ -460,6 +462,20 @@ public:
   }
 
   Error get_item_error() const override { return m_item_error; }
+
+  Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
+                                                       bool decode_tile_only, uint32_t tile_x0,
+                                                       uint32_t tile_y0) const override
+  {
+    return m_item_error;
+  }
+
+  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+                                                                  bool decode_tile_only, uint32_t tile_x0,
+                                                                  uint32_t tile_y0) const override
+  {
+    return m_item_error;
+  }
 
   [[nodiscard]] int get_luma_bits_per_pixel() const override { return -1; }
 
