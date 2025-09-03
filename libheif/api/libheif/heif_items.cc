@@ -289,7 +289,7 @@ struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result;
+    *out_item_id = *result;
     return heif_error_success;
   }
   else {
