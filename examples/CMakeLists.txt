@@ -52,7 +52,7 @@ if (WITH_HEADER_COMPRESSION)
 endif ()
 
 
-if (PNG_FOUND)
+if (WITH_EXAMPLE_HEIF_THUMB AND PNG_FOUND)
     add_executable(heif-thumbnailer ${getopt_sources}
             heif_thumbnailer.cc
             common.cc
