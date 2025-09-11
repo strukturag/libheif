@@ -89,7 +89,7 @@ void SampleAuxInfoHelper::add_nonpresent_sample()
 }
 
 
-void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<class HeifFile>& file)
+void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<HeifFile>& file)
 {
   if (m_interleaved && !m_data.empty()) {
     uint64_t pos = file->append_mdat_data(m_data);
@@ -99,7 +99,7 @@ void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<class HeifFile
   }
 }
 
-void SampleAuxInfoHelper::write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file)
+void SampleAuxInfoHelper::write_all(const std::shared_ptr<Box>& parent, const std::shared_ptr<HeifFile>& file)
 {
   parent->append_child_box(m_saiz);
   parent->append_child_box(m_saio);
@@ -163,7 +163,7 @@ Result<std::vector<uint8_t>> SampleAuxInfoReader::get_sample_info(const HeifFile
 }
 
 
-std::shared_ptr<class HeifFile> Track::get_file() const
+std::shared_ptr<HeifFile> Track::get_file() const
 {
   return m_heif_context->get_heif_file();
 }
@@ -802,7 +802,7 @@ void Track::init_sample_timing_table()
 }
 
 
-Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const struct heif_decoding_options* options)
+Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_decoding_options* options)
 {
   uint64_t num_output_samples = m_num_output_samples;
   if (options && options->ignore_sequence_editlist) {

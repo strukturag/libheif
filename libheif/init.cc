@@ -102,7 +102,7 @@ void load_plugins_if_not_initialized_yet()
 }
 
 
-struct heif_error heif_init(struct heif_init_params*)
+heif_error heif_init(heif_init_params*)
 {
 #if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());

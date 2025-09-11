@@ -661,7 +661,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
 
 Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                      const std::shared_ptr<HeifPixelImage>& image,
-                                     struct heif_encoder* encoder)
+                                     heif_encoder* encoder)
 {
   auto item = ImageItem::alloc_for_compression_format(get_context(), encoder->plugin->compression_format);
 
@@ -755,7 +755,7 @@ void ImageItem_Tiled::process_before_write()
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tiled::decode_compressed_image(const struct heif_decoding_options& options,
+ImageItem_Tiled::decode_compressed_image(const heif_decoding_options& options,
                                         bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {

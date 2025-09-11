@@ -68,7 +68,7 @@ static void openh264_deinit_plugin()
 }
 
 
-static int openh264_does_support_format(enum heif_compression_format format)
+static int openh264_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_AVC) {
     return OpenH264_PLUGIN_PRIORITY;
@@ -79,13 +79,12 @@ static int openh264_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error openh264_new_decoder(void** dec)
+heif_error openh264_new_decoder(void** dec)
 {
   auto* decoder = new openh264_decoder();
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
@@ -107,23 +106,22 @@ void openh264_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-struct heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  auto* decoder = (struct openh264_decoder*) decoder_raw;
+  auto* decoder = (openh264_decoder*) decoder_raw;
 
   const auto* input_data = (const uint8_t*) frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
-struct heif_error openh264_decode_next_image(void* decoder_raw, struct heif_image** out_img,
-                                             const heif_security_limits* limits)
+heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                      const heif_security_limits* limits)
 {
-  auto* decoder = (struct openh264_decoder*) decoder_raw;
+  auto* decoder = (openh264_decoder*) decoder_raw;
 
   if (decoder->data.size() < 4) {
     return kError_EOF;
@@ -246,8 +244,8 @@ struct heif_error openh264_decode_next_image(void* decoder_raw, struct heif_imag
   uint32_t width = sDstBufInfo.UsrData.sSystemBuffer.iWidth;
   uint32_t height = sDstBufInfo.UsrData.sSystemBuffer.iHeight;
 
-  struct heif_image* heif_img;
-  struct heif_error err{};
+  heif_image* heif_img;
+  heif_error err{};
 
   uint32_t cwidth, cheight;
 
@@ -330,14 +328,14 @@ struct heif_error openh264_decode_next_image(void* decoder_raw, struct heif_imag
   return heif_error_ok;
 }
 
-struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error openh264_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return openh264_decode_next_image(decoder_raw, out_img, limits);
 }
 
 
-static const struct heif_decoder_plugin decoder_openh264{
+static const heif_decoder_plugin decoder_openh264{
         4,
         openh264_plugin_name,
         openh264_init_plugin,
@@ -353,7 +351,7 @@ static const struct heif_decoder_plugin decoder_openh264{
 };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_openh264()
+const heif_decoder_plugin* get_decoder_plugin_openh264()
 {
   return &decoder_openh264;
 }

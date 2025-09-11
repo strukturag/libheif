@@ -272,7 +272,7 @@ Error ImageItem_Overlay::read_overlay_spec()
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const heif_decoding_options& options,
                                                                                    bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   return decode_overlay_image(options);

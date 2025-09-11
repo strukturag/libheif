@@ -104,7 +104,7 @@ Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, 
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(const struct heif_decoding_options& options)
+Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(const heif_decoding_options& options)
 {
   uint64_t num_output_samples = m_num_output_samples;
   if (options.ignore_sequence_editlist) {
@@ -191,8 +191,8 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 
 
 Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
-                                 struct heif_encoder* h_encoder,
-                                 const struct heif_encoding_options& in_options,
+                                 heif_encoder* h_encoder,
+                                 const heif_encoding_options& in_options,
                                  heif_image_input_class input_class)
 {
   if (image->get_width() > 0xFFFF ||

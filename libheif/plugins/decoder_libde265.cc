@@ -74,7 +74,7 @@ static void libde265_deinit_plugin()
 }
 
 
-static int libde265_does_support_format(enum heif_compression_format format)
+static int libde265_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_HEVC) {
     return LIBDE265_PLUGIN_PRIORITY;
@@ -85,10 +85,10 @@ static int libde265_does_support_format(enum heif_compression_format format)
 }
 
 
-static struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* decoder,
-                                                              const struct de265_image* de265img,
-                                                              struct heif_image** image,
-                                                              const heif_security_limits* limits)
+static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder,
+                                                       const de265_image* de265img,
+                                                       heif_image** image,
+                                                       const heif_security_limits* limits)
 {
   bool is_mono = (de265_get_chroma_format(de265img) == de265_chroma_mono);
 
@@ -162,10 +162,10 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 }
 
 
-static struct heif_error libde265_new_decoder(void** dec)
+static heif_error libde265_new_decoder(void** dec)
 {
   struct libde265_decoder* decoder = new libde265_decoder();
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
   decoder->ctx = de265_new_decoder();
 #if defined(__EMSCRIPTEN__)
@@ -183,7 +183,7 @@ static struct heif_error libde265_new_decoder(void** dec)
 
 static void libde265_free_decoder(void* decoder_raw)
 {
-  struct libde265_decoder* decoder = (struct libde265_decoder*) decoder_raw;
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
 
   de265_error err = de265_free_decoder(decoder->ctx);
   (void) err;
@@ -194,7 +194,7 @@ static void libde265_free_decoder(void* decoder_raw)
 
 void libde265_set_strict_decoding(void* decoder_raw, int flag)
 {
-  struct libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
 
   decoder->strict_decoding = flag;
 }
@@ -278,29 +278,31 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw,
 }
 #else
 
-static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
 {
-  struct libde265_decoder* decoder = (struct libde265_decoder*) decoder_raw;
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
 
   size_t ptr = 0;
   while (ptr < size) {
     if (4 > size - ptr) {
-      struct heif_error err = {heif_error_Decoder_plugin_error,
-                               heif_suberror_End_of_data,
-                               kEmptyString};
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        kEmptyString
+      };
     }
 
     uint32_t nal_size = static_cast<uint32_t>((cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]));
     ptr += 4;
 
     if (nal_size > size - ptr) {
-      struct heif_error err = {heif_error_Decoder_plugin_error,
-                               heif_suberror_End_of_data,
-                               kEmptyString};
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        kEmptyString
+      };
     }
 
     de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, nullptr);
@@ -310,17 +312,16 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
   // TODO(farindk): Set "err" if data could not be pushed
   //de265_push_data(decoder->ctx, data, size, 0, nullptr);
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
-static struct heif_error libde265_v1_decode_next_image(void* decoder_raw,
-                                                       struct heif_image** out_img,
-                                                       const heif_security_limits* limits)
+static heif_error libde265_v1_decode_next_image(void* decoder_raw,
+                                                heif_image** out_img,
+                                                const heif_security_limits* limits)
 {
-  struct libde265_decoder* decoder = (struct libde265_decoder*) decoder_raw;
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
+  heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
   de265_flush_data(decoder->ctx);
 
@@ -338,7 +339,7 @@ static struct heif_error libde265_v1_decode_next_image(void* decoder_raw,
 
     // TODO: read NCLX from h265 bitstream
 
-    const struct de265_image* image = de265_get_next_picture(decoder->ctx);
+    const de265_image* image = de265_get_next_picture(decoder->ctx);
     if (image) {
       // TODO(farindk): Should we return the first image instead?
       if (*out_img) {
@@ -382,8 +383,8 @@ static struct heif_error libde265_v1_decode_next_image(void* decoder_raw,
 }
 
 
-static struct heif_error libde265_v1_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static heif_error libde265_v1_decode_image(void* decoder_raw,
+                                           heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return libde265_v1_decode_next_image(decoder_raw, out_img, limits);
@@ -412,7 +413,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 #else
 
-static const struct heif_decoder_plugin decoder_libde265
+static const heif_decoder_plugin decoder_libde265
     {
         4,
         libde265_plugin_name,
@@ -430,7 +431,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 #endif
 
-const struct heif_decoder_plugin* get_decoder_plugin_libde265()
+const heif_decoder_plugin* get_decoder_plugin_libde265()
 {
   return &decoder_libde265;
 }

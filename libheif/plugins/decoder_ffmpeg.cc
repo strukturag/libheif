@@ -73,7 +73,7 @@ static void ffmpeg_deinit_plugin()
 }
 
 
-static int ffmpeg_does_support_format(enum heif_compression_format format)
+static int ffmpeg_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_HEVC) {
     return FFMPEG_DECODER_PLUGIN_PRIORITY;
@@ -84,9 +84,9 @@ static int ffmpeg_does_support_format(enum heif_compression_format format)
 }
 
 
-static struct heif_error ffmpeg_new_decoder(void** dec)
+static heif_error ffmpeg_new_decoder(void** dec)
 {
-  struct ffmpeg_decoder* decoder = new ffmpeg_decoder();
+  ffmpeg_decoder* decoder = new ffmpeg_decoder();
 
   *dec = decoder;
   return heif_error_success;
@@ -94,7 +94,7 @@ static struct heif_error ffmpeg_new_decoder(void** dec)
 
 static void ffmpeg_free_decoder(void* decoder_raw)
 {
-  struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
+  ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   delete decoder;
 }
@@ -102,15 +102,15 @@ static void ffmpeg_free_decoder(void* decoder_raw)
 
 void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
 {
-  struct ffmpeg_decoder* decoder = (ffmpeg_decoder*) decoder_raw;
+  ffmpeg_decoder* decoder = (ffmpeg_decoder*) decoder_raw;
 
   decoder->strict_decoding = flag;
 }
 
-static struct heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_t size)
+static heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_t size)
 {
 
-  struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
+  ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
 
@@ -119,7 +119,7 @@ static struct heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data
 
 
 
-static heif_chroma ffmpeg_get_chroma_format(enum AVPixelFormat pix_fmt) {
+static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8:
     case AV_PIX_FMT_GRAY10LE:
@@ -185,7 +185,7 @@ static int ffmpeg_get_chroma_height(const AVFrame* frame, heif_channel channel, 
     }
 }
 
-static int get_ffmpeg_format_bpp(enum AVPixelFormat pix_fmt)
+static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
 {
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8:
@@ -219,26 +219,23 @@ static int get_ffmpeg_format_bpp(enum AVPixelFormat pix_fmt)
   }
 }
 
-static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image,
-                                     const heif_security_limits* limits)
+static heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image,
+                              const heif_security_limits* limits)
 {
     int ret;
 
     ret = avcodec_send_packet(hevc_dec_ctx, hevc_pkt);
     if (ret < 0) {
-        struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet" };
-        return err;
+        return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet" };
     }
 
     ret = avcodec_receive_frame(hevc_dec_ctx, hevc_frame);
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
-        struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_receive_frame returned EAGAIN or ERROR_EOF" };
-        return err;
+        return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_receive_frame returned EAGAIN or ERROR_EOF" };
     }
     else if (ret < 0) {
-        struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_receive_frame" };
-        return err;
+        return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_receive_frame" };
     }
 
 
@@ -313,18 +310,19 @@ static struct heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* he
     }
     else
     {
-        struct heif_error err = { heif_error_Unsupported_feature,
-                                 heif_suberror_Unsupported_color_conversion,
-                                 "Pixel format not implemented" };
-        return err;
+        return {
+          heif_error_Unsupported_feature,
+          heif_suberror_Unsupported_color_conversion,
+          "Pixel format not implemented"
+        };
     }
 }
 
-static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
-                                                     struct heif_image** out_img,
-                                                     const heif_security_limits* limits)
+static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
+                                              heif_image** out_img,
+                                              const heif_security_limits* limits)
 {
-  struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
+  ffmpeg_decoder* decoder = (ffmpeg_decoder*) decoder_raw;
 
   int heif_idrpic_size;
   int heif_vps_size;
@@ -351,10 +349,11 @@ static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
   }
   else
   {
-      struct heif_error err = { heif_error_Decoder_plugin_error,
-                                heif_suberror_End_of_data,
-                                "Unexpected end of data" };
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        "Unexpected end of data"
+      };
   }
 
   if ((decoder->nalMap.count(NAL_UNIT_IDR_W_RADL) > 0) || (decoder->nalMap.count(NAL_UNIT_IDR_N_LP) > 0))
@@ -372,10 +371,11 @@ static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
   }
   else
   {
-      struct heif_error err = { heif_error_Decoder_plugin_error,
-                                heif_suberror_End_of_data,
-                                "Unexpected end of data" };
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        "Unexpected end of data"
+      };
   }
 
   const char hevc_AnnexB_StartCode[] = { 0x00, 0x00, 0x00, 0x01 };
@@ -417,10 +417,10 @@ static struct heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
   AVPacket* hevc_pkt = NULL;
   AVFrame* hevc_frame = NULL;
   AVCodecParameters* hevc_codecParam = NULL;
-  struct heif_color_profile_nclx* nclx = NULL;
+  heif_color_profile_nclx* nclx = NULL;
   int ret = 0;
 
-  struct heif_error err = heif_error_success;
+  heif_error err = heif_error_success;
 
   uint8_t* parse_hevc_data = NULL;
   int parse_hevc_data_size = 0;
@@ -524,15 +524,15 @@ errexit:
   return err;
 }
 
-static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
-                                                struct heif_image** out_img)
+static heif_error ffmpeg_v1_decode_image(void* decoder_raw,
+                                         heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return ffmpeg_v1_decode_next_image(decoder_raw, out_img, limits);
 }
 
 
-static const struct heif_decoder_plugin decoder_ffmpeg
+static const heif_decoder_plugin decoder_ffmpeg
     {
         4,
         ffmpeg_plugin_name,
@@ -548,7 +548,7 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_v1_decode_next_image
     };
 
-const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
+const heif_decoder_plugin* get_decoder_plugin_ffmpeg()
 {
   return &decoder_ffmpeg;
 }

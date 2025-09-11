@@ -216,7 +216,7 @@ Error ImageItem_Grid::read_grid_spec()
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
@@ -626,7 +626,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
                                                                           uint32_t output_height,
                                                                           uint16_t tile_rows,
                                                                           uint16_t tile_columns,
-                                                                          const struct heif_encoding_options* encoding_options)
+                                                                          const heif_encoding_options* encoding_options)
 {
   std::shared_ptr<ImageItem_Grid> grid_image;
   if (tile_rows > 0xFFFF / tile_columns) {
@@ -677,7 +677,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
 Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                      const std::shared_ptr<HeifPixelImage>& image,
-                                     struct heif_encoder* encoder)
+                                     heif_encoder* encoder)
 {
   auto encoding_options = get_encoding_options();
 
@@ -712,8 +712,8 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
                                                                                  const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
                                                                                  uint16_t rows,
                                                                                  uint16_t columns,
-                                                                                 struct heif_encoder* encoder,
-                                                                                 const struct heif_encoding_options& options)
+                                                                                 heif_encoder* encoder,
+                                                                                 const heif_encoding_options& options)
 {
   std::shared_ptr<ImageItem_Grid> griditem;
 

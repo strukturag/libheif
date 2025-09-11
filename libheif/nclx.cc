@@ -234,18 +234,18 @@ Error color_profile_nclx::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
-Error nclx_profile::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
+Error nclx_profile::get_nclx_color_profile(heif_color_profile_nclx** out_data) const
 {
   *out_data = nullptr;
 
-  struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+  heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
 
   if (nclx == nullptr) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Unspecified);
   }
 
-  struct heif_error err;
+  heif_error err;
 
   nclx->version = 1;
 
@@ -313,7 +313,7 @@ bool nclx_profile::is_undefined() const
 }
 
 
-void nclx_profile::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
+void nclx_profile::set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx)
 {
   if (nclx) {
     m_colour_primaries = nclx->color_primaries;

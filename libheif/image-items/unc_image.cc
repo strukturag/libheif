@@ -75,7 +75,7 @@ ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx)
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   std::shared_ptr<HeifPixelImage> img;
@@ -114,7 +114,7 @@ struct unciHeaders
 
 static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                             const heif_unci_image_parameters* parameters,
-                                            const struct heif_encoding_options* options)
+                                            const heif_encoding_options* options)
 {
   unciHeaders headers;
 
@@ -272,16 +272,16 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
 
 
 Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                                 struct heif_encoder* encoder,
-                                                                 const struct heif_encoding_options& options,
-                                                                 enum heif_image_input_class input_class)
+                                                                 heif_encoder* encoder,
+                                                                 const heif_encoding_options& options,
+                                                                 heif_image_input_class input_class)
 {
   return encode_static(src_image, options);
 }
 
 
 Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                               const struct heif_encoding_options& options)
+                                                               const heif_encoding_options& options)
 {
   auto parameters = std::unique_ptr<heif_unci_image_parameters,
                                     void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
@@ -326,7 +326,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
 
 Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci_item(HeifContext* ctx,
                                                                                       const heif_unci_image_parameters* parameters,
-                                                                                      const struct heif_encoding_options* encoding_options,
+                                                                                      const heif_encoding_options* encoding_options,
                                                                                       const std::shared_ptr<const HeifPixelImage>& prototype)
 {
   // Check input parameters

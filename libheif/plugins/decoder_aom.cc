@@ -74,7 +74,7 @@ static void aom_deinit_plugin()
 }
 
 
-static int aom_does_support_format(enum heif_compression_format format)
+static int aom_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_AV1) {
     return AOM_PLUGIN_PRIORITY;
@@ -85,9 +85,9 @@ static int aom_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error aom_new_decoder(void** dec)
+heif_error aom_new_decoder(void** dec)
 {
-  struct aom_decoder* decoder = new aom_decoder();
+  aom_decoder* decoder = new aom_decoder();
 
   decoder->iface = aom_codec_av1_dx();
 
@@ -97,21 +97,21 @@ struct heif_error aom_new_decoder(void** dec)
 
     delete decoder;
 
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
+    heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
     return err;
   }
 
   decoder->codec_initialized = true;
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
 }
 
 
 void aom_free_decoder(void* decoder_raw)
 {
-  struct aom_decoder* decoder = (aom_decoder*) decoder_raw;
+  aom_decoder* decoder = (aom_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -128,15 +128,15 @@ void aom_free_decoder(void* decoder_raw)
 
 void aom_set_strict_decoding(void* decoder_raw, int flag)
 {
-  struct aom_decoder* decoder = (aom_decoder*) decoder_raw;
+  aom_decoder* decoder = (aom_decoder*) decoder_raw;
 
   decoder->strict_decoding = flag;
 }
 
 
-struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  struct aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
+  aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
 
   const char* ver = aom_codec_version_str();
   (void)ver;
@@ -144,20 +144,20 @@ struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_
   aom_codec_err_t aomerr;
   aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*) frame_data, frame_size, NULL);
   if (aomerr) {
-    struct heif_error err = {heif_error_Invalid_input, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
+    heif_error err = {heif_error_Invalid_input, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
     return err;
   }
 
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
 }
 
 
-struct heif_error aom_decode_next_image(void* decoder_raw, struct heif_image** out_img,
+heif_error aom_decode_next_image(void* decoder_raw, heif_image** out_img,
                                         const heif_security_limits* limits)
 {
-  struct aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
+  aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
 
   aom_codec_iter_t iter = NULL;
   aom_image_t* img = NULL;
@@ -165,10 +165,11 @@ struct heif_error aom_decode_next_image(void* decoder_raw, struct heif_image** o
   img = aom_codec_get_frame(&decoder->codec, &iter);
 
   if (img == NULL) {
-    struct heif_error err = {heif_error_Decoder_plugin_error,
-                             heif_suberror_Unspecified,
-                             kEmptyString};
-    return err;
+    return {
+      heif_error_Decoder_plugin_error,
+      heif_suberror_Unspecified,
+      kEmptyString
+    };
   }
 
 
@@ -178,10 +179,11 @@ struct heif_error aom_decode_next_image(void* decoder_raw, struct heif_image** o
       img->fmt != AOM_IMG_FMT_I42216 &&
       img->fmt != AOM_IMG_FMT_I444 &&
       img->fmt != AOM_IMG_FMT_I44416) {
-    struct heif_error err = {heif_error_Decoder_plugin_error,
-                             heif_suberror_Unsupported_image_type,
-                             kEmptyString};
-    return err;
+    return {
+      heif_error_Decoder_plugin_error,
+      heif_suberror_Unsupported_image_type,
+      kEmptyString
+    };
   }
 
   heif_chroma chroma;
@@ -206,11 +208,11 @@ struct heif_error aom_decode_next_image(void* decoder_raw, struct heif_image** o
     colorspace = heif_colorspace_YCbCr;
   }
 
-  struct heif_image* heif_img = nullptr;
-  struct heif_error err = heif_image_create(img->d_w, img->d_h,
-                                            colorspace,
-                                            chroma,
-                                            &heif_img);
+  heif_image* heif_img = nullptr;
+  heif_error err = heif_image_create(img->d_w, img->d_h,
+                                     colorspace,
+                                     chroma,
+                                     &heif_img);
   if (err.code != heif_error_Ok) {
     assert(heif_img==nullptr);
     return err;
@@ -280,13 +282,13 @@ struct heif_error aom_decode_next_image(void* decoder_raw, struct heif_image** o
   return err;
 }
 
-struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error aom_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return aom_decode_next_image(decoder_raw, out_img, limits);
 }
 
-static const struct heif_decoder_plugin decoder_aom
+static const heif_decoder_plugin decoder_aom
     {
         4,
         aom_plugin_name,
@@ -303,7 +305,7 @@ static const struct heif_decoder_plugin decoder_aom
     };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_aom()
+const heif_decoder_plugin* get_decoder_plugin_aom()
 {
   return &decoder_aom;
 }

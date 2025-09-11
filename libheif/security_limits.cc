@@ -24,7 +24,7 @@
 #include <mutex>
 
 
-struct heif_security_limits global_security_limits{
+heif_security_limits global_security_limits{
     .version = 2,
 
     // --- version 1
@@ -53,7 +53,7 @@ struct heif_security_limits global_security_limits{
 };
 
 
-struct heif_security_limits disabled_security_limits{
+heif_security_limits disabled_security_limits{
     .version = 2
 };
 

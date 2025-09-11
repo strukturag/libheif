@@ -221,9 +221,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
 
 
 Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                                           struct heif_encoder* encoder,
-                                                                           const struct heif_encoding_options& options,
-                                                                           enum heif_image_input_class input_class)
+                                                                           heif_encoder* encoder,
+                                                                           const heif_encoding_options& options,
+                                                                           heif_image_input_class input_class)
 {
   // === generate compressed image bitstream
 
@@ -371,9 +371,9 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
 
 Error ImageItem::encode_to_item(HeifContext* ctx,
                                 const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class)
+                                heif_encoder* encoder,
+                                const heif_encoding_options& options,
+                                heif_image_input_class input_class)
 {
   uint32_t input_width = image->get_width();
   uint32_t input_height = image->get_height();
@@ -532,9 +532,9 @@ int ImageItem::get_chroma_bits_per_pixel() const
 
 
 Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                  struct heif_encoder* h_encoder,
-                                                  const struct heif_encoding_options& options,
-                                                  enum heif_image_input_class input_class)
+                                                  heif_encoder* h_encoder,
+                                                  const heif_encoding_options& options,
+                                                  heif_image_input_class input_class)
 {
   auto encoder = get_encoder();
   return encoder->encode(image, h_encoder, options, input_class);
@@ -542,8 +542,8 @@ Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixe
 
 
 void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
-                                  const struct heif_encoding_options& options,
-                                  enum heif_image_input_class input_class,
+                                  const heif_encoding_options& options,
+                                  heif_image_input_class input_class,
                                   const heif_color_profile_nclx* target_heif_nclx,
                                   Encoder::CodedImageData& inout_codedImage)
 {
@@ -642,7 +642,7 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   // --- check whether image size (according to 'ispe') exceeds maximum
@@ -879,7 +879,7 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 }
 #endif
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const heif_decoding_options& options,
                                                                            bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   DataExtent extent;

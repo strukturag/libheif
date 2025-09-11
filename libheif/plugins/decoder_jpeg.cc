@@ -74,7 +74,7 @@ static void jpeg_deinit_plugin()
 }
 
 
-static int jpeg_does_support_format(enum heif_compression_format format)
+static int jpeg_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_JPEG) {
     return JPEG_PLUGIN_PRIORITY;
@@ -85,19 +85,18 @@ static int jpeg_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error jpeg_new_decoder(void** dec)
+heif_error jpeg_new_decoder(void** dec)
 {
   struct jpeg_decoder* decoder = new jpeg_decoder();
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
 void jpeg_free_decoder(void* decoder_raw)
 {
-  struct jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
+  jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -113,21 +112,20 @@ void jpeg_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-struct heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
+  jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
   const uint8_t* input_data = (const uint8_t*)frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
 struct my_error_manager {
-  struct jpeg_error_mgr mgr;
+  jpeg_error_mgr mgr;
   jmp_buf setjmp_buffer;
 };
 
@@ -147,14 +145,13 @@ void on_jpeg_error(j_common_ptr cinfo)
 }
 
 
-struct heif_error jpeg_decode_next_image(void* decoder_raw, struct heif_image** out_img,
-                                         const heif_security_limits* limits)
+heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                  const heif_security_limits* limits)
 {
-  struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
+  jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
-
-  struct jpeg_decompress_struct cinfo;
-  struct my_error_manager jerr;
+  jpeg_decompress_struct cinfo;
+  my_error_manager jerr;
 
   // to store embedded icc profile
 //  uint32_t iccLen;
@@ -215,11 +212,11 @@ struct heif_error jpeg_decode_next_image(void* decoder_raw, struct heif_image** 
 
     // create destination image
 
-    struct heif_image* heif_img = nullptr;
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_monochrome,
-                                              heif_chroma_monochrome,
-                                              &heif_img);
+    heif_image* heif_img = nullptr;
+    heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                       heif_colorspace_monochrome,
+                                       heif_chroma_monochrome,
+                                       &heif_img);
     if (err.code != heif_error_Ok) {
       assert(heif_img==nullptr);
       return err;
@@ -261,11 +258,11 @@ struct heif_error jpeg_decode_next_image(void* decoder_raw, struct heif_image** 
 
     // create destination image
 
-    struct heif_image* heif_img = nullptr;
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_YCbCr,
-                                              heif_chroma_420,
-                                              &heif_img);
+    heif_image* heif_img = nullptr;
+    heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                       heif_colorspace_YCbCr,
+                                       heif_chroma_420,
+                                       &heif_img);
     if (err.code != heif_error_Ok) {
       assert(heif_img==nullptr);
       return err;
@@ -360,14 +357,14 @@ struct heif_error jpeg_decode_next_image(void* decoder_raw, struct heif_image** 
   return heif_error_ok;
 }
 
-struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error jpeg_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return jpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
 
-static const struct heif_decoder_plugin decoder_jpeg
+static const heif_decoder_plugin decoder_jpeg
     {
         4,
         jpeg_plugin_name,
@@ -384,7 +381,7 @@ static const struct heif_decoder_plugin decoder_jpeg
     };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_jpeg()
+const heif_decoder_plugin* get_decoder_plugin_jpeg()
 {
   return &decoder_jpeg;
 }

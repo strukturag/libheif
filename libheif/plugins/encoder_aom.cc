@@ -205,13 +205,13 @@ static const char* aom_plugin_name()
 
 #define MAX_NPARAMETERS 16
 
-static struct heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void aom_init_parameters()
 {
-  struct heif_encoder_parameter* p = aom_encoder_params;
-  const struct heif_encoder_parameter** d = aom_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = aom_encoder_params;
+  const heif_encoder_parameter** d = aom_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -389,7 +389,7 @@ static void aom_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** aom_list_parameters(void* encoder)
+const heif_encoder_parameter** aom_list_parameters(void* encoder)
 {
   return aom_encoder_parameter_ptrs;
 }
@@ -404,10 +404,10 @@ static void aom_cleanup_plugin()
 {
 }
 
-struct heif_error aom_new_encoder(void** enc)
+heif_error aom_new_encoder(void** enc)
 {
-  struct encoder_struct_aom* encoder = new encoder_struct_aom();
-  struct heif_error err = heif_error_ok;
+  encoder_struct_aom* encoder = new encoder_struct_aom();
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -420,15 +420,15 @@ struct heif_error aom_new_encoder(void** enc)
 
 void aom_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  struct encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   delete encoder;
 }
 
 
-struct heif_error aom_set_parameter_quality(void* encoder_raw, int quality)
+heif_error aom_set_parameter_quality(void* encoder_raw, int quality)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -439,18 +439,18 @@ struct heif_error aom_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error aom_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error aom_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (enable) {
     encoder->min_q = 0;
@@ -466,9 +466,9 @@ struct heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error aom_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error aom_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   *enable = encoder->lossless;
 
@@ -507,9 +507,9 @@ struct heif_error aom_get_parameter_logging_level(void* encoder_raw, int* loglev
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error aom_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return aom_set_parameter_quality(encoder, value);
@@ -545,9 +545,9 @@ struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error aom_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error aom_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return aom_get_parameter_quality(encoder, value);
@@ -577,9 +577,9 @@ struct heif_error aom_get_parameter_integer(void* encoder_raw, const char* name,
 }
 
 
-struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return aom_set_parameter_lossless(encoder, value);
@@ -606,9 +606,9 @@ struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return aom_get_parameter_lossless(encoder, value);
@@ -623,9 +623,9 @@ struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name,
 }
 
 
-struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
@@ -683,10 +683,10 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
 }
 
 
-struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
-                                           char* value, int value_size)
+heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
+                                    char* value, int value_size)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
@@ -731,8 +731,8 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
 
 static void aom_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = aom_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = aom_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -760,7 +760,7 @@ void aom_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma
 
 void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (*colorspace == heif_colorspace_monochrome) {
     // keep the monochrome colorspace
@@ -795,12 +795,12 @@ if (check_aom_error(aom_error, &codec, encoder, &err)) { \
 }
 
 
-struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* image,
-                                   heif_image_input_class input_class)
+heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
+                            heif_image_input_class input_class)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
-  struct heif_error err;
+  heif_error err;
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
   const int source_height = heif_image_get_height(image, heif_channel_Y);
@@ -931,10 +931,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   iface = aom_codec_av1_cx();
   //encoder->encoder = get_aom_encoder_by_name("av1");
   if (!iface) {
-    err = {heif_error_Unsupported_feature,
-           heif_suberror_Unsupported_codec,
-           "Unsupported codec: AOMedia Project AV1 Encoder"};
-    return err;
+    return {
+      heif_error_Unsupported_feature,
+      heif_suberror_Unsupported_codec,
+      "Unsupported codec: AOMedia Project AV1 Encoder"
+    };
   }
 
 
@@ -1058,7 +1059,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
 
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     assert(nclx == nullptr);
@@ -1195,10 +1196,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 }
 
 
-struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                          enum heif_encoded_data_type* type)
+heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                   heif_encoded_data_type* type)
 {
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (encoder->data_read) {
     *size = 0;
@@ -1214,7 +1215,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_aom
+static const heif_encoder_plugin encoder_plugin_aom
     {
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_AV1,
@@ -1247,7 +1248,7 @@ static const struct heif_encoder_plugin encoder_plugin_aom
         /* query_encoded_size (v3) */ nullptr
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_aom()
+const heif_encoder_plugin* get_encoder_plugin_aom()
 {
   return &encoder_plugin_aom;
 }

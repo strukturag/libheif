@@ -90,9 +90,9 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
-static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
-                                                           heif_suberror_Unspecified,
-                                                           "SVT-AV1 error"};
+static heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
+                                                  heif_suberror_Unspecified,
+                                                 "SVT-AV1 error"};
 
 static const int SVT_PLUGIN_PRIORITY = 40;
 
@@ -131,13 +131,13 @@ int int_log2(int pow2_value)
 
 #define MAX_NPARAMETERS 11
 
-static struct heif_encoder_parameter svt_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* svt_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter svt_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* svt_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void svt_init_parameters()
 {
-  struct heif_encoder_parameter* p = svt_encoder_params;
-  const struct heif_encoder_parameter** d = svt_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = svt_encoder_params;
+  const heif_encoder_parameter** d = svt_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -277,7 +277,7 @@ static void svt_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** svt_list_parameters(void* encoder)
+const heif_encoder_parameter** svt_list_parameters(void* encoder)
 {
   return svt_encoder_parameter_ptrs;
 }
@@ -292,7 +292,7 @@ static void svt_cleanup_plugin()
 {
 }
 
-struct heif_error svt_new_encoder(void** enc)
+heif_error svt_new_encoder(void** enc)
 {
   auto* encoder = new encoder_struct_svt();
   struct heif_error err = heif_error_ok;
@@ -314,9 +314,9 @@ void svt_free_encoder(void* encoder_raw)
 }
 
 
-struct heif_error svt_set_parameter_quality(void* encoder_raw, int quality)
+heif_error svt_set_parameter_quality(void* encoder_raw, int quality)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -327,18 +327,18 @@ struct heif_error svt_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error svt_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error svt_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
 #if SVT_AV1_CHECK_VERSION(3, 0, 0)
   encoder->lossless = enable;
@@ -355,9 +355,9 @@ struct heif_error svt_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error svt_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error svt_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
 #if SVT_AV1_CHECK_VERSION(3, 0, 0)
   *enable = encoder->lossless;
@@ -369,7 +369,7 @@ struct heif_error svt_get_parameter_lossless(void* encoder_raw, int* enable)
   return heif_error_ok;
 }
 
-struct heif_error svt_set_parameter_logging_level(void* encoder_raw, int logging)
+heif_error svt_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -384,7 +384,7 @@ struct heif_error svt_set_parameter_logging_level(void* encoder_raw, int logging
   return heif_error_ok;
 }
 
-struct heif_error svt_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+heif_error svt_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -401,9 +401,9 @@ struct heif_error svt_get_parameter_logging_level(void* encoder_raw, int* loglev
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error svt_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error svt_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_svt* encoder = (struct encoder_struct_svt*) encoder_raw;
+  encoder_struct_svt* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return svt_set_parameter_quality(encoder, value);
@@ -427,9 +427,9 @@ struct heif_error svt_set_parameter_integer(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error svt_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error svt_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return svt_get_parameter_quality(encoder, value);
@@ -450,9 +450,9 @@ struct heif_error svt_get_parameter_integer(void* encoder_raw, const char* name,
 }
 
 
-struct heif_error svt_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+heif_error svt_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return svt_set_parameter_lossless(encoder, value);
@@ -463,9 +463,9 @@ struct heif_error svt_set_parameter_boolean(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return svt_get_parameter_lossless(encoder, value);
@@ -477,9 +477,9 @@ struct heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name,
 }
 
 
-struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
   (void)encoder;
 
 #if 0
@@ -532,10 +532,10 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
 #endif
 
 
-struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
-                                           char* value, int value_size)
+heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
+                                    char* value, int value_size)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
   (void)encoder;
 
 #if 0
@@ -585,8 +585,8 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
 
 static void svt_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = svt_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = svt_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -625,7 +625,7 @@ void svt_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t input_height,
                             uint32_t* encoded_width, uint32_t* encoded_height)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   // SVT-AV1 (as of version 1.2.1) can only create image sizes matching the chroma format. Add padding if necessary.
 
@@ -651,10 +651,10 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
 }
 
 
-struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* image,
-                                   heif_image_input_class input_class)
+heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
+                            heif_image_input_class input_class)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
   EbErrorType res = EB_ErrorNone;
 
   encoder->compressed_data.clear();
@@ -730,7 +730,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.lossless = encoder->lossless;
 #endif
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     nclx = nullptr;
@@ -994,10 +994,10 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 }
 
 
-struct heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                          enum heif_encoded_data_type* type)
+heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                   heif_encoded_data_type* type)
 {
-  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   if (encoder->data_read) {
     *data = nullptr;
@@ -1013,7 +1013,7 @@ struct heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_svt
+static const heif_encoder_plugin encoder_plugin_svt
     {
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_AV1,
@@ -1050,7 +1050,7 @@ static const struct heif_encoder_plugin encoder_plugin_svt
         /* query_encoded_size (v3) */ svt_query_encoded_size
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_svt()
+const heif_encoder_plugin* get_encoder_plugin_svt()
 {
   return &encoder_plugin_svt;
 }

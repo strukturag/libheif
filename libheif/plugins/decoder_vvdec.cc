@@ -80,7 +80,7 @@ static void vvdec_deinit_plugin()
 }
 
 
-static int vvdec_does_support_format(enum heif_compression_format format)
+static int vvdec_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_VVC) {
     return VVDEC_PLUGIN_PRIORITY;
@@ -91,7 +91,7 @@ static int vvdec_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error vvdec_new_decoder(void** dec)
+heif_error vvdec_new_decoder(void** dec)
 {
   auto* decoder = new vvdec_decoder();
 
@@ -107,8 +107,7 @@ struct heif_error vvdec_new_decoder(void** dec)
 
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
@@ -142,9 +141,9 @@ void vvdec_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  auto* decoder = (struct vvdec_decoder*) decoder_raw;
+  auto* decoder = (vvdec_decoder*) decoder_raw;
 
   const auto* data = (const uint8_t*) frame_data;
 
@@ -170,15 +169,14 @@ struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, siz
     }
   }
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
-struct heif_error vvdec_decode_next_image(void* decoder_raw, struct heif_image** out_img,
-                                          const heif_security_limits* limits)
+heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                   const heif_security_limits* limits)
 {
-  auto* decoder = (struct vvdec_decoder*) decoder_raw;
+  auto* decoder = (vvdec_decoder*) decoder_raw;
 
   vvdecFrame* frame = nullptr;
 
@@ -254,12 +252,12 @@ struct heif_error vvdec_decode_next_image(void* decoder_raw, struct heif_image**
     colorspace = heif_colorspace_YCbCr;
   }
 
-  struct heif_image* heif_img = nullptr;
-  struct heif_error err = heif_image_create((int)frame->width,
-                                            (int)frame->height,
-                                            colorspace,
-                                            chroma,
-                                            &heif_img);
+  heif_image* heif_img = nullptr;
+  heif_error err = heif_image_create((int) frame->width,
+                                     (int) frame->height,
+                                     colorspace,
+                                     chroma,
+                                     &heif_img);
   if (err.code != heif_error_Ok) {
     assert(heif_img == nullptr);
     return err;
@@ -332,14 +330,14 @@ struct heif_error vvdec_decode_next_image(void* decoder_raw, struct heif_image**
   return err;
 }
 
-struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error vvdec_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return vvdec_decode_next_image(decoder_raw, out_img, limits);
 }
 
 
-static const struct heif_decoder_plugin decoder_vvdec
+static const heif_decoder_plugin decoder_vvdec
     {
         4,
         vvdec_plugin_name,
@@ -356,7 +354,7 @@ static const struct heif_decoder_plugin decoder_vvdec
     };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_vvdec()
+const heif_decoder_plugin* get_decoder_plugin_vvdec()
 {
   return &decoder_vvdec;
 }

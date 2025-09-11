@@ -48,7 +48,7 @@ static int uncompressed_does_support_format(enum heif_compression_format format)
 
 
 
-static const struct heif_decoder_plugin decoder_uncompressed
+static const heif_decoder_plugin decoder_uncompressed
     {
         3,
         uncompressed_plugin_name,
@@ -64,7 +64,7 @@ static const struct heif_decoder_plugin decoder_uncompressed
     };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_uncompressed()
+const heif_decoder_plugin* get_decoder_plugin_uncompressed()
 {
   return &decoder_uncompressed;
 }
