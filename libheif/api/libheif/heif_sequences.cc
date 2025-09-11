@@ -477,14 +477,15 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
     encoding_options->color_conversion_options = sequence_encoding_options->color_conversion_options;
 
     if (encoding_options->output_nclx_profile == nullptr) {
-      auto input_nclx = input_image->image->get_color_profile_nclx();
-      if (input_nclx) {
+      if (input_image->image->has_nclx_profile()) {
+        nclx_profile input_nclx = *input_image->image->get_color_profile_nclx();
+
         encoding_options->output_nclx_profile = &nclx;
         nclx.version = 1;
-        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
-        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
-        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
-        nclx.full_range_flag = input_nclx->get_full_range_flag();
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx.get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx.get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx.get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx.get_full_range_flag();
       }
     }
   }

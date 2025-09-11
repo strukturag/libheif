@@ -157,14 +157,15 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
     heif_encoding_options_copy(options, input_options);
 
     if (options->output_nclx_profile == nullptr) {
-      auto input_nclx = tiles[0]->image->get_color_profile_nclx();
-      if (input_nclx) {
+      if (tiles[0]->image->has_nclx_profile()) {
+        nclx_profile input_nclx = *tiles[0]->image->get_color_profile_nclx();
+
         options->output_nclx_profile = &nclx;
         nclx.version = 1;
-        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
-        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
-        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
-        nclx.full_range_flag = input_nclx->get_full_range_flag();
+        nclx.color_primaries = input_nclx.get_colour_primaries();
+        nclx.transfer_characteristics = input_nclx.get_transfer_characteristics();
+        nclx.matrix_coefficients = input_nclx.get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx.get_full_range_flag();
       }
     }
   }

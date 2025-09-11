@@ -48,7 +48,7 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = input_state.nclx.get_matrix_coefficients();
   if ( matrix == 11 || matrix == 14) {
     return {};
   }
@@ -129,8 +129,6 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   }
 
 
-  auto colorProfile = input->get_color_profile_nclx();
-
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
 
@@ -198,11 +196,13 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int matrix_coeffs = 2;
   bool full_range_flag = true;
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
-  if (colorProfile) {
-    matrix_coeffs = colorProfile->get_matrix_coefficients();
-    full_range_flag = colorProfile->get_full_range_flag();
-    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                           colorProfile->get_colour_primaries());
+  if (input->has_nclx_profile()) {
+    nclx_profile colorProfile = *input->get_color_profile_nclx();
+
+    matrix_coeffs = colorProfile.get_matrix_coefficients();
+    full_range_flag = colorProfile.get_full_range_flag();
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
+                                           colorProfile.get_colour_primaries());
   }
 
 
@@ -290,11 +290,11 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = input_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
-  if (!input_state.nclx_profile.get_full_range_flag()) {
+  if (!input_state.nclx.get_full_range_flag()) {
     return {};
   }
 
@@ -340,11 +340,11 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
     return err;
   }
 
-  auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
-  if (colorProfile) {
-    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                           colorProfile->get_colour_primaries());
+  if (input->has_nclx_profile()) {
+    auto colorProfile = *input->get_color_profile_nclx();
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
+                                           colorProfile.get_colour_primaries());
   }
 
   int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
@@ -422,11 +422,11 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = input_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
-  if (!input_state.nclx_profile.get_full_range_flag()) {
+  if (!input_state.nclx.get_full_range_flag()) {
     return {};
   }
 
@@ -475,11 +475,11 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   // --- get conversion coefficients
 
-  auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
-  if (colorProfile) {
-    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                           colorProfile->get_colour_primaries());
+  if (input->has_nclx_profile()) {
+    nclx_profile colorProfile = *input->get_color_profile_nclx();
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
+                                           colorProfile.get_colour_primaries());
   }
 
   int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
@@ -552,7 +552,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = input_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
@@ -636,11 +636,11 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   bool full_range_flag = true;
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
 
-  auto colorProfile = input->get_color_profile_nclx();
-  if (colorProfile) {
-    full_range_flag = colorProfile->get_full_range_flag();
-    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                           colorProfile->get_colour_primaries());
+  if (input->has_nclx_profile()) {
+    nclx_profile colorProfile = *input->get_color_profile_nclx();
+    full_range_flag = colorProfile.get_full_range_flag();
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
+                                           colorProfile.get_colour_primaries());
   }
 
   float limited_range_offset = static_cast<float>(16 << (bpp - 8));

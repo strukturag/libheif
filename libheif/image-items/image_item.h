@@ -312,7 +312,11 @@ public:
                        const struct heif_encoding_options& options,
                        enum heif_image_input_class input_class);
 
-  const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
+  bool has_nclx_color_profile() const { return m_color_profile_nclx.has_value(); }
+
+  std::optional<nclx_profile> get_color_profile_nclx() const { return m_color_profile_nclx; }
+
+  void set_color_profile_nclx(const std::optional<nclx_profile>& profile) { m_color_profile_nclx = profile; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
@@ -325,9 +329,9 @@ public:
 
     auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
     if (nclx) {
-      m_color_profile_nclx = std::move(nclx);
+      m_color_profile_nclx = nclx->get_nclx_color_profile();
     }
-  };
+  }
 
   void set_intrinsic_matrix(const Box_cmin::RelativeIntrinsicMatrix& cmin) {
     m_has_intrinsic_matrix = true;
@@ -413,7 +417,7 @@ private:
 
   std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
-  std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
+  std::optional<nclx_profile> m_color_profile_nclx;
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   bool m_miaf_compatible = true;

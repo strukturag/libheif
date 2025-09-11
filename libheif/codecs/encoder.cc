@@ -49,34 +49,32 @@ void Encoder::CodedImageData::append_with_4bytes_size(const uint8_t* data, size_
 
 
 
-// TODO: remove me, moved to encoder.cc
-static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
+static nclx_profile compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
 {
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+  nclx_profile target_nclx_profile;
 
   // If there is an output NCLX specified, use that.
   if (output_nclx_profile) {
-    target_nclx_profile->set_from_heif_color_profile_nclx(output_nclx_profile);
+    target_nclx_profile.set_from_heif_color_profile_nclx(output_nclx_profile);
   }
     // Otherwise, if there is an input NCLX, keep that.
-  else if (auto input_nclx = image->get_color_profile_nclx()) {
-    *target_nclx_profile = *input_nclx;
+  else if (image->has_nclx_profile()) {
+    target_nclx_profile = *image->get_color_profile_nclx();
   }
     // Otherwise, just use the defaults (set below)
   else {
-    target_nclx_profile->set_undefined();
+    target_nclx_profile.set_undefined();
   }
 
-  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
+  target_nclx_profile.replace_undefined_values_with_sRGB_defaults();
 
   return target_nclx_profile;
 }
 
 
-// TODO: remove me, moved to encoder.cc
 static bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                                      std::shared_ptr<const color_profile_nclx> image_nclx,
-                                      const struct heif_color_profile_nclx* spec_nclx)
+                                      std::optional<nclx_profile> image_nclx,
+                                      const heif_color_profile_nclx* spec_nclx)
 {
   if (colorspace != heif_colorspace_YCbCr) {
     return true;
@@ -88,8 +86,11 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
   }
 
   if (!image_nclx) {
+    static nclx_profile default_nclx;
+    default_nclx.set_sRGB_defaults();
+
     // if no input nclx is specified, compare against default one
-    image_nclx = std::make_shared<color_profile_nclx>();
+    image_nclx = default_nclx;
   }
 
   if (image_nclx->get_full_range_flag() != (spec_nclx->full_range_flag == 0 ? false : true)) {
@@ -139,15 +140,17 @@ Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding
 
   // If output format forces an NCLX, use that. Otherwise use user selected NCLX.
 
-  std::shared_ptr<color_profile_nclx> target_nclx_profile = compute_target_nclx_profile(image, output_nclx_profile);
+  nclx_profile target_nclx_profile = compute_target_nclx_profile(image, output_nclx_profile);
 
   // --- convert colorspace
 
   std::shared_ptr<HeifPixelImage> output_image;
 
+  const std::optional<nclx_profile> image_nclx = image->get_color_profile_nclx();
+
   if (colorspace == image->get_colorspace() &&
       chroma == image->get_chroma_format() &&
-      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), output_nclx_profile)) {
+      nclx_profile_matches_spec(colorspace, image_nclx, output_nclx_profile)) {
     return image;
   }
 

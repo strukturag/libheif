@@ -155,7 +155,7 @@ bool ColorState::operator==(const ColorState& b) const
   }
 
   if (colorspace == heif_colorspace_YCbCr) {
-    bool ycbcr_parameters_match = nclx_profile.equal_except_transfer_curve(b.nclx_profile);
+    bool ycbcr_parameters_match = nclx.equal_except_transfer_curve(b.nclx);
 
     if (!ycbcr_parameters_match) {
       return false;
@@ -197,10 +197,10 @@ std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
               << " alpha=" << (state.has_alpha ? "yes" : "no");
 
   if (state.colorspace == heif_colorspace_YCbCr) {
-    ostr << " matrix-coefficients=" << state.nclx_profile.get_matrix_coefficients()
-         << " colour-primaries=" << state.nclx_profile.get_colour_primaries()
-         << " transfer-characteristics=" << state.nclx_profile.get_transfer_characteristics()
-         << " full-range=" << (state.nclx_profile.get_full_range_flag() ? "yes" : "no");
+    ostr << " matrix-coefficients=" << state.nclx.get_matrix_coefficients()
+         << " colour-primaries=" << state.nclx.get_colour_primaries()
+         << " transfer-characteristics=" << state.nclx.get_transfer_characteristics()
+         << " full-range=" << (state.nclx.get_full_range_flag() ? "yes" : "no");
   }
 
   return ostr;
@@ -454,8 +454,7 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 
     // --- pass the color profiles to the new image
 
-    auto output_nclx = std::make_shared<color_profile_nclx>(step.output_state.nclx_profile);
-    out->set_color_profile_nclx(output_nclx);
+    out->set_color_profile_nclx(step.output_state.nclx);
     out->set_color_profile_icc(in->get_color_profile_icc());
 
     out->set_premultiplied_alpha(in->is_premultiplied_alpha());
@@ -500,7 +499,7 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                            heif_colorspace target_colorspace,
                                                            heif_chroma target_chroma,
-                                                           const std::shared_ptr<const color_profile_nclx>& target_profile,
+                                                           const nclx_profile& target_profile,
                                                            int output_bpp,
                                                            const heif_color_conversion_options& options,
                                                            const heif_color_conversion_options_ext* options_ext_optional,
@@ -542,11 +541,11 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
   input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_interleaved_with_alpha(input->get_chroma_format());
-  if (input->get_color_profile_nclx()) {
-    input_state.nclx_profile = *input->get_color_profile_nclx();
+  if (input->has_nclx_profile()) {
+    input_state.nclx = *input->get_color_profile_nclx();
   }
 
-  input_state.nclx_profile.replace_undefined_values_with_sRGB_defaults();
+  input_state.nclx.replace_undefined_values_with_sRGB_defaults();
 
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
@@ -555,22 +554,20 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   ColorState output_state = input_state;
   output_state.colorspace = target_colorspace;
   output_state.chroma = target_chroma;
-  if (target_profile) {
-    output_state.nclx_profile = *target_profile;
-  }
+  output_state.nclx = target_profile;
 
   // If some output nclx values are unspecified, set them to the same as the input.
 
-  if (output_state.nclx_profile.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
-    output_state.nclx_profile.set_matrix_coefficients(input_state.nclx_profile.get_matrix_coefficients());
+  if (output_state.nclx.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
+    output_state.nclx.set_matrix_coefficients(input_state.nclx.get_matrix_coefficients());
   }
 
-  if (output_state.nclx_profile.get_colour_primaries() == heif_color_primaries_unspecified) {
-    output_state.nclx_profile.set_colour_primaries(input_state.nclx_profile.get_colour_primaries());
+  if (output_state.nclx.get_colour_primaries() == heif_color_primaries_unspecified) {
+    output_state.nclx.set_colour_primaries(input_state.nclx.get_colour_primaries());
   }
 
-  if (output_state.nclx_profile.get_transfer_characteristics() == heif_transfer_characteristic_unspecified) {
-    output_state.nclx_profile.set_transfer_characteristics(input_state.nclx_profile.get_transfer_characteristics());
+  if (output_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_unspecified) {
+    output_state.nclx.set_transfer_characteristics(input_state.nclx.get_transfer_characteristics());
   }
 
   // If we convert to an interleaved format, we want alpha only if present in the
@@ -631,7 +628,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                                  heif_colorspace colorspace,
                                                                  heif_chroma chroma,
-                                                                 const std::shared_ptr<const color_profile_nclx>& target_profile,
+                                                                 const nclx_profile& target_profile,
                                                                  int output_bpp,
                                                                  const heif_color_conversion_options& options,
                                                                  const heif_color_conversion_options_ext* options_ext,

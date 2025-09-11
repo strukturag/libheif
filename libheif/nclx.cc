@@ -226,19 +226,19 @@ Error color_profile_nclx::parse(BitstreamRange& range)
                  heif_suberror_End_of_data);
   }
 
-  m_colour_primaries = range.read16();
-  m_transfer_characteristics = range.read16();
-  m_matrix_coefficients = range.read16();
-  m_full_range_flag = (range.read8() & 0x80 ? true : false);
+  m_profile.m_colour_primaries = range.read16();
+  m_profile.m_transfer_characteristics = range.read16();
+  m_profile.m_matrix_coefficients = range.read16();
+  m_profile.m_full_range_flag = (range.read8() & 0x80 ? true : false);
 
   return Error::Ok;
 }
 
-Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
+Error nclx_profile::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
 {
   *out_data = nullptr;
 
-  struct heif_color_profile_nclx* nclx = alloc_nclx_color_profile();
+  struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
 
   if (nclx == nullptr) {
     return Error(heif_error_Memory_allocation_error,
@@ -251,19 +251,19 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 
   err = heif_nclx_color_profile_set_color_primaries(nclx, get_colour_primaries());
   if (err.code) {
-    free_nclx_color_profile(nclx);
+    heif_nclx_color_profile_free(nclx);
     return {err.code, err.subcode};
   }
 
   err = heif_nclx_color_profile_set_transfer_characteristics(nclx, get_transfer_characteristics());
   if (err.code) {
-    free_nclx_color_profile(nclx);
+    heif_nclx_color_profile_free(nclx);
     return {err.code, err.subcode};
   }
 
   err = heif_nclx_color_profile_set_matrix_coefficients(nclx, get_matrix_coefficients());
   if (err.code) {
-    free_nclx_color_profile(nclx);
+    heif_nclx_color_profile_free(nclx);
     return {err.code, err.subcode};
   }
 
@@ -288,31 +288,7 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 }
 
 
-struct heif_color_profile_nclx* color_profile_nclx::alloc_nclx_color_profile()
-{
-  auto profile = (heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
-
-  if (profile) {
-    profile->version = 1;
-
-    // sRGB defaults
-    profile->color_primaries = heif_color_primaries_ITU_R_BT_709_5; // 1
-    profile->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1; // 13
-    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6; // 6
-    profile->full_range_flag = true;
-  }
-
-  return profile;
-}
-
-
-void color_profile_nclx::free_nclx_color_profile(struct heif_color_profile_nclx* profile)
-{
-  free(profile);
-}
-
-
-void color_profile_nclx::set_sRGB_defaults()
+void nclx_profile::set_sRGB_defaults()
 {
   // sRGB defaults
   m_colour_primaries = 1;
@@ -322,7 +298,7 @@ void color_profile_nclx::set_sRGB_defaults()
 }
 
 
-void color_profile_nclx::set_undefined()
+void nclx_profile::set_undefined()
 {
   m_colour_primaries = 2;
   m_transfer_characteristics = 2;
@@ -331,7 +307,7 @@ void color_profile_nclx::set_undefined()
 }
 
 
-void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
+void nclx_profile::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
 {
   if (nclx) {
     m_colour_primaries = nclx->color_primaries;
@@ -342,7 +318,7 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
 }
 
 
-void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
+void nclx_profile::replace_undefined_values_with_sRGB_defaults()
 {
   if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
     m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
@@ -358,7 +334,7 @@ void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
 }
 
 
-bool color_profile_nclx::equal_except_transfer_curve(const color_profile_nclx& b) const
+bool nclx_profile::equal_except_transfer_curve(const nclx_profile& b) const
 {
   return (m_matrix_coefficients == b.m_matrix_coefficients &&
           m_colour_primaries == b.m_colour_primaries &&
@@ -444,20 +420,20 @@ std::string color_profile_raw::dump(Indent& indent) const
 std::string color_profile_nclx::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << indent << "colour_primaries: " << m_colour_primaries << "\n"
-       << indent << "transfer_characteristics: " << m_transfer_characteristics << "\n"
-       << indent << "matrix_coefficients: " << m_matrix_coefficients << "\n"
-       << indent << "full_range_flag: " << m_full_range_flag << "\n";
+  sstr << indent << "colour_primaries: " << m_profile.m_colour_primaries << "\n"
+       << indent << "transfer_characteristics: " << m_profile.m_transfer_characteristics << "\n"
+       << indent << "matrix_coefficients: " << m_profile.m_matrix_coefficients << "\n"
+       << indent << "full_range_flag: " << m_profile.m_full_range_flag << "\n";
   return sstr.str();
 }
 
 
 Error color_profile_nclx::write(StreamWriter& writer) const
 {
-  writer.write16(m_colour_primaries);
-  writer.write16(m_transfer_characteristics);
-  writer.write16(m_matrix_coefficients);
-  writer.write8(m_full_range_flag ? 0x80 : 0x00);
+  writer.write16(m_profile.m_colour_primaries);
+  writer.write16(m_profile.m_transfer_characteristics);
+  writer.write16(m_profile.m_matrix_coefficients);
+  writer.write8(m_profile.m_full_range_flag ? 0x80 : 0x00);
 
   return Error::Ok;
 }

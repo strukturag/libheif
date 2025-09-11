@@ -846,7 +846,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -1002,7 +1004,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -1082,7 +1086,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -1556,26 +1563,14 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 }
 
 
-heif_color_profile_nclx HeifPixelImage::get_color_profile_nclx_with_fallback() const
+nclx_profile HeifPixelImage::get_color_profile_nclx_with_fallback() const
 {
-  heif_color_profile_nclx nclx;
-
-  // TODO: these are unnecessary allocations. Restructure the source to use value objects internally only.
-
-  auto profile = get_color_profile_nclx();
-  if (profile) {
-    heif_color_profile_nclx* profile_nclx;
-    profile->get_nclx_color_profile(&profile_nclx);
-    nclx = *profile_nclx;
-    heif_nclx_color_profile_free(profile_nclx);
+  if (has_nclx_profile()) {
+    return *get_color_profile_nclx();
   }
   else {
-    heif_color_profile_nclx* profile_nclx = heif_nclx_color_profile_alloc();
-    nclx = *profile_nclx;
-    heif_nclx_color_profile_free(profile_nclx);
+    return nclx_profile::defaults();
   }
-
-  return nclx;
 }
 
 

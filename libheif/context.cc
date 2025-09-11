@@ -925,8 +925,8 @@ Error HeifContext::interpret_heif_file_images()
         image->set_color_profile(tile_img->get_color_profile_icc());
       }
 
-      if (image->get_color_profile_nclx() == nullptr && tile_img->get_color_profile_nclx()) {
-        image->set_color_profile(tile_img->get_color_profile_nclx());
+      if (!image->has_nclx_color_profile() && tile_img->has_nclx_color_profile()) {
+        image->set_color_profile_nclx(tile_img->get_color_profile_nclx());
       }
     }
   }
@@ -1312,20 +1312,20 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 }
 
 
-bool nclx_color_profile_equal(const heif_color_profile_nclx* a,
+bool nclx_color_profile_equal(std::optional<nclx_profile> a,
                               const heif_color_profile_nclx* b)
 {
-  if (a==nullptr && b==nullptr) {
+  if (!a && b==nullptr) {
     return true;
   }
 
   heif_color_profile_nclx* default_nclx = nullptr;
 
-  if (a==nullptr || b==nullptr) {
+  if (!a || b==nullptr) {
     default_nclx = heif_nclx_color_profile_alloc();
 
-    if (a==nullptr) {
-      a = default_nclx;
+    if (!a) {
+      a = nclx_profile::defaults();
     }
 
     if (b==nullptr) {
@@ -1334,10 +1334,10 @@ bool nclx_color_profile_equal(const heif_color_profile_nclx* a,
   }
 
   bool equal = true;
-  if (a->matrix_coefficients != b->matrix_coefficients ||
-      a->color_primaries != b->color_primaries ||
-      a->transfer_characteristics != b->transfer_characteristics ||
-      a->full_range_flag != b->full_range_flag) {
+  if (a->m_matrix_coefficients != b->matrix_coefficients ||
+      a->m_colour_primaries != b->color_primaries ||
+      a->m_transfer_characteristics != b->transfer_characteristics ||
+      a->m_full_range_flag != b->full_range_flag) {
     equal = false;
   }
 
@@ -1367,8 +1367,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   uint8_t img_bpp = img->get_visual_image_bits_per_pixel();
   uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
 
-  heif_color_profile_nclx img_nclx = img->get_color_profile_nclx_with_fallback();
-  bool different_nclx = !nclx_color_profile_equal(&img_nclx, options.output_image_nclx_profile);
+  nclx_profile img_nclx = img->get_color_profile_nclx_with_fallback();
+  bool different_nclx = !nclx_color_profile_equal(img_nclx, options.output_image_nclx_profile);
 
   if (different_chroma ||
       different_colorspace ||
@@ -1376,14 +1376,14 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
       different_nclx ||
       (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
 
-    auto output_profile = std::make_shared<color_profile_nclx>();
+    nclx_profile output_profile;
     if (options.output_image_nclx_profile) {
-      output_profile->set_matrix_coefficients(options.output_image_nclx_profile->matrix_coefficients);
-      output_profile->set_colour_primaries(options.output_image_nclx_profile->color_primaries);
-      output_profile->set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
+      output_profile.set_matrix_coefficients(options.output_image_nclx_profile->matrix_coefficients);
+      output_profile.set_colour_primaries(options.output_image_nclx_profile->color_primaries);
+      output_profile.set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
     }
     else {
-      output_profile->set_sRGB_defaults();
+      output_profile.set_sRGB_defaults();
     }
 
     return convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
@@ -1418,9 +1418,8 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
   // --- set nclx profile with full-range flag
 
-  auto nclx = std::make_shared<color_profile_nclx>();
-  nclx->set_undefined();
-  nclx->set_full_range_flag(true); // this is the default, but just to be sure in case the defaults change
+  nclx_profile nclx = nclx_profile::undefined();
+  nclx.set_full_range_flag(true); // this is the default, but just to be sure in case the defaults change
   alpha_image->set_color_profile_nclx(nclx);
 
   return alpha_image;

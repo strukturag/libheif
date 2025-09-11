@@ -115,13 +115,11 @@ heif_color_profile_type heif_image_handle_get_color_profile_type(const struct he
     return (heif_color_profile_type) profile_icc->get_type();
   }
 
-  auto profile_nclx = handle->image->get_color_profile_nclx();
-  if (profile_nclx) {
-    return (heif_color_profile_type) profile_nclx->get_type();
+  if (handle->image->has_nclx_color_profile()) {
+    return heif_color_profile_type_nclx;
   }
-  else {
-    return heif_color_profile_type_not_present;
-  }
+
+  return heif_color_profile_type_not_present;
 }
 
 
@@ -283,28 +281,40 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
     return err.error_struct(handle->image.get());
   }
 
-  auto nclx_profile = handle->image->get_color_profile_nclx();
-  if (!nclx_profile) {
+  if (!handle->image->has_nclx_color_profile()) {
     Error err(heif_error_Color_profile_does_not_exist,
               heif_suberror_Unspecified);
     return err.error_struct(handle->image.get());
   }
 
+  auto nclx_profile = handle->image->get_color_profile_nclx();
   Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(handle->image.get());
 }
 
 
-struct heif_color_profile_nclx* heif_nclx_color_profile_alloc()
+heif_color_profile_nclx* heif_nclx_color_profile_alloc()
 {
-  return color_profile_nclx::alloc_nclx_color_profile();
+  auto profile = new heif_color_profile_nclx;
+
+  if (profile) {
+    profile->version = 1;
+
+    // sRGB defaults
+    profile->color_primaries = heif_color_primaries_ITU_R_BT_709_5; // 1
+    profile->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1; // 13
+    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6; // 6
+    profile->full_range_flag = true;
+  }
+
+  return profile;
 }
 
 
-void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
+void heif_nclx_color_profile_free(heif_color_profile_nclx* nclx_profile)
 {
-  color_profile_nclx::free_nclx_color_profile(nclx_profile);
+  delete nclx_profile;
 }
 
 
@@ -313,16 +323,15 @@ enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif
   std::shared_ptr<const color_profile> profile;
 
   profile = image->image->get_color_profile_icc();
-  if (!profile) {
-    profile = image->image->get_color_profile_nclx();
-  }
-
-  if (!profile) {
-    return heif_color_profile_type_not_present;
-  }
-  else {
+  if (profile) {
     return (heif_color_profile_type) profile->get_type();
   }
+
+  if (image->image->has_nclx_profile()) {
+    return heif_color_profile_type_nclx;
+  }
+
+  return heif_color_profile_type_not_present;
 }
 
 
@@ -416,12 +425,11 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
 struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
                                                     const struct heif_color_profile_nclx* color_profile)
 {
-  auto nclx = std::make_shared<color_profile_nclx>();
-
-  nclx->set_colour_primaries(color_profile->color_primaries);
-  nclx->set_transfer_characteristics(color_profile->transfer_characteristics);
-  nclx->set_matrix_coefficients(color_profile->matrix_coefficients);
-  nclx->set_full_range_flag(color_profile->full_range_flag);
+  nclx_profile nclx;
+  nclx.set_colour_primaries(color_profile->color_primaries);
+  nclx.set_transfer_characteristics(color_profile->transfer_characteristics);
+  nclx.set_matrix_coefficients(color_profile->matrix_coefficients);
+  nclx.set_full_range_flag(color_profile->full_range_flag);
 
   image->image->set_color_profile_nclx(nclx);
 
