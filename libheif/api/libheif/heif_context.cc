@@ -55,30 +55,30 @@ void heif_context_free(heif_context* ctx)
 }
 
 heif_error heif_context_read_from_file(heif_context* ctx, const char* filename,
-                                       const struct heif_reading_options*)
+                                       const heif_reading_options*)
 {
   Error err = ctx->context->read_from_file(filename);
   return err.error_struct(ctx->context.get());
 }
 
 heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, size_t size,
-                                         const struct heif_reading_options*)
+                                         const heif_reading_options*)
 {
   Error err = ctx->context->read_from_memory(mem, size, true);
   return err.error_struct(ctx->context.get());
 }
 
 heif_error heif_context_read_from_memory_without_copy(heif_context* ctx, const void* mem, size_t size,
-                                                      const struct heif_reading_options*)
+                                                      const heif_reading_options*)
 {
   Error err = ctx->context->read_from_memory(mem, size, false);
   return err.error_struct(ctx->context.get());
 }
 
-heif_error heif_context_read_from_reader(struct heif_context* ctx,
-                                         const struct heif_reader* reader_func_table,
+heif_error heif_context_read_from_reader(heif_context* ctx,
+                                         const heif_reader* reader_func_table,
                                          void* userdata,
-                                         const struct heif_reading_options*)
+                                         const heif_reading_options*)
 {
   auto reader = std::make_shared<StreamReader_CApi>(reader_func_table, userdata);
 
@@ -94,9 +94,9 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 }
 
 
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
+int heif_context_is_top_level_image_ID(heif_context* ctx, heif_item_id id)
 {
-  const std::vector<std::shared_ptr<ImageItem>> images = ctx->context->get_top_level_images(true);
+  const std::vector<std::shared_ptr<ImageItem> > images = ctx->context->get_top_level_images(true);
 
   for (const auto& img : images) {
     if (img->get_id() == id) {
@@ -108,7 +108,7 @@ int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id
 }
 
 
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+int heif_context_get_list_of_top_level_image_IDs(heif_context* ctx,
                                                  heif_item_id* ID_array,
                                                  int count)
 {
@@ -119,7 +119,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
 
   // fill in ID values into output array
 
-  const std::vector<std::shared_ptr<ImageItem>> imgs = ctx->context->get_top_level_images(true);
+  const std::vector<std::shared_ptr<ImageItem> > imgs = ctx->context->get_top_level_images(true);
   int n = (int) std::min(count, (int) imgs.size());
   for (int i = 0; i < n; i++) {
     ID_array[i] = imgs[i]->get_id();
@@ -129,7 +129,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id)
+heif_error heif_context_get_primary_image_ID(heif_context* ctx, heif_item_id* id)
 {
   if (!id) {
     return Error(heif_error_Usage_error,
@@ -179,9 +179,9 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
-                                                heif_item_id id,
-                                                struct heif_image_handle** imgHdl)
+heif_error heif_context_get_image_handle(heif_context* ctx,
+                                         heif_item_id id,
+                                         heif_image_handle** imgHdl)
 {
   if (!imgHdl) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, ""};
@@ -208,7 +208,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 }
 
 
-void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
+void heif_context_debug_dump_boxes_to_file(heif_context* ctx, int fd)
 {
   if (!ctx) {
     return;
@@ -229,8 +229,8 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
 //   Write the heif_context to a HEIF file
 
 
-static struct heif_error heif_file_writer_write(struct heif_context* ctx,
-                                                const void* data, size_t size, void* userdata)
+static heif_error heif_file_writer_write(heif_context* ctx,
+                                         const void* data, size_t size, void* userdata)
 {
   const char* filename = static_cast<const char*>(userdata);
 
@@ -245,8 +245,8 @@ static struct heif_error heif_file_writer_write(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_write_to_file(struct heif_context* ctx,
-                                             const char* filename)
+heif_error heif_context_write_to_file(heif_context* ctx,
+                                      const char* filename)
 {
   heif_writer writer;
   writer.writer_api_version = 1;
@@ -255,15 +255,16 @@ struct heif_error heif_context_write_to_file(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_write(struct heif_context* ctx,
-                                     struct heif_writer* writer,
-                                     void* userdata)
+heif_error heif_context_write(heif_context* ctx,
+                              heif_writer* writer,
+                              void* userdata)
 {
   if (!writer) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
-  else if (writer->writer_api_version != 1) {
+
+  if (writer->writer_api_version != 1) {
     Error err(heif_error_Usage_error, heif_suberror_Unsupported_writer_version);
     return err.error_struct(ctx->context.get());
   }
@@ -287,4 +288,3 @@ struct heif_error heif_context_write(struct heif_context* ctx,
     return writer_error;
   }
 }
-
