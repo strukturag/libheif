@@ -358,6 +358,14 @@ void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
 }
 
 
+bool color_profile_nclx::equal_except_transfer_curve(const color_profile_nclx& b) const
+{
+  return (m_matrix_coefficients == b.m_matrix_coefficients &&
+          m_colour_primaries == b.m_colour_primaries &&
+          m_full_range_flag == b.m_full_range_flag);
+}
+
+
 Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   StreamReader::grow_status status;

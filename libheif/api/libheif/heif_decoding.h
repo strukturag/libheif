@@ -106,6 +106,10 @@ typedef struct heif_decoding_options
 
   // If enabled, it will decode the media timeline, ignoring the sequence tracks edit-list.
   int ignore_sequence_editlist; // bool
+
+  // version 9 options
+
+  heif_color_profile_nclx* output_image_nclx_profile;
 } heif_decoding_options;
 
 

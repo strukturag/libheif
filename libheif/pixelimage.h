@@ -196,6 +196,9 @@ public:
 
   const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
 
+  // get the stored nclx fallback or return the default nclx if none is stored
+  heif_color_profile_nclx get_color_profile_nclx_with_fallback() const;
+
   void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }

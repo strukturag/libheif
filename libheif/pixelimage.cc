@@ -1556,6 +1556,29 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 }
 
 
+heif_color_profile_nclx HeifPixelImage::get_color_profile_nclx_with_fallback() const
+{
+  heif_color_profile_nclx nclx;
+
+  // TODO: these are unnecessary allocations. Restructure the source to use value objects internally only.
+
+  auto profile = get_color_profile_nclx();
+  if (profile) {
+    heif_color_profile_nclx* profile_nclx;
+    profile->get_nclx_color_profile(&profile_nclx);
+    nclx = *profile_nclx;
+    heif_nclx_color_profile_free(profile_nclx);
+  }
+  else {
+    heif_color_profile_nclx* profile_nclx = heif_nclx_color_profile_alloc();
+    nclx = *profile_nclx;
+    heif_nclx_color_profile_free(profile_nclx);
+  }
+
+  return nclx;
+}
+
+
 void HeifPixelImage::forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image)
 {
   set_color_profile_nclx(src_image->get_color_profile_nclx());

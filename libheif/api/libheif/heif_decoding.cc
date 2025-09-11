@@ -43,7 +43,7 @@ int heif_have_decoder_for_format(enum heif_compression_format format)
 
 static void fill_default_decoding_options(heif_decoding_options& options)
 {
-  options.version = 8;
+  options.version = 9;
 
   options.ignore_transformations = false;
 
@@ -82,6 +82,10 @@ static void fill_default_decoding_options(heif_decoding_options& options)
   // version 8
 
   options.ignore_sequence_editlist = false;
+
+  // version 9
+
+  options.output_image_nclx_profile = nullptr;
 }
 
 
@@ -106,6 +110,9 @@ void heif_decoding_options_copy(struct heif_decoding_options* dst,
   int min_version = std::min(dst->version, src->version);
 
   switch (min_version) {
+    case 9:
+      dst->output_image_nclx_profile = src->output_image_nclx_profile;
+      [[fallthrough]];
     case 8:
       dst->ignore_sequence_editlist = src->ignore_sequence_editlist;
       [[fallthrough]];
@@ -239,6 +246,7 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                                                                             chroma,
                                                                                             dec_options,
                                                                                             false, 0, 0);
+
   if (!decodingResult) {
     return decodingResult.error_struct(in_handle->image.get());
   }

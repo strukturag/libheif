@@ -161,6 +161,8 @@ public:
 
   void replace_undefined_values_with_sRGB_defaults();
 
+  bool equal_except_transfer_curve(const color_profile_nclx& b) const;
+
 private:
   uint16_t m_colour_primaries = heif_color_primaries_unspecified;
   uint16_t m_transfer_characteristics = heif_transfer_characteristic_unspecified;

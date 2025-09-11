@@ -1312,6 +1312,42 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 }
 
 
+bool nclx_color_profile_equal(const heif_color_profile_nclx* a,
+                              const heif_color_profile_nclx* b)
+{
+  if (a==nullptr && b==nullptr) {
+    return true;
+  }
+
+  heif_color_profile_nclx* default_nclx = nullptr;
+
+  if (a==nullptr || b==nullptr) {
+    default_nclx = heif_nclx_color_profile_alloc();
+
+    if (a==nullptr) {
+      a = default_nclx;
+    }
+
+    if (b==nullptr) {
+      b = default_nclx;
+    }
+  }
+
+  bool equal = true;
+  if (a->matrix_coefficients != b->matrix_coefficients ||
+      a->color_primaries != b->color_primaries ||
+      a->transfer_characteristics != b->transfer_characteristics ||
+      a->full_range_flag != b->full_range_flag) {
+    equal = false;
+  }
+
+  if (default_nclx) {
+    heif_nclx_color_profile_free(default_nclx);
+  }
+
+  return equal;
+}
+
 
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                                   heif_colorspace out_colorspace,
@@ -1331,12 +1367,26 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   uint8_t img_bpp = img->get_visual_image_bits_per_pixel();
   uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
 
+  heif_color_profile_nclx img_nclx = img->get_color_profile_nclx_with_fallback();
+  bool different_nclx = !nclx_color_profile_equal(&img_nclx, options.output_image_nclx_profile);
+
   if (different_chroma ||
       different_colorspace ||
       converted_output_bpp ||
+      different_nclx ||
       (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
 
-    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, converted_output_bpp,
+    auto output_profile = std::make_shared<color_profile_nclx>();
+    if (options.output_image_nclx_profile) {
+      output_profile->set_matrix_coefficients(options.output_image_nclx_profile->matrix_coefficients);
+      output_profile->set_colour_primaries(options.output_image_nclx_profile->color_primaries);
+      output_profile->set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
+    }
+    else {
+      output_profile->set_sRGB_defaults();
+    }
+
+    return convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
                                          options.color_conversion_options, options.color_conversion_options_ext,
                                          get_security_limits());
   }

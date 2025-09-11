@@ -155,14 +155,14 @@ bool ColorState::operator==(const ColorState& b) const
   }
 
   if (colorspace == heif_colorspace_YCbCr) {
-    bool ycbcr_parameters_match = (nclx_profile.get_full_range_flag() == b.nclx_profile.get_full_range_flag() &&
-                                   nclx_profile.get_matrix_coefficients() == b.nclx_profile.get_matrix_coefficients() &&
-                                   nclx_profile.get_colour_primaries() == b.nclx_profile.get_colour_primaries());
-    return ycbcr_parameters_match;
+    bool ycbcr_parameters_match = nclx_profile.equal_except_transfer_curve(b.nclx_profile);
+
+    if (!ycbcr_parameters_match) {
+      return false;
+    }
   }
-  else {
-    return true;
-  }
+
+  return true;
 }
 
 
