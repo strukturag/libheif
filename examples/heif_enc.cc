@@ -81,6 +81,8 @@ uint16_t nclx_transfer_characteristic = 13;
 uint16_t nclx_matrix_coefficients = 6;
 int nclx_full_range = true;
 
+std::optional<heif_content_light_level> clli;
+
 // default to 30 fps
 uint32_t sequence_timebase = 30;
 uint32_t sequence_durations = 1;
@@ -152,6 +154,7 @@ const int OPTION_SEQUENCES_FPS = 1018;
 const int OPTION_VMT_METADATA_FILE = 1019;
 const int OPTION_SEQUENCES_REPETITIONS = 1020;
 const int OPTION_COLOR_PROFILE_PRESET = 1021;
+const int OPTION_SET_CLLI = 1022;
 
 
 static struct option long_options[] = {
@@ -184,6 +187,7 @@ static struct option long_options[] = {
     {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
     {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
     {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
+    {(char* const) "clli",                        required_argument, 0,                     OPTION_SET_CLLI},
     {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
     {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
@@ -279,6 +283,7 @@ void show_help(const char* argv0)
             << "      --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
             << "      --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "      --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
+            << "      --clli MaxCLL,MaxPALL     add 'content light level information' property to all encoded images\n"
             << "\n"
             << "tiling:\n"
             << "      --cut-tiles #             cuts the input image into square tiles of the given width\n"
@@ -1064,6 +1069,46 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 }
 
 
+bool parse_clli_argument(std::string arg)
+{
+  std::istringstream ss(arg);
+  std::string token;
+
+  heif_content_light_level _clli;
+
+  // Parse first number
+  if (!std::getline(ss, token, ',')) return false;
+  try {
+    size_t pos;
+    unsigned long val = std::stoul(token, &pos);
+    if (pos != token.size()) return false; // extra non-numeric characters
+    if (val > std::numeric_limits<uint16_t>::max()) return false;
+    _clli.max_content_light_level = static_cast<uint16_t>(val);
+  } catch (...) {
+    return false;
+  }
+
+  // Parse second number
+  if (!std::getline(ss, token, ',')) return false;
+  try {
+    size_t pos;
+    unsigned long val = std::stoul(token, &pos);
+    if (pos != token.size()) return false; // extra non-numeric characters
+    if (val > std::numeric_limits<uint16_t>::max()) return false;
+    _clli.max_pic_average_light_level = static_cast<uint16_t>(val);
+  } catch (...) {
+    return false;
+  }
+
+  // There should be no extra tokens
+  if (ss.rdbuf()->in_avail() != 0) return false;
+
+  clli = _clli;
+
+  return true;
+}
+
+
 class LibHeifInitializer
 {
 public:
@@ -1301,6 +1346,11 @@ int main(int argc, char** argv)
         break;
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
+        break;
+      case OPTION_SET_CLLI:
+        if (!parse_clli_argument(optarg)) {
+          std::cerr << "Invalid arguments for --clli option.\n";
+        }
         break;
     }
   }
@@ -1612,7 +1662,11 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
-    struct heif_image_handle* handle;
+    if (clli) {
+      heif_image_set_content_light_level(image.get(), &*clli);
+    }
+
+    heif_image_handle* handle;
 
     if (use_tiling || cut_tiles > 0) {
       handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling);
