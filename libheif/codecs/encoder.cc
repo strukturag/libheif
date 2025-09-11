@@ -59,7 +59,7 @@ static nclx_profile compute_target_nclx_profile(const std::shared_ptr<HeifPixelI
   }
     // Otherwise, if there is an input NCLX, keep that.
   else if (image->has_nclx_profile()) {
-    target_nclx_profile = *image->get_color_profile_nclx();
+    target_nclx_profile = image->get_color_profile_nclx();
   }
     // Otherwise, just use the defaults (set below)
   else {

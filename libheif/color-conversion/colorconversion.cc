@@ -542,7 +542,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   input_state.chroma = input->get_chroma_format();
   input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_interleaved_with_alpha(input->get_chroma_format());
   if (input->has_nclx_profile()) {
-    input_state.nclx = *input->get_color_profile_nclx();
+    input_state.nclx = input->get_color_profile_nclx();
   }
 
   input_state.nclx.replace_undefined_values_with_sRGB_defaults();

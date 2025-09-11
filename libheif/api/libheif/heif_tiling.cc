@@ -158,7 +158,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
 
     if (options->output_nclx_profile == nullptr) {
       if (tiles[0]->image->has_nclx_profile()) {
-        nclx_profile input_nclx = *tiles[0]->image->get_color_profile_nclx();
+        nclx_profile input_nclx = tiles[0]->image->get_color_profile_nclx();
 
         options->output_nclx_profile = &nclx;
         nclx.version = 1;

@@ -192,11 +192,11 @@ public:
   Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height,
                                const heif_security_limits* limits) const;
 
-  bool has_nclx_profile() const { return m_color_profile_nclx.has_value(); }
+  bool has_nclx_profile() const;
 
-  void set_color_profile_nclx(const std::optional<nclx_profile>& profile) { m_color_profile_nclx = profile; }
+  void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
 
-  std::optional<nclx_profile> get_color_profile_nclx() const { return m_color_profile_nclx; }
+  nclx_profile get_color_profile_nclx() const { return m_color_profile_nclx; }
 
   // get the stored nclx fallback or return the default nclx if none is stored
   nclx_profile get_color_profile_nclx_with_fallback() const;
@@ -330,7 +330,7 @@ private:
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
   bool m_premultiplied_alpha = false;
-  std::optional<nclx_profile> m_color_profile_nclx;
+  nclx_profile m_color_profile_nclx = nclx_profile::undefined();
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   std::map<heif_channel, ImagePlane> m_planes;

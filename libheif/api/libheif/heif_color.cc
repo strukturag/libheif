@@ -288,7 +288,7 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
   }
 
   auto nclx_profile = handle->image->get_color_profile_nclx();
-  Error err = nclx_profile->get_nclx_color_profile(out_data);
+  Error err = nclx_profile.get_nclx_color_profile(out_data);
 
   return err.error_struct(handle->image.get());
 }
@@ -381,15 +381,14 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
     return err.error_struct(image->image.get());
   }
 
-  auto nclx_profile = image->image->get_color_profile_nclx();
-
-  if (!nclx_profile) {
+  if (!image->image->has_nclx_profile()) {
     Error err(heif_error_Color_profile_does_not_exist,
               heif_suberror_Unspecified);
     return err.error_struct(image->image.get());
   }
 
-  Error err = nclx_profile->get_nclx_color_profile(out_data);
+  auto nclx_profile = image->image->get_color_profile_nclx();
+  Error err = nclx_profile.get_nclx_color_profile(out_data);
 
   return err.error_struct(image->image.get());
 }

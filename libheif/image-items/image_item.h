@@ -312,11 +312,11 @@ public:
                        const struct heif_encoding_options& options,
                        enum heif_image_input_class input_class);
 
-  bool has_nclx_color_profile() const { return m_color_profile_nclx.has_value(); }
+  bool has_nclx_color_profile() const { return !m_color_profile_nclx.is_undefined(); }
 
-  std::optional<nclx_profile> get_color_profile_nclx() const { return m_color_profile_nclx; }
+  nclx_profile get_color_profile_nclx() const { return m_color_profile_nclx; }
 
-  void set_color_profile_nclx(const std::optional<nclx_profile>& profile) { m_color_profile_nclx = profile; }
+  void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
@@ -417,7 +417,7 @@ private:
 
   std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
-  std::optional<nclx_profile> m_color_profile_nclx;
+  nclx_profile m_color_profile_nclx = nclx_profile::undefined();
   std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   bool m_miaf_compatible = true;

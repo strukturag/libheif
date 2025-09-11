@@ -197,7 +197,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   bool full_range_flag = true;
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (input->has_nclx_profile()) {
-    nclx_profile colorProfile = *input->get_color_profile_nclx();
+    nclx_profile colorProfile = input->get_color_profile_nclx();
 
     matrix_coeffs = colorProfile.get_matrix_coefficients();
     full_range_flag = colorProfile.get_full_range_flag();
@@ -342,7 +342,7 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (input->has_nclx_profile()) {
-    auto colorProfile = *input->get_color_profile_nclx();
+    auto colorProfile = input->get_color_profile_nclx();
     coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
                                            colorProfile.get_colour_primaries());
   }
@@ -477,7 +477,7 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (input->has_nclx_profile()) {
-    nclx_profile colorProfile = *input->get_color_profile_nclx();
+    nclx_profile colorProfile = input->get_color_profile_nclx();
     coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
                                            colorProfile.get_colour_primaries());
   }
@@ -637,7 +637,7 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
 
   if (input->has_nclx_profile()) {
-    nclx_profile colorProfile = *input->get_color_profile_nclx();
+    nclx_profile colorProfile = input->get_color_profile_nclx();
     full_range_flag = colorProfile.get_full_range_flag();
     coeffs = get_YCbCr_to_RGB_coefficients(colorProfile.get_matrix_coefficients(),
                                            colorProfile.get_colour_primaries());

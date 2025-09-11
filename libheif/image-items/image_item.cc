@@ -475,7 +475,7 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 
   if (*inout_colorspace == heif_colorspace_YCbCr) {
     auto nclx = get_color_profile_nclx();
-    if (nclx && nclx->get_matrix_coefficients() == 0) {
+    if (nclx.get_matrix_coefficients() == 0) {
       *inout_colorspace = heif_colorspace_RGB;
       *inout_chroma = heif_chroma_444; // TODO: this or keep the original chroma?
     }
@@ -816,7 +816,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // Otherwise, use the profile that is stored in the image stream itself and then set the
   // (non-NCLX) profile later.
   auto nclx = get_color_profile_nclx();
-  if (nclx) {
+  if (!nclx.is_undefined()) {
     img->set_color_profile_nclx(nclx);
   }
 

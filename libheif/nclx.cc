@@ -307,6 +307,12 @@ void nclx_profile::set_undefined()
 }
 
 
+bool nclx_profile::is_undefined() const
+{
+  return *this == nclx_profile::undefined();
+}
+
+
 void nclx_profile::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
 {
   if (nclx) {
