@@ -477,6 +477,16 @@ void heif_image_set_content_light_level(const heif_image* image, const heif_cont
 }
 
 
+void heif_image_handle_set_content_light_level(const heif_image_handle* handle, const heif_content_light_level* in)
+{
+  if (in == nullptr) {
+    return;
+  }
+
+  handle->image->set_clli(*in);
+}
+
+
 // --- mastering display colour volume ---
 
 

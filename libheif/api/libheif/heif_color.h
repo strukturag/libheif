@@ -297,6 +297,9 @@ int heif_image_handle_get_content_light_level(const heif_image_handle*, heif_con
 LIBHEIF_API
 void heif_image_set_content_light_level(const heif_image*, const heif_content_light_level* in);
 
+LIBHEIF_API
+void heif_image_handle_set_content_light_level(const heif_image_handle*, const heif_content_light_level* in);
+
 
 // --- mastering display colour volume ---
 

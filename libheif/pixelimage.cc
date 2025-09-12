@@ -114,6 +114,19 @@ nclx_profile ImageExtraData::get_color_profile_nclx_with_fallback() const
 }
 
 
+std::shared_ptr<Box_clli> ImageExtraData::get_clli_box() const
+{
+  if (!has_clli()) {
+    return {};
+  }
+
+  auto clli = std::make_shared<Box_clli>();
+  clli->clli = get_clli();
+
+  return clli;
+}
+
+
 std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
 {
   std::vector<std::shared_ptr<Box>> properties;
@@ -131,10 +144,7 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() cons
   // --- write CLLI property
 
   if (has_clli()) {
-    auto clli = std::make_shared<Box_clli>();
-    clli->clli = get_clli();
-
-    properties.push_back(clli);
+    properties.push_back(get_clli_box());
   }
 
 

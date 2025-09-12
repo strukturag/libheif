@@ -274,6 +274,12 @@ public:
   const std::vector<std::shared_ptr<ImageMetadata>>& get_metadata() const { return m_metadata; }
 
 
+
+  // --- ImageExtraData
+
+  void set_clli(const heif_content_light_level& clli) override;
+
+
   // --- miaf
 
   // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.

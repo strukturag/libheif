@@ -75,7 +75,7 @@ enum heif_chroma420_sample_position {
 class ImageExtraData
 {
 public:
-  ~ImageExtraData();
+  virtual ~ImageExtraData();
 
   std::vector<std::shared_ptr<Box>> generate_property_boxes() const;
 
@@ -84,14 +84,14 @@ public:
 
   bool has_nclx_profile() const;
 
-  void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
+  virtual void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
 
   nclx_profile get_color_profile_nclx() const { return m_color_profile_nclx; }
 
   // get the stored nclx fallback or return the default nclx if none is stored
   nclx_profile get_color_profile_nclx_with_fallback() const;
 
-  void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
+  virtual void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
@@ -100,7 +100,7 @@ public:
 
   bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
 
-  void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
+  virtual void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
 
 
   // --- pixel aspect ratio
@@ -113,7 +113,7 @@ public:
     *v = m_PixelAspectRatio_v;
   }
 
-  void set_pixel_ratio(uint32_t h, uint32_t v)
+  virtual void set_pixel_ratio(uint32_t h, uint32_t v)
   {
     m_PixelAspectRatio_h = h;
     m_PixelAspectRatio_v = v;
@@ -125,7 +125,7 @@ public:
 
   heif_content_light_level get_clli() const { return m_clli; }
 
-  void set_clli(const heif_content_light_level& clli) { m_clli = clli; }
+  virtual void set_clli(const heif_content_light_level& clli) { m_clli = clli; }
 
   // --- mdcv
 
@@ -133,14 +133,14 @@ public:
 
   heif_mastering_display_colour_volume get_mdcv() const { return *m_mdcv; }
 
-  void set_mdcv(const heif_mastering_display_colour_volume& mdcv)
+  virtual void set_mdcv(const heif_mastering_display_colour_volume& mdcv)
   {
     m_mdcv = mdcv;
   }
 
   void unset_mdcv() { m_mdcv.reset(); }
 
-  Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
+  virtual Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
     delete m_tai_timestamp;
 
     m_tai_timestamp = heif_tai_timestamp_packet_alloc();
@@ -153,7 +153,7 @@ public:
   }
 
 
-  void set_gimi_sample_content_id(std::string id) { m_gimi_sample_content_id = id; }
+  virtual void set_gimi_sample_content_id(std::string id) { m_gimi_sample_content_id = id; }
 
   bool has_gimi_sample_content_id() const { return m_gimi_sample_content_id.has_value(); }
 
@@ -172,6 +172,9 @@ private:
   heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
 
   std::optional<std::string> m_gimi_sample_content_id;
+
+protected:
+  std::shared_ptr<Box_clli> get_clli_box() const;
 };
 
 

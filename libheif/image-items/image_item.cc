@@ -69,6 +69,10 @@ std::shared_ptr<HeifFile> ImageItem::get_file() const
 
 heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool essential)
 {
+  if (!property) {
+    return 0;
+  }
+
   // TODO: is this correct? What happens when add_property does deduplicate the property?
   m_properties.push_back(property);
   return get_file()->add_property(get_id(), property, essential);
@@ -77,6 +81,10 @@ heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool ess
 
 heif_property_id ImageItem::add_property_without_deduplication(std::shared_ptr<Box> property, bool essential)
 {
+  if (!property) {
+    return 0;
+  }
+
   m_properties.push_back(property);
   return get_file()->add_property_without_deduplication(get_id(), property, essential);
 }
@@ -327,6 +335,9 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
 
   // --- generate properties for image extra data
 
+  // copy over ImageExtraData into image item
+  *static_cast<ImageExtraData*>(this) = static_cast<ImageExtraData>(*image);
+
   auto extra_data_properties = image->generate_property_boxes();
   codedImage.properties.insert(codedImage.properties.end(),
                                extra_data_properties.begin(),
@@ -367,6 +378,7 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // set item properties
 
   for (auto& propertyBox : codingResult->properties) {
+    // TODO: can we simply use add_property() ?
     int index = ctx->get_heif_file()->get_ipco_box()->find_or_append_child_box(propertyBox);
     ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{propertyBox->is_essential(),
                                                                                                            uint16_t(index + 1)});
@@ -606,6 +618,13 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
   }
 
   return Error::Ok;
+}
+
+
+void ImageItem::set_clli(const heif_content_light_level& clli)
+{
+  ImageExtraData::set_clli(clli);
+  add_property(get_clli_box(), false);
 }
 
 

@@ -1662,10 +1662,6 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
-    if (clli) {
-      heif_image_set_content_light_level(image.get(), &*clli);
-    }
-
     heif_image_handle* handle;
 
     if (use_tiling || cut_tiles > 0) {
@@ -1687,6 +1683,10 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (handle==nullptr) {
       std::cerr << "Could not encode image\n";
       return 1;
+    }
+
+    if (clli) {
+      heif_image_handle_set_content_light_level(handle, &*clli);
     }
 
     if (is_primary_image) {
