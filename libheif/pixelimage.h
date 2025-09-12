@@ -72,125 +72,10 @@ enum heif_chroma420_sample_position {
 };
 
 
-class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
-                       public ErrorBuffer
+class ImageExtraData
 {
 public:
-  explicit HeifPixelImage() = default;
-
-  ~HeifPixelImage();
-
-  void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
-
-  Error create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h,
-                                       const heif_security_limits* limits);
-
-  Error add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth, const heif_security_limits* limits);
-
-  Error add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
-                    const heif_security_limits* limits);
-
-  bool has_channel(heif_channel channel) const;
-
-  // Has alpha information either as a separate channel or in the interleaved format.
-  bool has_alpha() const;
-
-  bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
-
-  void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
-
-  uint32_t get_width() const { return m_width; }
-
-  uint32_t get_height() const { return m_height; }
-
-  uint32_t get_width(enum heif_channel channel) const;
-
-  uint32_t get_height(enum heif_channel channel) const;
-
-  bool has_odd_width() const { return !!(m_width & 1); }
-
-  bool has_odd_height() const { return !!(m_height & 1); }
-
-  heif_chroma get_chroma_format() const { return m_chroma; }
-
-  heif_colorspace get_colorspace() const { return m_colorspace; }
-
-  std::set<enum heif_channel> get_channel_set() const;
-
-  uint8_t get_storage_bits_per_pixel(enum heif_channel channel) const;
-
-  uint8_t get_bits_per_pixel(enum heif_channel channel) const;
-
-  // Get the maximum bit depth of a visual channel (YCbCr or RGB).
-  uint8_t get_visual_image_bits_per_pixel() const;
-
-  heif_channel_datatype get_datatype(enum heif_channel channel) const;
-
-  int get_number_of_interleaved_components(heif_channel channel) const;
-
-  // Note: we are using size_t as stride type since the stride is usually involved in a multiplication with the line number.
-  //       For very large images (e.g. >2 GB), this can result in an integer overflow and corresponding illegal memory access.
-  //       (see https://github.com/strukturag/libheif/issues/1419)
-  uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
-
-  const uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
-
-  template <typename T>
-  T* get_channel(enum heif_channel channel, size_t* out_stride)
-  {
-    auto iter = m_planes.find(channel);
-    if (iter == m_planes.end()) {
-      if (out_stride)
-        *out_stride = 0;
-
-      return nullptr;
-    }
-
-    if (out_stride) {
-      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
-    }
-
-    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
-
-    return static_cast<T*>(iter->second.mem);
-  }
-
-  template <typename T>
-  const T* get_channel(enum heif_channel channel, size_t* out_stride) const
-  {
-    return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
-  }
-
-  Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
-                            heif_channel src_channel,
-                            heif_channel dst_channel,
-                            const heif_security_limits* limits);
-
-  Error extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage, const heif_security_limits* limits);
-
-  void fill_plane(heif_channel dst_channel, uint16_t value);
-
-  Error fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp, const heif_security_limits* limits);
-
-  void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
-                                    heif_channel src_channel,
-                                    heif_channel dst_channel);
-
-  Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
-
-  Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees, const heif_security_limits* limits);
-
-  Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction, const heif_security_limits* limits);
-
-  Result<std::shared_ptr<HeifPixelImage>> crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
-                                               const heif_security_limits* limits) const;
-
-  Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
-
-  Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy);
-
-  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height,
-                               const heif_security_limits* limits) const;
+  ~ImageExtraData();
 
   bool has_nclx_profile() const;
 
@@ -205,17 +90,10 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
-  void forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image);
 
-  void debug_dump() const;
+  bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
 
-  Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
-                               const heif_security_limits* limits);
-
-  Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
-
-  Result<std::shared_ptr<HeifPixelImage>> extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-                                                             const heif_security_limits* limits) const;
+  void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
 
 
   // --- pixel aspect ratio
@@ -274,6 +152,151 @@ public:
 
   std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
 
+private:
+  bool m_premultiplied_alpha = false;
+  nclx_profile m_color_profile_nclx = nclx_profile::undefined();
+  std::shared_ptr<const color_profile_raw> m_color_profile_icc;
+
+  uint32_t m_PixelAspectRatio_h = 1;
+  uint32_t m_PixelAspectRatio_v = 1;
+  heif_content_light_level m_clli{};
+  std::optional<heif_mastering_display_colour_volume> m_mdcv;
+
+  heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
+
+  std::optional<std::string> m_gimi_sample_content_id;
+};
+
+
+class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
+                       public ImageExtraData,
+                       public ErrorBuffer
+{
+public:
+  explicit HeifPixelImage() = default;
+
+  ~HeifPixelImage();
+
+  void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
+
+  Error create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h,
+                                       const heif_security_limits* limits);
+
+  Error add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth, const heif_security_limits* limits);
+
+  Error add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+                    const heif_security_limits* limits);
+
+  bool has_channel(heif_channel channel) const;
+
+  // Has alpha information either as a separate channel or in the interleaved format.
+  bool has_alpha() const;
+
+  uint32_t get_width() const { return m_width; }
+
+  uint32_t get_height() const { return m_height; }
+
+  uint32_t get_width(heif_channel channel) const;
+
+  uint32_t get_height(heif_channel channel) const;
+
+  bool has_odd_width() const { return !!(m_width & 1); }
+
+  bool has_odd_height() const { return !!(m_height & 1); }
+
+  heif_chroma get_chroma_format() const { return m_chroma; }
+
+  heif_colorspace get_colorspace() const { return m_colorspace; }
+
+  std::set<heif_channel> get_channel_set() const;
+
+  uint8_t get_storage_bits_per_pixel(heif_channel channel) const;
+
+  uint8_t get_bits_per_pixel(heif_channel channel) const;
+
+  // Get the maximum bit depth of a visual channel (YCbCr or RGB).
+  uint8_t get_visual_image_bits_per_pixel() const;
+
+  heif_channel_datatype get_datatype(heif_channel channel) const;
+
+  int get_number_of_interleaved_components(heif_channel channel) const;
+
+  // Note: we are using size_t as stride type since the stride is usually involved in a multiplication with the line number.
+  //       For very large images (e.g. >2 GB), this can result in an integer overflow and corresponding illegal memory access.
+  //       (see https://github.com/strukturag/libheif/issues/1419)
+  uint8_t* get_plane(heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+
+  const uint8_t* get_plane(heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+
+  template <typename T>
+  T* get_channel(heif_channel channel, size_t* out_stride)
+  {
+    auto iter = m_planes.find(channel);
+    if (iter == m_planes.end()) {
+      if (out_stride)
+        *out_stride = 0;
+
+      return nullptr;
+    }
+
+    if (out_stride) {
+      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
+    }
+
+    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
+
+    return static_cast<T*>(iter->second.mem);
+  }
+
+  template <typename T>
+  const T* get_channel(heif_channel channel, size_t* out_stride) const
+  {
+    return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
+  }
+
+  Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
+                            heif_channel src_channel,
+                            heif_channel dst_channel,
+                            const heif_security_limits* limits);
+
+  Error extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage, const heif_security_limits* limits);
+
+  void fill_plane(heif_channel dst_channel, uint16_t value);
+
+  Error fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp, const heif_security_limits* limits);
+
+  void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
+                                    heif_channel src_channel,
+                                    heif_channel dst_channel);
+
+  Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
+
+  Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees, const heif_security_limits* limits);
+
+  Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction, const heif_security_limits* limits);
+
+  Result<std::shared_ptr<HeifPixelImage>> crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
+                                               const heif_security_limits* limits) const;
+
+  Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
+
+  Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy);
+
+  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height,
+                               const heif_security_limits* limits) const;
+
+  void forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image);
+
+  void debug_dump() const;
+
+  Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
+                               const heif_security_limits* limits);
+
+  Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
+
+  Result<std::shared_ptr<HeifPixelImage>> extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                                             const heif_security_limits* limits) const;
+
 
   // --- sequences
 
@@ -329,23 +352,11 @@ private:
   uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
-  bool m_premultiplied_alpha = false;
-  nclx_profile m_color_profile_nclx = nclx_profile::undefined();
-  std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   std::map<heif_channel, ImagePlane> m_planes;
   MemoryHandle m_memory_handle;
 
-  uint32_t m_PixelAspectRatio_h = 1;
-  uint32_t m_PixelAspectRatio_v = 1;
-  heif_content_light_level m_clli{};
-  std::optional<heif_mastering_display_colour_volume> m_mdcv;
-
   uint32_t m_sample_duration = 0; // duration of a sequence frame
-
-  heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
-
-  std::optional<std::string> m_gimi_sample_content_id;
 
   std::vector<Error> m_warnings;
 };

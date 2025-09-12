@@ -216,7 +216,7 @@ public:
     return m_has_depth_representation_info;
   }
 
-  const struct heif_depth_representation_info& get_depth_representation_info() const
+  const heif_depth_representation_info& get_depth_representation_info() const
   {
     return m_depth_representation_info;
   }
@@ -409,7 +409,7 @@ private:
   std::shared_ptr<ImageItem> m_depth_channel;
 
   bool m_has_depth_representation_info = false;
-  struct heif_depth_representation_info m_depth_representation_info;
+  heif_depth_representation_info m_depth_representation_info;
 
   bool m_is_aux_image = false;
   std::string m_aux_image_type;

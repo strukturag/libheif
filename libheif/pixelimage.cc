@@ -90,13 +90,35 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
   }
 }
 
+
+ImageExtraData::~ImageExtraData()
+{
+  heif_tai_timestamp_packet_release(m_tai_timestamp);
+}
+
+
+bool ImageExtraData::has_nclx_profile() const
+{
+  return m_color_profile_nclx != nclx_profile::defaults();
+}
+
+
+nclx_profile ImageExtraData::get_color_profile_nclx_with_fallback() const
+{
+  if (has_nclx_profile()) {
+    return get_color_profile_nclx();
+  }
+  else {
+    return nclx_profile::defaults();
+  }
+}
+
+
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
   }
-
-  heif_tai_timestamp_packet_release(m_tai_timestamp);
 }
 
 
@@ -1560,23 +1582,6 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
   }
 
   return Error::Ok;
-}
-
-
-bool HeifPixelImage::has_nclx_profile() const
-{
-  return m_color_profile_nclx != nclx_profile::defaults();
-}
-
-
-nclx_profile HeifPixelImage::get_color_profile_nclx_with_fallback() const
-{
-  if (has_nclx_profile()) {
-    return get_color_profile_nclx();
-  }
-  else {
-    return nclx_profile::defaults();
-  }
 }
 
 
