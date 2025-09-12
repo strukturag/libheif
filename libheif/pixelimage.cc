@@ -114,6 +114,54 @@ nclx_profile ImageExtraData::get_color_profile_nclx_with_fallback() const
 }
 
 
+std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
+{
+  std::vector<std::shared_ptr<Box>> properties;
+
+  // --- write PASP property
+
+  if (has_nonsquare_pixel_ratio()) {
+    auto pasp = std::make_shared<Box_pasp>();
+    get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
+
+    properties.push_back(pasp);
+  }
+
+
+  // --- write CLLI property
+
+  if (has_clli()) {
+    auto clli = std::make_shared<Box_clli>();
+    clli->clli = get_clli();
+
+    properties.push_back(clli);
+  }
+
+
+  // --- write MDCV property
+
+  if (has_mdcv()) {
+    auto mdcv = std::make_shared<Box_mdcv>();
+    mdcv->mdcv = get_mdcv();
+
+    properties.push_back(mdcv);
+  }
+
+
+  // --- write TAI property
+
+  if (auto* tai = get_tai_timestamp()) {
+    auto itai = std::make_shared<Box_itai>();
+    itai->set_from_tai_timestamp_packet(tai);
+
+    properties.push_back(itai);
+  }
+
+  return properties;
+}
+
+
+
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {

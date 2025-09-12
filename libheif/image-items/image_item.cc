@@ -325,45 +325,12 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
   }
   codedImage.properties.push_back(pixi);
 
+  // --- generate properties for image extra data
 
-  // --- write PASP property
-
-  if (image->has_nonsquare_pixel_ratio()) {
-    auto pasp = std::make_shared<Box_pasp>();
-    image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
-
-    codedImage.properties.push_back(pasp);
-  }
-
-
-  // --- write CLLI property
-
-  if (image->has_clli()) {
-    auto clli = std::make_shared<Box_clli>();
-    clli->clli = image->get_clli();
-
-    codedImage.properties.push_back(clli);
-  }
-
-
-  // --- write MDCV property
-
-  if (image->has_mdcv()) {
-    auto mdcv = std::make_shared<Box_mdcv>();
-    mdcv->mdcv = image->get_mdcv();
-
-    codedImage.properties.push_back(mdcv);
-  }
-
-
-  // --- write TAI property
-
-  if (auto* tai = image->get_tai_timestamp()) {
-    auto itai = std::make_shared<Box_itai>();
-    itai->set_from_tai_timestamp_packet(tai);
-
-    codedImage.properties.push_back(itai);
-  }
+  auto extra_data_properties = image->generate_property_boxes();
+  codedImage.properties.insert(codedImage.properties.end(),
+                               extra_data_properties.begin(),
+                               extra_data_properties.end());
 
   return encodeResult;
 }

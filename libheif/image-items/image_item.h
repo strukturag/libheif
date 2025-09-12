@@ -29,6 +29,8 @@
 #include <memory>
 #include <utility>
 #include <set>
+
+#include "pixelimage.h"
 #include "api/libheif/heif_plugin.h"
 #include "codecs/encoder.h"
 
@@ -49,7 +51,8 @@ public:
 };
 
 
-class ImageItem : public ErrorBuffer
+class ImageItem : public ImageExtraData,
+                  public ErrorBuffer
 {
 public:
   ImageItem(HeifContext* ctx);
@@ -433,6 +436,8 @@ private:
   std::vector<Error> m_decoding_warnings;
 
   std::vector<heif_item_id> m_text_item_ids;
+
+  void generate_property_boxes_for_ImageExtraData();
 
 protected:
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;

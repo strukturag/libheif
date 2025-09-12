@@ -45,7 +45,7 @@ public:
     std::vector<uint8_t> bitstream;
     CodingConstraints codingConstraints;
 
-    // If 0, the encoded size is equal to the input size.
+    // If 0, the encoded size is unknown.
     uint32_t encoded_image_width = 0;
     uint32_t encoded_image_height = 0;
 

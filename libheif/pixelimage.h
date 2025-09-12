@@ -77,6 +77,11 @@ class ImageExtraData
 public:
   ~ImageExtraData();
 
+  std::vector<std::shared_ptr<Box>> generate_property_boxes() const;
+
+
+  // --- color profile
+
   bool has_nclx_profile() const;
 
   void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
@@ -90,6 +95,8 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+
+  // --- premultiplied alpha
 
   bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
 
