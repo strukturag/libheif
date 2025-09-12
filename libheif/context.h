@@ -107,13 +107,13 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_item_id ID,
                                                        heif_colorspace out_colorspace,
                                                        heif_chroma out_chroma,
-                                                       const struct heif_decoding_options& options,
+                                                       const heif_decoding_options& options,
                                                        bool decode_only_tile, uint32_t tx, uint32_t ty) const;
 
   Result<std::shared_ptr<HeifPixelImage>> convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                        heif_colorspace out_colorspace,
                                                                        heif_chroma out_chroma,
-                                                                       const struct heif_decoding_options& options) const;
+                                                                       const heif_decoding_options& options) const;
 
   Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
@@ -130,9 +130,9 @@ public:
   void reset_to_empty_heif();
 
   Result<std::shared_ptr<ImageItem>> encode_image(const std::shared_ptr<HeifPixelImage>& image,
-                                                  struct heif_encoder* encoder,
-                                                  const struct heif_encoding_options& options,
-                                                  enum heif_image_input_class input_class);
+                                                  heif_encoder* encoder,
+                                                  const heif_encoding_options& options,
+                                                  heif_image_input_class input_class);
 
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
@@ -142,8 +142,8 @@ public:
                          const std::shared_ptr<ImageItem>& thumbnail_image);
 
   Result<std::shared_ptr<ImageItem>> encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                                                      struct heif_encoder* encoder,
-                                                      const struct heif_encoding_options& options,
+                                                      heif_encoder* encoder,
+                                                      const heif_encoding_options& options,
                                                       int bbox_size);
 
   Error add_exif_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size);

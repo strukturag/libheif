@@ -287,11 +287,11 @@ public:
 
   virtual void set_decoder_input_data() { }
 
-  virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
+  virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                                bool decode_tile_only, uint32_t tile_x0,
                                                                uint32_t tile_y0) const;
 
-  virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+  virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0,
                                                                           uint32_t tile_y0) const;
 
@@ -302,15 +302,15 @@ public:
   // === encoding ===
 
   Result<Encoder::CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                                struct heif_encoder* encoder,
-                                                                const struct heif_encoding_options& options,
-                                                                enum heif_image_input_class input_class);
+                                                                heif_encoder* encoder,
+                                                                const heif_encoding_options& options,
+                                                                heif_image_input_class input_class);
 
   Error encode_to_item(HeifContext* ctx,
                        const std::shared_ptr<HeifPixelImage>& image,
-                       struct heif_encoder* encoder,
-                       const struct heif_encoding_options& options,
-                       enum heif_image_input_class input_class);
+                       heif_encoder* encoder,
+                       const heif_encoding_options& options,
+                       heif_image_input_class input_class);
 
   bool has_nclx_color_profile() const { return !m_color_profile_nclx.is_undefined(); }
 
@@ -438,15 +438,15 @@ protected:
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
   virtual Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                 struct heif_encoder* encoder,
-                                                 const struct heif_encoding_options& options,
-                                                 enum heif_image_input_class input_class);
+                                                 heif_encoder* encoder,
+                                                 const heif_encoding_options& options,
+                                                 heif_image_input_class input_class);
 
   // --- encoding utility functions
 
   static void add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class,
+                                const heif_encoding_options& options,
+                                heif_image_input_class input_class,
                                 const heif_color_profile_nclx* target_heif_nclx,
                                 Encoder::CodedImageData& inout_codedImage);
 };
@@ -467,14 +467,14 @@ public:
 
   Error get_item_error() const override { return m_item_error; }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0,
                                                        uint32_t tile_y0) const override
   {
     return m_item_error;
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0,
                                                                   uint32_t tile_y0) const override
   {

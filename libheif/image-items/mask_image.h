@@ -97,13 +97,13 @@ public:
 
   int get_chroma_bits_per_pixel() const override { return 0; }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                         struct heif_encoder* encoder,
-                                         const struct heif_encoding_options& options,
-                                         enum heif_image_input_class input_class) override;
+                                         heif_encoder* encoder,
+                                         const heif_encoding_options& options,
+                                         heif_image_input_class input_class) override;
 };
 
 #endif //LIBHEIF_MASK_IMAGE_H

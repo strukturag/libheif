@@ -108,15 +108,15 @@ public:
   heif_brand2 get_compatible_brand() const override;
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                         struct heif_encoder* encoder,
-                                         const struct heif_encoding_options& options,
-                                         enum heif_image_input_class input_class) override
+                                         heif_encoder* encoder,
+                                         const heif_encoding_options& options,
+                                         heif_image_input_class input_class) override
   {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unspecified, "Cannot encode image to 'iovl'"};
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
 

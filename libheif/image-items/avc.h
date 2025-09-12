@@ -54,9 +54,9 @@ protected:
 
 public:
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                         struct heif_encoder* encoder,
-                                         const struct heif_encoding_options& options,
-                                         enum heif_image_input_class input_class) override;
+                                         heif_encoder* encoder,
+                                         const heif_encoding_options& options,
+                                         heif_image_input_class input_class) override;
 
   std::shared_ptr<class Decoder_AVC> m_decoder;
 };
