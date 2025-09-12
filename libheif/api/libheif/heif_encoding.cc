@@ -666,7 +666,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     heif_encoding_options_copy(&options, input_options);
 
     if (options.output_nclx_profile == nullptr) {
-      if (input_image->image->has_nclx_profile()) {
+      if (input_image->image->has_nclx_color_profile()) {
         nclx_profile input_nclx = input_image->image->get_color_profile_nclx();
 
         options.output_nclx_profile = &nclx;

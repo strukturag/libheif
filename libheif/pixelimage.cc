@@ -97,7 +97,7 @@ ImageExtraData::~ImageExtraData()
 }
 
 
-bool ImageExtraData::has_nclx_profile() const
+bool ImageExtraData::has_nclx_color_profile() const
 {
   return m_color_profile_nclx != nclx_profile::defaults();
 }
@@ -105,7 +105,7 @@ bool ImageExtraData::has_nclx_profile() const
 
 nclx_profile ImageExtraData::get_color_profile_nclx_with_fallback() const
 {
-  if (has_nclx_profile()) {
+  if (has_nclx_color_profile()) {
     return get_color_profile_nclx();
   }
   else {

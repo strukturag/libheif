@@ -477,7 +477,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
     encoding_options->color_conversion_options = sequence_encoding_options->color_conversion_options;
 
     if (encoding_options->output_nclx_profile == nullptr) {
-      if (input_image->image->has_nclx_profile()) {
+      if (input_image->image->has_nclx_color_profile()) {
         nclx_profile input_nclx = input_image->image->get_color_profile_nclx();
 
         encoding_options->output_nclx_profile = &nclx;

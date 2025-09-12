@@ -82,7 +82,7 @@ public:
 
   // --- color profile
 
-  bool has_nclx_profile() const;
+  bool has_nclx_color_profile() const;
 
   virtual void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
 

@@ -322,9 +322,6 @@ public:
                        const heif_encoding_options& options,
                        heif_image_input_class input_class);
 
-  // TODO: use same name
-  bool has_nclx_color_profile() const { return has_nclx_profile(); }
-
   void set_color_profile_nclx(const nclx_profile& profile) override
   { ImageExtraData::set_color_profile_nclx(profile); } // TODO: set 'colr'
 

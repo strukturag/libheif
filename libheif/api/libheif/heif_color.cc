@@ -329,7 +329,7 @@ heif_color_profile_type heif_image_get_color_profile_type(const heif_image* imag
     return (heif_color_profile_type) profile->get_type();
   }
 
-  if (image->image->has_nclx_profile()) {
+  if (image->image->has_nclx_color_profile()) {
     return heif_color_profile_type_nclx;
   }
 
@@ -383,7 +383,7 @@ heif_error heif_image_get_nclx_color_profile(const heif_image* image,
     return err.error_struct(image->image.get());
   }
 
-  if (!image->image->has_nclx_profile()) {
+  if (!image->image->has_nclx_color_profile()) {
     Error err(heif_error_Color_profile_does_not_exist,
               heif_suberror_Unspecified);
     return err.error_struct(image->image.get());
