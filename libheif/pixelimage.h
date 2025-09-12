@@ -198,7 +198,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 public:
   explicit HeifPixelImage() = default;
 
-  ~HeifPixelImage();
+  ~HeifPixelImage() override;
 
   void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
 

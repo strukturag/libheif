@@ -59,8 +59,6 @@ public:
 
   ImageItem(HeifContext* ctx, heif_item_id id);
 
-  virtual ~ImageItem() = default;
-
   static std::shared_ptr<ImageItem> alloc_for_infe_box(HeifContext*, const std::shared_ptr<Box_infe>&);
 
   static std::shared_ptr<ImageItem> alloc_for_compression_format(HeifContext*, heif_compression_format);
