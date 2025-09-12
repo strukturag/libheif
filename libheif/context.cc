@@ -263,7 +263,7 @@ std::shared_ptr<const ImageItem> HeifContext::get_primary_image(bool return_erro
 
 bool HeifContext::is_image(heif_item_id ID) const
 {
-  return m_all_images.find(ID) != m_all_images.end();
+  return m_all_images.contains(ID);
 }
 
 
@@ -1252,7 +1252,7 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
     }
   }
   else {
-    if (m_all_images.find(id) == m_all_images.end()) {
+    if (!m_all_images.contains(id)) {
       std::stringstream sstr;
       sstr << "Image item " << id << " referenced, but it does not exist\n";
 
@@ -1277,7 +1277,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
   std::shared_ptr<ImageItem> imgitem;
-  if (m_all_images.find(ID) != m_all_images.end()) {
+  if (m_all_images.contains(ID)) {
     imgitem = m_all_images.find(ID)->second;
   }
 
