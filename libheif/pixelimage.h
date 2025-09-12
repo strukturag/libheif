@@ -95,6 +95,19 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+  void set_color_profile(const std::shared_ptr<const color_profile>& profile)
+  {
+    auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+    if (icc) {
+      m_color_profile_icc = std::move(icc);
+    }
+
+    auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+    if (nclx) {
+      m_color_profile_nclx = nclx->get_nclx_color_profile();
+    }
+  }
+
 
   // --- premultiplied alpha
 

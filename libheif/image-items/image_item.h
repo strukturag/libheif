@@ -322,26 +322,12 @@ public:
                        const heif_encoding_options& options,
                        heif_image_input_class input_class);
 
-  bool has_nclx_color_profile() const { return !m_color_profile_nclx.is_undefined(); }
+  // TODO: use same name
+  bool has_nclx_color_profile() const { return has_nclx_profile(); }
 
-  nclx_profile get_color_profile_nclx() const { return m_color_profile_nclx; }
+  void set_color_profile_nclx(const nclx_profile& profile) override
+  { ImageExtraData::set_color_profile_nclx(profile); } // TODO: set 'colr'
 
-  void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
-
-  const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
-
-  void set_color_profile(const std::shared_ptr<const color_profile>& profile)
-  {
-    auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
-    if (icc) {
-      m_color_profile_icc = std::move(icc);
-    }
-
-    auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
-    if (nclx) {
-      m_color_profile_nclx = nclx->get_nclx_color_profile();
-    }
-  }
 
   void set_intrinsic_matrix(const Box_cmin::RelativeIntrinsicMatrix& cmin) {
     m_has_intrinsic_matrix = true;
@@ -426,9 +412,6 @@ private:
   std::vector<std::shared_ptr<ImageItem>> m_aux_images;
 
   std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
-
-  nclx_profile m_color_profile_nclx = nclx_profile::undefined();
-  std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
   bool m_miaf_compatible = true;
 
