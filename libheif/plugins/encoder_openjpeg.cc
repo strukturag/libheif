@@ -87,13 +87,13 @@ const char* opj_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter opj_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* opj_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter opj_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* opj_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void opj_init_parameters()
 {
-  struct heif_encoder_parameter* p = opj_encoder_params;
-  const struct heif_encoder_parameter** d = opj_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = opj_encoder_params;
+  const heif_encoder_parameter** d = opj_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -119,9 +119,9 @@ void opj_cleanup_plugin()
 
 static void opj_set_default_parameters(void* encoder);
 
-struct heif_error opj_new_encoder(void** encoder_out)
+heif_error opj_new_encoder(void** encoder_out)
 {
-  struct encoder_struct_opj* encoder = new encoder_struct_opj();
+  encoder_struct_opj* encoder = new encoder_struct_opj();
   *encoder_out = encoder;
 
   opj_set_default_parameters(encoder);
@@ -132,13 +132,13 @@ struct heif_error opj_new_encoder(void** encoder_out)
 
 void opj_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
   delete encoder;
 }
 
-struct heif_error opj_set_parameter_quality(void* encoder_raw, int quality)
+heif_error opj_set_parameter_quality(void* encoder_raw, int quality)
 {
-  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  auto* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -149,47 +149,47 @@ struct heif_error opj_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error opj_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  auto* encoder = (encoder_struct_opj*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_lossless(void* encoder_raw, int lossless)
+heif_error opj_set_parameter_lossless(void* encoder_raw, int lossless)
 {
-  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  auto* encoder = (encoder_struct_opj*) encoder_raw;
   encoder->parameters.irreversible = lossless ? 0 : 1;
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_lossless(void* encoder_raw, int* lossless)
+heif_error opj_get_parameter_lossless(void* encoder_raw, int* lossless)
 {
-  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  auto* encoder = (encoder_struct_opj*) encoder_raw;
   *lossless = (encoder->parameters.irreversible == 0);
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_logging_level(void* encoder, int logging)
+heif_error opj_set_parameter_logging_level(void* encoder, int logging)
 {
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_logging_level(void* encoder, int* logging)
+heif_error opj_get_parameter_logging_level(void* encoder, int* logging)
 {
   return heif_error_ok;
 }
 
-const struct heif_encoder_parameter** opj_list_parameters(void* encoder)
+const heif_encoder_parameter** opj_list_parameters(void* encoder)
 {
   return opj_encoder_parameter_ptrs;
 }
 
-struct heif_error opj_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error opj_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return opj_set_parameter_quality(encoder, value);
@@ -198,9 +198,9 @@ struct heif_error opj_set_parameter_integer(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error opj_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error opj_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return opj_get_parameter_quality(encoder, value);
@@ -209,19 +209,19 @@ struct heif_error opj_get_parameter_integer(void* encoder_raw, const char* name,
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_boolean(void* encoder, const char* name, int value)
+heif_error opj_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_boolean(void* encoder, const char* name, int* value)
+heif_error opj_get_parameter_boolean(void* encoder, const char* name, int* value)
 {
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error opj_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  auto* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
@@ -250,9 +250,9 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
   dst[dst_size - 1] = 0;
 }
 
-struct heif_error opj_get_parameter_string(void* encoder_raw, const char* name, char* value, int value_size)
+heif_error opj_get_parameter_string(void* encoder_raw, const char* name, char* value, int value_size)
 {
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
@@ -281,8 +281,8 @@ struct heif_error opj_get_parameter_string(void* encoder_raw, const char* name, 
 
 static void opj_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = opj_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = opj_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -301,7 +301,7 @@ static void opj_set_default_parameters(void* encoder)
 }
 
 
-void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
+void opj_query_input_colorspace(heif_colorspace* inout_colorspace, heif_chroma* inout_chroma)
 {
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.
@@ -316,7 +316,7 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
   }
 }
 
-void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
+void opj_query_input_colorspace2(void* encoder_raw, heif_colorspace* inout_colorspace, heif_chroma* inout_chroma)
 {
   auto* encoder = (struct encoder_struct_opj*) encoder_raw;
 
@@ -341,11 +341,11 @@ void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_
 // @param src_data_raw - Newly encoded bytes provided by OpenJPEG
 // @param nb_bytes - The number of bytes or size of src_data_raw
 // @param encoder_raw - Out the new
-// @return - The number of bytes successfuly transfered
+// @return - The number of bytes successfully transferred
 static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw)
 {
   uint8_t* src_data = (uint8_t*) src_data_raw;
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
 
   for (size_t i = 0; i < nb_bytes; i++) {
     encoder->codestream.push_back(src_data[i]);
@@ -363,7 +363,7 @@ static void opj_close_from_buffer(void* p_user_data)
 // compressed image pixel data and very basic metadata. 
 // @param data - Uncompressed image pixel data
 // @param encoder - The function will output codestream in encoder->codestream
-static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder)
+static heif_error generate_codestream(opj_image_t* image, encoder_struct_opj* encoder)
 {
   heif_error error;
   OPJ_BOOL success;
@@ -449,10 +449,10 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
 }
 
 
-struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* image, enum heif_image_input_class image_class)
+heif_error opj_encode_image(void* encoder_raw, const heif_image* image, heif_image_input_class image_class)
 {
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
-  struct heif_error err;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
+  heif_error err;
 
   heif_chroma chroma = heif_image_get_chroma_format(image);
   heif_colorspace colorspace = heif_image_get_colorspace(image);
@@ -478,7 +478,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
       break;
     default:
       assert(false);
-      return heif_error{heif_error_Encoding_error, heif_suberror_Unspecified, "OpenJPEG encoder plugin received image with invalid colorspace."};
+      return {heif_error_Encoding_error, heif_suberror_Unspecified, "OpenJPEG encoder plugin received image with invalid colorspace."};
   }
 
   int band_count = (int) channels.size();
@@ -527,14 +527,27 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   for (int comp = 0; comp < band_count; comp++) {
     int stride;
     const uint8_t* p = heif_image_get_plane_readonly(image, channels[comp], &stride);
+    int bpp = heif_image_get_bits_per_pixel(image, channels[comp]);
 
     int cwidth = component_params[comp].w;
     int cheight = component_params[comp].h;
 
     // Note: obj_image data is 32bit integer
-    for (int y = 0; y < cheight; y++) {
-      for (int x = 0; x < cwidth; x++) {
-        opj_image->comps[comp].data[y * cwidth + x] = p[y * stride + x];
+
+    if (bpp <= 8) {
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          opj_image->comps[comp].data[y * cwidth + x] = p[y * stride + x];
+        }
+      }
+    }
+    else {
+      const uint16_t* p16 = (const uint16_t*)p;
+
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          opj_image->comps[comp].data[y * cwidth + x] = p16[y * stride/2 + x];
+        }
       }
     }
   }
@@ -550,11 +563,11 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   return err;
 }
 
-struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int* size, enum heif_encoded_data_type* type)
+heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int* size, enum heif_encoded_data_type* type)
 {
   // Get a packet of decoded data. The data format depends on the codec.
 
-  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder_struct_opj* encoder = (encoder_struct_opj*) encoder_raw;
 
   if (encoder->data_read) {
     *size = 0;
@@ -583,7 +596,7 @@ void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_openjpeg{
+static const heif_encoder_plugin encoder_plugin_openjpeg{
     /* plugin_api_version */ 3,
     /* compression_format */ heif_compression_JPEG2000,
     /* id_name */ "openjpeg",
@@ -615,7 +628,7 @@ static const struct heif_encoder_plugin encoder_plugin_openjpeg{
     /* query_encoded_size (v3) */ opj_query_encoded_size
 };
 
-const struct heif_encoder_plugin* get_encoder_plugin_openjpeg()
+const heif_encoder_plugin* get_encoder_plugin_openjpeg()
 {
   return &encoder_plugin_openjpeg;
 }

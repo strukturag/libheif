@@ -26,6 +26,7 @@
 #include <vector>
 #include "image-items/image_item.h"
 #include <memory>
+#include "sequences/seq_boxes.h"
 
 
 class Box_jpgC : public Box
@@ -50,5 +51,16 @@ protected:
 private:
   std::vector<uint8_t> m_data;
 };
+
+
+class Box_mjpg : public Box_VisualSampleEntry
+{
+public:
+  Box_mjpg()
+  {
+    set_short_type(fourcc("mjpg"));
+  }
+};
+
 
 #endif // LIBHEIF_JPEG_BOXES_H

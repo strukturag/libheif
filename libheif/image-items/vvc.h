@@ -31,24 +31,23 @@
 class ImageItem_VVC : public ImageItem
 {
 public:
-  ImageItem_VVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_VVC(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_VVC(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_VVC(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("vvc1"); }
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
-
   heif_compression_format get_compression_format() const override { return heif_compression_VVC; }
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Error initialize_decoder() override;
 
-  Error on_load_file() override;
+  void set_decoder_input_data() override;
+
+  std::shared_ptr<class Encoder> get_encoder() const override;
+
+  heif_brand2 get_compatible_brand() const override;
 
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
@@ -57,6 +56,7 @@ protected:
 
 private:
   std::shared_ptr<class Decoder_VVC> m_decoder;
+  std::shared_ptr<class Encoder_VVC> m_encoder;
 };
 
 #endif // LIBHEIF_VVC_H

@@ -76,4 +76,3 @@ Error Box_jpgC::parse(BitstreamRange& range, const heif_security_limits* limits)
   range.read(m_data.data(), nBytes);
   return range.get_error();
 }
-

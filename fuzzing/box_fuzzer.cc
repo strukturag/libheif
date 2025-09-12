@@ -22,16 +22,24 @@
 
 #include "box.h"
 #include "bitstream.h"
+#include "context.h"
 #include "logging.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
   auto reader = std::make_shared<StreamReader_memory>(data, size, false);
 
+  // --- OSS-Fuzz assumes a bug if the allocated memory exceeds 2560 MB.
+  //     Set a lower allocation limit to prevent this.
+
+  // Use a context for tracking the memory usage and set the reduced limit.
+  HeifContext ctx;
+  ctx.get_security_limits()->max_total_memory = UINT64_C(2) * 1024 * 1024 * 1024;
+
   BitstreamRange range(reader, size);
   for (;;) {
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box, heif_get_global_security_limits());
+    Error error = Box::read(range, &box, ctx.get_security_limits());
     if (error != Error::Ok || range.error()) {
       break;
     }

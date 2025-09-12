@@ -50,6 +50,8 @@ public:
     return heif_chroma_420;
   }
 
+  bool supports_alpha() const override { return false; }
+
   void UpdateDecodingOptions(const struct heif_image_handle* handle,
                              struct heif_decoding_options* options) const override;
 

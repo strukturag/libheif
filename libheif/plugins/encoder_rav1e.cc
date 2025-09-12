@@ -65,9 +65,11 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
-static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
-                                                           heif_suberror_Unspecified,
-                                                           "rav1e error"};
+static heif_error heif_error_codec_library_error = {
+  heif_error_Encoder_plugin_error,
+  heif_suberror_Unspecified,
+  "rav1e error"
+};
 
 static const int RAV1E_PLUGIN_PRIORITY = 20;
 
@@ -89,13 +91,13 @@ static const char* rav1e_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter rav1e_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* rav1e_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter rav1e_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* rav1e_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void rav1e_init_parameters()
 {
-  struct heif_encoder_parameter* p = rav1e_encoder_params;
-  const struct heif_encoder_parameter** d = rav1e_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = rav1e_encoder_params;
+  const heif_encoder_parameter** d = rav1e_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -198,7 +200,7 @@ static void rav1e_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** rav1e_list_parameters(void* encoder)
+const heif_encoder_parameter** rav1e_list_parameters(void* encoder)
 {
   return rav1e_encoder_parameter_ptrs;
 }
@@ -213,10 +215,10 @@ static void rav1e_cleanup_plugin()
 {
 }
 
-struct heif_error rav1e_new_encoder(void** enc)
+heif_error rav1e_new_encoder(void** enc)
 {
   auto* encoder = new encoder_struct_rav1e();
-  struct heif_error err = heif_error_ok;
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -229,15 +231,15 @@ struct heif_error rav1e_new_encoder(void** enc)
 
 void rav1e_free_encoder(void* encoder_raw)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   delete encoder;
 }
 
 
-struct heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
+heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -248,18 +250,18 @@ struct heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error rav1e_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (enable) {
     encoder->min_q = 0;
@@ -268,16 +270,16 @@ struct heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error rav1e_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   *enable = (encoder->min_q == 0);
 
   return heif_error_ok;
 }
 
-struct heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int logging)
+heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -292,7 +294,7 @@ struct heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int loggi
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -309,9 +311,9 @@ struct heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* logl
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return rav1e_set_parameter_quality(encoder, value);
@@ -329,9 +331,9 @@ struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* nam
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return rav1e_get_parameter_quality(encoder, value);
@@ -350,9 +352,9 @@ struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* nam
 }
 
 
-struct heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return rav1e_set_parameter_lossless(encoder, value);
@@ -363,9 +365,9 @@ struct heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* nam
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return rav1e_get_parameter_lossless(encoder, value);
@@ -377,9 +379,9 @@ struct heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* nam
 }
 
 
-struct heif_error rav1e_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error rav1e_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
@@ -410,10 +412,10 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
 }
 
 
-struct heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name,
-                                             char* value, int value_size)
+heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name,
+                                      char* value, int value_size)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
@@ -439,8 +441,8 @@ struct heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name
 
 static void rav1e_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = rav1e_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = rav1e_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -475,10 +477,10 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 }
 
 
-struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image* image,
-                                     heif_image_input_class input_class)
+heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
+                              heif_image_input_class input_class)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
@@ -512,7 +514,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     }
   }
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     nclx = nullptr;
@@ -608,12 +610,12 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   // if (input_class == heif_image_input_class_alpha) {
   //} else
   {
-    int strideY;
-    const uint8_t* Y = heif_image_get_plane_readonly(image, heif_channel_Y, &strideY);
-    int strideCb;
-    const uint8_t* Cb = heif_image_get_plane_readonly(image, heif_channel_Cb, &strideCb);
-    int strideCr;
-    const uint8_t* Cr = heif_image_get_plane_readonly(image, heif_channel_Cr, &strideCr);
+    size_t strideY;
+    const uint8_t* Y = heif_image_get_plane_readonly2(image, heif_channel_Y, &strideY);
+    size_t strideCb;
+    const uint8_t* Cb = heif_image_get_plane_readonly2(image, heif_channel_Cb, &strideCb);
+    size_t strideCr;
+    const uint8_t* Cr = heif_image_get_plane_readonly2(image, heif_channel_Cr, &strideCr);
 
 
     uint32_t height = heif_image_get_height(image, heif_channel_Y);
@@ -654,10 +656,10 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                            enum heif_encoded_data_type* type)
+heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                     heif_encoded_data_type* type)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (encoder->data_read) {
     *data = nullptr;
@@ -673,7 +675,7 @@ struct heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, i
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_rav1e
+static const heif_encoder_plugin encoder_plugin_rav1e
     {
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_AV1,
@@ -706,7 +708,7 @@ static const struct heif_encoder_plugin encoder_plugin_rav1e
         /* query_encoded_size (v3) */ nullptr
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_rav1e()
+const heif_encoder_plugin* get_encoder_plugin_rav1e()
 {
   return &encoder_plugin_rav1e;
 }

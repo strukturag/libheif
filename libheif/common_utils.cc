@@ -158,3 +158,29 @@ std::string fourcc_to_string(uint32_t code)
 
   return str;
 }
+
+
+Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
+{
+  if (vec.empty()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Null length string"};
+  }
+
+  if (vec.back() != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "utf8string not null-terminated"};
+  }
+
+  for (size_t i=0;i<vec.size()-1;i++) {
+    if (vec[i] == 0) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "utf8string with null character"};
+    }
+  }
+
+  return std::string(vec.begin(), vec.end()-1);
+}

@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits>
 #include <utility>
+#include <string>
 
 #include <dav1d/version.h>
 #include <dav1d/dav1d.h>
@@ -39,6 +40,7 @@ struct dav1d_decoder
   Dav1dContext* context;
   Dav1dData data;
   bool strict_decoding = false;
+  std::string error_message;
 };
 
 static const char kEmptyString[] = "";
@@ -75,7 +77,7 @@ static void dav1d_deinit_plugin()
 }
 
 
-static int dav1d_does_support_format(enum heif_compression_format format)
+static int dav1d_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_AV1) {
     return DAV1D_PLUGIN_PRIORITY;
@@ -86,7 +88,7 @@ static int dav1d_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error dav1d_new_decoder(void** dec)
+heif_error dav1d_new_decoder(void** dec)
 {
   auto* decoder = new dav1d_decoder();
 
@@ -111,7 +113,7 @@ struct heif_error dav1d_new_decoder(void** dec)
 
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
 }
 
@@ -137,12 +139,12 @@ void dav1d_free_decoder(void* decoder_raw)
 
 void dav1d_set_strict_decoding(void* decoder_raw, int flag)
 {
-  struct dav1d_decoder* decoder = (dav1d_decoder*) decoder_raw;
+  dav1d_decoder* decoder = (dav1d_decoder*) decoder_raw;
 
   decoder->strict_decoding = flag;
 }
 
-struct heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
   auto* decoder = (struct dav1d_decoder*) decoder_raw;
 
@@ -150,22 +152,21 @@ struct heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, siz
 
   uint8_t* d = dav1d_data_create(&decoder->data, frame_size);
   if (d == nullptr) {
-    struct heif_error err = {heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess};
-    return err;
+    return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess};
   }
 
   memcpy(d, frame_data, frame_size);
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
-struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error dav1d_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                   const heif_security_limits* limits)
 {
   auto* decoder = (struct dav1d_decoder*) decoder_raw;
 
-  struct heif_error err;
+  heif_error err;
 
   Dav1dPicture frame;
   memset(&frame, 0, sizeof(Dav1dPicture));
@@ -176,10 +177,11 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
     int res = dav1d_send_data(decoder->context, &decoder->data);
     if ((res < 0) && (res != DAV1D_ERR(EAGAIN))) {
-      err = {heif_error_Decoder_plugin_error,
-             heif_suberror_Unspecified,
-             kEmptyString};
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_Unspecified,
+        kEmptyString
+      };
     }
 
     res = dav1d_get_picture(decoder->context, &frame);
@@ -190,10 +192,11 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
       continue;
     }
     else if (res < 0) {
-      err = {heif_error_Decoder_plugin_error,
-             heif_suberror_Unspecified,
-             kEmptyString};
-      return err;
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_Unspecified,
+        kEmptyString
+      };
     }
     else {
       break;
@@ -228,7 +231,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
   }
 
 
-  struct heif_image* heif_img = nullptr;
+  heif_image* heif_img = nullptr;
   err = heif_image_create(frame.p.w, frame.p.h,
                           colorspace,
                           chroma,
@@ -273,14 +276,18 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     get_subsampled_size(frame.p.w, frame.p.h,
                         channel2plane[c], chroma, &w, &h);
 
-    err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
+    err = heif_image_add_plane_safe(heif_img, channel2plane[c], w, h, bpp, limits);
     if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
       heif_image_release(heif_img);
       return err;
     }
 
-    int dst_stride;
-    uint8_t* dst_mem = heif_image_get_plane(heif_img, channel2plane[c], &dst_stride);
+    size_t dst_stride;
+    uint8_t* dst_mem = heif_image_get_plane2(heif_img, channel2plane[c], &dst_stride);
 
     int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -299,9 +306,16 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 }
 
 
-static const struct heif_decoder_plugin decoder_dav1d
+heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return dav1d_decode_next_image(decoder_raw, out_img, limits);
+}
+
+
+static const heif_decoder_plugin decoder_dav1d
     {
-        3,
+        4,
         dav1d_plugin_name,
         dav1d_init_plugin,
         dav1d_deinit_plugin,
@@ -311,11 +325,12 @@ static const struct heif_decoder_plugin decoder_dav1d
         dav1d_push_data,
         dav1d_decode_image,
         dav1d_set_strict_decoding,
-        "dav1d"
+        "dav1d",
+        dav1d_decode_next_image
     };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_dav1d()
+const heif_decoder_plugin* get_decoder_plugin_dav1d()
 {
   return &decoder_dav1d;
 }

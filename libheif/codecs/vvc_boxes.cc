@@ -25,7 +25,7 @@
 #include <cassert>
 #include <iomanip>
 #include <utility>
-#include <libheif/api_structs.h>
+#include "api_structs.h"
 
 
 Error Box_vvcC::parse(BitstreamRange& range, const heif_security_limits* limits)

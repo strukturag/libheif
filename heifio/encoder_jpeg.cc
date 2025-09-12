@@ -175,116 +175,121 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
   // --- Write EXIF
 
-  size_t exifsize = 0;
-  uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
-  if (exifdata) {
-    if (exifsize > 4) {
-      static const uint8_t kExifMarker = JPEG_APP0 + 1;
+  if (handle) {
+    size_t exifsize = 0;
+    uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
+    if (exifdata) {
+      if (exifsize > 4) {
+        static const uint8_t kExifMarker = JPEG_APP0 + 1;
 
-      uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
-      if (skip > (exifsize - 4)) {
-        fprintf(stderr, "Invalid EXIF data (offset too large)\n");
-        free(exifdata);
-        jpeg_destroy_compress(&cinfo);
-        fclose(fp);
-        return false;
-      }
-      skip += 4;
+        uint32_t skip = (exifdata[0] << 24) | (exifdata[1] << 16) | (exifdata[2] << 8) | exifdata[3];
+        if (skip > (exifsize - 4)) {
+          fprintf(stderr, "Invalid EXIF data (offset too large)\n");
+          free(exifdata);
+          jpeg_destroy_compress(&cinfo);
+          fclose(fp);
+          return false;
+        }
+        skip += 4;
 
-      uint8_t* ptr = exifdata + skip;
-      size_t size = exifsize - skip;
+        uint8_t* ptr = exifdata + skip;
+        size_t size = exifsize - skip;
 
-      if (size > std::numeric_limits<uint32_t>::max()) {
-        fprintf(stderr, "EXIF larger than 4GB is not supported");
-        free(exifdata);
-        jpeg_destroy_compress(&cinfo);
-        fclose(fp);
-        return false;
-      }
+        if (size > std::numeric_limits<uint32_t>::max()) {
+          fprintf(stderr, "EXIF larger than 4GB is not supported");
+          free(exifdata);
+          jpeg_destroy_compress(&cinfo);
+          fclose(fp);
+          return false;
+        }
 
-      auto size32 = static_cast<uint32_t>(size);
+        auto size32 = static_cast<uint32_t>(size);
 
-      // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-      modify_exif_orientation_tag_if_it_exists(ptr, size32, 1);
-      overwrite_exif_image_size_if_it_exists(ptr, size32, cinfo.image_width, cinfo.image_height);
+        // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
+        modify_exif_orientation_tag_if_it_exists(ptr, size32, 1);
+        overwrite_exif_image_size_if_it_exists(ptr, size32, cinfo.image_width, cinfo.image_height);
 
-      // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
-      if (size>0x1000000) {
-        size = 0x1000000;
-      }
+        // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
+        if (size > 0x1000000) {
+          size = 0x1000000;
+        }
 
-      std::vector<uint8_t> jpegExifMarkerData(6+size);
-      memcpy(jpegExifMarkerData.data()+6, ptr, size);
-      jpegExifMarkerData[0]='E';
-      jpegExifMarkerData[1]='x';
-      jpegExifMarkerData[2]='i';
-      jpegExifMarkerData[3]='f';
-      jpegExifMarkerData[4]=0;
-      jpegExifMarkerData[5]=0;
+        std::vector<uint8_t> jpegExifMarkerData(6 + size);
+        memcpy(jpegExifMarkerData.data() + 6, ptr, size);
+        jpegExifMarkerData[0] = 'E';
+        jpegExifMarkerData[1] = 'x';
+        jpegExifMarkerData[2] = 'i';
+        jpegExifMarkerData[3] = 'f';
+        jpegExifMarkerData[4] = 0;
+        jpegExifMarkerData[5] = 0;
 
-      ptr = jpegExifMarkerData.data();
-      size = jpegExifMarkerData.size();
+        ptr = jpegExifMarkerData.data();
+        size = jpegExifMarkerData.size();
 
-      while (size > MAX_BYTES_IN_MARKER) {
+        while (size > MAX_BYTES_IN_MARKER) {
+          jpeg_write_marker(&cinfo, kExifMarker, ptr,
+                            static_cast<unsigned int>(MAX_BYTES_IN_MARKER));
+
+          ptr += MAX_BYTES_IN_MARKER;
+          size -= MAX_BYTES_IN_MARKER;
+        }
+
         jpeg_write_marker(&cinfo, kExifMarker, ptr,
-                          static_cast<unsigned int>(MAX_BYTES_IN_MARKER));
-
-        ptr += MAX_BYTES_IN_MARKER;
-        size -= MAX_BYTES_IN_MARKER;
+                          static_cast<unsigned int>(size));
       }
 
-      jpeg_write_marker(&cinfo, kExifMarker, ptr,
-                        static_cast<unsigned int>(size));
+      free(exifdata);
     }
-
-    free(exifdata);
   }
 
   // --- Write XMP
 
   // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
 
-  auto xmp = get_xmp_metadata(handle);
-  if (xmp.size() > 65502) {
-    fprintf(stderr, "XMP data too large, ExtendedXMP is not supported yet.\n");
-  }
-  else if (!xmp.empty()) {
-    std::vector<uint8_t> xmpWithId;
-    xmpWithId.resize(xmp.size() + strlen(JPEG_XMP_MARKER_ID)+1);
-    strcpy((char*)xmpWithId.data(), JPEG_XMP_MARKER_ID);
-    memcpy(xmpWithId.data() + strlen(JPEG_XMP_MARKER_ID) + 1, xmp.data(), xmp.size());
+  if (handle) {
+    auto xmp = get_xmp_metadata(handle);
+    if (xmp.size() > 65502) {
+      fprintf(stderr, "XMP data too large, ExtendedXMP is not supported yet.\n");
+    }
+    else if (!xmp.empty()) {
+      std::vector<uint8_t> xmpWithId;
+      xmpWithId.resize(xmp.size() + strlen(JPEG_XMP_MARKER_ID) + 1);
+      strcpy((char*) xmpWithId.data(), JPEG_XMP_MARKER_ID);
+      memcpy(xmpWithId.data() + strlen(JPEG_XMP_MARKER_ID) + 1, xmp.data(), xmp.size());
 
-    jpeg_write_marker(&cinfo, JPEG_XMP_MARKER, xmpWithId.data(), static_cast<unsigned int>(xmpWithId.size()));
+      jpeg_write_marker(&cinfo, JPEG_XMP_MARKER, xmpWithId.data(), static_cast<unsigned int>(xmpWithId.size()));
+    }
   }
 
   // --- Write ICC
 
-  size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
-  if (profile_size > 0) {
-    uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
-    heif_image_handle_get_raw_color_profile(handle, profile_data);
-    jpeg_write_icc_profile(&cinfo, profile_data, (unsigned int) profile_size);
-    free(profile_data);
+  if (handle) {
+    size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
+    if (profile_size > 0) {
+      uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
+      heif_image_handle_get_raw_color_profile(handle, profile_data);
+      jpeg_write_icc_profile(&cinfo, profile_data, (unsigned int) profile_size);
+      free(profile_data);
+    }
+
+
+    if (heif_image_get_bits_per_pixel(image, heif_channel_Y) != 8) {
+      fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
+      jpeg_destroy_compress(&cinfo);
+      fclose(fp);
+      return false;
+    }
   }
 
-
-  if (heif_image_get_bits_per_pixel(image, heif_channel_Y) != 8) {
-    fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
-    jpeg_destroy_compress(&cinfo);
-    fclose(fp);
-    return false;
-  }
-
-
-  int stride_y;
-  const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
-                                                       &stride_y);
-  int stride_u;
-  const uint8_t* row_u = heif_image_get_plane_readonly(image, heif_channel_Cb,
-                                                       &stride_u);
-  int stride_v;
-  const uint8_t* row_v = heif_image_get_plane_readonly(image, heif_channel_Cr,
-                                                       &stride_v);
+  size_t stride_y;
+  const uint8_t* row_y = heif_image_get_plane_readonly2(image, heif_channel_Y,
+                                                        &stride_y);
+  size_t stride_u;
+  const uint8_t* row_u = heif_image_get_plane_readonly2(image, heif_channel_Cb,
+                                                        &stride_u);
+  size_t stride_v;
+  const uint8_t* row_v = heif_image_get_plane_readonly2(image, heif_channel_Cr,
+                                                        &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,

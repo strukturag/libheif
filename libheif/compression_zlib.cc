@@ -80,8 +80,9 @@ std::vector<uint8_t> compress(const uint8_t* input, size_t size, int windowSize)
 }
 
 
-Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, std::vector<uint8_t> *output)
+Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize)
 {
+  std::vector<uint8_t> output;
 
   // decompress data with zlib
 
@@ -127,13 +128,13 @@ Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, s
     }
 
     // append decoded data to output
-    output->insert(output->end(), dst, dst + outBufferSize - strm.avail_out);
+    output.insert(output.end(), dst, dst + outBufferSize - strm.avail_out);
   } while (err != Z_STREAM_END);
 
 
   inflateEnd(&strm);
 
-  return Error::Ok;
+  return output;
 }
 
 std::vector<uint8_t> compress_zlib(const uint8_t* input, size_t size)
@@ -147,13 +148,13 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size)
 }
 
 
-Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input)
 {
-  return do_inflate(compressed_input, 15, output);
+  return do_inflate(compressed_input, 15);
 }
 
-Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input)
 {
-  return do_inflate(compressed_input, -15, output);
+  return do_inflate(compressed_input, -15);
 }
 #endif

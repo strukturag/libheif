@@ -2,6 +2,7 @@
 #define LIBHEIF_BOX_EMSCRIPTEN_H
 
 #include <emscripten/bind.h>
+#include <emscripten/version.h>
 
 #include <memory>
 #include <string>
@@ -44,7 +45,13 @@ static emscripten::val heif_js_context_get_image_handle(
     return emscripten::val(err);
   }
 
+#if __EMSCRIPTEN_major__ > 4 ||   \
+    (__EMSCRIPTEN_major__ == 4 && \
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
+#else
   return emscripten::val(handle);
+#endif
 }
 
 static emscripten::val heif_js_context_get_primary_image_handle(
@@ -62,7 +69,13 @@ static emscripten::val heif_js_context_get_primary_image_handle(
     return emscripten::val(err);
   }
 
+#if __EMSCRIPTEN_major__ > 4 ||   \
+    (__EMSCRIPTEN_major__ == 4 && \
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
+#else
   return emscripten::val(handle);
+#endif
 }
 
 
@@ -228,20 +241,20 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("width", width);
   int height = heif_image_handle_get_height(handle);
   result.set("height", height);
-  std::basic_string<unsigned char> data;
+  std::vector<unsigned char> data;
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
   switch (heif_image_get_colorspace(image)) {
     case heif_colorspace_YCbCr: {
-      int stride_y;
-      const uint8_t* plane_y = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Y, &stride_y);
-      int stride_u;
-      const uint8_t* plane_u = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Cb, &stride_u);
-      int stride_v;
-      const uint8_t* plane_v = heif_image_get_plane_readonly(image,
-                                                             heif_channel_Cr, &stride_v);
+      size_t stride_y;
+      const uint8_t* plane_y = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Y, &stride_y);
+      size_t stride_u;
+      const uint8_t* plane_u = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Cb, &stride_u);
+      size_t stride_v;
+      const uint8_t* plane_v = heif_image_get_plane_readonly2(image,
+                                                              heif_channel_Cr, &stride_v);
       data.resize((width * height) + (2 * round_odd(width) * round_odd(height)));
       unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_y, width, height, stride_y);
@@ -253,17 +266,17 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       break;
     case heif_colorspace_RGB: {
       if(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGB) {
-        int stride_rgb;
-        const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
-                                                                 heif_channel_interleaved, &stride_rgb);
+        size_t stride_rgb;
+        const uint8_t* plane_rgb = heif_image_get_plane_readonly2(image,
+                                                                  heif_channel_interleaved, &stride_rgb);
         data.resize(width * height * 3);
         unsigned char* dest = const_cast<unsigned char*>(data.data());
         strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
       }
       else if (heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA) {
-        int stride_rgba;
-        const uint8_t* plane_rgba = heif_image_get_plane_readonly(image,
-                                                                 heif_channel_interleaved, &stride_rgba);
+        size_t stride_rgba;
+        const uint8_t* plane_rgba = heif_image_get_plane_readonly2(image,
+                                                                   heif_channel_interleaved, &stride_rgba);
         data.resize(width * height * 4);
         unsigned char* dest = const_cast<unsigned char*>(data.data());
         strided_copy(dest, plane_rgba, width * 4, height, stride_rgba);
@@ -276,9 +289,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
     case heif_colorspace_monochrome: {
       assert(heif_image_get_chroma_format(image) ==
              heif_chroma_monochrome);
-      int stride_grey;
-      const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
-                                                                heif_channel_Y, &stride_grey);
+      size_t stride_grey;
+      const uint8_t* plane_grey = heif_image_get_plane_readonly2(image,
+                                                                 heif_channel_Y, &stride_grey);
       data.resize(width * height);
       unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_grey, width, height, stride_grey);
@@ -291,10 +304,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("data", std::move(data));
 
   if (heif_image_has_channel(image, heif_channel_Alpha)) {
-    std::basic_string<unsigned char> alpha;
-    int stride_alpha;
-    const uint8_t* plane_alpha = heif_image_get_plane_readonly(image,
-							       heif_channel_Alpha, &stride_alpha);
+    std::vector<unsigned char> alpha;
+    size_t stride_alpha;
+    const uint8_t* plane_alpha = heif_image_get_plane_readonly2(image, heif_channel_Alpha, &stride_alpha);
     alpha.resize(width * height);
     unsigned char* dest = const_cast<unsigned char*>(alpha.data());
     strided_copy(dest, plane_alpha, width, height, stride_alpha);
@@ -354,14 +366,16 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
       emscripten::val val_channel_info = emscripten::val::object();
       val_channel_info.set("id", channel);
 
-      int stride;
-      const uint8_t* plane = heif_image_get_plane_readonly(image, channel, &stride);
+      size_t stride;
+      const uint8_t* plane = heif_image_get_plane_readonly2(image, channel, &stride);
 
       val_channel_info.set("stride", stride);
       val_channel_info.set("data", emscripten::val(emscripten::typed_memory_view(stride * height, plane)));
 
       val_channel_info.set("width", heif_image_get_width(image, channel));
       val_channel_info.set("height", heif_image_get_height(image, channel));
+
+      val_channel_info.set("bits_per_pixel", heif_image_get_bits_per_pixel_range(image, channel));
 
       val_channels.call<void>("push", val_channel_info);
     }
@@ -395,6 +409,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_release);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_has_alpha_channel);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_is_premultiplied_alpha);
 
     // heif_items.h
     emscripten::function("heif_context_get_list_of_item_IDs", &heif_js_context_get_list_of_item_IDs, emscripten::allow_raw_pointers());
@@ -424,6 +440,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_error_Decoder_plugin_error", heif_error_Decoder_plugin_error)
     .value("heif_error_Encoder_plugin_error", heif_error_Encoder_plugin_error)
     .value("heif_error_Encoding_error", heif_error_Encoding_error)
+    .value("heif_error_End_of_sequence", heif_error_End_of_sequence)
     .value("heif_error_Color_profile_does_not_exist", heif_error_Color_profile_does_not_exist)
     .value("heif_error_Canceled", heif_error_Canceled);
     emscripten::enum_<heif_suberror_code>("heif_suberror_code")
@@ -440,6 +457,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_ftyp_box", heif_suberror_No_ftyp_box)
     .value("heif_suberror_No_idat_box", heif_suberror_No_idat_box)
     .value("heif_suberror_No_meta_box", heif_suberror_No_meta_box)
+    .value("heif_suberror_No_moov_box", heif_suberror_No_moov_box)
     .value("heif_suberror_No_hdlr_box", heif_suberror_No_hdlr_box)
     .value("heif_suberror_No_hvcC_box", heif_suberror_No_hvcC_box)
     .value("heif_suberror_No_vvcC_box", heif_suberror_No_vvcC_box)

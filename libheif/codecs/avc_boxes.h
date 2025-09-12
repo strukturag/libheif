@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include "image-items/image_item.h"
+#include "sequences/seq_boxes.h"
 
 
 class Box_avcC : public Box {
@@ -90,4 +91,14 @@ private:
   std::vector< std::vector<uint8_t> > m_sps_ext;
 };
 
+
+
+class Box_avc1 : public Box_VisualSampleEntry
+{
+public:
+  Box_avc1()
+  {
+    set_short_type(fourcc("avc1"));
+  }
+};
 #endif

@@ -14,9 +14,9 @@ jobs:
           - { MINGW: 32 }
           - { MINGW: 64 }
     env: ${{ matrix.env }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install dependencies
       run: |

@@ -25,6 +25,7 @@
 #include "pixelimage.h"
 #include "file.h"
 #include "context.h"
+#include "libheif/heif_uncompressed.h"
 
 #include <cstdint>
 #include <string>
@@ -37,9 +38,9 @@ class HeifContext;
 class ImageItem_uncompressed : public ImageItem
 {
 public:
-  ImageItem_uncompressed(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_uncompressed(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_uncompressed(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_uncompressed(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("unci"); }
 
@@ -50,7 +51,7 @@ public:
 
   bool has_coded_alpha_channel() const override;
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+  // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
   bool is_ispe_essential() const override { return true; }
 
@@ -63,16 +64,23 @@ public:
 
   heif_image_tiling get_heif_image_tiling() const override;
 
-  Error on_load_file() override;
+  Error initialize_decoder() override;
+
+  void set_decoder_input_data() override;
+
+  heif_brand2 get_compatible_brand() const override;
 
 public:
 
   // --- encoding
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override;
+
+  static Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<HeifPixelImage>& image,
+                                                       const struct heif_encoding_options& options);
 
   static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
                                                                 const heif_unci_image_parameters* parameters,
@@ -84,8 +92,12 @@ public:
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
+  std::shared_ptr<Encoder> get_encoder() const override;
+
 private:
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
+  std::shared_ptr<class Encoder_uncompressed> m_encoder;
+
   /*
   Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                      const heif_unci_image_parameters* parameters,

@@ -32,7 +32,7 @@ extern "C" {
 
 // See ISO/IEC 23008-12:2022 Section 6.10 "Region items and region annotations"
 
-struct heif_region_item;
+typedef struct heif_region_item heif_region_item;
 
 /**
  * Region type.
@@ -43,7 +43,7 @@ struct heif_region_item;
 enum heif_region_type
 {
   /**
-   * Point gemetry.
+   * Point geometry.
    *
    * The region is represented by a single point.
    */
@@ -121,7 +121,7 @@ enum heif_region_type
   heif_region_type_polyline = 6
 };
 
-struct heif_region;
+typedef struct heif_region heif_region;
 
 /**
  * Get the number of region items that are attached to an image.
@@ -130,7 +130,7 @@ struct heif_region;
  * @return the number of region items, which can be zero.
  */
 LIBHEIF_API
-int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* image_handle);
+int heif_image_handle_get_number_of_region_items(const heif_image_handle* image_handle);
 
 /**
  * Get the region item identifiers for the region items attached to an image.
@@ -151,7 +151,7 @@ int heif_image_handle_get_number_of_region_items(const struct heif_image_handle*
  * @return the number of region item identifiers that were returned.
  */
 LIBHEIF_API
-int heif_image_handle_get_list_of_region_item_ids(const struct heif_image_handle* image_handle,
+int heif_image_handle_get_list_of_region_item_ids(const heif_image_handle* image_handle,
                                                   heif_item_id* region_item_ids_array,
                                                   int max_count);
 
@@ -166,18 +166,18 @@ int heif_image_handle_get_list_of_region_item_ids(const struct heif_image_handle
  * @return heif_error_ok on success, or an error value indicating the problem
  */
 LIBHEIF_API
-struct heif_error heif_context_get_region_item(const struct heif_context* context,
-                                               heif_item_id region_item_id,
-                                               struct heif_region_item** out);
+heif_error heif_context_get_region_item(const heif_context* context,
+                                        heif_item_id region_item_id,
+                                        heif_region_item** out);
 
 /**
  * Get the item identifier for a region item.
  *
  * @param region_item the region item to query
- * @return the region item identifier (or -1 if the region_item is null)
+ * @return the region item identifier (or 0 if the region_item is null)
  */
 LIBHEIF_API
-heif_item_id heif_region_item_get_id(struct heif_region_item* region_item);
+heif_item_id heif_region_item_get_id(heif_region_item* region_item);
 
 /**
  * Release a region item.
@@ -187,7 +187,7 @@ heif_item_id heif_region_item_get_id(struct heif_region_item* region_item);
  * @param region_item the item to release.
  */
 LIBHEIF_API
-void heif_region_item_release(struct heif_region_item* region_item);
+void heif_region_item_release(heif_region_item* region_item);
 
 /**
  * Get the reference size for a region item.
@@ -200,7 +200,7 @@ void heif_region_item_release(struct heif_region_item* region_item);
  * @param out_height the return value for the reference height (before any transformation)
  */
 LIBHEIF_API
-void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* out_width, uint32_t* out_height);
+void heif_region_item_get_reference_size(heif_region_item*, uint32_t* out_width, uint32_t* out_height);
 
 /**
  * Get the number of regions within a region item.
@@ -209,7 +209,7 @@ void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* out
  * @return the number of regions
 */
 LIBHEIF_API
-int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item);
+int heif_region_item_get_number_of_regions(const heif_region_item* region_item);
 
 /**
  * Get the regions that are part of a region item.
@@ -234,8 +234,8 @@ int heif_region_item_get_number_of_regions(const struct heif_region_item* region
  * @return the number of regions that were returned.
  */
 LIBHEIF_API
-int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
-                                         struct heif_region** out_regions_array,
+int heif_region_item_get_list_of_regions(const heif_region_item* region_item,
+                                         heif_region** out_regions_array,
                                          int max_count);
 
 /**
@@ -248,7 +248,7 @@ int heif_region_item_get_list_of_regions(const struct heif_region_item* region_i
  * \sa heif_region_release_many() to release the whole list
  */
 LIBHEIF_API
-void heif_region_release(const struct heif_region* region);
+void heif_region_release(const heif_region* region);
 
 /**
  * Release a list of regions.
@@ -261,7 +261,7 @@ void heif_region_release(const struct heif_region* region);
  * \sa heif_region_release() to release a single region
  */
 LIBHEIF_API
-void heif_region_release_many(const struct heif_region* const* regions_array, int num_items);
+void heif_region_release_many(const heif_region* const* regions_array, int num_items);
 
 /**
  * Get the region type for a specified region. 
@@ -270,7 +270,7 @@ void heif_region_release_many(const struct heif_region* const* regions_array, in
  * @return the corresponding region type as an enumeration value
  */
 LIBHEIF_API
-enum heif_region_type heif_region_get_type(const struct heif_region* region);
+enum heif_region_type heif_region_get_type(const heif_region* region);
 
 // When querying the region geometry, there is a version without and a version with "_transformed" suffix.
 // The version without returns the coordinates in the reference coordinate space.
@@ -289,7 +289,7 @@ enum heif_region_type heif_region_get_type(const struct heif_region* region);
  * \sa heif_region_get_point_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* out_x, int32_t* out_y);
+heif_error heif_region_get_point(const heif_region* region, int32_t* out_x, int32_t* out_y);
 
 /**
  * Get the transformed values for a point region.
@@ -305,7 +305,7 @@ struct heif_error heif_region_get_point(const struct heif_region* region, int32_
  * \sa heif_region_get_point() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_point_transformed(const struct heif_region* region, heif_item_id image_id, double* out_x, double* out_y);
+heif_error heif_region_get_point_transformed(const heif_region* region, heif_item_id image_id, double* out_x, double* out_y);
 
 /**
  * Get the values for a rectangle region.
@@ -325,9 +325,9 @@ struct heif_error heif_region_get_point_transformed(const struct heif_region* re
  * \sa heif_region_get_rectangle_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_rectangle(const struct heif_region* region,
-                                            int32_t* out_x, int32_t* out_y,
-                                            uint32_t* out_width, uint32_t* out_height);
+heif_error heif_region_get_rectangle(const heif_region* region,
+                                     int32_t* out_x, int32_t* out_y,
+                                     uint32_t* out_width, uint32_t* out_height);
 
 /**
  * Get the transformed values for a rectangle region.
@@ -348,10 +348,10 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
  * \sa heif_region_get_rectangle() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_rectangle_transformed(const struct heif_region* region,
-                                                        heif_item_id image_id,
-                                                        double* out_x, double* out_y,
-                                                        double* out_width, double* out_height);
+heif_error heif_region_get_rectangle_transformed(const heif_region* region,
+                                                 heif_item_id image_id,
+                                                 double* out_x, double* out_y,
+                                                 double* out_width, double* out_height);
 
 /**
  * Get the values for an ellipse region.
@@ -371,9 +371,9 @@ struct heif_error heif_region_get_rectangle_transformed(const struct heif_region
  * \sa heif_region_get_ellipse_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_ellipse(const struct heif_region* region,
-                                          int32_t* out_x, int32_t* out_y,
-                                          uint32_t* out_radius_x, uint32_t* out_radius_y);
+heif_error heif_region_get_ellipse(const heif_region* region,
+                                   int32_t* out_x, int32_t* out_y,
+                                   uint32_t* out_radius_x, uint32_t* out_radius_y);
 
 
 /**
@@ -395,10 +395,10 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
  * \sa heif_region_get_ellipse() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_ellipse_transformed(const struct heif_region* region,
-                                                      heif_item_id image_id,
-                                                      double* out_x, double* out_y,
-                                                      double* out_radius_x, double* out_radius_y);
+heif_error heif_region_get_ellipse_transformed(const heif_region* region,
+                                               heif_item_id image_id,
+                                               double* out_x, double* out_y,
+                                               double* out_radius_x, double* out_radius_y);
 
 /**
  * Get the number of points in a polygon.
@@ -407,7 +407,7 @@ struct heif_error heif_region_get_ellipse_transformed(const struct heif_region* 
  * @return the number of points, or -1 on error.
  */
 LIBHEIF_API
-int heif_region_get_polygon_num_points(const struct heif_region* region);
+int heif_region_get_polygon_num_points(const heif_region* region);
 
 /**
  * Get the points in a polygon region.
@@ -420,7 +420,7 @@ int heif_region_get_polygon_num_points(const struct heif_region* region);
  * The points are returned as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
- * @param region the region to equery, which must be of type #heif_region_type_polygon
+ * @param region the region to query, which must be of type #heif_region_type_polygon
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polygon.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
@@ -428,8 +428,8 @@ int heif_region_get_polygon_num_points(const struct heif_region* region);
  * \sa heif_region_get_polygon_points_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_polygon_points(const struct heif_region* region,
-                                                 int32_t* out_pts_array);
+heif_error heif_region_get_polygon_points(const heif_region* region,
+                                          int32_t* out_pts_array);
 
 /**
  * Get the transformed points in a polygon region.
@@ -442,7 +442,7 @@ struct heif_error heif_region_get_polygon_points(const struct heif_region* regio
  * The points are returned as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
- * @param region the region to equery, which must be of type #heif_region_type_polygon
+ * @param region the region to query, which must be of type #heif_region_type_polygon
  * @param image_id the identifier for the image to transform / scale the region to
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polygon.
@@ -451,9 +451,9 @@ struct heif_error heif_region_get_polygon_points(const struct heif_region* regio
  * \sa heif_region_get_polygon_points() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_polygon_points_transformed(const struct heif_region* region,
-                                                             heif_item_id image_id,
-                                                             double* out_pts_array);
+heif_error heif_region_get_polygon_points_transformed(const heif_region* region,
+                                                      heif_item_id image_id,
+                                                      double* out_pts_array);
 /**
  * Get the number of points in a polyline.
  *
@@ -461,7 +461,7 @@ struct heif_error heif_region_get_polygon_points_transformed(const struct heif_r
  * @return the number of points, or -1 on error.
  */
 LIBHEIF_API
-int heif_region_get_polyline_num_points(const struct heif_region* region);
+int heif_region_get_polyline_num_points(const heif_region* region);
 
 /**
  * Get the points in a polyline region.
@@ -484,7 +484,7 @@ int heif_region_get_polyline_num_points(const struct heif_region* region);
  * }
  * @endcode
  *
- * @param region the region to equery, which must be of type #heif_region_type_polyline
+ * @param region the region to query, which must be of type #heif_region_type_polyline
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polyline.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
@@ -492,8 +492,8 @@ int heif_region_get_polyline_num_points(const struct heif_region* region);
  * \sa heif_region_get_polyline_points_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_polyline_points(const struct heif_region* region,
-                                                  int32_t* out_pts_array);
+heif_error heif_region_get_polyline_points(const heif_region* region,
+                                           int32_t* out_pts_array);
 
 /**
  * Get the transformed points in a polyline region.
@@ -515,9 +515,9 @@ struct heif_error heif_region_get_polyline_points(const struct heif_region* regi
  * \sa heif_region_get_polyline_points() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_polyline_points_transformed(const struct heif_region* region,
-                                                              heif_item_id image_id,
-                                                              double* out_pts_array);
+heif_error heif_region_get_polyline_points_transformed(const heif_region* region,
+                                                       heif_item_id image_id,
+                                                       double* out_pts_array);
 
 /**
  * Get a referenced item mask region.
@@ -554,10 +554,10 @@ struct heif_error heif_region_get_polyline_points_transformed(const struct heif_
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
-struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* region,
-                                                     int32_t* out_x, int32_t* out_y,
-                                                     uint32_t* out_width, uint32_t* out_height,
-                                                     heif_item_id *out_mask_item_id);
+heif_error heif_region_get_referenced_mask_ID(const heif_region* region,
+                                              int32_t* out_x, int32_t* out_y,
+                                              uint32_t* out_width, uint32_t* out_height,
+                                              heif_item_id* out_mask_item_id);
 
 /**
  * Get the length of the data in an inline mask region.
@@ -566,7 +566,7 @@ struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* r
  * @return the number of bytes in the mask data, or 0 on error.
  */
 LIBHEIF_API
-size_t heif_region_get_inline_mask_data_len(const struct heif_region* region);
+size_t heif_region_get_inline_mask_data_len(const heif_region* region);
 
 
 /**
@@ -599,10 +599,10 @@ size_t heif_region_get_inline_mask_data_len(const struct heif_region* region);
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
-struct heif_error heif_region_get_inline_mask_data(const struct heif_region* region,
-                                                   int32_t* out_x, int32_t* out_y,
-                                                   uint32_t* out_width, uint32_t* out_height,
-                                                   uint8_t* out_mask_data);
+heif_error heif_region_get_inline_mask_data(const heif_region* region,
+                                            int32_t* out_x, int32_t* out_y,
+                                            uint32_t* out_width, uint32_t* out_height,
+                                            uint8_t* out_mask_data);
 
 /**
  * Get a mask region image.
@@ -632,10 +632,10 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
  * \note the caller is responsible for releasing the mask image
  */
 LIBHEIF_API
-struct heif_error heif_region_get_mask_image(const struct heif_region* region,
-                                             int32_t* out_x, int32_t* out_y,
-                                             uint32_t* out_width, uint32_t* out_height,
-                                             struct heif_image** out_mask_image);
+heif_error heif_region_get_mask_image(const heif_region* region,
+                                      int32_t* out_x, int32_t* out_y,
+                                      uint32_t* out_width, uint32_t* out_height,
+                                      heif_image** out_mask_image);
 
 // --- adding region items
 
@@ -654,9 +654,9 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
  * @return heif_error_ok on success, or an error indicating the problem on failure
 */
 LIBHEIF_API
-struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* image_handle,
-                                                    uint32_t reference_width, uint32_t reference_height,
-                                                    struct heif_region_item** out_region_item);
+heif_error heif_image_handle_add_region_item(heif_image_handle* image_handle,
+                                             uint32_t reference_width, uint32_t reference_height,
+                                             heif_region_item** out_region_item);
 
 /**
  * Add a point region to the region item.
@@ -670,9 +670,9 @@ struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* im
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_point(struct heif_region_item* region_item,
-                                                    int32_t x, int32_t y,
-                                                    struct heif_region** out_region);
+heif_error heif_region_item_add_region_point(heif_region_item* region_item,
+                                             int32_t x, int32_t y,
+                                             heif_region** out_region);
 
 /**
  * Add a rectangle region to the region item.
@@ -688,10 +688,10 @@ struct heif_error heif_region_item_add_region_point(struct heif_region_item* reg
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item* region_item,
-                                                        int32_t x, int32_t y,
-                                                        uint32_t width, uint32_t height,
-                                                        struct heif_region** out_region);
+heif_error heif_region_item_add_region_rectangle(heif_region_item* region_item,
+                                                 int32_t x, int32_t y,
+                                                 uint32_t width, uint32_t height,
+                                                 heif_region** out_region);
 
 /**
  * Add a ellipse region to the region item.
@@ -707,10 +707,10 @@ struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item*
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item* region_item,
-                                                      int32_t x, int32_t y,
-                                                      uint32_t radius_x, uint32_t radius_y,
-                                                      struct heif_region** out_region);
+heif_error heif_region_item_add_region_ellipse(heif_region_item* region_item,
+                                               int32_t x, int32_t y,
+                                               uint32_t radius_x, uint32_t radius_y,
+                                               heif_region** out_region);
 
 /**
  * Add a polygon region to the region item.
@@ -730,9 +730,9 @@ struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item* r
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_polygon(struct heif_region_item* region_item,
-                                                      const int32_t* pts_array, int nPoints,
-                                                      struct heif_region** out_region);
+heif_error heif_region_item_add_region_polygon(heif_region_item* region_item,
+                                               const int32_t* pts_array, int nPoints,
+                                               heif_region** out_region);
 
 /**
  * Add a polyline region to the region item.
@@ -753,9 +753,9 @@ struct heif_error heif_region_item_add_region_polygon(struct heif_region_item* r
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_polyline(struct heif_region_item* region_item,
-                                                       const int32_t* pts_array, int nPoints,
-                                                       struct heif_region** out_region);
+heif_error heif_region_item_add_region_polyline(heif_region_item* region_item,
+                                                const int32_t* pts_array, int nPoints,
+                                                heif_region** out_region);
 
 
 /**
@@ -794,11 +794,11 @@ struct heif_error heif_region_item_add_region_polyline(struct heif_region_item* 
  * @note The `out_region` parameter is optional, and can be set to `NULL` if not needed.
  */
 LIBHEIF_API
-struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region_item* region_item,
-                                                              int32_t x, int32_t y,
-                                                              uint32_t width, uint32_t height,
-                                                              heif_item_id mask_item_id,
-                                                              struct heif_region** out_region);
+heif_error heif_region_item_add_region_referenced_mask(heif_region_item* region_item,
+                                                       int32_t x, int32_t y,
+                                                       uint32_t width, uint32_t height,
+                                                       heif_item_id mask_item_id,
+                                                       heif_region** out_region);
 
 
 /**
@@ -822,13 +822,13 @@ struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region
  * @param out_region pointer to pointer to the returned region (optional, see below)
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
- LIBHEIF_API
-struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_region_item* region_item,
-                                                               int32_t x, int32_t y,
-                                                               uint32_t width, uint32_t height,
-                                                               const uint8_t* mask_data,
-                                                               size_t mask_data_len,
-                                                               struct heif_region** out_region);
+LIBHEIF_API
+heif_error heif_region_item_add_region_inline_mask_data(heif_region_item* region_item,
+                                                        int32_t x, int32_t y,
+                                                        uint32_t width, uint32_t height,
+                                                        const uint8_t* mask_data,
+                                                        size_t mask_data_len,
+                                                        heif_region** out_region);
 
 /**
  * Add an inline mask region image to the region item.
@@ -853,12 +853,12 @@ struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_regio
  * @param out_region pointer to pointer to the returned region (optional, see below)
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
- LIBHEIF_API
-struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_item* region_item,
-                                                          int32_t x, int32_t y,
-                                                          uint32_t width, uint32_t height,
-                                                          struct heif_image* image,
-                                                          struct heif_region** out_region);
+LIBHEIF_API
+heif_error heif_region_item_add_region_inline_mask(heif_region_item* region_item,
+                                                   int32_t x, int32_t y,
+                                                   uint32_t width, uint32_t height,
+                                                   heif_image* image,
+                                                   heif_region** out_region);
 #ifdef __cplusplus
 }
 #endif

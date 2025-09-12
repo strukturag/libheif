@@ -54,7 +54,7 @@ set(LIBDE265_extra_plugin_sources ../error.cc)
 plugin_compilation(libde265 LIBDE265 LIBDE265_FOUND LIBDE265 LIBDE265)
 
 set(DAV1D_sources decoder_dav1d.cc decoder_dav1d.h)
-set(DAV1D_extra_plugin_sources ../common_utils.cc ../common_utils.h)
+set(DAV1D_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
 plugin_compilation(dav1d DAV1D DAV1D_FOUND DAV1D DAV1D)
 
 set(AOM_DECODER_sources decoder_aom.cc decoder_aom.h)
@@ -66,7 +66,7 @@ set(AOM_ENCODER_extra_plugin_sources ../error.cc ../common_utils.cc ../common_ut
 plugin_compilation(aomenc AOM AOM_ENCODER_FOUND AOM_ENCODER AOM_ENCODER)
 
 set(SvtEnc_sources encoder_svt.cc encoder_svt.h)
-set(SvtEnc_extra_plugin_sources)
+set(SvtEnc_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
 plugin_compilation(svtenc SvtEnc SvtEnc_FOUND SvtEnc SvtEnc)
 
 set(RAV1E_sources encoder_rav1e.cc encoder_rav1e.h)

@@ -20,77 +20,23 @@
 
 #include "vvc.h"
 #include "codecs/vvc_dec.h"
+#include "codecs/vvc_enc.h"
 #include "codecs/vvc_boxes.h"
 #include <cstring>
 #include <string>
 #include <cassert>
-#include "api/libheif/api_structs.h"
+#include "api_structs.h"
 #include <utility>
 
 
-Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                        struct heif_encoder* encoder,
-                                                        const struct heif_encoding_options& options,
-                                                        enum heif_image_input_class input_class)
+ImageItem_VVC::ImageItem_VVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id)
 {
-  CodedImageData codedImage;
+  m_encoder = std::make_shared<Encoder_VVC>();
+}
 
-  auto vvcC = std::make_shared<Box_vvcC>();
-  codedImage.properties.push_back(vvcC);
-
-
-  heif_image c_api_image;
-  c_api_image.image = image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
-  }
-
-  int encoded_width = 0;
-  int encoded_height = 0;
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
-
-    if (data == NULL) {
-      break;
-    }
-
-
-    const uint8_t NAL_SPS = 15;
-
-    uint8_t nal_type = 0;
-    if (size>=2) {
-      nal_type = (data[1] >> 3) & 0x1F;
-    }
-
-    if (nal_type == NAL_SPS) {
-      Box_vvcC::configuration config;
-
-      parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
-
-      vvcC->set_configuration(config);
-    }
-
-    switch (nal_type) {
-      case 14: // VPS
-      case 15: // SPS
-      case 16: // PPS
-        vvcC->append_nal_data(data, size);
-        break;
-
-      default:
-        codedImage.append_with_4bytes_size(data, size);
-    }
-  }
-
-  return codedImage;
+ImageItem_VVC::ImageItem_VVC(HeifContext* ctx) : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_VVC>();
 }
 
 
@@ -122,7 +68,14 @@ Result<std::shared_ptr<Decoder>> ImageItem_VVC::get_decoder() const
   return {m_decoder};
 }
 
-Error ImageItem_VVC::on_load_file()
+
+std::shared_ptr<class Encoder> ImageItem_VVC::get_encoder() const
+{
+  return m_encoder;
+}
+
+
+Error ImageItem_VVC::initialize_decoder()
 {
   auto vvcC_box = get_property<Box_vvcC>();
   if (!vvcC_box) {
@@ -132,10 +85,18 @@ Error ImageItem_VVC::on_load_file()
 
   m_decoder = std::make_shared<Decoder_VVC>(vvcC_box);
 
+  return Error::Ok;
+}
+
+void ImageItem_VVC::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
+}
 
-  return Error::Ok;
+heif_brand2 ImageItem_VVC::get_compatible_brand() const
+{
+  return heif_brand2_vvic;
 }

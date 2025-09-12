@@ -24,15 +24,13 @@
 #include <cstring>
 #include <cassert>
 
-#if ((defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__PGI)) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
+#if !defined(HAVE_BIT)
 #include <type_traits>
 #else
 #include <bit>
 #endif
 
 #define MAX_UVLC_LEADING_ZEROS 20
-
-#define AVOID_FUZZER_FALSE_POSITIVE 0
 
 
 StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
@@ -362,7 +360,7 @@ float BitstreamRange::read_float32()
   // TODO: I am not sure this works everywhere as there seem to be systems where
   //       the float byte order is different from the integer endianness
   //       https://en.wikipedia.org/wiki/Endianness#Floating_point
-  int i = read32();
+  uint32_t i = read32();
   float f;
   memcpy(&f, &i, sizeof(float));
   return f;
@@ -397,12 +395,13 @@ std::string BitstreamRange::read_string()
     return std::string();
   }
 
+  auto istr = get_istream();
+
   for (;;) {
     if (!prepare_read(1)) {
       return std::string();
     }
 
-    auto istr = get_istream();
     char c;
     bool success = istr->read(&c, 1);
 
@@ -418,6 +417,40 @@ std::string BitstreamRange::read_string()
       str += (char) c;
     }
   }
+
+  return str;
+}
+
+
+std::string BitstreamRange::read_fixed_string(int len)
+{
+  std::string str;
+
+  if (!prepare_read(len)) {
+    return std::string();
+  }
+
+  auto istr = get_istream();
+
+  uint8_t n;
+  bool success = istr->read(&n, 1);
+  if (!success || n > len - 1) {
+    return {};
+  }
+
+  for (int i = 0; i < n; i++) {
+    char c;
+    success = istr->read(&c, 1);
+
+    if (!success) {
+      set_eof_while_reading();
+      return std::string();
+    }
+
+    str += (char) c;
+  }
+
+  istr->seek_cur(len-n-1);
 
   return str;
 }
@@ -512,7 +545,10 @@ uint32_t BitReader::get_bits(int n)
   uint64_t val = nextbits;
   val >>= 64 - n;
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  // Shifting an unsigned integer left such that some MSBs fall out is well defined in C++ despite the fuzzer claiming otherwise.
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
 
   nextbits <<= n;
   nextbits_cnt -= n;
@@ -600,14 +636,20 @@ void BitReader::skip_bits(int n)
     refill();
   }
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
+
   nextbits <<= n;
   nextbits_cnt -= n;
 }
 
 void BitReader::skip_bits_fast(int n)
 {
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> n);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> n);
+#endif
+
   nextbits <<= n;
   nextbits_cnt -= n;
 }
@@ -616,7 +658,10 @@ void BitReader::skip_to_byte_boundary()
 {
   int nskip = (nextbits_cnt & 7);
 
-  if (AVOID_FUZZER_FALSE_POSITIVE) nextbits &= (0xffffffffffffffffULL >> nskip);
+#if AVOID_FUZZER_FALSE_POSITIVE
+  nextbits &= (0xffffffffffffffffULL >> nskip);
+#endif
+
   nextbits <<= nskip;
   nextbits_cnt -= nskip;
 }
@@ -833,6 +878,28 @@ void StreamWriter::write(const std::string& str)
   }
 
   m_data[m_position++] = 0;
+}
+
+
+void StreamWriter::write_fixed_string(std::string s, size_t len)
+{
+  size_t required_size = m_position + len;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  size_t n_chars = std::min(s.length(), len - 1);
+  assert(n_chars <= 255);
+  m_data[m_position++] = static_cast<uint8_t>(n_chars);
+
+  for (size_t i = 0; i < s.size() && i < len - 1; i++) {
+    m_data[m_position++] = s[i];
+  }
+
+  for (size_t i = s.size(); i < len - 1; i++) {
+    m_data[m_position++] = 0;
+  }
 }
 
 

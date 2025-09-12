@@ -27,7 +27,10 @@
 
 #include <cstring>
 #include <getopt.h>
+#include <filesystem>
 #include "libheif/heif_items.h"
+#include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
 
 #if defined(HAVE_UNISTD_H)
 
@@ -46,6 +49,7 @@
 #include <cctype>
 
 #include <libheif/heif.h>
+#include <libheif/heif_tai_timestamps.h>
 
 #include "heifio/encoder.h"
 
@@ -70,12 +74,21 @@
 
 #define UNUSED(x) (void)x
 
+
 static void show_help(const char* argv0)
 {
-  std::cerr << " " << argv0 << "  libheif version: " << heif_get_version() << "\n"
-            << "---------------------------------------\n"
-               "Usage: " << argv0 << " [options]  <input-image> [output-image]\n"
-               "\n"
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options]  <input-image> [output-image]\n"
+            << "\n"
                "The program determines the output file format from the output filename suffix.\n"
                "These suffixes are recognized: jpg, jpeg, png, tif, tiff, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"
@@ -93,8 +106,12 @@ static void show_help(const char* argv0)
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "      --tiles                    output all image tiles as separate images\n"
                "      --quiet                    do not output status messages to console\n"
+               "  -S, --sequence                 decode image sequence instead of still image\n"
+               "      --ignore-editlist          show the raw media sequence timeline without repetitions\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
+               "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
+               "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n";
 }
 
@@ -125,12 +142,15 @@ int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
 int option_output_tiles = 0;
 int option_disable_limits = 0;
+int option_sequence = 0;
+int option_ignore_editlist = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
+std::string transparency_composition_mode = "checkerboard";
 
 #define OPTION_PNG_COMPRESSION_LEVEL 1000
-
+#define OPTION_TRANSPARENCY_COMPOSITION_MODE 1001
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -145,60 +165,19 @@ static struct option long_options[] = {
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "tiles",            no_argument,       &option_output_tiles,     1},
+    {(char* const) "sequence",            no_argument,       &option_sequence,     1},
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
+    {(char* const) "transparency-composition-mode", required_argument, 0,  OPTION_TRANSPARENCY_COMPOSITION_MODE},
     {(char* const) "version",          no_argument,       0,                        'v'},
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
+    {(char* const) "ignore-editlist", no_argument, &option_ignore_editlist, 1},
     {nullptr, no_argument, nullptr, 0}
 };
 
 
 #define MAX_DECODERS 20
-
-void list_decoders(heif_compression_format format)
-{
-  const heif_decoder_descriptor* decoders[MAX_DECODERS];
-  int n = heif_get_decoder_descriptors(format, decoders, MAX_DECODERS);
-
-  for (int i=0;i<n;i++) {
-    const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
-    if (id==nullptr) {
-      id = "---";
-    }
-
-    std::cout << "- " << id << " = " << heif_decoder_descriptor_get_name(decoders[i]) << "\n";
-  }
-}
-
-
-void list_all_decoders()
-{
-  std::cout << "AVC decoders:\n";
-  list_decoders(heif_compression_AVC);
-
-  std::cout << "AVIF decoders:\n";
-  list_decoders(heif_compression_AV1);
-
-  std::cout << "HEIC decoders:\n";
-  list_decoders(heif_compression_HEVC);
-
-  std::cout << "JPEG decoders:\n";
-  list_decoders(heif_compression_JPEG);
-
-  std::cout << "JPEG 2000 decoders:\n";
-  list_decoders(heif_compression_JPEG2000);
-
-  std::cout << "JPEG 2000 (HT) decoders:\n";
-  list_decoders(heif_compression_HTJ2K);
-
-  std::cout << "uncompressed:\n";
-  list_decoders(heif_compression_uncompressed);
-
-  std::cout << "VVIC decoders:\n";
-  list_decoders(heif_compression_VVC);
-}
-
 
 bool is_integer_string(const char* s)
 {
@@ -606,7 +585,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:vo:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:C:vo:S", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -650,17 +629,31 @@ int main(int argc, char** argv)
           exit(5);
         }
         break;
+      case OPTION_TRANSPARENCY_COMPOSITION_MODE:
+        if (strcmp(optarg, "white") == 0 ||
+            strcmp(optarg, "black") == 0 ||
+            strcmp(optarg, "checkerboard") == 0) {
+            transparency_composition_mode = optarg;
+          }
+        else {
+          fprintf(stderr, "Unknown transparency composition mode. Must be one of: white, black, checkerboard.\n");
+          exit(5);
+        }
+        break;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
       case 'o':
         output_filename = optarg;
+        break;
+      case 'S':
+        option_sequence = 1;
         break;
     }
   }
 
   if (option_list_decoders) {
-    list_all_decoders();
+    heif_examples::list_all_decoders();
     return 0;
   }
 
@@ -757,36 +750,8 @@ int main(int argc, char** argv)
 
   // --- check whether input is a supported HEIF file
 
-  // TODO: when we are reading from named pipes, we probably should not consume any bytes
-  // just for file-type checking.
-  // TODO: check, whether reading from named pipes works at all.
-
-  std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
-  if (istr.fail()) {
-    fprintf(stderr, "Input file does not exist.\n");
-    return 10;
-  }
-  std::array<uint8_t,4> length{};
-  istr.read((char*) length.data(), length.size());
-  uint32_t box_size = (length[0] << 24) + (length[1] << 16) + (length[2] << 8) + (length[3]);
-  if ((box_size < 16) || (box_size > 512)) {
-    fprintf(stderr, "Input file does not appear to start with a valid box length.");
-    if ((box_size & 0xFFFFFFF0) == 0xFFD8FFE0) {
-      fprintf(stderr, " Possibly could be a JPEG file instead.\n");
-    } else {
-      fprintf(stderr, "\n");
-    }
-    return 1;
-  }
-
-  std::vector<uint8_t> ftyp_bytes(box_size);
-  std::copy(length.begin(), length.end(), ftyp_bytes.begin());
-  istr.read((char*) ftyp_bytes.data() + 4, ftyp_bytes.size() - 4);
-
-  heif_error filetype_check = heif_has_compatible_filetype(ftyp_bytes.data(), (int)ftyp_bytes.size());
-  if (filetype_check.code != heif_error_Ok) {
-    fprintf(stderr, "Input file is not a supported format. %s\n", filetype_check.message);
-    return 1;
+  if (int ret = heif_examples::check_for_valid_input_HEIF_file(input_filename)) {
+    return ret;
   }
 
   // --- read the HEIF file
@@ -807,6 +772,144 @@ int main(int argc, char** argv)
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
+  }
+
+
+  if (option_sequence) {
+    if (!heif_context_has_sequence(ctx)) {
+      std::cerr << "File contains no image sequence\n";
+      return 1;
+    }
+
+    int nTracks = heif_context_number_of_sequence_tracks(ctx);
+    std::cout << "number of tracks: " << nTracks << "\n";
+
+    std::vector<uint32_t> track_ids(nTracks);
+    heif_context_get_track_ids(ctx, track_ids.data());
+
+    for (uint32_t id : track_ids) {
+      heif_track* track = heif_context_get_track(ctx, id);
+      std::cout << "#" << id << " : " << heif_examples::fourcc_to_string(heif_track_get_track_handler_type(track));
+
+      if (heif_track_get_track_handler_type(track) == heif_track_type_image_sequence ||
+          heif_track_get_track_handler_type(track) == heif_track_type_video ||
+          heif_track_get_track_handler_type(track) == heif_track_type_auxiliary) {
+        uint16_t w,h;
+        heif_track_get_image_resolution(track, &w, &h);
+        std::cout << " " << w << "x" << h;
+      }
+      else {
+        uint32_t sample_entry_type = heif_track_get_sample_entry_type_of_first_cluster(track);
+        std::cout << "\n  sample entry type: " << heif_examples::fourcc_to_string(sample_entry_type);
+        if (sample_entry_type == heif_fourcc('u', 'r', 'i', 'm')) {
+          const char* uri;
+          err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
+          if (err.code) {
+            std::cerr << "Cannot read 'urim'-track URI: " << err.message << "\n";
+          }
+          std::cout << "\n  URI: " << uri;
+          heif_string_release(uri);
+        }
+
+        // get metadata track samples
+
+        for (;;) {
+          struct heif_raw_sequence_sample* sample;
+          err = heif_track_get_next_raw_sequence_sample(track, &sample);
+          if (err.code != 0) {
+            break;
+          }
+
+          size_t dataSize;
+          const uint8_t* data = heif_raw_sequence_sample_get_data(sample, &dataSize);
+
+          std::cout << "\n  raw sample: ";
+          for (uint32_t i = 0; i < dataSize; i++) {
+            std::cout << " " << std::hex << (int)data[i];
+          }
+
+          heif_raw_sequence_sample_release(sample);
+        }
+      }
+
+      std::cout << "\n";
+    }
+
+    std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
+    encoder->UpdateDecodingOptions(nullptr, decode_options.get());
+    decode_options->ignore_sequence_editlist = option_ignore_editlist;
+
+    struct heif_track* track = heif_context_get_track(ctx, 0);
+
+    const char* track_contentId = heif_track_get_gimi_track_content_id(track);
+    if (track_contentId) {
+      std::cout << "track content ID: " << track_contentId << "\n";
+      heif_string_release(track_contentId);
+    }
+
+    const heif_tai_clock_info* taic = heif_track_get_tai_clock_info_of_first_cluster(track);
+    if (taic) {
+      std::cout << "taic: " << taic->time_uncertainty << " / " << taic->clock_resolution << " / "
+                << taic->clock_drift_rate << " / " << int(taic->clock_type) << "\n";
+    }
+
+    int with_alpha = heif_track_has_alpha_channel(track);
+
+    for (int i=0; ;i++) {
+      heif_image* out_image = nullptr;
+      int bit_depth = 8; // TODO
+      err = heif_track_decode_next_image(track, &out_image,
+                                         encoder->colorspace(false),
+                                         encoder->chroma(with_alpha, bit_depth),
+                                         decode_options.get());
+      if (err.code == heif_error_End_of_sequence) {
+        break;
+      }
+      else if (err.code) {
+        std::cerr << err.message << "\n";
+        return 1;
+      }
+
+      std::cout << "sample duration " << heif_image_get_duration(out_image) << "\n";
+
+      const char* contentID = heif_image_get_gimi_sample_content_id(out_image);
+      if (contentID) {
+        std::cout << "content ID " << contentID << "\n";
+        heif_string_release(contentID);
+      }
+
+      heif_tai_timestamp_packet* timestamp;
+      err = heif_image_get_tai_timestamp(out_image, &timestamp);
+      if (err.code) {
+        std::cerr << err.message << "\n";
+        return 10;
+      }
+      else if (timestamp) {
+        std::cout << "TAI timestamp: " << timestamp->tai_timestamp << "\n";
+        heif_tai_timestamp_packet_release(timestamp);
+      }
+
+      std::ostringstream s;
+      s << output_filename_stem;
+      s << "-" << i+1;
+      s << "." << output_filename_suffix;
+      std::string numbered_filename = s.str();
+
+      bool written = encoder->Encode(nullptr, out_image, numbered_filename);
+      if (!written) {
+        fprintf(stderr, "could not write image\n");
+      }
+      else {
+        if (!option_quiet) {
+          std::cout << "Written to " << numbered_filename << "\n";
+        }
+      }
+      heif_image_release(out_image);
+    }
+
+    heif_track_release(track);
+
+    return 0;
   }
 
 
@@ -876,12 +979,39 @@ int main(int argc, char** argv)
 
     int ret;
 
+    auto* color_conversion_options_ext = heif_color_conversion_options_ext_alloc();
+    decode_options->color_conversion_options_ext = color_conversion_options_ext;
+
+
+    // If output file format does not support transparency, render in the selected composition mode.
+
+    if (!encoder->supports_alpha()) {
+      if (transparency_composition_mode == "white") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+        color_conversion_options_ext->background_red = 0xFFFFU;
+        color_conversion_options_ext->background_green = 0xFFFFU;
+        color_conversion_options_ext->background_blue = 0xFFFFU;
+      }
+      else if (transparency_composition_mode == "black") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+        color_conversion_options_ext->background_red = 0;
+        color_conversion_options_ext->background_green = 0;
+        color_conversion_options_ext->background_blue = 0;
+      }
+      else if (transparency_composition_mode == "checkerboard") {
+        color_conversion_options_ext->alpha_composition_mode = heif_alpha_composition_mode_checkerboard;
+      }
+    }
+
     if (option_output_tiles) {
       ret = decode_image_tiles(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
     else {
       ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
+
+    heif_color_conversion_options_ext_free(color_conversion_options_ext);
+
     if (ret) {
       heif_image_handle_release(handle);
       return ret;

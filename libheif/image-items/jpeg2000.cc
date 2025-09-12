@@ -19,53 +19,25 @@
  */
 
 #include "jpeg2000.h"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "codecs/jpeg2000_dec.h"
+#include "codecs/jpeg2000_enc.h"
 #include "codecs/jpeg2000_boxes.h"
 #include <cstdint>
-#include <iostream>
-#include <cstdio>
 #include <utility>
 
 
-
-Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                             struct heif_encoder* encoder,
-                                                             const struct heif_encoding_options& options,
-                                                             enum heif_image_input_class input_class)
+ImageItem_JPEG2000::ImageItem_JPEG2000(HeifContext* ctx, heif_item_id id)
+    : ImageItem(ctx, id)
 {
-  CodedImageData codedImageData;
+  m_encoder = std::make_shared<Encoder_JPEG2000>();
+}
 
-  heif_image c_api_image;
-  c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-
-  // get compressed data
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-
-    if (data == nullptr) {
-      break;
-    }
-
-    codedImageData.append(data, size);
-  }
-
-  // add 'j2kH' property
-  auto j2kH = std::make_shared<Box_j2kH>();
-
-  // add 'cdef' to 'j2kH'
-  auto cdef = std::make_shared<Box_cdef>();
-  cdef->set_channels(image->get_colorspace());
-  j2kH->append_child_box(cdef);
-
-  codedImageData.properties.push_back(j2kH);
-
-  return codedImageData;
+ImageItem_JPEG2000::ImageItem_JPEG2000(HeifContext* ctx)
+    : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_JPEG2000>();
 }
 
 
@@ -88,12 +60,20 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
   return std::vector<uint8_t>{};
 }
 
+
 Result<std::shared_ptr<Decoder>> ImageItem_JPEG2000::get_decoder() const
 {
   return {m_decoder};
 }
 
-Error ImageItem_JPEG2000::on_load_file()
+
+std::shared_ptr<class Encoder> ImageItem_JPEG2000::get_encoder() const
+{
+  return m_encoder;
+}
+
+
+Error ImageItem_JPEG2000::initialize_decoder()
 {
   auto j2kH = get_property<Box_j2kH>();
   if (!j2kH) {
@@ -104,10 +84,19 @@ Error ImageItem_JPEG2000::on_load_file()
 
   m_decoder = std::make_shared<Decoder_JPEG2000>(j2kH);
 
+  return Error::Ok;
+}
+
+
+void ImageItem_JPEG2000::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
+}
 
-  return Error::Ok;
+heif_brand2 ImageItem_JPEG2000::get_compatible_brand() const
+{
+  return heif_brand2_j2ki;
 }

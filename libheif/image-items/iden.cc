@@ -35,7 +35,7 @@ ImageItem_iden::ImageItem_iden(HeifContext* ctx, heif_item_id id)
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   std::shared_ptr<HeifPixelImage> img;
@@ -77,7 +77,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
+  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0);
 }
 
 
@@ -90,6 +90,11 @@ Error ImageItem_iden::get_coded_image_colorspace(heif_colorspace* out_colorspace
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Nonexisting_item_referenced};
+  }
+
   return image->get_coded_image_colorspace(out_colorspace, out_chroma);
 }
 
@@ -103,6 +108,10 @@ int ImageItem_iden::get_luma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_luma_bits_per_pixel();
 }
 
@@ -116,5 +125,15 @@ int ImageItem_iden::get_chroma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_chroma_bits_per_pixel();
+}
+
+heif_brand2 ImageItem_iden::get_compatible_brand() const
+{
+  assert(false);
+  return 0; // TODO (we never write 'iden' images)
 }

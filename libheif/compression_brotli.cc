@@ -33,7 +33,7 @@ const size_t BUF_SIZE = (1 << 18);
 #include "error.h"
 
 
-Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output)
+Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compressed_input)
 {
     BrotliDecoderResult result = BROTLI_DECODER_RESULT_ERROR;
     std::vector<uint8_t> buffer(BUF_SIZE, 0);
@@ -44,19 +44,21 @@ Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vecto
 
     std::unique_ptr<BrotliDecoderState, void(*)(BrotliDecoderState*)> state(BrotliDecoderCreateInstance(0, 0, 0), BrotliDecoderDestroyInstance);
 
+    std::vector<uint8_t> output;
+
     while (true)
     {
         result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_output, 0);
 
         if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT)
         {
-            output->insert(output->end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
+            output.insert(output.end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
             available_out = buffer.size();
             next_output = buffer.data();
         }
         else if (result == BROTLI_DECODER_RESULT_SUCCESS)
         {
-            output->insert(output->end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
+            output.insert(output.end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
             break;
         }
         else if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT)
@@ -81,7 +83,7 @@ Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vecto
         }
     }
 
-    return Error::Ok;
+    return output;
 }
 
 

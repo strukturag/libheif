@@ -283,8 +283,8 @@ heif_error readMono(TIFF *tif, heif_image **image)
   }
   heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, 8);
 
-  int y_stride;
-  uint8_t *py = heif_image_get_plane(*image, heif_channel_Y, &y_stride);
+  size_t y_stride;
+  uint8_t *py = heif_image_get_plane2(*image, heif_channel_Y, &y_stride);
   for (uint32_t row = 0; row < height; row++)
   {
     TIFFReadScanline(tif, py, row, 0);
@@ -313,8 +313,8 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_imag
   heif_channel channel = heif_channel_interleaved;
   heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
 
-  int y_stride;
-  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
+  size_t y_stride;
+  uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
 
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
   for (uint32_t row = 0; row < height; row++)
@@ -354,8 +354,8 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image
   heif_channel channel = heif_channel_interleaved;
   heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
 
-  int y_stride;
-  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
+  size_t y_stride;
+  uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
 
   uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
   for (uint16_t i = 0; i < samplesPerPixel; i++)

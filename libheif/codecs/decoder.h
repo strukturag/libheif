@@ -39,7 +39,7 @@
 struct DataExtent
 {
   std::shared_ptr<HeifFile> m_file;
-  enum class Source : uint8_t { Raw, Image, Sequence } m_source = Source::Raw;
+  enum class Source : uint8_t { Raw, Image, FileRange } m_source = Source::Raw;
 
   // --- raw data
   mutable std::vector<uint8_t> m_raw; // also for cached data
@@ -47,10 +47,13 @@ struct DataExtent
   // --- image
   heif_item_id m_item_id = 0;
 
-  // --- sequence
-  // TODO
+  // --- file range
+  uint64_t m_offset = 0;
+  uint32_t m_size = 0;
 
   void set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item);
+
+  void set_file_range(std::shared_ptr<HeifFile> file, uint64_t offset, uint32_t size);
 
   Result<std::vector<uint8_t>*> read_data() const;
 
@@ -63,12 +66,16 @@ class Decoder
 public:
   static std::shared_ptr<Decoder> alloc_for_infe_type(const ImageItem* item);
 
+  static std::shared_ptr<Decoder> alloc_for_sequence_sample_description_box(std::shared_ptr<const class Box_VisualSampleEntry> sample_description_box);
 
-  virtual ~Decoder() = default;
+
+  virtual ~Decoder();
 
   virtual heif_compression_format get_compression_format() const = 0;
 
   void set_data_extent(DataExtent extent) { m_data_extent = std::move(extent); }
+
+  const DataExtent& get_data_extent() const { return m_data_extent; }
 
   // --- information about the image format
 
@@ -87,10 +94,14 @@ public:
   // --- decoding
 
   virtual Result<std::shared_ptr<HeifPixelImage>>
-  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options);
+  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                           const struct heif_security_limits* limits);
 
 private:
   DataExtent m_data_extent;
+
+  const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
+  void* m_decoder = nullptr;
 };
 
 #endif

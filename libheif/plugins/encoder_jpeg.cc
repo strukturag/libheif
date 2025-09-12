@@ -72,13 +72,13 @@ static const char* jpeg_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter jpeg_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* jpeg_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter jpeg_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* jpeg_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void jpeg_init_parameters()
 {
-  struct heif_encoder_parameter* p = jpeg_encoder_params;
-  const struct heif_encoder_parameter** d = jpeg_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = jpeg_encoder_params;
+  const heif_encoder_parameter** d = jpeg_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -108,7 +108,7 @@ static void jpeg_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** jpeg_list_parameters(void* encoder)
+const heif_encoder_parameter** jpeg_list_parameters(void* encoder)
 {
   return jpeg_encoder_parameter_ptrs;
 }
@@ -123,10 +123,10 @@ static void jpeg_cleanup_plugin()
 {
 }
 
-struct heif_error jpeg_new_encoder(void** enc)
+heif_error jpeg_new_encoder(void** enc)
 {
   auto* encoder = new encoder_struct_jpeg();
-  struct heif_error err = heif_error_ok;
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -139,15 +139,15 @@ struct heif_error jpeg_new_encoder(void** enc)
 
 void jpeg_free_encoder(void* encoder_raw)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   delete encoder;
 }
 
 
-struct heif_error jpeg_set_parameter_quality(void* encoder_raw, int quality)
+heif_error jpeg_set_parameter_quality(void* encoder_raw, int quality)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -158,18 +158,18 @@ struct heif_error jpeg_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error jpeg_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error jpeg_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error jpeg_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error jpeg_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (enable) {
     encoder->quality = 100; // not really lossless, but the best we can do
@@ -178,21 +178,21 @@ struct heif_error jpeg_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error jpeg_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error jpeg_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   *enable = (encoder->quality == 100);  // not really correct, but matches the setting above
 
   return heif_error_ok;
 }
 
-struct heif_error jpeg_set_parameter_logging_level(void* encoder_raw, int logging)
+heif_error jpeg_set_parameter_logging_level(void* encoder_raw, int logging)
 {
   return heif_error_ok;
 }
 
-struct heif_error jpeg_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+heif_error jpeg_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
   *loglevel = 0;
 
@@ -203,9 +203,9 @@ struct heif_error jpeg_get_parameter_logging_level(void* encoder_raw, int* logle
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error jpeg_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error jpeg_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_jpeg* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  encoder_struct_jpeg* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return jpeg_set_parameter_quality(encoder, value);
@@ -217,9 +217,9 @@ struct heif_error jpeg_set_parameter_integer(void* encoder_raw, const char* name
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error jpeg_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error jpeg_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return jpeg_get_parameter_quality(encoder, value);
@@ -232,9 +232,9 @@ struct heif_error jpeg_get_parameter_integer(void* encoder_raw, const char* name
 }
 
 
-struct heif_error jpeg_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+heif_error jpeg_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return jpeg_set_parameter_lossless(encoder, value);
@@ -245,9 +245,9 @@ struct heif_error jpeg_set_parameter_boolean(void* encoder_raw, const char* name
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error jpeg_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error jpeg_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return jpeg_get_parameter_lossless(encoder, value);
@@ -259,7 +259,7 @@ struct heif_error jpeg_get_parameter_boolean(void* encoder_raw, const char* name
 }
 
 
-struct heif_error jpeg_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error jpeg_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   //auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
 
@@ -267,8 +267,8 @@ struct heif_error jpeg_set_parameter_string(void* encoder_raw, const char* name,
 }
 
 
-struct heif_error jpeg_get_parameter_string(void* encoder_raw, const char* name,
-                                            char* value, int value_size)
+heif_error jpeg_get_parameter_string(void* encoder_raw, const char* name,
+                                     char* value, int value_size)
 {
   //auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
 
@@ -278,8 +278,8 @@ struct heif_error jpeg_get_parameter_string(void* encoder_raw, const char* name,
 
 static void jpeg_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = jpeg_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = jpeg_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -327,7 +327,7 @@ void jpeg_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t i
 
 struct ErrorHandler
 {
-  struct jpeg_error_mgr pub;  /* "public" fields */
+  jpeg_error_mgr pub;  /* "public" fields */
   jmp_buf setjmp_buffer;  /* for return to caller */
 };
 
@@ -338,15 +338,15 @@ static void OnJpegError(j_common_ptr cinfo)
 }
 
 
-struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* image,
-                                    heif_image_input_class input_class)
+heif_error jpeg_encode_image(void* encoder_raw, const heif_image* image,
+                             heif_image_input_class input_class)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
 
-  struct jpeg_compress_struct cinfo;
-  struct ErrorHandler jerr;
-  cinfo.err = jpeg_std_error(reinterpret_cast<struct jpeg_error_mgr*>(&jerr));
+  jpeg_compress_struct cinfo;
+  ErrorHandler jerr;
+  cinfo.err = jpeg_std_error(reinterpret_cast<jpeg_error_mgr*>(&jerr));
   jerr.pub.error_exit = &OnJpegError;
   if (setjmp(jerr.setjmp_buffer)) {
     cinfo.err->output_message(reinterpret_cast<j_common_ptr>(&cinfo));
@@ -381,15 +381,15 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
 
 
 
-  int stride_y;
-  const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
-                                                       &stride_y);
-  int stride_u;
-  const uint8_t* row_u = heif_image_get_plane_readonly(image, heif_channel_Cb,
-                                                       &stride_u);
-  int stride_v;
-  const uint8_t* row_v = heif_image_get_plane_readonly(image, heif_channel_Cr,
-                                                       &stride_v);
+  size_t stride_y;
+  const uint8_t* row_y = heif_image_get_plane_readonly2(image, heif_channel_Y,
+                                                        &stride_y);
+  size_t stride_u;
+  const uint8_t* row_u = heif_image_get_plane_readonly2(image, heif_channel_Cb,
+                                                        &stride_u);
+  size_t stride_v;
+  const uint8_t* row_v = heif_image_get_plane_readonly2(image, heif_channel_Cr,
+                                                        &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,
@@ -425,10 +425,10 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
 }
 
 
-struct heif_error jpeg_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                           enum heif_encoded_data_type* type)
+heif_error jpeg_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                    heif_encoded_data_type* type)
 {
-  auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
+  auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
   if (encoder->data_read) {
     *data = nullptr;
@@ -444,7 +444,7 @@ struct heif_error jpeg_get_compressed_data(void* encoder_raw, uint8_t** data, in
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_jpeg
+static const heif_encoder_plugin encoder_plugin_jpeg
     {
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_JPEG,
@@ -477,7 +477,7 @@ static const struct heif_encoder_plugin encoder_plugin_jpeg
         /* query_encoded_size (v3) */ jpeg_query_encoded_size
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_jpeg()
+const heif_encoder_plugin* get_encoder_plugin_jpeg()
 {
   return &encoder_plugin_jpeg;
 }

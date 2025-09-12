@@ -25,6 +25,11 @@
 #include "pixelimage.h"
 #include "file.h"
 #include "context.h"
+#include "libheif/heif_uncompressed.h"
+
+#if WITH_UNCOMPRESSED_CODEC
+#include "unc_boxes.h"
+#endif
 
 #include <cstdint>
 #include <string>
@@ -59,6 +64,22 @@ public:
                                               heif_item_id ID,
                                               std::shared_ptr<HeifPixelImage>& img,
                                               uint32_t tile_x0, uint32_t tile_y0);
+
+  struct unci_properties {
+    std::shared_ptr<const Box_ispe> ispe;
+    std::shared_ptr<const Box_cmpd> cmpd;
+    std::shared_ptr<const Box_uncC> uncC;
+    std::shared_ptr<const Box_cmpC> cmpC;
+    std::shared_ptr<const Box_icef> icef;
+    // ...
+
+    void fill_from_image_item(const std::shared_ptr<const ImageItem>&);
+  };
+
+  static Result<std::shared_ptr<HeifPixelImage>> decode_uncompressed_image(const unci_properties& properties,
+                                                                           const struct DataExtent& extent,
+                                                                           const heif_security_limits*);
+
 
   static Error get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
                                             const std::shared_ptr<const Box_cmpd>& cmpd,

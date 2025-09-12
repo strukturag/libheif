@@ -25,7 +25,7 @@
 */
 
 #include "catch_amalgamated.hpp"
-#include "libheif/api_structs.h"
+#include "api_structs.h"
 #include "libheif/heif.h"
 #include "test-config.h"
 #include "test_utils.h"

@@ -860,11 +860,12 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   ipco_box->append_child_box(pixi); // entry 3
 
   std::shared_ptr<Box_colr> colr = std::make_shared<Box_colr>();
-  std::shared_ptr<color_profile_nclx> nclx = std::make_shared<color_profile_nclx>();
-  nclx->set_colour_primaries(get_colour_primaries());
-  nclx->set_transfer_characteristics(get_transfer_characteristics());
-  nclx->set_matrix_coefficients(get_matrix_coefficients());
-  nclx->set_full_range_flag(get_full_range_flag());
+  nclx_profile colorProfile;
+  colorProfile.set_colour_primaries(get_colour_primaries());
+  colorProfile.set_transfer_characteristics(get_transfer_characteristics());
+  colorProfile.set_matrix_coefficients(get_matrix_coefficients());
+  colorProfile.set_full_range_flag(get_full_range_flag());
+  std::shared_ptr<color_profile_nclx> nclx = std::make_shared<color_profile_nclx>(colorProfile);
   colr->set_color_profile(nclx);
   ipco_box->append_child_box(colr); // entry 4
 

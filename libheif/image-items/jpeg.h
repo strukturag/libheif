@@ -31,33 +31,30 @@
 class ImageItem_JPEG : public ImageItem
 {
 public:
-  ImageItem_JPEG(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) { }
+  ImageItem_JPEG(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_JPEG(HeifContext* ctx) : ImageItem(ctx) { }
+  ImageItem_JPEG(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("jpeg"); }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override;
-
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG; }
 
+  Error initialize_decoder() override;
 
-  Error on_load_file() override;
+  void set_decoder_input_data() override;
 
-public:
-
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class) override;
+  heif_brand2 get_compatible_brand() const override;
 
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
+
+  std::shared_ptr<Encoder> get_encoder() const override;
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
 private:
   std::shared_ptr<class Decoder_JPEG> m_decoder;
+  std::shared_ptr<class Encoder_JPEG> m_encoder;
 };
 
 #endif // LIBHEIF_JPEG_H

@@ -38,7 +38,7 @@ void writevec(uint8_t* data, size_t& idx, I value, int len)
 
 static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int len)
 {
-  const uint32_t high_bit = 0x80 << ((len - 1) * 8);
+  const uint32_t high_bit = UINT32_C(0x80) << ((len - 1) * 8);
 
   uint32_t val = 0;
   while (len--) {
@@ -216,7 +216,7 @@ ImageItem_Overlay::ImageItem_Overlay(HeifContext* ctx, heif_item_id id)
 }
 
 
-Error ImageItem_Overlay::on_load_file()
+Error ImageItem_Overlay::initialize_decoder()
 {
   Error err = read_overlay_spec();
   if (err) {
@@ -252,13 +252,12 @@ Error ImageItem_Overlay::read_overlay_spec()
   */
 
 
-  std::vector<uint8_t> overlay_data;
-  Error err = heif_file->get_uncompressed_item_data(get_id(), &overlay_data);
-  if (err) {
-    return err;
+  auto overlayDataResult = heif_file->get_uncompressed_item_data(get_id());
+  if (!overlayDataResult) {
+    return overlayDataResult.error();
   }
 
-  err = m_overlay_spec.parse(m_overlay_image_ids.size(), overlay_data);
+  Error err = m_overlay_spec.parse(m_overlay_image_ids.size(), *overlayDataResult);
   if (err) {
     return err;
   }
@@ -273,7 +272,7 @@ Error ImageItem_Overlay::read_overlay_spec()
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const heif_decoding_options& options,
                                                                                    bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   return decode_overlay_image(options);
@@ -334,21 +333,23 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
     }
 
     auto decodeResult = imgItem->decode_image(options, false, 0,0);
-    if (decodeResult.error) {
-      return decodeResult.error;
+    if (!decodeResult) {
+      return decodeResult.error();
     }
 
-    std::shared_ptr<HeifPixelImage> overlay_img = decodeResult.value;
+    std::shared_ptr<HeifPixelImage> overlay_img = *decodeResult;
 
 
     // process overlay in RGB space
 
     if (overlay_img->get_colorspace() != heif_colorspace_RGB ||
         overlay_img->get_chroma_format() != heif_chroma_444) {
-      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options,
+      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444,
+                                                   nclx_profile::undefined(),
+                                                   0, options.color_conversion_options, options.color_conversion_options_ext,
                                                    get_context()->get_security_limits());
-      if (overlay_img_result.error) {
-        return overlay_img_result.error;
+      if (!overlay_img_result) {
+        return overlay_img_result.error();
       }
       else {
         overlay_img = *overlay_img_result;
@@ -456,4 +457,15 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
   //                       out_grid_image->is_miaf_compatible());
 
   return iovl_image;
+}
+
+heif_brand2 ImageItem_Overlay::get_compatible_brand() const
+{
+  if (m_overlay_image_ids.empty()) { return 0; }
+
+  heif_item_id child_id = m_overlay_image_ids[0];
+  auto child = get_context()->get_image(child_id, false);
+  if (!child) { return 0; }
+
+  return child->get_compatible_brand();
 }

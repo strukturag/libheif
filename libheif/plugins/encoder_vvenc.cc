@@ -69,13 +69,13 @@ static const char* vvenc_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter vvenc_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* vvenc_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter vvenc_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* vvenc_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void vvenc_init_parameters()
 {
-  struct heif_encoder_parameter* p = vvenc_encoder_params;
-  const struct heif_encoder_parameter** d = vvenc_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = vvenc_encoder_params;
+  const heif_encoder_parameter** d = vvenc_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -103,7 +103,7 @@ static void vvenc_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** vvenc_list_parameters(void* encoder)
+const heif_encoder_parameter** vvenc_list_parameters(void* encoder)
 {
   return vvenc_encoder_parameter_ptrs;
 }
@@ -120,10 +120,10 @@ static void vvenc_cleanup_plugin()
 }
 
 
-static struct heif_error vvenc_new_encoder(void** enc)
+static heif_error vvenc_new_encoder(void** enc)
 {
-  struct encoder_struct_vvenc* encoder = new encoder_struct_vvenc();
-  struct heif_error err = heif_error_ok;
+  encoder_struct_vvenc* encoder = new encoder_struct_vvenc();
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -136,14 +136,14 @@ static struct heif_error vvenc_new_encoder(void** enc)
 
 static void vvenc_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   delete encoder;
 }
 
-static struct heif_error vvenc_set_parameter_quality(void* encoder_raw, int quality)
+static heif_error vvenc_set_parameter_quality(void* encoder_raw, int quality)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -154,34 +154,34 @@ static struct heif_error vvenc_set_parameter_quality(void* encoder_raw, int qual
   return heif_error_ok;
 }
 
-static struct heif_error vvenc_get_parameter_quality(void* encoder_raw, int* quality)
+static heif_error vvenc_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-static struct heif_error vvenc_set_parameter_lossless(void* encoder_raw, int enable)
+static heif_error vvenc_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   encoder->lossless = enable ? 1 : 0;
 
   return heif_error_ok;
 }
 
-static struct heif_error vvenc_get_parameter_lossless(void* encoder_raw, int* enable)
+static heif_error vvenc_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   *enable = encoder->lossless;
 
   return heif_error_ok;
 }
 
-static struct heif_error vvenc_set_parameter_logging_level(void* encoder_raw, int logging)
+static heif_error vvenc_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 //  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
 
@@ -190,7 +190,7 @@ static struct heif_error vvenc_set_parameter_logging_level(void* encoder_raw, in
   return heif_error_ok;
 }
 
-static struct heif_error vvenc_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+static heif_error vvenc_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 //  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
 
@@ -200,9 +200,9 @@ static struct heif_error vvenc_get_parameter_logging_level(void* encoder_raw, in
 }
 
 
-static struct heif_error vvenc_set_parameter_integer(void* encoder_raw, const char* name, int value)
+static heif_error vvenc_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return vvenc_set_parameter_quality(encoder, value);
@@ -214,9 +214,9 @@ static struct heif_error vvenc_set_parameter_integer(void* encoder_raw, const ch
   return heif_error_unsupported_parameter;
 }
 
-static struct heif_error vvenc_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+static heif_error vvenc_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return vvenc_get_parameter_quality(encoder, value);
@@ -229,7 +229,7 @@ static struct heif_error vvenc_get_parameter_integer(void* encoder_raw, const ch
 }
 
 
-static struct heif_error vvenc_set_parameter_boolean(void* encoder, const char* name, int value)
+static heif_error vvenc_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return vvenc_set_parameter_lossless(encoder, value);
@@ -251,13 +251,13 @@ static struct heif_error vvenc_get_parameter_boolean(void* encoder, const char* 
 */
 
 
-static struct heif_error vvenc_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+static heif_error vvenc_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   return heif_error_unsupported_parameter;
 }
 
-static struct heif_error vvenc_get_parameter_string(void* encoder_raw, const char* name,
-                                                    char* value, int value_size)
+static heif_error vvenc_get_parameter_string(void* encoder_raw, const char* name,
+                                             char* value, int value_size)
 {
   return heif_error_unsupported_parameter;
 }
@@ -265,8 +265,8 @@ static struct heif_error vvenc_get_parameter_string(void* encoder_raw, const cha
 
 static void vvenc_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = vvenc_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = vvenc_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -339,7 +339,7 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
 }
 
 
-static void copy_plane(int16_t*& out_p, int& out_stride, const uint8_t* in_p, uint32_t in_stride, int w, int h, int padded_width, int padded_height)
+static void copy_plane(int16_t*& out_p, size_t& out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
 {
   out_stride = padded_width;
   out_p = new int16_t[out_stride * w * h];
@@ -358,10 +358,10 @@ static void copy_plane(int16_t*& out_p, int& out_stride, const uint8_t* in_p, ui
 }
 
 
-static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif_image* image,
-                                            heif_image_input_class input_class)
+static heif_error vvenc_encode_image(void* encoder_raw, const heif_image* image,
+                                     heif_image_input_class input_class)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
@@ -474,7 +474,7 @@ static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif
   }
 
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     nclx = nullptr;
@@ -530,50 +530,50 @@ static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif
   int16_t* yptr = nullptr;
   int16_t* cbptr = nullptr;
   int16_t* crptr = nullptr;
-  int ystride = 0;
-  int cbstride = 0;
-  int crstride = 0;
+  size_t ystride = 0;
+  size_t cbstride = 0;
+  size_t crstride = 0;
 
   if (isGreyscale) {
-    int stride;
-    const uint8_t* data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    size_t stride;
+    const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
     copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
     yuvbuf->planes[0].ptr = yptr;
     yuvbuf->planes[0].width = encoded_width;
     yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = ystride;
+    yuvbuf->planes[0].stride = (int)ystride;
   }
   else {
-    int stride;
+    size_t stride;
     const uint8_t* data;
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
     copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
     copy_plane(cbptr, cbstride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
-    data = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride);
+    data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
     copy_plane(crptr, crstride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
     yuvbuf->planes[0].ptr = yptr;
     yuvbuf->planes[0].width = encoded_width;
     yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = ystride;
+    yuvbuf->planes[0].stride = (int)ystride;
 
     yuvbuf->planes[1].ptr = cbptr;
     yuvbuf->planes[1].width = encoded_width >> chroma_stride_shift;
     yuvbuf->planes[1].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[1].stride = cbstride;
+    yuvbuf->planes[1].stride = (int)cbstride;
 
     yuvbuf->planes[2].ptr = crptr;
     yuvbuf->planes[2].width = encoded_width >> chroma_stride_shift;
     yuvbuf->planes[2].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[2].stride = crstride;
+    yuvbuf->planes[2].stride = (int)crstride;
   }
 
   //yuvbuf->cts     = frame->pts;
@@ -632,10 +632,10 @@ static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif
 }
 
 
-static struct heif_error vvenc_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                                   enum heif_encoded_data_type* type)
+static heif_error vvenc_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                            heif_encoded_data_type* type)
 {
-  struct encoder_struct_vvenc* encoder = (struct encoder_struct_vvenc*) encoder_raw;
+  encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
   if (encoder->output_idx == encoder->output_data.size()) {
     *data = nullptr;
@@ -675,7 +675,7 @@ static struct heif_error vvenc_get_compressed_data(void* encoder_raw, uint8_t** 
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_vvenc
+static const heif_encoder_plugin encoder_plugin_vvenc
     {
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_VVC,
@@ -708,7 +708,7 @@ static const struct heif_encoder_plugin encoder_plugin_vvenc
         /* query_encoded_size (v3) */ vvenc_query_encoded_size
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_vvenc()
+const heif_encoder_plugin* get_encoder_plugin_vvenc()
 {
   return &encoder_plugin_vvenc;
 }

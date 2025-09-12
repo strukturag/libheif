@@ -25,7 +25,8 @@
 std::vector<ColorStateWithCost>
 Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
                                          const ColorState& target_state,
-                                         const heif_color_conversion_options& options) const
+                                         const heif_color_conversion_options& options,
+                                         const heif_color_conversion_options_ext& options_ext) const
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -55,6 +56,7 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                      const ColorState& input_state,
                                      const ColorState& target_state,
                                      const heif_color_conversion_options& options,
+                                     const heif_color_conversion_options_ext& options_ext,
                                      const heif_security_limits* limits) const
 {
   auto outimg = std::make_shared<HeifPixelImage>();
@@ -85,11 +87,11 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       int shift2 = 2 * input_bits - output_bits;
 
       const uint8_t* p_in;
-      uint32_t stride_in;
+      size_t stride_in;
       p_in = input->get_plane(channel, &stride_in);
 
       uint16_t* p_out;
-      uint32_t stride_out;
+      size_t stride_out;
       p_out = (uint16_t*) outimg->get_plane(channel, &stride_out);
       stride_out /= 2;
 
@@ -109,7 +111,8 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
 std::vector<ColorStateWithCost>
 Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
                                          const ColorState& target_state,
-                                         const heif_color_conversion_options& options) const
+                                         const heif_color_conversion_options& options,
+                                         const heif_color_conversion_options_ext& options_ext) const
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -143,6 +146,7 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                      const ColorState& input_state,
                                      const ColorState& target_state,
                                      const heif_color_conversion_options& options,
+                                     const heif_color_conversion_options_ext& options_ext,
                                      const heif_security_limits* limits) const
 {
 
@@ -173,12 +177,12 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
         int shift = input_bits - 8;
 
         const uint16_t* p_in;
-        uint32_t stride_in;
+        size_t stride_in;
         p_in = (uint16_t*) input->get_plane(channel, &stride_in);
         stride_in /= 2;
 
         uint8_t* p_out;
-        uint32_t stride_out;
+        size_t stride_out;
         p_out = outimg->get_plane(channel, &stride_out);
 
         for (uint32_t y = 0; y < height; y++)
@@ -217,10 +221,10 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
           mulFactor |= bit;
         }
 
-        uint32_t stride_in;
+        size_t stride_in;
         const uint8_t* p_in = input->get_plane(channel, &stride_in);
 
-        uint32_t stride_out;
+        size_t stride_out;
         uint8_t* p_out = outimg->get_plane(channel, &stride_out);
 
         for (uint32_t y = 0; y < height; y++)

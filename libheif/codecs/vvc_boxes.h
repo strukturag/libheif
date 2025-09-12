@@ -26,6 +26,7 @@
 #include <vector>
 #include "image-items/image_item.h"
 #include <memory>
+#include "sequences/seq_boxes.h"
 
 
 class Box_vvcC : public FullBox
@@ -98,6 +99,16 @@ private:
 
   configuration m_configuration;
   std::vector<NalArray> m_nal_array;
+};
+
+
+class Box_vvc1 : public Box_VisualSampleEntry
+{
+public:
+  Box_vvc1()
+  {
+    set_short_type(fourcc("vvc1"));
+  }
 };
 
 

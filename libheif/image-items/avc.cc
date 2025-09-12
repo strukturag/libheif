@@ -30,7 +30,7 @@
 #include <utility>
 
 
-Result<ImageItem::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                         struct heif_encoder* encoder,
                                                         const struct heif_encoding_options& options,
                                                         enum heif_image_input_class input_class)
@@ -126,7 +126,7 @@ Result<std::shared_ptr<Decoder>> ImageItem_AVC::get_decoder() const
 }
 
 
-Error ImageItem_AVC::on_load_file()
+Error ImageItem_AVC::initialize_decoder()
 {
   auto avcC_box = get_property<Box_avcC>();
   if (!avcC_box) {
@@ -136,10 +136,13 @@ Error ImageItem_AVC::on_load_file()
 
   m_decoder = std::make_shared<Decoder_AVC>(avcC_box);
 
+  return Error::Ok;
+}
+
+void ImageItem_AVC::set_decoder_input_data()
+{
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }

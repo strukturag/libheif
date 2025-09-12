@@ -20,10 +20,12 @@
 
 #include "security_limits.h"
 #include <limits>
+#include <map>
+#include <mutex>
 
 
-struct heif_security_limits global_security_limits {
-    .version = 1,
+heif_security_limits global_security_limits{
+    .version = 2,
 
     // --- version 1
 
@@ -31,22 +33,28 @@ struct heif_security_limits global_security_limits {
     // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
     .max_image_size_pixels = 32768 * 32768,
     .max_number_of_tiles = 4096 * 4096,
-    .max_bayer_pattern_pixels = 16*16,
+    .max_bayer_pattern_pixels = 16 * 16,
     .max_items = 1000,
 
     .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
-    .max_memory_block_size = 512 * 1024 * 1024,  // 512 MB
+    .max_memory_block_size = UINT64_C(4) * 1024 * 1024 * 1024,  // 4 GB
 
     .max_components = 256,
     .max_iloc_extents_per_item = 32,
     .max_size_entity_group = 64,
 
-    .max_children_per_box = 100
+    .max_children_per_box = 100,
+
+    // --- version 2
+
+    .max_total_memory = UINT64_C(4) * 1024 * 1024 * 1024,  // 4 GB
+    .max_sample_description_box_entries = 1024,
+    .max_sample_group_description_box_entries = 1024
 };
 
 
-struct heif_security_limits disabled_security_limits{
-        .version = 1
+heif_security_limits disabled_security_limits{
+    .version = 2
 };
 
 
@@ -78,3 +86,164 @@ Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t wi
 
   return Error::Ok;
 }
+
+
+struct memory_stats {
+  size_t total_memory_usage = 0;
+  size_t max_memory_usage = 0;
+};
+
+std::mutex& get_memory_usage_mutex()
+{
+  static std::mutex sMutex;
+  return sMutex;
+}
+
+static std::map<const heif_security_limits*, memory_stats> sMemoryUsage;
+
+TotalMemoryTracker::TotalMemoryTracker(const heif_security_limits* limits)
+{
+  std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+
+  sMemoryUsage[limits] = {};
+  m_limits_context = limits;
+}
+
+TotalMemoryTracker::~TotalMemoryTracker()
+{
+  std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+  sMemoryUsage.erase(m_limits_context);
+}
+
+
+size_t TotalMemoryTracker::get_max_total_memory_used() const
+{
+  std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+
+  auto it = sMemoryUsage.find(m_limits_context);
+  if (it != sMemoryUsage.end()) {
+    return it->second.max_memory_usage;
+  }
+  else {
+    assert(false);
+    return 0;
+  }
+}
+
+
+Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limits_context,
+                          const char* reason_description)
+{
+  // we allow several allocations on the same handle, but they have to be for the same context
+  if (m_limits_context) {
+    assert(m_limits_context == limits_context);
+  }
+
+
+  // --- check whether limits are exceeded
+
+  if (!limits_context) {
+    return Error::Ok;
+  }
+
+  // check against maximum memory block size
+
+  if (limits_context->max_memory_block_size != 0 &&
+      memory_amount > limits_context->max_memory_block_size) {
+    std::stringstream sstr;
+
+    if (reason_description) {
+      sstr << "Allocating " << memory_amount << " bytes for " << reason_description <<" exceeds the security limit of "
+           << limits_context->max_memory_block_size << " bytes";
+    }
+    else {
+      sstr << "Allocating " << memory_amount << " bytes exceeds the security limit of "
+           << limits_context->max_memory_block_size << " bytes";
+    }
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  if (limits_context == &global_security_limits ||
+      limits_context == &disabled_security_limits) {
+    return Error::Ok;
+  }
+
+  std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+  auto it = sMemoryUsage.find(limits_context);
+  if (it == sMemoryUsage.end()) {
+    assert(false);
+    return Error::Ok;
+  }
+
+  // check against maximum total memory usage
+
+  if (limits_context->max_total_memory != 0 &&
+      it->second.total_memory_usage + memory_amount > limits_context->max_total_memory) {
+    std::stringstream sstr;
+
+    if (reason_description) {
+      sstr << "Memory usage of " << it->second.total_memory_usage + memory_amount
+           << " bytes for " << reason_description << " exceeds the security limit of "
+           << limits_context->max_total_memory << " bytes of total memory usage";
+    }
+    else {
+      sstr << "Memory usage of " << it->second.total_memory_usage + memory_amount
+           << " bytes exceeds the security limit of "
+           << limits_context->max_total_memory << " bytes of total memory usage";
+    }
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+
+  // --- register memory usage
+
+  m_limits_context = limits_context;
+  m_memory_amount += memory_amount;
+
+  it->second.total_memory_usage += memory_amount;
+
+  // remember maximum memory usage (for informational purpose)
+  if (it->second.total_memory_usage > it->second.max_memory_usage) {
+    it->second.max_memory_usage = it->second.total_memory_usage;
+  }
+
+  return Error::Ok;
+}
+
+
+void MemoryHandle::free()
+{
+  if (m_limits_context) {
+    std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+
+    auto it = sMemoryUsage.find(m_limits_context);
+    if (it != sMemoryUsage.end()) {
+      it->second.total_memory_usage -= m_memory_amount;
+    }
+
+    m_limits_context = nullptr;
+    m_memory_amount = 0;
+  }
+}
+
+
+void MemoryHandle::free(size_t memory_amount)
+{
+  if (m_limits_context) {
+    std::lock_guard<std::mutex> lock(get_memory_usage_mutex());
+
+    auto it = sMemoryUsage.find(m_limits_context);
+    if (it != sMemoryUsage.end()) {
+      it->second.total_memory_usage -= memory_amount;
+    }
+
+    m_memory_amount -= memory_amount;
+  }
+}
+

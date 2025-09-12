@@ -89,8 +89,6 @@ public:
 
   uint32_t get_infe_type() const override { return fourcc("mski"); }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
-
   heif_compression_format get_compression_format() const override { return heif_compression_mask; }
 
   bool is_ispe_essential() const override { return true; }
@@ -102,10 +100,10 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override;
 };
 
 #endif //LIBHEIF_MASK_IMAGE_H

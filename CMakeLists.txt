@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.19.5)
+project(libheif LANGUAGES C CXX VERSION 1.21.0)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -15,12 +15,15 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# Check for unistd.h
+# Check for header files.
+include (${CMAKE_ROOT}/Modules/CheckIncludeFileCXX.cmake)
 
-include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+CHECK_INCLUDE_FILE_CXX(bit HAVE_BIT)
+if (HAVE_BIT)
+  add_definitions(-DHAVE_BIT)
+endif()
 
-CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
-
+CHECK_INCLUDE_FILE_CXX(unistd.h HAVE_UNISTD_H)
 if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
@@ -162,7 +165,7 @@ plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
 if (WITH_VVDEC)
     # TODO: how to do configure vvdec cleanly?
     find_package(Threads REQUIRED)
-    find_package(vvdec 2.3.0)
+    find_package(vvdec 3.0.0)
     if (vvdec_FOUND)
         set(vvdec_LIBRARIES vvdec::vvdec)
     endif()
@@ -394,8 +397,15 @@ message("")
 # --- Libsharpyuv color space transforms
 
 option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
+option(WITH_LIBSHARPYUV_INTERNAL "Use the libsharpyuv build in the 'third-party' directory" OFF)
 if (WITH_LIBSHARPYUV)
-    find_package(libsharpyuv)
+   if (WITH_LIBSHARPYUV_INTERNAL)
+       set(LIBSHARPYUV_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third-party/libwebp)
+       set(LIBSHARPYUV_LIBRARIES ${PROJECT_SOURCE_DIR}/third-party/libwebp/build/libsharpyuv.a)
+       set(LIBSHARPYUV_FOUND YES)
+   else()
+       find_package(libsharpyuv)
+   endif()
 endif ()
 if (LIBSHARPYUV_FOUND)
     message("libsharpyuv: found")
@@ -495,6 +505,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
+option(WITH_EXAMPLE_HEIF_THUMB "Build heif-thumbnailer tool" ON)
+option(WITH_EXAMPLE_HEIF_VIEW "Build heif-view tool" ON)
 option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
@@ -520,8 +532,10 @@ endif()
 # --- API documentation
 
 # check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
+option(BUILD_DOCUMENTATION "Build doxygen documentation" ON)
+if (BUILD_DOCUMENTATION)
+  find_package(Doxygen)
+  if (DOXYGEN_FOUND)
     # set input and output files
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/libheif/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
@@ -536,9 +550,10 @@ if (DOXYGEN_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM )
-else (DOXYGEN_FOUND)
-  message("Doxygen tool needs to be installed to generate the API documentation")
-endif (DOXYGEN_FOUND)
+  else (DOXYGEN_FOUND)
+    message("Doxygen tool needs to be installed to generate the API documentation")
+  endif (DOXYGEN_FOUND)
+endif(BUILD_DOCUMENTATION)
 
 # --- Testing
 
@@ -584,6 +599,7 @@ if (WITH_FUZZERS)
     separate_arguments(FUZZING_COMPILE_OPTIONS UNIX_COMMAND "${FUZZING_COMPILE_OPTIONS}")
     separate_arguments(FUZZING_LINKER UNIX_COMMAND "${FUZZING_LINKER_OPTIONS}")
     add_compile_options(${FUZZING_COMPILE_OPTIONS})
+    add_definitions(-DAVOID_FUZZER_FALSE_POSITIVE=1)
     add_link_options(${FUZZING_COMPILE_OPTIONS} ${FUZZING_LINKER_OPTIONS})
 
     add_subdirectory(fuzzing)

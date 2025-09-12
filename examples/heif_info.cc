@@ -40,13 +40,17 @@
 #include <libheif/heif.h>
 #include <libheif/heif_regions.h>
 #include <libheif/heif_properties.h>
+#include <libheif/heif_experimental.h>
+#include "libheif/heif_sequences.h"
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <getopt.h>
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
+#include <filesystem>
 #include "common.h"
 
 
@@ -77,31 +81,28 @@ static struct option long_options[] = {
     {0, 0,                                    0, 0}
 };
 
-// Note: the same function is also exists in common_utils.h, but is not in the public API.
-static const char* fourcc_to_string(uint32_t fourcc)
-{
-  static char fcc[5];
-  fcc[0] = (char) ((fourcc >> 24) & 0xFF);
-  fcc[1] = (char) ((fourcc >> 16) & 0xFF);
-  fcc[2] = (char) ((fourcc >> 8) & 0xFF);
-  fcc[3] = (char) ((fourcc >> 0) & 0xFF);
-  fcc[4] = 0;
-  return fcc;
-}
 
 void show_help(const char* argv0)
 {
-  fprintf(stderr, " heif-info  libheif version: %s\n", heif_get_version());
-  fprintf(stderr, "------------------------------------\n");
-  fprintf(stderr, "usage: heif-info [options] image.heic\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "options:\n");
-  //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
-  //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
-  fprintf(stderr, "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
-  fprintf(stderr, "      --disable-limits disable all security limits (do not use in production environment)\n");
-  fprintf(stderr, "  -h, --help           show help\n");
-  fprintf(stderr, "  -v, --version        show version\n");
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options] <HEIF-image>\n"
+            << "\n"
+               "options:\n"
+               //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
+               //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
+               "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n"
+               "      --disable-limits disable all security limits (do not use in production environment)\n"
+               "  -h, --help           show help\n"
+               "  -v, --version        show version\n";
 }
 
 
@@ -146,7 +147,7 @@ int main(int argc, char** argv)
         output_filename = optarg;
         break;
       case 'v':
-        show_version();
+        heif_examples::show_version();
         return 0;
     }
   }
@@ -233,14 +234,20 @@ int main(int argc, char** argv)
   struct heif_error err;
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
+  if (dump_boxes) {
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+
+    if (err.code != 0) {
+      std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
+      return 1;
+    }
+
+    return 0;
+  }
+
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
-  }
-
-  if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
-    return 0;
   }
 
 
@@ -365,7 +372,7 @@ int main(int argc, char** argv)
     // --- color profile
 
     uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
-    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType) : "no");
+    printf("  color profile: %s\n", profileType ? heif_examples::fourcc_to_string(profileType).c_str() : "no");
 
 
     // --- depth information
@@ -747,6 +754,128 @@ int main(int argc, char** argv)
   heif_image_release(image);
   heif_image_handle_release(handle);
 #endif
+
+  // ==============================================================================
+
+  heif_context* context = ctx.get();
+
+  uint32_t nTracks = heif_context_number_of_sequence_tracks(context);
+
+  if (nTracks > 0) {
+    std::cout << "\n";
+
+    uint64_t timescale = heif_context_get_sequence_timescale(context);
+    std::cout << "sequence time scale: " << timescale << " Hz\n";
+
+    uint64_t duration = heif_context_get_sequence_duration(context);
+    std::cout << "sequence duration: " << ((double)duration)/(double)timescale << " seconds\n";
+
+              //    TrackOptions
+
+    std::vector<uint32_t> track_ids(nTracks);
+
+    heif_context_get_track_ids(context, track_ids.data());
+
+    for (uint32_t id : track_ids) {
+      heif_track* track = heif_context_get_track(context, id);
+
+      heif_track_type handler = heif_track_get_track_handler_type(track);
+      std::cout << "track " << id << "\n";
+      std::cout << "  handler: '" << heif_examples::fourcc_to_string(handler) << "' = ";
+
+      switch (handler) {
+        case heif_track_type_image_sequence:
+          std::cout << "image sequence\n";
+          break;
+        case heif_track_type_video:
+          std::cout << "video\n";
+          break;
+        case heif_track_type_auxiliary:
+          std::cout << "auxiliary ";
+          {
+            heif_auxiliary_track_info_type type = heif_track_get_auxiliary_info_type(track);
+            switch (type) {
+              case heif_auxiliary_track_info_type_unknown: {
+                const char* s = heif_track_get_auxiliary_info_type_urn(track);
+                std::cout << "(unknown: " << s << ")\n";
+                heif_string_release(s);
+                break;
+              }
+              case heif_auxiliary_track_info_type_alpha:
+                std::cout << "(alpha)\n";
+                break;
+            }
+          }
+          break;
+        case heif_track_type_metadata:
+          std::cout << "metadata\n";
+          break;
+        default:
+          std::cout << "unknown\n";
+          break;
+      }
+
+      if (handler == heif_track_type_video ||
+          handler == heif_track_type_image_sequence) {
+        uint16_t w, h;
+        heif_track_get_image_resolution(track, &w, &h);
+        std::cout << "  resolution: " << w << "x" << h << "\n";
+      }
+
+      uint32_t sampleEntryType = heif_track_get_sample_entry_type_of_first_cluster(track);
+      std::cout << "  sample entry type: " << heif_examples::fourcc_to_string(sampleEntryType) << "\n";
+
+      if (sampleEntryType == heif_fourcc('u', 'r', 'i', 'm')) {
+        const char* uri;
+        err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
+        if (err.code) {
+          std::cerr << "error reading urim-track uri: " << err.message << "\n";
+        }
+        std::cout << "  uri: " << uri << "\n";
+        heif_string_release(uri);
+      }
+
+      std::cout << "  sample auxiliary information: ";
+      int nSampleAuxTypes = heif_track_get_number_of_sample_aux_infos(track);
+
+      std::vector<heif_sample_aux_info_type> aux_types(nSampleAuxTypes);
+      heif_track_get_sample_aux_info_types(track, aux_types.data());
+
+      for (size_t i=0;i<aux_types.size();i++) {
+        if (i) { std::cout << ", "; }
+        std::cout << heif_examples::fourcc_to_string(aux_types[i].type);
+      }
+
+      if (nSampleAuxTypes==0) {
+        std::cout << "---";
+      }
+      std::cout << "\n";
+
+
+      size_t nRefTypes = heif_track_get_number_of_track_reference_types(track);
+
+      if (nRefTypes > 0) {
+        std::cout << "  references:\n";
+        std::vector<uint32_t> refTypes(nRefTypes);
+        heif_track_get_track_reference_types(track, refTypes.data());
+
+        for (uint32_t refType : refTypes) {
+          std::cout << "    " << heif_examples::fourcc_to_string(refType) << ": ";
+
+          size_t n = heif_track_get_number_of_track_reference_of_type(track, refType);
+          std::vector<uint32_t> track_ids(n);
+          heif_track_get_references_from_track(track, refType, track_ids.data());
+          for (size_t i=0;i<n;i++) {
+            if (i>0) std::cout << ", ";
+            std::cout << "track#" << track_ids[i];
+          }
+          std::cout << "\n";
+        }
+      }
+
+      heif_track_release(track);
+    }
+  }
 
   return 0;
 }

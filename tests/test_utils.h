@@ -27,6 +27,10 @@
 #include <string>
 #include "libheif/heif.h"
 
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
 struct heif_context * get_context_for_test_file(std::string filename);
 struct heif_context * get_context_for_local_file(std::string filename);
 
@@ -43,3 +47,7 @@ struct heif_image * createImage_RGB_planar();
 std::string get_path_for_heifio_test_file(std::string filename);
 
 heif_encoder* get_encoder_or_skip_test(heif_compression_format format);
+
+fs::path get_tests_output_dir();
+
+std::string get_tests_output_file_path(const char* filename);

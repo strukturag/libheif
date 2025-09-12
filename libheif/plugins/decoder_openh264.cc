@@ -28,11 +28,13 @@
 #include <cstdio>
 
 #include <wels/codec_api.h>
+#include <string>
 
 
 struct openh264_decoder
 {
   std::vector<uint8_t> data;
+  std::string error_message;
 };
 
 static const char kSuccess[] = "Success";
@@ -66,7 +68,7 @@ static void openh264_deinit_plugin()
 }
 
 
-static int openh264_does_support_format(enum heif_compression_format format)
+static int openh264_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_AVC) {
     return OpenH264_PLUGIN_PRIORITY;
@@ -77,13 +79,12 @@ static int openh264_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error openh264_new_decoder(void** dec)
+heif_error openh264_new_decoder(void** dec)
 {
   auto* decoder = new openh264_decoder();
   *dec = decoder;
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
@@ -105,22 +106,22 @@ void openh264_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-struct heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  auto* decoder = (struct openh264_decoder*) decoder_raw;
+  auto* decoder = (openh264_decoder*) decoder_raw;
 
   const auto* input_data = (const uint8_t*) frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 
-struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                      const heif_security_limits* limits)
 {
-  auto* decoder = (struct openh264_decoder*) decoder_raw;
+  auto* decoder = (openh264_decoder*) decoder_raw;
 
   if (decoder->data.size() < 4) {
     return kError_EOF;
@@ -243,8 +244,8 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
   uint32_t width = sDstBufInfo.UsrData.sSystemBuffer.iWidth;
   uint32_t height = sDstBufInfo.UsrData.sSystemBuffer.iHeight;
 
-  struct heif_image* heif_img;
-  struct heif_error err{};
+  heif_image* heif_img;
+  heif_error err{};
 
   uint32_t cwidth, cheight;
 
@@ -263,16 +264,42 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
 
     *out_img = heif_img;
 
-    heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Y, width, height, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
 
-    int y_stride;
-    int cb_stride;
-    int cr_stride;
-    uint8_t* py = heif_image_get_plane(heif_img, heif_channel_Y, &y_stride);
-    uint8_t* pcb = heif_image_get_plane(heif_img, heif_channel_Cb, &cb_stride);
-    uint8_t* pcr = heif_image_get_plane(heif_img, heif_channel_Cr, &cr_stride);
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, cwidth, cheight, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, cwidth, cheight, 8, limits);
+    if (err.code != heif_error_Ok) {
+      // copy error message to decoder object because heif_image will be released
+      decoder->error_message = err.message;
+      err.message = decoder->error_message.c_str();
+
+      heif_image_release(heif_img);
+      return err;
+    }
+
+    size_t y_stride;
+    size_t cb_stride;
+    size_t cr_stride;
+    uint8_t* py = heif_image_get_plane2(heif_img, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane2(heif_img, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane2(heif_img, heif_channel_Cr, &cr_stride);
 
     int ystride = sDstBufInfo.UsrData.sSystemBuffer.iStride[0];
     int cstride = sDstBufInfo.UsrData.sSystemBuffer.iStride[1];
@@ -301,9 +328,15 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
   return heif_error_ok;
 }
 
+heif_error openh264_decode_image(void* decoder_raw, heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return openh264_decode_next_image(decoder_raw, out_img, limits);
+}
 
-static const struct heif_decoder_plugin decoder_openh264{
-        3,
+
+static const heif_decoder_plugin decoder_openh264{
+        4,
         openh264_plugin_name,
         openh264_init_plugin,
         openh264_deinit_plugin,
@@ -313,11 +346,12 @@ static const struct heif_decoder_plugin decoder_openh264{
         openh264_push_data,
         openh264_decode_image,
         openh264_set_strict_decoding,
-        "openh264"
+        "openh264",
+        openh264_decode_next_image
 };
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_openh264()
+const heif_decoder_plugin* get_decoder_plugin_openh264()
 {
   return &decoder_openh264;
 }

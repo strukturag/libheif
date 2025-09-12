@@ -161,3 +161,19 @@ bool Decoder_uncompressed::has_alpha_component() const
 
   return has_alpha;
 }
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
+                                                               const struct heif_security_limits* limits)
+{
+  UncompressedImageCodec::unci_properties properties;
+  properties.uncC = m_uncC;
+  properties.cmpd = m_cmpd;
+  properties.ispe = m_ispe;
+
+  auto decodeResult = UncompressedImageCodec::decode_uncompressed_image(properties,
+                                                          get_data_extent(),
+                                                          limits);
+  return decodeResult;
+}

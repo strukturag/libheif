@@ -8,7 +8,7 @@ There is partial support for ISO/IEC 23008-12:2022 (2nd Edition) capabilities.
 HEIF and AVIF are new image file formats employing HEVC (H.265) or AV1 image coding, respectively, for the
 best compression ratios currently possible.
 
-libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
+libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIC image decoding and x265 for encoding.
 For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 ## Supported features
@@ -35,13 +35,14 @@ Supported codecs:
 | AVC          | openh264            | -                            |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
+| HTJ2K        | OpenJPEG            | OpenJPH                      |
 | uncompressed | built-in            | built-in                     |
 
 ## API
 
 The library has a C API for easy integration and wide language support.
 
-The decoder automatically supports both HEIF and AVIF (and the other compression formats) through the same API. The same code decoding code can be used to decode any of them.
+The decoder automatically supports both HEIF and AVIF (and the other compression formats) through the same API. The same decoding code can be used to decode any of them.
 The encoder can be switched between HEIF and AVIF simply by setting `heif_compression_HEVC` or `heif_compression_AV1`
 to `heif_context_get_encoder_for_format()`, or using any of the other compression formats.
 
@@ -112,7 +113,6 @@ There is also a C++ API which is a header-only wrapper to the C API.
 Hence, you can use the C++ API and still be binary compatible.
 Code using the C++ API is much less verbose than using the C API directly.
 
-There is also an experimental Go API, but this is not stable yet.
 
 ### Reading and Writing Tiled Images
 
@@ -287,12 +287,13 @@ A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the
 
 * .NET Platform (C#, F#, and other languages): [libheif-sharp](https://github.com/0xC0000054/libheif-sharp)
 * C++: part of libheif
-* Go: part of libheif
+* Go: [libheif-go](https://github.com/strukturag/libheif-go), the wrapper distributed with libheif is deprecated
 * JavaScript: by compilation with emscripten (see below)
 * NodeJS module: [libheif-js](https://www.npmjs.com/package/libheif-js)
 * Python: [pyheif](https://pypi.org/project/pyheif/), [pillow_heif](https://pypi.org/project/pillow-heif/)
 * Rust: [libheif-sys](https://github.com/Cykooz/libheif-sys)
 * Swift: [libheif-Xcode](https://swiftpackageregistry.com/SDWebImage/libheif-Xcode)
+* JavaFX: [LibHeifFx](https://github.com/lanthale/LibHeifFX)
 
 Languages that can directly interface with C libraries (e.g., Swift, C#) should work out of the box.
 
@@ -390,5 +391,5 @@ The sample applications are distributed under the terms of the MIT License.
 See COPYING for more details.
 
 Copyright (c) 2017-2020 Struktur AG</br>
-Copyright (c) 2017-2024 Dirk Farin</br>
+Copyright (c) 2017-2025 Dirk Farin</br>
 Contact: Dirk Farin <dirk.farin@gmail.com>

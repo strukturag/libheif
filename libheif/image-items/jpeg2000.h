@@ -33,29 +33,31 @@
 class ImageItem_JPEG2000 : public ImageItem
 {
 public:
-  ImageItem_JPEG2000(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_JPEG2000(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_JPEG2000(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_JPEG2000(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("j2k1"); }
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  heif_brand2 get_compatible_brand() const override;
 
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
+  std::shared_ptr<Encoder> get_encoder() const override;
+
 public:
-  Error on_load_file() override;
+  Error initialize_decoder() override;
+
+  void set_decoder_input_data() override;
 
 private:
   std::shared_ptr<class Decoder_JPEG2000> m_decoder;
+  std::shared_ptr<class Encoder_JPEG2000> m_encoder;
 };
 
 #endif // LIBHEIF_JPEG2000_H
