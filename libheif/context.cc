@@ -66,7 +66,7 @@
 #include "text.h"
 
 
-heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
+heif_encoder::heif_encoder(const heif_encoder_plugin* _plugin)
     : plugin(_plugin)
 {
 
@@ -86,16 +86,15 @@ void heif_encoder::release()
 }
 
 
-struct heif_error heif_encoder::alloc()
+heif_error heif_encoder::alloc()
 {
   if (encoder == nullptr) {
-    struct heif_error error = plugin->new_encoder(&encoder);
+    heif_error error = plugin->new_encoder(&encoder);
     // TODO: error handling
     return error;
   }
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
 
@@ -1274,7 +1273,7 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id ID,
                                                                   heif_colorspace out_colorspace,
                                                                   heif_chroma out_chroma,
-                                                                  const struct heif_decoding_options& options,
+                                                                  const heif_decoding_options& options,
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
   std::shared_ptr<ImageItem> imgitem;
@@ -1352,7 +1351,7 @@ bool nclx_color_profile_equal(std::optional<nclx_profile> a,
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                                   heif_colorspace out_colorspace,
                                                                                   heif_chroma out_chroma,
-                                                                                  const struct heif_decoding_options& options) const
+                                                                                  const heif_decoding_options& options) const
 {
   heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                        img->get_colorspace() :
@@ -1427,9 +1426,9 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 
 Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& in_options,
-                                enum heif_image_input_class input_class)
+                                heif_encoder* encoder,
+                                const heif_encoding_options& in_options,
+                                heif_image_input_class input_class)
 {
   std::shared_ptr<ImageItem> output_image_item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
@@ -1571,8 +1570,8 @@ Error HeifContext::assign_thumbnail(const std::shared_ptr<ImageItem>& master_ima
 
 
 Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                                                                 struct heif_encoder* encoder,
-                                                                 const struct heif_encoding_options& options,
+                                                                 heif_encoder* encoder,
+                                                                 const heif_encoding_options& options,
                                                                  int bbox_size)
 {
   int orig_width = image->get_width();

@@ -309,6 +309,7 @@ public:
                                                                 const heif_encoding_options& options,
                                                                 heif_image_input_class input_class);
 
+  // Entry point for encoding pixel images.
   Error encode_to_item(HeifContext* ctx,
                        const std::shared_ptr<HeifPixelImage>& image,
                        heif_encoder* encoder,
