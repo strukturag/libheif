@@ -263,6 +263,8 @@ public:
 
   virtual parse_error_fatality get_parse_error_fatality() const { return parse_error_fatality::fatal; }
 
+  // Note: this function may never be called for `ispe` items since it depends
+  //       on the image item type whether the `ispe` is essential.
   virtual bool is_essential() const { return m_is_essential; } // only used for properties
 
   void set_is_essential(bool flag) { m_is_essential = flag; }
@@ -793,7 +795,8 @@ public:
 
   bool operator==(const Box& other) const override;
 
-  bool is_essential() const override { return false; }
+  // Note: this depends on the image item type. Never call this for an `ispe` property.
+  bool is_essential() const override { assert(false); return false; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
