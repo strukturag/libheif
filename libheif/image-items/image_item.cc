@@ -61,6 +61,17 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 }
 
 
+bool ImageItem::is_property_essential(const std::shared_ptr<Box>& property) const
+{
+  if (property->get_short_type() == fourcc("ispe")) {
+    return is_ispe_essential();
+  }
+  else {
+    return property->is_essential();
+  }
+}
+
+
 std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();
@@ -378,9 +389,11 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // set item properties
 
   for (auto& propertyBox : codingResult->properties) {
+    bool essential = is_property_essential(propertyBox);
+
     // TODO: can we simply use add_property() ?
     int index = ctx->get_heif_file()->get_ipco_box()->find_or_append_child_box(propertyBox);
-    ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{propertyBox->is_essential(),
+    ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{essential,
                                                                                                            uint16_t(index + 1)});
   }
 
@@ -934,7 +947,7 @@ bool ImageItem::has_essential_property_other_than(const std::set<uint32_t>& prop
   }
 
   for (const auto& property : *propertiesResult) {
-    if (property->is_essential() &&
+    if (is_property_essential(property) &&
         props.find(property->get_short_type()) == props.end()) {
       return true;
     }

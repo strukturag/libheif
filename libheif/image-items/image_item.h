@@ -73,6 +73,8 @@ public:
 
   virtual bool is_ispe_essential() const { return false; }
 
+  bool is_property_essential(const std::shared_ptr<Box>& property) const;
+
   virtual Error get_item_error() const { return Error::Ok; }
 
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
