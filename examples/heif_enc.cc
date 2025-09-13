@@ -82,6 +82,11 @@ uint16_t nclx_matrix_coefficients = 6;
 int nclx_full_range = true;
 
 std::optional<heif_content_light_level> clli;
+struct pixel_aspect_ratio
+{
+  uint32_t h,v;
+};
+std::optional<pixel_aspect_ratio> pasp;
 
 // default to 30 fps
 uint32_t sequence_timebase = 30;
@@ -155,6 +160,7 @@ const int OPTION_VMT_METADATA_FILE = 1019;
 const int OPTION_SEQUENCES_REPETITIONS = 1020;
 const int OPTION_COLOR_PROFILE_PRESET = 1021;
 const int OPTION_SET_CLLI = 1022;
+const int OPTION_SET_PASP = 1023;
 
 
 static struct option long_options[] = {
@@ -188,6 +194,7 @@ static struct option long_options[] = {
     {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
     {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
     {(char* const) "clli",                        required_argument, 0,                     OPTION_SET_CLLI},
+    {(char* const) "pasp",                        required_argument, 0,                     OPTION_SET_PASP},
     {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
     {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
@@ -284,6 +291,7 @@ void show_help(const char* argv0)
             << "      --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "      --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "      --clli MaxCLL,MaxPALL     add 'content light level information' property to all encoded images\n"
+            << "      --pasp h,v                set pixel aspect ratio property to all encoded images\n"
             << "\n"
             << "tiling:\n"
             << "      --cut-tiles #             cuts the input image into square tiles of the given width\n"
@@ -1354,6 +1362,23 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_SET_PASP: {
+        auto pasp_args = parse_comma_separated_numeric_arguments<uint32_t>(optarg,
+                                                                           {
+                                                                             std::numeric_limits<uint32_t>::max(),
+                                                                             std::numeric_limits<uint32_t>::max()
+                                                                           });
+        if (pasp_args.empty()) {
+          std::cerr << "Invalid arguments for --pasp option.\n";
+        }
+        else {
+          pixel_aspect_ratio aspect_ratio;
+          aspect_ratio.h = pasp_args[0];
+          aspect_ratio.v = pasp_args[1];
+          pasp = aspect_ratio;
+        }
+        break;
+      }
     }
   }
 
@@ -1689,6 +1714,10 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
     if (clli) {
       heif_image_handle_set_content_light_level(handle, &*clli);
+    }
+
+    if (pasp) {
+      heif_image_handle_set_pixel_aspect_ratio(handle, pasp->h, pasp->v);
     }
 
     if (is_primary_image) {
