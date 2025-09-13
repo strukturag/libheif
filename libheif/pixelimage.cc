@@ -140,6 +140,20 @@ std::shared_ptr<Box_mdcv> ImageExtraData::get_mdcv_box() const
 }
 
 
+std::shared_ptr<Box_pasp> ImageExtraData::get_pasp_box() const
+{
+  if (!has_nonsquare_pixel_ratio()) {
+    return {};
+  }
+
+  auto pasp = std::make_shared<Box_pasp>();
+  pasp->hSpacing = m_PixelAspectRatio_h;
+  pasp->vSpacing = m_PixelAspectRatio_v;
+
+  return pasp;
+}
+
+
 std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
 {
   std::vector<std::shared_ptr<Box>> properties;

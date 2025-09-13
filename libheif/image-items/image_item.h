@@ -281,6 +281,8 @@ public:
 
   void set_mdcv(const heif_mastering_display_colour_volume& mdcv) override;
 
+  void set_pixel_ratio(uint32_t h, uint32_t v) override;
+
   // --- miaf
 
   // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.

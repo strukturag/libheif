@@ -319,6 +319,11 @@ void heif_image_set_pixel_aspect_ratio(struct heif_image* image, uint32_t aspect
   image->image->set_pixel_ratio(aspect_h, aspect_v);
 }
 
+void heif_image_handle_set_pixel_aspect_ratio(struct heif_image_handle* handle, uint32_t aspect_h, uint32_t aspect_v)
+{
+  handle->image->set_pixel_ratio(aspect_h, aspect_v);
+}
+
 
 struct heif_error heif_image_create(int width, int height,
                                     heif_colorspace colorspace,

@@ -648,6 +648,13 @@ void ImageItem::set_mdcv(const heif_mastering_display_colour_volume& mdcv)
 }
 
 
+void ImageItem::set_pixel_ratio(uint32_t h, uint32_t v)
+{
+  ImageExtraData::set_pixel_ratio(h, v);
+  add_property(get_pasp_box(), false);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {

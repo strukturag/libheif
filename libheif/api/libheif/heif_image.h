@@ -262,6 +262,9 @@ void heif_image_get_pixel_aspect_ratio(const heif_image*, uint32_t* aspect_h, ui
 LIBHEIF_API
 void heif_image_set_pixel_aspect_ratio(heif_image*, uint32_t aspect_h, uint32_t aspect_v);
 
+LIBHEIF_API
+void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle*, uint32_t aspect_h, uint32_t aspect_v);
+
 
 // --- heif_image allocation
 
