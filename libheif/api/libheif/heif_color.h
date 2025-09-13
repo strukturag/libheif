@@ -345,6 +345,9 @@ int heif_image_handle_get_mastering_display_colour_volume(const heif_image_handl
 LIBHEIF_API
 void heif_image_set_mastering_display_colour_volume(const heif_image*, const heif_mastering_display_colour_volume* in);
 
+LIBHEIF_API
+void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle*, const heif_mastering_display_colour_volume* in);
+
 
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the
 // normalized values, collected in heif_decoded_mastering_display_colour_volume.

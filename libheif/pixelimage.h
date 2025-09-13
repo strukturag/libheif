@@ -188,6 +188,8 @@ private:
 
 protected:
   std::shared_ptr<Box_clli> get_clli_box() const;
+
+  std::shared_ptr<Box_mdcv> get_mdcv_box() const;
 };
 
 

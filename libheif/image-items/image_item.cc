@@ -641,6 +641,13 @@ void ImageItem::set_clli(const heif_content_light_level& clli)
 }
 
 
+void ImageItem::set_mdcv(const heif_mastering_display_colour_volume& mdcv)
+{
+  ImageExtraData::set_mdcv(mdcv);
+  add_property(get_mdcv_box(), false);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {

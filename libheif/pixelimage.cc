@@ -127,6 +127,19 @@ std::shared_ptr<Box_clli> ImageExtraData::get_clli_box() const
 }
 
 
+std::shared_ptr<Box_mdcv> ImageExtraData::get_mdcv_box() const
+{
+  if (!has_mdcv()) {
+    return {};
+  }
+
+  auto mdcv = std::make_shared<Box_mdcv>();
+  mdcv->mdcv = get_mdcv();
+
+  return mdcv;
+}
+
+
 std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
 {
   std::vector<std::shared_ptr<Box>> properties;

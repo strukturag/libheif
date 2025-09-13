@@ -279,6 +279,7 @@ public:
 
   void set_clli(const heif_content_light_level& clli) override;
 
+  void set_mdcv(const heif_mastering_display_colour_volume& mdcv) override;
 
   // --- miaf
 

@@ -523,6 +523,16 @@ void heif_image_set_mastering_display_colour_volume(const heif_image* image, con
 }
 
 
+void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle* handle, const heif_mastering_display_colour_volume* in)
+{
+  if (in == nullptr) {
+    return;
+  }
+
+  handle->image->set_mdcv(*in);
+}
+
+
 float mdcv_coord_decode_x(uint16_t coord)
 {
   // check for unspecified value
