@@ -154,6 +154,30 @@ std::shared_ptr<Box_pasp> ImageExtraData::get_pasp_box() const
 }
 
 
+std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_nclx() const
+{
+  if (!has_nclx_color_profile()) {
+    return {};
+  }
+
+  auto colr = std::make_shared<Box_colr>();
+  colr->set_color_profile(std::make_shared<color_profile_nclx>(get_color_profile_nclx()));
+  return colr;
+}
+
+
+std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_icc() const
+{
+  if (!has_nclx_color_profile()) {
+    return {};
+  }
+
+  auto colr = std::make_shared<Box_colr>();
+  colr->set_color_profile(get_color_profile_icc());
+  return colr;
+}
+
+
 std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
 {
   std::vector<std::shared_ptr<Box>> properties;
@@ -192,6 +216,18 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() cons
     itai->set_from_tai_timestamp_packet(tai);
 
     properties.push_back(itai);
+  }
+
+  // --- colr (nclx)
+
+  if (has_nclx_color_profile()) {
+    properties.push_back(get_colr_box_nclx());
+  }
+
+  // --- colr (icc)
+
+  if (has_icc_color_profile()) {
+    properties.push_back(get_colr_box_icc());
   }
 
   return properties;

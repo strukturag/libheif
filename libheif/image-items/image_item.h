@@ -283,6 +283,10 @@ public:
 
   void set_pixel_ratio(uint32_t h, uint32_t v) override;
 
+  void set_color_profile_nclx(const nclx_profile& profile) override;
+
+  void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) override;
+
   // --- miaf
 
   // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.
@@ -324,10 +328,6 @@ public:
                        heif_encoder* encoder,
                        const heif_encoding_options& options,
                        heif_image_input_class input_class);
-
-  void set_color_profile_nclx(const nclx_profile& profile) override
-  { ImageExtraData::set_color_profile_nclx(profile); } // TODO: set 'colr'
-
 
   void set_intrinsic_matrix(const Box_cmin::RelativeIntrinsicMatrix& cmin) {
     m_has_intrinsic_matrix = true;
@@ -439,11 +439,11 @@ protected:
 
   // --- encoding utility functions
 
-  static void add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
-                                const heif_encoding_options& options,
-                                heif_image_input_class input_class,
-                                const heif_color_profile_nclx* target_heif_nclx,
-                                Encoder::CodedImageData& inout_codedImage);
+  static std::vector<std::shared_ptr<Box_colr> >
+  add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
+                    const heif_encoding_options& options,
+                    heif_image_input_class input_class,
+                    const heif_color_profile_nclx* target_heif_nclx);
 };
 
 

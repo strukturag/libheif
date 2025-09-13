@@ -704,6 +704,24 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   auto pixi = encoded_image->get_property<Box_pixi>();
   add_property(pixi, true);
 
+  // copy over extra properties to grid item
+
+  if (tile_x == 0 && tile_y == 0) {
+    auto property_boxes = encoded_image->generate_property_boxes();
+    for (auto& property : property_boxes) {
+      add_property(property, is_property_essential(property));
+    }
+
+    // add color profile similar to first tile image
+    // TODO: this shouldn't be necessary. The colr profiles should be in the ImageExtraData above.
+    auto colr_boxes = add_color_profile(image, *encoding_options,
+                                        heif_image_input_class_normal,
+                                        encoding_options->output_nclx_profile);
+    for (auto& property : colr_boxes) {
+      add_property(property, is_property_essential(property));
+    }
+  }
+
   return Error::Ok;
 }
 
@@ -754,6 +772,13 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
     if (!pixi_property) {
       pixi_property = out_tile->get_property<Box_pixi>();
     }
+  }
+
+  // copy over extra properties to grid item
+
+  auto property_boxes = tiles[0]->generate_property_boxes();
+  for (auto& property : property_boxes) {
+    griditem->add_property(property, griditem->is_property_essential(property));
   }
 
   // Create Grid Item

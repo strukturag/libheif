@@ -93,18 +93,20 @@ public:
 
   virtual void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
 
+  bool has_icc_color_profile() const { return m_color_profile_icc != nullptr; }
+
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
   void set_color_profile(const std::shared_ptr<const color_profile>& profile)
   {
     auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
     if (icc) {
-      m_color_profile_icc = std::move(icc);
+      set_color_profile_icc(icc);
     }
 
     auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
     if (nclx) {
-      m_color_profile_nclx = nclx->get_nclx_color_profile();
+      set_color_profile_nclx(nclx->get_nclx_color_profile());
     }
   }
 
@@ -192,6 +194,10 @@ protected:
   std::shared_ptr<Box_mdcv> get_mdcv_box() const;
 
   std::shared_ptr<Box_pasp> get_pasp_box() const;
+
+  std::shared_ptr<Box_colr> get_colr_box_nclx() const;
+
+  std::shared_ptr<Box_colr> get_colr_box_icc() const;
 };
 
 

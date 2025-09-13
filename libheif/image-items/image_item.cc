@@ -257,7 +257,10 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
 
   // --- choose which color profile to put into 'colr' box
 
-  add_color_profile(image, options, input_class, options.output_nclx_profile, codedImage);
+  auto colr_boxes = add_color_profile(image, options, input_class, options.output_nclx_profile);
+  codedImage.properties.insert(codedImage.properties.end(),
+                               colr_boxes.begin(),
+                               colr_boxes.end());
 
 
   // --- ispe
@@ -533,18 +536,20 @@ Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixe
 }
 
 
-void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
-                                  const heif_encoding_options& options,
-                                  heif_image_input_class input_class,
-                                  const heif_color_profile_nclx* target_heif_nclx,
-                                  Encoder::CodedImageData& inout_codedImage)
+std::vector<std::shared_ptr<Box_colr> >
+ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
+                             const heif_encoding_options& options,
+                             heif_image_input_class input_class,
+                             const heif_color_profile_nclx* target_heif_nclx)
 {
+  std::vector<std::shared_ptr<Box_colr> > colr_boxes;
+
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
       auto colr = std::make_shared<Box_colr>();
       colr->set_color_profile(icc_profile);
-      inout_codedImage.properties.push_back(colr);
+      colr_boxes.push_back(colr);
     }
 
 
@@ -569,9 +574,11 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
 
       auto colr = std::make_shared<Box_colr>();
       colr->set_color_profile(target_nclx_profile);
-      inout_codedImage.properties.push_back(colr);
+      colr_boxes.push_back(colr);
     }
   }
+
+  return colr_boxes;
 }
 
 
@@ -652,6 +659,20 @@ void ImageItem::set_pixel_ratio(uint32_t h, uint32_t v)
 {
   ImageExtraData::set_pixel_ratio(h, v);
   add_property(get_pasp_box(), false);
+}
+
+
+void ImageItem::set_color_profile_nclx(const nclx_profile& profile)
+{
+  ImageExtraData::set_color_profile_nclx(profile);
+  add_property(get_colr_box_nclx(), false);
+}
+
+
+void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile)
+{
+  ImageExtraData::set_color_profile_icc(profile);
+  add_property(get_colr_box_icc(), false);
 }
 
 
