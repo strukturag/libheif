@@ -119,7 +119,7 @@ static void show_help(const char* argv0)
 class ContextReleaser
 {
 public:
-  ContextReleaser(struct heif_context* ctx) : ctx_(ctx)
+  ContextReleaser(heif_context* ctx) : ctx_(ctx)
   {}
 
   ~ContextReleaser()
@@ -128,7 +128,7 @@ public:
   }
 
 private:
-  struct heif_context* ctx_;
+  heif_context* ctx_;
 };
 
 
@@ -152,7 +152,7 @@ std::string transparency_composition_mode = "checkerboard";
 #define OPTION_PNG_COMPRESSION_LEVEL 1000
 #define OPTION_TRANSPARENCY_COMPOSITION_MODE 1001
 
-static struct option long_options[] = {
+static option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
     {(char* const) "strict",           no_argument,       0,                        's'},
     {(char* const) "decoder",          required_argument, 0,                        'd'},
@@ -220,8 +220,8 @@ int decode_single_image(heif_image_handle* handle,
 
   int has_alpha = heif_image_handle_has_alpha_channel(handle);
 
-  struct heif_image* image;
-  struct heif_error err;
+  heif_image* image;
+  heif_error err;
   err = heif_decode_image(handle,
                           &image,
                           encoder->colorspace(has_alpha),
@@ -267,7 +267,7 @@ int decode_single_image(heif_image_handle* handle,
         assert(nDepthImages == 1);
         (void) nDepthImages;
 
-        struct heif_image_handle* depth_handle = nullptr;
+        heif_image_handle* depth_handle = nullptr;
         err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
         if (err.code) {
           std::cerr << "Could not read depth channel\n";
@@ -276,7 +276,7 @@ int decode_single_image(heif_image_handle* handle,
 
         int depth_bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
 
-        struct heif_image* depth_image;
+        heif_image* depth_image;
         err = heif_decode_image(depth_handle,
                                 &depth_image,
                                 encoder->colorspace(false),
@@ -322,7 +322,7 @@ int decode_single_image(heif_image_handle* handle,
 
         for (heif_item_id auxId : auxIDs) {
 
-          struct heif_image_handle* aux_handle = nullptr;
+          heif_image_handle* aux_handle = nullptr;
           err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
           if (err.code) {
             std::cerr << "Could not read auxiliary image\n";
@@ -331,7 +331,7 @@ int decode_single_image(heif_image_handle* handle,
 
           int aux_bit_depth = heif_image_handle_get_luma_bits_per_pixel(aux_handle);
 
-          struct heif_image* aux_image = nullptr;
+          heif_image* aux_image = nullptr;
           err = heif_decode_image(aux_handle,
                                   &aux_image,
                                   encoder->colorspace(false),
@@ -498,8 +498,8 @@ int decode_image_tiles(heif_image_handle* handle,
 
   for (uint32_t ty = 0; ty < tiling.num_rows; ty++)
     for (uint32_t tx = 0; tx < tiling.num_columns; tx++) {
-      struct heif_image* image;
-      struct heif_error err;
+      heif_image* image;
+      heif_error err;
       err = heif_image_handle_decode_image_tile(handle,
                                                 &image,
                                                 encoder->colorspace(has_alpha),
@@ -756,7 +756,7 @@ int main(int argc, char** argv)
 
   // --- read the HEIF file
 
-  struct heif_context* ctx = heif_context_alloc();
+  heif_context* ctx = heif_context_alloc();
   if (!ctx) {
     fprintf(stderr, "Could not create context object\n");
     return 1;
@@ -767,7 +767,7 @@ int main(int argc, char** argv)
   }
 
   ContextReleaser cr(ctx);
-  struct heif_error err;
+  heif_error err;
   err = heif_context_read_from_file(ctx, input_filename.c_str(), nullptr);
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
@@ -814,7 +814,7 @@ int main(int argc, char** argv)
         // get metadata track samples
 
         for (;;) {
-          struct heif_raw_sequence_sample* sample;
+          heif_raw_sequence_sample* sample;
           err = heif_track_get_next_raw_sequence_sample(track, &sample);
           if (err.code != 0) {
             break;

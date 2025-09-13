@@ -33,7 +33,7 @@
 
 #include "uncompressed_decode.h"
 
-void check_image_size(struct heif_context *&context, int expect_alpha) {
+void check_image_size(heif_context *&context, int expect_alpha) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image(handle);
 
@@ -96,7 +96,7 @@ TEST_CASE("check image size") {
 }
 
 
-void check_image_content(struct heif_context *&context) {
+void check_image_content(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image(handle);
 

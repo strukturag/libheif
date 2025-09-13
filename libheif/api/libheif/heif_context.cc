@@ -43,7 +43,7 @@ heif_context* heif_context_alloc()
 {
   load_plugins_if_not_initialized_yet();
 
-  struct heif_context* ctx = new heif_context;
+  heif_context* ctx = new heif_context;
   ctx->context = std::make_shared<HeifContext>();
 
   return ctx;

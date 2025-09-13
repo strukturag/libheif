@@ -31,7 +31,7 @@
 #include <algorithm>
 
 
-int heif_item_get_properties_of_type(const struct heif_context* context,
+int heif_item_get_properties_of_type(const heif_context* context,
                                      heif_item_id id,
                                      heif_item_property_type type,
                                      heif_property_id* out_list,
@@ -75,7 +75,7 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
 }
 
 
-int heif_item_get_transformation_properties(const struct heif_context* context,
+int heif_item_get_transformation_properties(const heif_context* context,
                                             heif_item_id id,
                                             heif_property_id* out_list,
                                             int count)
@@ -113,9 +113,9 @@ int heif_item_get_transformation_properties(const struct heif_context* context,
   return out_idx;
 }
 
-enum heif_item_property_type heif_item_get_property_type(const struct heif_context* context,
-                                                         heif_item_id id,
-                                                         heif_property_id propertyId)
+heif_item_property_type heif_item_get_property_type(const heif_context* context,
+                                                    heif_item_id id,
+                                                    heif_property_id propertyId)
 {
   auto file = context->context->get_heif_file();
 
@@ -131,7 +131,7 @@ enum heif_item_property_type heif_item_get_property_type(const struct heif_conte
   }
 
   auto property = properties[propertyId - 1];
-  return (enum heif_item_property_type) property->get_short_type();
+  return (heif_item_property_type) property->get_short_type();
 }
 
 
@@ -143,10 +143,10 @@ static char* create_c_string_copy(const std::string s)
 }
 
 
-struct heif_error heif_item_get_property_user_description(const struct heif_context* context,
-                                                          heif_item_id itemId,
-                                                          heif_property_id propertyId,
-                                                          struct heif_property_user_description** out)
+heif_error heif_item_get_property_user_description(const heif_context* context,
+                                                   heif_item_id itemId,
+                                                   heif_property_id propertyId,
+                                                   heif_property_user_description** out)
 {
   if (!out || !context) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
@@ -169,10 +169,10 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
 }
 
 
-struct heif_error heif_item_add_property_user_description(const struct heif_context* context,
-                                                          heif_item_id itemId,
-                                                          const struct heif_property_user_description* description,
-                                                          heif_property_id* out_propertyId)
+heif_error heif_item_add_property_user_description(const heif_context* context,
+                                                   heif_item_id itemId,
+                                                   const heif_property_user_description* description,
+                                                   heif_property_id* out_propertyId)
 {
   if (!context || !description) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
@@ -194,7 +194,7 @@ struct heif_error heif_item_add_property_user_description(const struct heif_cont
 }
 
 
-void heif_property_user_description_release(struct heif_property_user_description* udes)
+void heif_property_user_description_release(heif_property_user_description* udes)
 {
   if (udes == nullptr) {
     return;
@@ -209,9 +209,9 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 }
 
 
-enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(const struct heif_context* context,
-                                                                             heif_item_id itemId,
-                                                                             heif_property_id propertyId)
+heif_transform_mirror_direction heif_item_get_property_transform_mirror(const heif_context* context,
+                                                                        heif_item_id itemId,
+                                                                        heif_property_id propertyId)
 {
   auto imir = context->context->find_property<Box_imir>(itemId, propertyId);
   if (!imir) {
@@ -222,7 +222,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
 }
 
 
-int heif_item_get_property_transform_rotation_ccw(const struct heif_context* context,
+int heif_item_get_property_transform_rotation_ccw(const heif_context* context,
                                                   heif_item_id itemId,
                                                   heif_property_id propertyId)
 {
@@ -234,7 +234,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
   return (*irot)->get_rotation_ccw();
 }
 
-void heif_item_get_property_transform_crop_borders(const struct heif_context* context,
+void heif_item_get_property_transform_crop_borders(const heif_context* context,
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
@@ -252,13 +252,13 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 }
 
 
-struct heif_error heif_item_add_raw_property(const struct heif_context* context,
-                                              heif_item_id itemId,
-                                              uint32_t short_type,
-                                              const uint8_t* uuid_type,
-                                              const uint8_t* data, size_t size,
-                                              int is_essential,
-                                              heif_property_id* out_propertyId)
+heif_error heif_item_add_raw_property(const heif_context* context,
+                                      heif_item_id itemId,
+                                      uint32_t short_type,
+                                      const uint8_t* uuid_type,
+                                      const uint8_t* data, size_t size,
+                                      int is_essential,
+                                      heif_property_id* out_propertyId)
 {
   if (!context || !data || (short_type == fourcc("uuid") && uuid_type==nullptr)) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
@@ -284,10 +284,10 @@ struct heif_error heif_item_add_raw_property(const struct heif_context* context,
 }
 
 
-struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
-                                                  heif_item_id itemId,
-                                                  heif_property_id propertyId,
-                                                  size_t* size_out)
+heif_error heif_item_get_property_raw_size(const heif_context* context,
+                                           heif_item_id itemId,
+                                           heif_property_id propertyId,
+                                           size_t* size_out)
 {
   if (!context || !size_out) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
@@ -310,10 +310,10 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
 }
 
 
-struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
-                                                  heif_item_id itemId,
-                                                  heif_property_id propertyId,
-                                                  uint8_t* data_out)
+heif_error heif_item_get_property_raw_data(const heif_context* context,
+                                           heif_item_id itemId,
+                                           heif_property_id propertyId,
+                                           uint8_t* data_out)
 {
   if (!context || !data_out) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
@@ -337,10 +337,10 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
 }
 
 
-struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
-                                                   heif_item_id itemId,
-                                                   heif_property_id propertyId,
-                                                   uint8_t extended_type[16])
+heif_error heif_item_get_property_uuid_type(const heif_context* context,
+                                            heif_item_id itemId,
+                                            heif_property_id propertyId,
+                                            uint8_t extended_type[16])
 {
   if (!context || !extended_type) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
@@ -367,7 +367,7 @@ struct heif_error heif_item_get_property_uuid_type(const struct heif_context* co
 // ------------------------- intrinsic and extrinsic matrices -------------------------
 
 
-int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+int heif_image_handle_has_camera_intrinsic_matrix(const heif_image_handle* handle)
 {
   if (!handle) {
     return false;
@@ -377,12 +377,15 @@ int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle
 }
 
 
-struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+heif_error heif_image_handle_get_camera_intrinsic_matrix(const heif_image_handle* handle,
+                                                         heif_camera_intrinsic_matrix* out_matrix)
 {
   if (handle == nullptr || out_matrix == nullptr) {
-    return heif_error{heif_error_Usage_error,
-                      heif_suberror_Null_pointer_argument};
+    Error err{
+      heif_error_Usage_error,
+      heif_suberror_Null_pointer_argument
+    };
+    return err.error_struct(handle->image.get());
   }
 
   if (!handle->image->has_intrinsic_matrix()) {
@@ -402,7 +405,7 @@ struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct hei
 }
 
 
-int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+int heif_image_handle_has_camera_extrinsic_matrix(const heif_image_handle* handle)
 {
   if (!handle) {
     return false;
@@ -418,12 +421,15 @@ struct heif_camera_extrinsic_matrix
 };
 
 
-struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
-                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+heif_error heif_image_handle_get_camera_extrinsic_matrix(const heif_image_handle* handle,
+                                                         heif_camera_extrinsic_matrix** out_matrix)
 {
   if (handle == nullptr || out_matrix == nullptr) {
-    return heif_error{heif_error_Usage_error,
-                      heif_suberror_Null_pointer_argument};
+    Error err{
+      heif_error_Usage_error,
+      heif_suberror_Null_pointer_argument
+    };
+    return err.error_struct(handle->image.get());
   }
 
   if (!handle->image->has_extrinsic_matrix()) {
@@ -439,18 +445,21 @@ struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct hei
 }
 
 
-void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+void heif_camera_extrinsic_matrix_release(heif_camera_extrinsic_matrix* matrix)
 {
   delete matrix;
 }
 
 
-struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
-                                                                   double* out_matrix_row_major)
+heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_extrinsic_matrix* matrix,
+                                                            double* out_matrix_row_major)
 {
   if (matrix == nullptr || out_matrix_row_major == nullptr) {
-    return heif_error{heif_error_Usage_error,
-                      heif_suberror_Null_pointer_argument};
+    return heif_error{
+      heif_error_Usage_error,
+      heif_suberror_Null_pointer_argument,
+      "Null pointer argument"
+    };
   }
 
   auto m3x3 = matrix->matrix.calculate_rotation_matrix();

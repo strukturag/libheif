@@ -159,9 +159,9 @@ struct nclx_profile
 
   bool equal_except_transfer_curve(const nclx_profile& b) const;
 
-  Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
+  Error get_nclx_color_profile(heif_color_profile_nclx** out_data) const;
 
-  void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
+  void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx);
 };
 
 
@@ -172,7 +172,7 @@ public:
 
   color_profile_nclx(const nclx_profile& profile) : m_profile(profile) { }
 
-  void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
+  void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx)
   {
     m_profile.set_from_heif_color_profile_nclx(nclx);
   }

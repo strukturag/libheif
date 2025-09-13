@@ -51,6 +51,8 @@ class ImageItem;
 
 class Track;
 
+struct TrackOptions;
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -201,10 +203,10 @@ public:
 
   void set_number_of_sequence_repetitions(uint32_t repetitions);
 
-  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const struct TrackOptions*, uint32_t handler_type,
+  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const TrackOptions*, uint32_t handler_type,
                                                                         uint16_t width, uint16_t height);
 
-  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const struct TrackOptions*, std::string uri);
+  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const TrackOptions*, std::string uri);
 
   void add_text_item(std::shared_ptr<TextItem> text_item)
   {

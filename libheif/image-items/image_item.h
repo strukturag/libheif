@@ -208,7 +208,7 @@ public:
   const std::shared_ptr<ImageItem>& get_depth_channel() const { return m_depth_channel; }
 
 
-  void set_depth_representation_info(struct heif_depth_representation_info& info)
+  void set_depth_representation_info(heif_depth_representation_info& info)
   {
     m_has_depth_representation_info = true;
     m_depth_representation_info = info;

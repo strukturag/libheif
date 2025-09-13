@@ -254,8 +254,8 @@ Decoder::~Decoder()
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
-                                                  const struct heif_security_limits* limits)
+Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& options,
+                                                  const heif_security_limits* limits)
 {
   if (!m_decoder_plugin) {
     m_decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
@@ -266,7 +266,7 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   // --- decode image with the plugin
 
-  struct heif_error err;
+  heif_error err;
 
   if (!m_decoder) {
     if (m_decoder_plugin->new_decoder == nullptr) {

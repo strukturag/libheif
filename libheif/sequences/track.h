@@ -49,13 +49,13 @@ public:
 
   void add_nonpresent_sample();
 
-  void write_interleaved(const std::shared_ptr<class HeifFile>& file);
+  void write_interleaved(const std::shared_ptr<HeifFile>& file);
 
-  void write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file);
+  void write_all(const std::shared_ptr<Box>& parent, const std::shared_ptr<HeifFile>& file);
 
 private:
-  std::shared_ptr<class Box_saiz> m_saiz;
-  std::shared_ptr<class Box_saio> m_saio;
+  std::shared_ptr<Box_saiz> m_saiz;
+  std::shared_ptr<Box_saio> m_saio;
 
   std::vector<uint8_t> m_data;
 
@@ -74,8 +74,8 @@ public:
   Result<std::vector<uint8_t>> get_sample_info(const HeifFile* file, uint32_t idx);
 
 private:
-  std::shared_ptr<class Box_saiz> m_saiz;
-  std::shared_ptr<class Box_saio> m_saio;
+  std::shared_ptr<Box_saiz> m_saiz;
+  std::shared_ptr<Box_saio> m_saio;
 
   bool m_contiguous;
   std::vector<uint64_t> m_contiguous_offsets;
@@ -104,12 +104,12 @@ struct TrackOptions
 
 
   // --- TAI timestamps for samples
-  enum heif_sample_aux_info_presence with_sample_tai_timestamps = heif_sample_aux_info_presence_none;
-  struct heif_tai_clock_info* tai_clock_info = nullptr;
+  heif_sample_aux_info_presence with_sample_tai_timestamps = heif_sample_aux_info_presence_none;
+  heif_tai_clock_info* tai_clock_info = nullptr;
 
   // --- GIMI content IDs for samples
 
-  enum heif_sample_aux_info_presence with_sample_content_ids = heif_sample_aux_info_presence_none;
+  heif_sample_aux_info_presence with_sample_content_ids = heif_sample_aux_info_presence_none;
 
   // --- GIMI content ID for the track
 
@@ -138,7 +138,7 @@ public:
 
   heif_item_id get_id() const { return m_id; }
 
-  std::shared_ptr<class HeifFile> get_file() const;
+  std::shared_ptr<HeifFile> get_file() const;
 
   uint32_t get_handler() const { return m_handler_type; }
 
@@ -167,7 +167,7 @@ public:
 
   void enable_edit_list_repeat_mode(bool enable);
 
-  std::shared_ptr<class Box_taic> get_first_cluster_taic() { return m_first_taic; }
+  std::shared_ptr<Box_taic> get_first_cluster_taic() { return m_first_taic; }
 
   bool end_of_sequence_reached() const;
 
@@ -178,9 +178,9 @@ public:
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
-  std::shared_ptr<const class Box_tref> get_tref_box() const { return m_tref; }
+  std::shared_ptr<const Box_tref> get_tref_box() const { return m_tref; }
 
-  Result<heif_raw_sequence_sample*> get_next_sample_raw_data(const struct heif_decoding_options* options);
+  Result<heif_raw_sequence_sample*> get_next_sample_raw_data(const heif_decoding_options* options);
 
   std::vector<heif_sample_aux_info_type> get_sample_aux_info_types() const;
 
@@ -212,20 +212,20 @@ protected:
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
-  std::shared_ptr<class Box_moov> m_moov;
-  std::shared_ptr<class Box_trak> m_trak;
-  std::shared_ptr<class Box_tkhd> m_tkhd;
-  std::shared_ptr<class Box_minf> m_minf;
-  std::shared_ptr<class Box_mdhd> m_mdhd;
-  std::shared_ptr<class Box_hdlr> m_hdlr;
-  std::shared_ptr<class Box_stbl> m_stbl;
-  std::shared_ptr<class Box_stsd> m_stsd;
-  std::shared_ptr<class Box_stsc> m_stsc;
-  std::shared_ptr<class Box_stco> m_stco;
-  std::shared_ptr<class Box_stts> m_stts;
-  std::shared_ptr<class Box_stss> m_stss;
-  std::shared_ptr<class Box_stsz> m_stsz;
-  std::shared_ptr<class Box_elst> m_elst;
+  std::shared_ptr<Box_moov> m_moov;
+  std::shared_ptr<Box_trak> m_trak;
+  std::shared_ptr<Box_tkhd> m_tkhd;
+  std::shared_ptr<Box_minf> m_minf;
+  std::shared_ptr<Box_mdhd> m_mdhd;
+  std::shared_ptr<Box_hdlr> m_hdlr;
+  std::shared_ptr<Box_stbl> m_stbl;
+  std::shared_ptr<Box_stsd> m_stsd;
+  std::shared_ptr<Box_stsc> m_stsc;
+  std::shared_ptr<Box_stco> m_stco;
+  std::shared_ptr<Box_stts> m_stts;
+  std::shared_ptr<Box_stss> m_stss;
+  std::shared_ptr<Box_stsz> m_stsz;
+  std::shared_ptr<Box_elst> m_elst;
 
   std::shared_ptr<class Box_tref> m_tref; // optional
 

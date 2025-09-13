@@ -94,13 +94,13 @@ public:
   // --- decoding
 
   virtual Result<std::shared_ptr<HeifPixelImage>>
-  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
-                                           const struct heif_security_limits* limits);
+  decode_single_frame_from_compressed_data(const heif_decoding_options& options,
+                                           const heif_security_limits* limits);
 
 private:
   DataExtent m_data_extent;
 
-  const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
+  const heif_decoder_plugin* m_decoder_plugin = nullptr;
   void* m_decoder = nullptr;
 };
 

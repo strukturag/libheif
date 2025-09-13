@@ -68,8 +68,8 @@ private:
 class Error
 {
 public:
-  enum heif_error_code error_code = heif_error_Ok;
-  enum heif_suberror_code sub_error_code = heif_suberror_Unspecified;
+  heif_error_code error_code = heif_error_Ok;
+  heif_suberror_code sub_error_code = heif_suberror_Unspecified;
   std::string message;
 
   Error();

@@ -133,8 +133,8 @@ std::string property_pitm_description;
 
 #if HAVE_GETTIMEOFDAY
 #include <sys/time.h>
-struct timeval time_encoding_start;
-struct timeval time_encoding_end;
+timeval time_encoding_start;
+timeval time_encoding_end;
 #endif
 
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
@@ -163,7 +163,7 @@ const int OPTION_SET_CLLI = 1022;
 const int OPTION_SET_PASP = 1023;
 
 
-static struct option long_options[] = {
+static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
     {(char* const) "version",                 no_argument,       0,              'v'},
     {(char* const) "quality",                 required_argument, 0,              'q'},
@@ -334,7 +334,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
 
-  const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+  const heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
   for (int i = 0; params[i]; i++) {
     const char* name = heif_encoder_parameter_get_name(params[i]);
 
@@ -431,7 +431,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 }
 
 
-void set_params(struct heif_encoder* encoder, const std::vector<std::string>& params)
+void set_params(heif_encoder* encoder, const std::vector<std::string>& params)
 {
   for (const std::string& p : params) {
     auto pos = p.find_first_of('=');

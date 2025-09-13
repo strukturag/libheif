@@ -46,11 +46,11 @@ public:
 
   bool has_alpha_channel() const override { return m_aux_alpha_track != nullptr; }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
+  Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const heif_decoding_options& options);
 
   Error encode_image(std::shared_ptr<HeifPixelImage> image,
-                     struct heif_encoder* encoder,
-                     const struct heif_encoding_options& options,
+                     heif_encoder* encoder,
+                     const heif_encoding_options& options,
                      heif_image_input_class image_class);
 
   heif_brand2 get_compatible_brand() const;

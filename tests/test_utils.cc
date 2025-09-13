@@ -31,15 +31,15 @@
 #include "catch_amalgamated.hpp"
 
 
-struct heif_context * get_context_for_test_file(std::string filename)
+heif_context * get_context_for_test_file(std::string filename)
 {
   return get_context_for_local_file(tests_data_directory + "/" + filename);
 }
 
-struct heif_context * get_context_for_local_file(std::string filename)
+heif_context * get_context_for_local_file(std::string filename)
 {
-  struct heif_context* context;
-  struct heif_error err;
+  heif_context* context;
+  heif_error err;
   context = heif_context_alloc();
   err = heif_context_read_from_file(context, filename.c_str(), NULL);
   INFO(filename);
@@ -47,10 +47,10 @@ struct heif_context * get_context_for_local_file(std::string filename)
   return context;
 }
 
-struct heif_image_handle * get_primary_image_handle(heif_context *context)
+heif_image_handle * get_primary_image_handle(heif_context *context)
 {
-  struct heif_error err;
-  struct heif_image_handle * image_handle;
+  heif_error err;
+  heif_image_handle * image_handle;
   int num_images = heif_context_get_number_of_top_level_images(context);
   REQUIRE(num_images == 1);
   err =  heif_context_get_primary_image_handle(context, &image_handle);
@@ -58,28 +58,28 @@ struct heif_image_handle * get_primary_image_handle(heif_context *context)
   return image_handle;
 }
 
-struct heif_image * get_primary_image(heif_image_handle * handle)
+heif_image * get_primary_image(heif_image_handle * handle)
 {
-  struct heif_error err;
-  struct heif_image* img;
+  heif_error err;
+  heif_image* img;
   err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_444, NULL);
   REQUIRE(err.code == heif_error_Ok);
   return img;
 }
 
-struct heif_image * get_primary_image_mono(heif_image_handle * handle)
+heif_image * get_primary_image_mono(heif_image_handle * handle)
 {
-  struct heif_error err;
-  struct heif_image* img;
+  heif_error err;
+  heif_image* img;
   err = heif_decode_image(handle, &img, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
   REQUIRE(err.code == heif_error_Ok);
   return img;
 }
 
-struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chroma chroma)
+heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chroma chroma)
 {
-  struct heif_error err;
-  struct heif_image* img;
+  heif_error err;
+  heif_image* img;
   err = heif_decode_image(handle, &img, heif_colorspace_YCbCr, chroma, NULL);
   REQUIRE(err.code == heif_error_Ok);
   return img;
@@ -87,7 +87,7 @@ struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chr
 
 void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
 {
-  struct heif_error err;
+  heif_error err;
 
   err = heif_image_add_plane(img, channel, w, h, 8);
   REQUIRE(err.code == heif_error_Ok);
@@ -100,10 +100,10 @@ void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
   }
 }
 
-struct heif_image * createImage_RGB_planar()
+heif_image * createImage_RGB_planar()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_RGB,

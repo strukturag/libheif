@@ -37,7 +37,7 @@
 void checkMono(InputImage input_image) {
   REQUIRE(input_image.orientation == heif_orientation_normal);
   REQUIRE(input_image.image != nullptr);
-  const struct heif_image* image = input_image.image.get();
+  const heif_image* image = input_image.image.get();
   REQUIRE(heif_image_get_colorspace(image) == heif_colorspace_monochrome);
   REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
   REQUIRE(heif_image_get_width(image, heif_channel_Y) == 128);
@@ -108,7 +108,7 @@ TEST_CASE("rgb_planar") {
 void checkRGBA(InputImage input_image) {
   REQUIRE(input_image.orientation == heif_orientation_normal);
   REQUIRE(input_image.image != nullptr);
-  const struct heif_image* image = input_image.image.get();
+  const heif_image* image = input_image.image.get();
   REQUIRE(heif_image_get_colorspace(image) == heif_colorspace_RGB);
   REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA);
   REQUIRE(heif_image_get_width(image, heif_channel_interleaved) == 32);

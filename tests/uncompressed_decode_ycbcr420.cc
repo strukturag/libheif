@@ -34,7 +34,7 @@
 #include "uncompressed_decode.h"
 
 
-void check_image_size_ycbcr_420(struct heif_context *&context) {
+void check_image_size_ycbcr_420(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image_ycbcr(handle, heif_chroma_420);
 
@@ -89,7 +89,7 @@ TEST_CASE("check image size YCbCr 4:2:0") {
 }
 
 
-void check_image_size_ycbcr_420_16bit(struct heif_context *&context) {
+void check_image_size_ycbcr_420_16bit(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image_ycbcr(handle, heif_chroma_420);
 
@@ -143,7 +143,7 @@ TEST_CASE("check image size YCbCr 4:2:0 16 bit") {
   heif_context_free(context);
 }
 
-void check_image_content_ycbcr420(struct heif_context *&context) {
+void check_image_content_ycbcr420(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image_ycbcr(handle, heif_chroma_420);
 
@@ -453,7 +453,7 @@ TEST_CASE("check image content YCbCr 4:2:0") {
   heif_context_free(context);
 }
 
-void check_image_content_ycbcr420_16bit(struct heif_context *&context) {
+void check_image_content_ycbcr420_16bit(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image_ycbcr(handle, heif_chroma_420);
 
