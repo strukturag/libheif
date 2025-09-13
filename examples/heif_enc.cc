@@ -1069,43 +1069,33 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 }
 
 
-bool parse_clli_argument(std::string arg)
+template <typename T>
+std::vector<T> parse_comma_separated_numeric_arguments(std::string arg,
+                                                       std::vector<T> max_val)
 {
   std::istringstream ss(arg);
   std::string token;
 
-  heif_content_light_level _clli;
+  std::vector<T> results;
 
-  // Parse first number
-  if (!std::getline(ss, token, ',')) return false;
-  try {
-    size_t pos;
-    unsigned long val = std::stoul(token, &pos);
-    if (pos != token.size()) return false; // extra non-numeric characters
-    if (val > std::numeric_limits<uint16_t>::max()) return false;
-    _clli.max_content_light_level = static_cast<uint16_t>(val);
-  } catch (...) {
-    return false;
-  }
+  for (size_t i = 0 ; i<max_val.size(); i++) {
 
-  // Parse second number
-  if (!std::getline(ss, token, ',')) return false;
-  try {
-    size_t pos;
-    unsigned long val = std::stoul(token, &pos);
-    if (pos != token.size()) return false; // extra non-numeric characters
-    if (val > std::numeric_limits<uint16_t>::max()) return false;
-    _clli.max_pic_average_light_level = static_cast<uint16_t>(val);
-  } catch (...) {
-    return false;
+    if (!std::getline(ss, token, ',')) return {};
+    try {
+      size_t pos;
+      unsigned long val = std::stoul(token, &pos);
+      if (pos != token.size()) return {}; // extra non-numeric characters
+      if (val > max_val[i]) return {};
+      results.push_back(static_cast<T>(val));
+    } catch (...) {
+      return {};
+    }
   }
 
   // There should be no extra tokens
-  if (ss.rdbuf()->in_avail() != 0) return false;
+  if (ss.rdbuf()->in_avail() != 0) return {};
 
-  clli = _clli;
-
-  return true;
+  return results;
 }
 
 
@@ -1347,11 +1337,23 @@ int main(int argc, char** argv)
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
         break;
-      case OPTION_SET_CLLI:
-        if (!parse_clli_argument(optarg)) {
+      case OPTION_SET_CLLI: {
+        auto clli_args = parse_comma_separated_numeric_arguments<uint16_t>(optarg,
+                                                                           {
+                                                                             std::numeric_limits<uint16_t>::max(),
+                                                                             std::numeric_limits<uint16_t>::max()
+                                                                           });
+        if (clli_args.empty()) {
           std::cerr << "Invalid arguments for --clli option.\n";
         }
+        else {
+          heif_content_light_level clliVal;
+          clliVal.max_content_light_level = clli_args[0];
+          clliVal.max_pic_average_light_level = clli_args[1];
+          clli = clliVal;
+        }
         break;
+      }
     }
   }
 
