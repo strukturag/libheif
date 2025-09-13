@@ -27,10 +27,10 @@
 #include <vector>
 
 
-struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context* ctx,
-                                                         uint32_t type_filter,
-                                                         heif_item_id item_filter,
-                                                         int* out_num_groups)
+heif_entity_group* heif_context_get_entity_groups(const heif_context* ctx,
+                                                  uint32_t type_filter,
+                                                  heif_item_id item_filter,
+                                                  int* out_num_groups)
 {
   std::shared_ptr<Box_grpl> grplBox = ctx->context->get_heif_file()->get_grpl_box();
   if (!grplBox) {
@@ -38,7 +38,7 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
     return nullptr;
   }
 
-  std::vector<std::shared_ptr<Box>> all_entity_group_boxes = grplBox->get_all_child_boxes();
+  std::vector<std::shared_ptr<Box> > all_entity_group_boxes = grplBox->get_all_child_boxes();
   if (all_entity_group_boxes.empty()) {
     *out_num_groups = 0;
     return nullptr;
@@ -46,7 +46,7 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
 
   // --- filter groups
 
-  std::vector<std::shared_ptr<Box_EntityToGroup>> entity_group_boxes;
+  std::vector<std::shared_ptr<Box_EntityToGroup> > entity_group_boxes;
   for (auto& group : all_entity_group_boxes) {
     if (type_filter != 0 && group->get_short_type() != type_filter) {
       continue;
@@ -76,7 +76,8 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
     groups[i].entities = (items.empty() ? nullptr : new heif_item_id[items.size()]);
     groups[i].num_entities = static_cast<uint32_t>(items.size());
 
-    if (groups[i].entities) { // avoid clang static analyzer false positive
+    if (groups[i].entities) {
+      // avoid clang static analyzer false positive
       for (size_t k = 0; k < items.size(); k++) {
         groups[i].entities[k] = items[k];
       }
@@ -88,9 +89,9 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
 }
 
 
-void heif_entity_groups_release(struct heif_entity_group* grp, int num_groups)
+void heif_entity_groups_release(heif_entity_group* grp, int num_groups)
 {
-  for (int i=0;i<num_groups;i++) {
+  for (int i = 0; i < num_groups; i++) {
     delete[] grp[i].entities;
   }
 

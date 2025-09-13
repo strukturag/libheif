@@ -32,13 +32,12 @@
 #include <array>
 
 
-
-heif_colorspace heif_image_get_colorspace(const struct heif_image* img)
+heif_colorspace heif_image_get_colorspace(const heif_image* img)
 {
   return img->image->get_colorspace();
 }
 
-enum heif_chroma heif_image_get_chroma_format(const struct heif_image* img)
+heif_chroma heif_image_get_chroma_format(const heif_image* img)
 {
   return img->image->get_chroma_format();
 }
@@ -55,19 +54,19 @@ static int uint32_to_int(uint32_t v)
 }
 
 
-int heif_image_get_width(const struct heif_image* img, enum heif_channel channel)
+int heif_image_get_width(const heif_image* img, heif_channel channel)
 {
   return uint32_to_int(img->image->get_width(channel));
 }
 
 
-int heif_image_get_height(const struct heif_image* img, enum heif_channel channel)
+int heif_image_get_height(const heif_image* img, heif_channel channel)
 {
   return uint32_to_int(img->image->get_height(channel));
 }
 
 
-int heif_image_get_primary_width(const struct heif_image* img)
+int heif_image_get_primary_width(const heif_image* img)
 {
   if (img->image->get_colorspace() == heif_colorspace_RGB) {
     if (img->image->get_chroma_format() == heif_chroma_444) {
@@ -83,7 +82,7 @@ int heif_image_get_primary_width(const struct heif_image* img)
 }
 
 
-int heif_image_get_primary_height(const struct heif_image* img)
+int heif_image_get_primary_height(const heif_image* img)
 {
   if (img->image->get_colorspace() == heif_colorspace_RGB) {
     if (img->image->get_chroma_format() == heif_chroma_444) {
@@ -99,17 +98,19 @@ int heif_image_get_primary_height(const struct heif_image* img)
 }
 
 
-heif_error heif_image_crop(struct heif_image* img,
+heif_error heif_image_crop(heif_image* img,
                            int left, int right, int top, int bottom)
 {
   uint32_t w = img->image->get_width();
   uint32_t h = img->image->get_height();
 
-  if (w==0 || w>0x7FFFFFFF ||
-      h==0 || h>0x7FFFFFFF) {
-    return heif_error{heif_error_Usage_error,
-                      heif_suberror_Invalid_image_size,
-                      "Image size exceeds maximum supported size"};
+  if (w == 0 || w > 0x7FFFFFFF ||
+      h == 0 || h > 0x7FFFFFFF) {
+    return heif_error{
+      heif_error_Usage_error,
+      heif_suberror_Invalid_image_size,
+      "Image size exceeds maximum supported size"
+    };
   }
 
   auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, nullptr);
@@ -123,12 +124,12 @@ heif_error heif_image_crop(struct heif_image* img,
 }
 
 
-struct heif_error heif_image_extract_area(const heif_image* srcimg,
-                                          uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-                                          const heif_security_limits* limits,
-                                          struct heif_image** out_image)
+heif_error heif_image_extract_area(const heif_image* srcimg,
+                                   uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+                                   const heif_security_limits* limits,
+                                   heif_image** out_image)
 {
-  auto extractResult = srcimg->image->extract_image_area(x0,y0,w,h, limits);
+  auto extractResult = srcimg->image->extract_image_area(x0, y0, w, h, limits);
   if (!extractResult) {
     return extractResult.error_struct(srcimg->image.get());
   }
@@ -142,26 +143,26 @@ struct heif_error heif_image_extract_area(const heif_image* srcimg,
 }
 
 
-int heif_image_get_bits_per_pixel(const struct heif_image* img, enum heif_channel channel)
+int heif_image_get_bits_per_pixel(const heif_image* img, heif_channel channel)
 {
   return img->image->get_storage_bits_per_pixel(channel);
 }
 
 
-int heif_image_get_bits_per_pixel_range(const struct heif_image* img, enum heif_channel channel)
+int heif_image_get_bits_per_pixel_range(const heif_image* img, heif_channel channel)
 {
   return img->image->get_bits_per_pixel(channel);
 }
 
 
-int heif_image_has_channel(const struct heif_image* img, enum heif_channel channel)
+int heif_image_has_channel(const heif_image* img, heif_channel channel)
 {
   return img->image->has_channel(channel);
 }
 
 
-const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
-                                             enum heif_channel channel,
+const uint8_t* heif_image_get_plane_readonly(const heif_image* image,
+                                             heif_channel channel,
                                              int* out_stride)
 {
   if (!out_stride) {
@@ -186,8 +187,8 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
 }
 
 
-uint8_t* heif_image_get_plane(struct heif_image* image,
-                              enum heif_channel channel,
+uint8_t* heif_image_get_plane(heif_image* image,
+                              heif_channel channel,
                               int* out_stride)
 {
   if (!out_stride) {
@@ -212,8 +213,8 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
 }
 
 
-const uint8_t* heif_image_get_plane_readonly2(const struct heif_image* image,
-                                              enum heif_channel channel,
+const uint8_t* heif_image_get_plane_readonly2(const heif_image* image,
+                                              heif_channel channel,
                                               size_t* out_stride)
 {
   if (!out_stride) {
@@ -229,8 +230,8 @@ const uint8_t* heif_image_get_plane_readonly2(const struct heif_image* image,
 }
 
 
-uint8_t* heif_image_get_plane2(struct heif_image* image,
-                               enum heif_channel channel,
+uint8_t* heif_image_get_plane2(heif_image* image,
+                               heif_channel channel,
                                size_t* out_stride)
 {
   if (!out_stride) {
@@ -246,10 +247,10 @@ uint8_t* heif_image_get_plane2(struct heif_image* image,
 }
 
 
-struct heif_error heif_image_scale_image(const struct heif_image* input,
-                                         struct heif_image** output,
-                                         int width, int height,
-                                         const struct heif_scaling_options* options)
+heif_error heif_image_scale_image(const heif_image* input,
+                                  heif_image** output,
+                                  int width, int height,
+                                  const heif_scaling_options* options)
 {
   std::shared_ptr<HeifPixelImage> out_img;
 
@@ -265,8 +266,8 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 }
 
 
-struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
-                                                           uint32_t width, uint32_t height)
+heif_error heif_image_extend_to_size_fill_with_zero(heif_image* image,
+                                                    uint32_t width, uint32_t height)
 {
   Error err = image->image->extend_to_size_with_zero(width, height, nullptr);
   if (err) {
@@ -277,9 +278,9 @@ struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* im
 }
 
 
-int heif_image_get_decoding_warnings(struct heif_image* image,
+int heif_image_get_decoding_warnings(heif_image* image,
                                      int first_warning_idx,
-                                     struct heif_error* out_warnings,
+                                     heif_error* out_warnings,
                                      int max_output_buffer_entries)
 {
   if (max_output_buffer_entries == 0) {
@@ -295,43 +296,43 @@ int heif_image_get_decoding_warnings(struct heif_image* image,
   }
 }
 
-void heif_image_add_decoding_warning(struct heif_image* image,
-                                     struct heif_error err)
+void heif_image_add_decoding_warning(heif_image* image,
+                                     heif_error err)
 {
   image->image->add_warning(Error(err.code, err.subcode));
 }
 
 
-void heif_image_release(const struct heif_image* img)
+void heif_image_release(const heif_image* img)
 {
   delete img;
 }
 
 
-void heif_image_get_pixel_aspect_ratio(const struct heif_image* image, uint32_t* aspect_h, uint32_t* aspect_v)
+void heif_image_get_pixel_aspect_ratio(const heif_image* image, uint32_t* aspect_h, uint32_t* aspect_v)
 {
   image->image->get_pixel_ratio(aspect_h, aspect_v);
 }
 
 
-void heif_image_set_pixel_aspect_ratio(struct heif_image* image, uint32_t aspect_h, uint32_t aspect_v)
+void heif_image_set_pixel_aspect_ratio(heif_image* image, uint32_t aspect_h, uint32_t aspect_v)
 {
   image->image->set_pixel_ratio(aspect_h, aspect_v);
 }
 
-void heif_image_handle_set_pixel_aspect_ratio(struct heif_image_handle* handle, uint32_t aspect_h, uint32_t aspect_v)
+void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle* handle, uint32_t aspect_h, uint32_t aspect_v)
 {
   handle->image->set_pixel_ratio(aspect_h, aspect_v);
 }
 
 
-struct heif_error heif_image_create(int width, int height,
-                                    heif_colorspace colorspace,
-                                    heif_chroma chroma,
-                                    struct heif_image** image)
+heif_error heif_image_create(int width, int height,
+                             heif_colorspace colorspace,
+                             heif_chroma chroma,
+                             heif_image** image)
 {
   if (image == nullptr) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "heif_image_create: NULL passed as image pointer."};
+    return heif_error_null_pointer_argument;
   }
 
   // auto-correct colorspace_YCbCr + chroma_monochrome to colorspace_monochrome
@@ -349,7 +350,7 @@ struct heif_error heif_image_create(int width, int height,
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Invalid colorspace/chroma combination."};
   }
 
-  struct heif_image* img = new heif_image;
+  heif_image* img = new heif_image;
   img->image = std::make_shared<HeifPixelImage>();
 
   img->image->create(width, height, colorspace, chroma);
@@ -359,8 +360,8 @@ struct heif_error heif_image_create(int width, int height,
   return heif_error_success;
 }
 
-struct heif_error heif_image_add_plane(struct heif_image* image,
-                                       heif_channel channel, int width, int height, int bit_depth)
+heif_error heif_image_add_plane(heif_image* image,
+                                heif_channel channel, int width, int height, int bit_depth)
 {
   // Note: no security limit, because this is explicitly requested by the user.
   if (auto err = image->image->add_plane(channel, width, height, bit_depth, nullptr)) {
@@ -372,9 +373,9 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
 }
 
 
-struct heif_error heif_image_add_plane_safe(struct heif_image* image,
-                                            heif_channel channel, int width, int height, int bit_depth,
-                                            const heif_security_limits* limits)
+heif_error heif_image_add_plane_safe(heif_image* image,
+                                     heif_channel channel, int width, int height, int bit_depth,
+                                     const heif_security_limits* limits)
 {
   if (auto err = image->image->add_plane(channel, width, height, bit_depth, limits)) {
     return err.error_struct(image->image.get());
@@ -385,7 +386,7 @@ struct heif_error heif_image_add_plane_safe(struct heif_image* image,
 }
 
 
-void heif_image_set_premultiplied_alpha(struct heif_image* image,
+void heif_image_set_premultiplied_alpha(heif_image* image,
                                         int is_premultiplied_alpha)
 {
   if (image == nullptr) {
@@ -396,7 +397,7 @@ void heif_image_set_premultiplied_alpha(struct heif_image* image,
 }
 
 
-int heif_image_is_premultiplied_alpha(struct heif_image* image)
+int heif_image_is_premultiplied_alpha(heif_image* image)
 {
   if (image == nullptr) {
     return 0;
@@ -406,7 +407,7 @@ int heif_image_is_premultiplied_alpha(struct heif_image* image)
 }
 
 
-struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height)
+heif_error heif_image_extend_padding_to_size(heif_image* image, int min_physical_width, int min_physical_height)
 {
   Error err = image->image->extend_padding_to_size(min_physical_width, min_physical_height, false, nullptr);
   if (err) {
@@ -416,5 +417,3 @@ struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, in
     return heif_error_success;
   }
 }
-
-

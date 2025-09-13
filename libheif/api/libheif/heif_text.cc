@@ -28,7 +28,7 @@
 #include <utility>
 #include <string>
 
-struct heif_error heif_image_handle_add_text_item(heif_image_handle *image_handle,
+heif_error heif_image_handle_add_text_item(heif_image_handle *image_handle,
                                            const char *content_type,
                                            const char *text,
                                            heif_text_item** out_text_item)
@@ -45,17 +45,17 @@ struct heif_error heif_image_handle_add_text_item(heif_image_handle *image_handl
   return heif_error_success;
 }
 
-void heif_text_item_release(struct heif_text_item* text_item)
+void heif_text_item_release(heif_text_item* text_item)
 {
   delete text_item;
 }
 
-int heif_image_handle_get_number_of_text_items(const struct heif_image_handle* handle)
+int heif_image_handle_get_number_of_text_items(const heif_image_handle* handle)
 {
   return (int) handle->image->get_text_item_ids().size();
 }
 
-int heif_image_handle_get_list_of_text_item_ids(const struct heif_image_handle* handle,
+int heif_image_handle_get_list_of_text_item_ids(const heif_image_handle* handle,
                                                   heif_item_id* item_ids,
                                                   int max_count)
 {
@@ -68,12 +68,12 @@ int heif_image_handle_get_list_of_text_item_ids(const struct heif_image_handle* 
 }
 
 
-struct heif_error heif_context_get_text_item(const struct heif_context* context,
+heif_error heif_context_get_text_item(const heif_context* context,
                                              heif_item_id text_item_id,
-                                             struct heif_text_item** out)
+                                             heif_text_item** out)
 {
   if (out==nullptr) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+    return heif_error_null_pointer_argument;
   }
 
   auto r = context->context->get_text_item(text_item_id);
@@ -90,7 +90,7 @@ struct heif_error heif_context_get_text_item(const struct heif_context* context,
   return heif_error_success;
 }
 
-heif_item_id heif_text_item_get_id(struct heif_text_item* text_item)
+heif_item_id heif_text_item_get_id(heif_text_item* text_item)
 {
   if (text_item == nullptr) {
     return 0;
@@ -99,7 +99,7 @@ heif_item_id heif_text_item_get_id(struct heif_text_item* text_item)
   return text_item->text_item->get_item_id();
 }
 
-const char* heif_text_item_get_content(struct heif_text_item* text_item)
+const char* heif_text_item_get_content(heif_text_item* text_item)
 {
   if (text_item == nullptr) {
     return nullptr;

@@ -37,6 +37,9 @@
 #include <variant>
 
 
+extern const heif_error heif_error_null_pointer_argument;
+
+
 class ErrorBuffer
 {
 public:

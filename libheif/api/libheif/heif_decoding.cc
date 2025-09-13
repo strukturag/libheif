@@ -28,13 +28,13 @@
 #include <vector>
 
 
-void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads)
+void heif_context_set_max_decoding_threads(heif_context* ctx, int max_threads)
 {
   ctx->context->set_max_decoding_threads(max_threads);
 }
 
 
-int heif_have_decoder_for_format(enum heif_compression_format format)
+int heif_have_decoder_for_format(heif_compression_format format)
 {
   auto plugin = get_decoder(format, nullptr);
   return plugin != nullptr;
@@ -100,8 +100,8 @@ heif_decoding_options* heif_decoding_options_alloc()
 
 
 // overwrite the (possibly lower version) input options over the default options
-void heif_decoding_options_copy(struct heif_decoding_options* dst,
-                                const struct heif_decoding_options* src)
+void heif_decoding_options_copy(heif_decoding_options* dst,
+                                const heif_decoding_options* src)
 {
   if (src == nullptr) {
     return;
@@ -150,8 +150,8 @@ void heif_decoding_options_free(heif_decoding_options* options)
 }
 
 
-int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
-                                 const struct heif_decoder_descriptor** out_decoders,
+int heif_get_decoder_descriptors(heif_compression_format format_filter,
+                                 const heif_decoder_descriptor** out_decoders,
                                  int count)
 {
   struct decoder_with_priority
@@ -197,14 +197,14 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
 }
 
 
-const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descriptor* descriptor)
+const char* heif_decoder_descriptor_get_name(const heif_decoder_descriptor* descriptor)
 {
   auto decoder = (heif_decoder_plugin*) descriptor;
   return decoder->get_plugin_name();
 }
 
 
-const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor* descriptor)
+const char* heif_decoder_descriptor_get_id_name(const heif_decoder_descriptor* descriptor)
 {
   auto decoder = (heif_decoder_plugin*) descriptor;
   if (decoder->plugin_api_version < 3) {
@@ -216,22 +216,14 @@ const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descri
 }
 
 
-struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img,
-                                    heif_colorspace colorspace,
-                                    heif_chroma chroma,
-                                    const struct heif_decoding_options* input_options)
+heif_error heif_decode_image(const heif_image_handle* in_handle,
+                             heif_image** out_img,
+                             heif_colorspace colorspace,
+                             heif_chroma chroma,
+                             const heif_decoding_options* input_options)
 {
-  if (out_img == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "NULL out_img passed to heif_decode_image()"};
-  }
-
-  if (in_handle == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "NULL heif_image_handle passed to heif_decode_image()"};
+  if (out_img == nullptr || in_handle == nullptr) {
+    return heif_error_null_pointer_argument;
   }
 
   *out_img = nullptr;
@@ -241,11 +233,11 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
   fill_default_decoding_options(dec_options);
   heif_decoding_options_copy(&dec_options, input_options);
 
-  Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
-                                                                                            colorspace,
-                                                                                            chroma,
-                                                                                            dec_options,
-                                                                                            false, 0, 0);
+  Result<std::shared_ptr<HeifPixelImage> > decodingResult = in_handle->context->decode_image(id,
+                                                                                             colorspace,
+                                                                                             chroma,
+                                                                                             dec_options,
+                                                                                             false, 0, 0);
 
   if (!decodingResult) {
     return decodingResult.error_struct(in_handle->image.get());
@@ -258,6 +250,3 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 
   return Error::Ok.error_struct(in_handle->image.get());
 }
-
-
-

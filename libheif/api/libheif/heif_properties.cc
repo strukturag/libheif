@@ -30,7 +30,6 @@
 #include <string>
 #include <algorithm>
 
-
 int heif_item_get_properties_of_type(const heif_context* context,
                                      heif_item_id id,
                                      heif_item_property_type type,
@@ -149,7 +148,7 @@ heif_error heif_item_get_property_user_description(const heif_context* context,
                                                    heif_property_user_description** out)
 {
   if (!out || !context) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+    return heif_error_null_pointer_argument;
   }
   auto udes = context->context->find_property<Box_udes>(itemId, propertyId);
   if (!udes) {
@@ -175,7 +174,7 @@ heif_error heif_item_add_property_user_description(const heif_context* context,
                                                    heif_property_id* out_propertyId)
 {
   if (!context || !description) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+    return heif_error_null_pointer_argument;
   }
 
   auto udes = std::make_shared<Box_udes>();
@@ -261,7 +260,7 @@ heif_error heif_item_add_raw_property(const heif_context* context,
                                       heif_property_id* out_propertyId)
 {
   if (!context || !data || (short_type == fourcc("uuid") && uuid_type==nullptr)) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+    return heif_error_null_pointer_argument;
   }
 
   auto raw_box = std::make_shared<Box_other>(short_type);
@@ -290,7 +289,7 @@ heif_error heif_item_get_property_raw_size(const heif_context* context,
                                            size_t* size_out)
 {
   if (!context || !size_out) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+    return heif_error_null_pointer_argument;
   }
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
   if (!box_other) {
@@ -316,7 +315,7 @@ heif_error heif_item_get_property_raw_data(const heif_context* context,
                                            uint8_t* data_out)
 {
   if (!context || !data_out) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+    return heif_error_null_pointer_argument;
   }
 
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
@@ -343,7 +342,7 @@ heif_error heif_item_get_property_uuid_type(const heif_context* context,
                                             uint8_t extended_type[16])
 {
   if (!context || !extended_type) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+    return heif_error_null_pointer_argument;
   }
 
   auto box_other = context->context->find_property<Box_other>(itemId, propertyId);
@@ -381,11 +380,7 @@ heif_error heif_image_handle_get_camera_intrinsic_matrix(const heif_image_handle
                                                          heif_camera_intrinsic_matrix* out_matrix)
 {
   if (handle == nullptr || out_matrix == nullptr) {
-    Error err{
-      heif_error_Usage_error,
-      heif_suberror_Null_pointer_argument
-    };
-    return err.error_struct(handle->image.get());
+    return heif_error_null_pointer_argument;
   }
 
   if (!handle->image->has_intrinsic_matrix()) {
@@ -425,11 +420,7 @@ heif_error heif_image_handle_get_camera_extrinsic_matrix(const heif_image_handle
                                                          heif_camera_extrinsic_matrix** out_matrix)
 {
   if (handle == nullptr || out_matrix == nullptr) {
-    Error err{
-      heif_error_Usage_error,
-      heif_suberror_Null_pointer_argument
-    };
-    return err.error_struct(handle->image.get());
+    return heif_error_null_pointer_argument;
   }
 
   if (!handle->image->has_extrinsic_matrix()) {
@@ -455,11 +446,7 @@ heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_ex
                                                             double* out_matrix_row_major)
 {
   if (matrix == nullptr || out_matrix_row_major == nullptr) {
-    return heif_error{
-      heif_error_Usage_error,
-      heif_suberror_Null_pointer_argument,
-      "Null pointer argument"
-    };
+    return heif_error_null_pointer_argument;
   }
 
   auto m3x3 = matrix->matrix.calculate_rotation_matrix();

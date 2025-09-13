@@ -98,10 +98,10 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
 }
 
 
-struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
+heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
 {
   if (data == nullptr || out_brands == nullptr || out_size == nullptr) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+    return heif_error_null_pointer_argument;
   }
 
   if (len <= 0) {
