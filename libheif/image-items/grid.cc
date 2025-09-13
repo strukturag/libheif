@@ -774,13 +774,6 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
     }
   }
 
-  // copy over extra properties to grid item
-
-  auto property_boxes = tiles[0]->generate_property_boxes();
-  for (auto& property : property_boxes) {
-    griditem->add_property(property, griditem->is_property_essential(property));
-  }
-
   // Create Grid Item
 
   heif_item_id grid_id = file->add_new_image(fourcc("grid"));
@@ -805,6 +798,13 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   // Add PIXI property (copy from first tile)
 
   griditem->add_property(pixi_property, true);
+
+  // copy over extra properties to grid item
+
+  auto property_boxes = tiles[0]->generate_property_boxes();
+  for (auto& property : property_boxes) {
+    griditem->add_property(property, griditem->is_property_essential(property));
+  }
 
   // Set Brands
 
