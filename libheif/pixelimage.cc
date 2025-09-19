@@ -168,7 +168,7 @@ std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_nclx() const
 
 std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_icc() const
 {
-  if (!has_nclx_color_profile()) {
+  if (!has_icc_color_profile()) {
     return {};
   }
 
