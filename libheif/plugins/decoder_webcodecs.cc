@@ -64,7 +64,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
  *
  * Any other image format returned by the WebCodecs API will be converted to
  * RGBA before being returned to C++ to ensure that the result can be
- * property interpreted by the plugin.
+ * properly interpreted by the plugin.
  * 
  * Note that the WebCodecs API don't support converting into NV12 format in
  * cases where the native pixel format is something else. That's why RGBA is
