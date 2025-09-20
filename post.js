@@ -66,12 +66,12 @@ HeifImage.prototype.display = function(image_data, callback) {
     var w = this.get_width();
     var h = this.get_height();
 
-    setTimeout(function() {
+    setTimeout(async function() {
 
         // If image hasn't been loaded yet, decode the image
 
         if (!this.img) {
-            var img = Module.heif_js_decode_image2(this.handle,
+            var img = await Module.heif_js_decode_image2(this.handle,
               Module.heif_colorspace.heif_colorspace_RGB, Module.heif_chroma.heif_chroma_interleaved_RGBA);
             if (!img || img.code) {
                 console.log("Decoding image failed", this.handle, img);
