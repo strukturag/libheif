@@ -409,6 +409,8 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
     return err;
   }
 
+  // The y plane can be reused as-is.
+
   int y_stride;
   uint8_t* y_dst = heif_image_get_plane(*out_img, heif_channel_Y, &y_stride);
 
@@ -417,6 +419,10 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
            buffer.get() + y_offset + i * y_src_stride,
            width);
   }
+
+  // In the NV12 format, the U and V planes are interleaved (UVUVUV...), whereas
+  // in libheif they are two separate planes. This code splits the interleaved UV
+  // bytes into two separate planes for use in libheif.
 
   int u_stride;
   uint8_t* u_dst = heif_image_get_plane(*out_img, heif_channel_Cb, &u_stride);
