@@ -82,8 +82,37 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
       }
     }
 
+    function handleEmptyFormat(decoded) {
+      const canvas = new OffscreenCanvas(decoded.codedWidth, decoded.codedHeight);
+      const context = canvas.getContext('2d');
+      context.drawImage(decoded, 0, 0);
+      const imageData = context.getImageData(0, 0, decoded.codedWidth, decoded.codedHeight);
+      const data = imageData.data;
+      const format = 'RGBA';
+      const planes = [{offset: 0, stride: decoded.codedWidth * 4}];
+      callback(Emval.toHandle({
+        'buffer': data,
+        'format': format,
+        'planes': planes,
+        'codedWidth': decoded.codedWidth, 
+        'codedHeight': decoded.codedHeight,
+      }));
+
+      decoded.close();
+    }
+
     const decoder = new VideoDecoder({
       output: (decoded) => {
+        // For 10-bit color images, the format is observed to be null. In this
+        // case the VideoFrame.copyTo API doesn't work, however, it does work
+        // to draw the VideoFrame to a Canvas and then extract the image bytes.
+        // Drawing to a canvas is slower than copyTo, so only use it when
+        //necessary.
+        if (!decoded.format) {
+          handleEmptyFormat(decoded);
+          return;
+        }
+
         const format = decoded.format === 'NV12' ? 'NV12' : 'RGBA';
         const formatOptions = format === 'NV12' ?
           {} :
@@ -492,29 +521,58 @@ static void convert_rgba_to_nv12(const uint8_t* rgba_buffer, int width, int heig
 }
 
 
+static void get_nal_units(struct webcodecs_decoder* decoder,
+                          NALUnit& vps_nal_unit,
+                          NALUnit& sps_nal_unit,
+                          NALUnit& pps_nal_unit,
+                          NALUnit& data_unit) {
+  // This code parses the NAL units to find the VPS, SPS, PPS, and data NAL
+  // units. It handles cases where the NAL units are not in the expected order
+  // and where there are extra NAL units that should be ignored. The last seen
+  // VPS, SPS, PPS, and VCL data are used.
+  while (!decoder->data_queue.empty()) {
+    NALUnit nal_unit = decoder->data_queue.front();
+    decoder->data_queue.pop();
+
+    if (nal_unit.size == 0) {
+      continue;
+    }
+
+    const auto* nal_data = static_cast<const uint8_t*>(nal_unit.data);
+    const uint8_t nal_type = (nal_data[0] >> 1) & 0x3F;
+
+    if (nal_type == NAL_UNIT_VPS_NUT) {
+      vps_nal_unit = nal_unit;
+    } else if (nal_type == NAL_UNIT_SPS_NUT) {
+      sps_nal_unit = nal_unit;
+    } else if (nal_type == NAL_UNIT_PPS_NUT) {
+      pps_nal_unit = nal_unit;
+    } else if (nal_type <= NAL_UNIT_MAX_VCL) {
+      // Assume the plugin will only receive one VCL NAL unit.
+      data_unit = nal_unit;
+    }
+  }
+}
+
+
 static struct heif_error webcodecs_decode_image(void* decoder_raw,
                                                   struct heif_image** out_img)
 {
   struct webcodecs_decoder* decoder = (struct webcodecs_decoder*) decoder_raw;
   *out_img = nullptr;
 
-  if (decoder->data_queue.size() < 4) {
+  NALUnit vps_nal_unit = {nullptr, 0};
+  NALUnit sps_nal_unit = {nullptr, 0};
+  NALUnit pps_nal_unit = {nullptr, 0};
+  NALUnit data_unit = {nullptr, 0};
+
+  get_nal_units(decoder, vps_nal_unit, sps_nal_unit, pps_nal_unit, data_unit);
+
+  if (!vps_nal_unit.data || !sps_nal_unit.data || !pps_nal_unit.data || !data_unit.data) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_End_of_data,
-            "Not enough NAL units in queue"};
+            "Missing required NAL units (VPS, SPS, PPS, or data)"};
   }
-
-  // This code assumes that the NAL units are in the following order: VPS, SPS,
-  // PPS, and then the HEVC binary data for the frame. If it's possible for the
-  // ordering of NAL units to be different, then this could would need to be
-  // updated to handle that.
-  NALUnit vps_nal_unit = decoder->data_queue.front();
-  decoder->data_queue.pop();
-  NALUnit sps_nal_unit = decoder->data_queue.front();
-  decoder->data_queue.pop();
-  NALUnit pps_nal_unit = decoder->data_queue.front();
-  decoder->data_queue.pop();
-  NALUnit data_unit = decoder->data_queue.front();
 
   HEVCDecoderConfigurationRecord config;
   int w, h;
