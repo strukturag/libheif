@@ -107,7 +107,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         // case the VideoFrame.copyTo API doesn't work, however, it does work
         // to draw the VideoFrame to a Canvas and then extract the image bytes.
         // Drawing to a canvas is slower than copyTo, so only use it when
-        //necessary.
+        // necessary.
         if (!decoded.format) {
           handleEmptyFormat(decoded);
           return;
