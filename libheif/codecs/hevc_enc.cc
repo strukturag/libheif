@@ -62,11 +62,7 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
     }
 
 
-    const uint8_t NAL_VPS = 32;
-    const uint8_t NAL_SPS = 33;
-    const uint8_t NAL_PPS = 34;
-
-    if ((data[0] >> 1) == NAL_SPS) {
+    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT) {
       parse_sps_for_hvcC_configuration(data, size, &hvcC->get_configuration(), &encoded_width, &encoded_height);
 
       codedImage.encoded_image_width = encoded_width;
