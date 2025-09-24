@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2017 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2025 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,22 +18,18 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/heif.h"
-#include "libheif/heif_plugin.h"
 #include "decoder_webcodecs.h"
+#include "libheif/heif_plugin.h"
 #include "libheif/codecs/hevc_boxes.h"
 #include "libheif/bitstream.h"
+#include "libheif/plugins/nalu_utils.h"
 
 #include <assert.h>
+#include <cstring>
 #include <emscripten/emscripten.h>
 #include <emscripten/bind.h>
 #include <memory>
-#include <cstring>
-#include <queue>
-#include <sstream>
-#include <iomanip>
 
-#include "third_party/libheif/libheif/plugins/nalu_utils.h"
 
 struct NALUnit {
   void* data;
