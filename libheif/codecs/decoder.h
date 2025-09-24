@@ -87,6 +87,7 @@ public:
 
   // --- raw data access
 
+  // Returns a stream of packets. Each packet is starts with a 4-byte size (MSB first).
   [[nodiscard]] virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const = 0;
 
   Result<std::vector<uint8_t>> get_compressed_data() const;
