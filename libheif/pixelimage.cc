@@ -712,9 +712,15 @@ uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
                                get_bits_per_pixel(heif_channel_Cr)));
       break;
     case heif_colorspace_RGB:
-      return std::max(get_bits_per_pixel(heif_channel_R),
-                      std::max(get_bits_per_pixel(heif_channel_G),
-                               get_bits_per_pixel(heif_channel_B)));
+      if (m_chroma == heif_chroma_444) {
+        return std::max(get_bits_per_pixel(heif_channel_R),
+             std::max(get_bits_per_pixel(heif_channel_G),
+                        get_bits_per_pixel(heif_channel_B)));
+      }
+      else {
+        assert(has_channel(heif_channel_interleaved));
+        return get_bits_per_pixel(heif_channel_interleaved);
+      }
       break;
     case heif_colorspace_nonvisual:
       return 0;
