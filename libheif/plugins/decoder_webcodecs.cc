@@ -749,10 +749,10 @@ const struct heif_decoder_plugin* get_decoder_plugin_webcodecs()
   return &decoder_webcodecs;
 }
 
-// #if PLUGIN_WEBCODECS
+#if PLUGIN_WEBCODECS
 heif_plugin_info plugin_info {
   1,
   heif_plugin_type_decoder,
   &decoder_webcodecs
 };
-// #endif
+#endif
