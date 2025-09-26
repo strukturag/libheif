@@ -83,13 +83,6 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
     }
 
     function handleEmptyFormat(decoded) {
-      if (typeof OffscreenCanvas === 'undefined') {
-        returnError(new Error('OffscreenCanvas is not available, but is required to decode this HEIC image.'));
-
-        decoded.close();
-        return;
-      }
-
       const canvas = new OffscreenCanvas(decoded.codedWidth, decoded.codedHeight);
       const context = canvas.getContext('2d');
       context.drawImage(decoded, 0, 0);
@@ -106,6 +99,12 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
       }));
 
       decoded.close();
+    }
+
+    if (typeof VideoDecoder === 'undefined') {
+      returnError(new Error('VideoDecoder API is not available'));
+
+      return;
     }
 
     const decoder = new VideoDecoder({
