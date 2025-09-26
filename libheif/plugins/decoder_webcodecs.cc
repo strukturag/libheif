@@ -120,6 +120,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         const bufferSize = format === 'NV12' ?
           decoded.allocationSize() :
           decoded.codedWidth * decoded.codedHeight * 4;
+
         const buffer = new Uint8Array(bufferSize);
 
         Promise.resolve().then(
@@ -501,24 +502,7 @@ static std::string get_hevc_codec_string(const HEVCDecoderConfigurationRecord& c
   return codec_string;
 }
 
-static void convert_rgba_to_nv12(const uint8_t* rgba_buffer, int width, int height, int rgba_stride,
-                                 uint8_t* y_buffer, uint8_t* uv_buffer, int y_stride, int uv_stride) {
-  for (int i = 0; i < height; ++i) {
-    for (int j = 0; j < width; ++j) {
-      const uint8_t* pixel = rgba_buffer + i * rgba_stride + j * 4;
-      uint8_t r = pixel[0];
-      uint8_t g = pixel[1];
-      uint8_t b = pixel[2];
 
-      y_buffer[i * y_stride + j] = static_cast<uint8_t>(0.299 * r + 0.587 * g + 0.114 * b);
-
-      if (i % 2 == 0 && j % 2 == 0) {
-        uv_buffer[(i / 2) * uv_stride + j] = static_cast<uint8_t>(-0.168736 * r - 0.331264 * g + 0.5 * b + 128);
-        uv_buffer[(i / 2) * uv_stride + j + 1] = static_cast<uint8_t>(0.5 * r - 0.418688 * g - 0.081312 * b + 128);
-      }
-    }
-  }
-}
 
 
 static void get_nal_units(struct webcodecs_decoder* decoder,
@@ -703,18 +687,32 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
     const int rgba_offset = rgba_plane["offset"].as<int>();
     const int rgba_src_stride = rgba_plane["stride"].as<int>();
 
-    size_t y_size = width * height;
-    size_t uv_size = width * height / 2;
-    std::unique_ptr<uint8_t[]> nv12_buffer(new uint8_t[y_size + uv_size]);
-    uint8_t* y_buffer = nv12_buffer.get();
-    uint8_t* uv_buffer = nv12_buffer.get() + y_size;
+    heif_error err;
+    err = heif_image_create(width,
+                            height,
+                            heif_colorspace_RGB,
+                            heif_chroma_interleaved_RGBA,
+                            out_img);
+    if (err.code) {
+      return err;
+    }
 
-    // The image is converted to NV12 in order to minimize memory usage, and
-    // also allows for code reuse of convert_webcodecs_result_to_heif_image.
-    convert_rgba_to_nv12(buffer.get() + rgba_offset, width, height, rgba_src_stride,
-                         y_buffer, uv_buffer, width, width);
+    err = heif_image_add_plane(*out_img, heif_channel_interleaved, width, height, 8);
+    if (err.code) {
+      heif_image_release(*out_img);
+      return err;
+    }
 
-    return convert_webcodecs_result_to_heif_image(nv12_buffer, width, height, 0, width, y_size, width, out_img);
+    int stride;
+    uint8_t* dst = heif_image_get_plane(*out_img, heif_channel_interleaved, &stride);
+
+    for (int i = 0; i < height; ++i) {
+      memcpy(dst + i * stride,
+             buffer.get() + rgba_offset + i * rgba_src_stride,
+             width * 4);
+    }
+
+    return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   } else {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_Unsupported_color_conversion,
