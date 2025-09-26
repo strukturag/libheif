@@ -25,6 +25,9 @@
 #include "plugin_registry.h"
 #include "init.h"
 
+#if HAVE_WEBCODECS
+#include "third_party/libheif/libheif/plugins/decoder_webcodecs.h"
+#endif
 
 #if HAVE_LIBDE265
 #include "plugins/decoder_libde265.h"
@@ -140,6 +143,10 @@ public:
 
 void register_default_plugins()
 {
+#if HAVE_WEBCODECS
+  register_decoder(get_decoder_plugin_webcodecs());
+#endif
+
 #if HAVE_LIBDE265
   register_decoder(get_decoder_plugin_libde265());
 #endif

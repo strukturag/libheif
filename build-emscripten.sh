@@ -140,8 +140,12 @@ emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
     -sEXPORT_NAME="libheif" \
     -sWASM_ASYNC_COMPILATION=0 \
     -sALLOW_MEMORY_GROWTH \
+    # Asyncify options need to be included to use webcodecs decoder
+    # -sASYNCIFY=1 \
+    # -sASYNCIFY_IMPORTS=[decode_with_browser_hevc] \
     -std=c++11 \
     $LIBRARY_INCLUDE_FLAGS \
     $LIBRARY_LINKER_FLAGS \
     $BUILD_FLAGS \
     $RELEASE_BUILD_FLAGS
+
