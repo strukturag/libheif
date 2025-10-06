@@ -290,6 +290,7 @@ option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed 
 message("\n=== Summary of compiled codecs ===")
 plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
 plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
+plugin_compilation_info(WEBCODECS WEBCODECS "WebCodecs HEVC decoder")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
 plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
 plugin_compilation_info(AOM_DECODER AOM_DECODER "AOM AV1 decoder")
@@ -332,7 +333,7 @@ macro(format_compilation_info formatName decoding_supported encoding_supported)
 endmacro()
 
 
-if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND)
+if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND OR WITH_WEBCODECS)
     set(SUPPORTS_HEIC_DECODING TRUE)
 endif()
 if (X265_FOUND OR KVAZAAR_FOUND)
