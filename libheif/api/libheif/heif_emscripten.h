@@ -336,7 +336,7 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
     return emscripten::val(err);
   }
 
-  result.set("image", image);
+  result.set("image", image, emscripten::allow_raw_pointers());
 
   int width = heif_image_handle_get_width(handle);
   result.set("width", width);
