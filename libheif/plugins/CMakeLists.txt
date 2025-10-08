@@ -105,10 +105,6 @@ set(UVG266_sources encoder_uvg266.cc encoder_uvg266.h)
 set(UVG266_extra_plugin_sources)
 plugin_compilation(uvg266 UVG266 UVG266_FOUND UVG266 UVG266)
 
-set(WEBCODECS_sources decoder_webcodecs.h decoder_webcodecs.cc)
-set(WEBCODECS_extra_plugin_sources ../error.cc nalu_utils.cc)
-plugin_compilation(webcodecs WEBCODECS WEBCODECS_FOUND WEBCODECS WEBCODECS)
-
 set(VVDEC_sources decoder_vvdec.cc decoder_vvdec.h)
 set(VVDEC_extra_plugin_sources)
 plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
@@ -134,3 +130,11 @@ if (WITH_UNCOMPRESSED_CODEC)
             decoder_uncompressed.h
             decoder_uncompressed.cc)
 endif ()
+
+if (WITH_WEBCODECS)
+   target_sources(heif PRIVATE
+   		  decoder_webcodecs.h
+		  decoder_webcodecs.cc)
+endif()
+
+

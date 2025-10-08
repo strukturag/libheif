@@ -284,6 +284,10 @@ endif()
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
+# Web codecs
+
+option(WITH_WEBCODECS "Support HEVC decoding through browser web codecs API" OFF)
+
 
 # --- show codec compilation summary
 
