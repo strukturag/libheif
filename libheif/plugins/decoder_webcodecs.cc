@@ -24,11 +24,15 @@
 #include "libheif/bitstream.h"
 #include "libheif/plugins/nalu_utils.h"
 
+#include <algorithm>
 #include <assert.h>
 #include <cstring>
 #include <emscripten/emscripten.h>
 #include <emscripten/bind.h>
 #include <memory>
+#include <queue>
+#include <string>
+#include <vector>
 
 
 struct NALUnit {
