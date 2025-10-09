@@ -24,11 +24,15 @@
 #include "libheif/bitstream.h"
 #include "libheif/plugins/nalu_utils.h"
 
+#include <algorithm>
 #include <assert.h>
 #include <cstring>
 #include <emscripten/emscripten.h>
 #include <emscripten/bind.h>
 #include <memory>
+#include <queue>
+#include <string>
+#include <vector>
 
 
 struct NALUnit {
@@ -120,6 +124,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         }
 
         const format = decoded.format === 'NV12' ? 'NV12' : 'RGBA';
+        const fullRange = decoded.colorSpace ? decoded.colorSpace.fullRange : false;
         const formatOptions = format === 'NV12' ?
           {} :
           {'format': format, 'colorSpace': 'srgb'};
@@ -138,6 +143,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
             'planes': planes,
             'codedWidth': decoded.codedWidth, 
             'codedHeight': decoded.codedHeight,
+            'fullRange': fullRange,
           }));
 
           decoded.close();
@@ -412,12 +418,15 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
                                                     int width, int height,
                                                     int y_offset, int y_src_stride,
                                                     int uv_offset, int uv_src_stride,
-                                                    struct heif_image** out_img) {
+                                                    struct heif_image** out_img,
+                                                    heif_chroma chroma,
+                                                    bool is_full_range) {
   heif_error err;
+  bool is_mono = chroma == heif_chroma_monochrome;
   err = heif_image_create(width,
                           height,
-                          heif_colorspace_YCbCr,
-                          heif_chroma_420,
+                          is_mono ? heif_colorspace_monochrome : heif_colorspace_YCbCr,
+                          is_mono ? heif_chroma_monochrome : heif_chroma_420,
                           out_img);
   if (err.code) {
     return err;
@@ -429,16 +438,18 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
     return err;
   }
 
-  err = heif_image_add_plane(*out_img, heif_channel_Cb, width / 2, height / 2, 8);
-  if (err.code) {
-    heif_image_release(*out_img);
-    return err;
-  }
+  if (!is_mono) {
+    err = heif_image_add_plane(*out_img, heif_channel_Cb, width / 2, height / 2, 8);
+    if (err.code) {
+      heif_image_release(*out_img);
+      return err;
+    }
 
-  err = heif_image_add_plane(*out_img, heif_channel_Cr, width / 2, height / 2, 8);
-  if (err.code) {
-    heif_image_release(*out_img);
-    return err;
+    err = heif_image_add_plane(*out_img, heif_channel_Cr, width / 2, height / 2, 8);
+    if (err.code) {
+      heif_image_release(*out_img);
+      return err;
+    }
   }
 
   // The y plane can be reused as-is.
@@ -452,20 +463,45 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
            width);
   }
 
-  // In the NV12 format, the U and V planes are interleaved (UVUVUV...), whereas
-  // in libheif they are two separate planes. This code splits the interleaved UV
-  // bytes into two separate planes for use in libheif.
+  // NV12 luma data coming from the browser's VideoDecoder API may be using a
+  // limited range (16-235) instead of the full range (0-255). If this is the
+  // case, we need to normalize the data to the full range.
+  if (!is_full_range) {
+    for (int y = 0; y < height; y++) {
+      uint8_t* p = y_dst + y * y_stride;
+      for (int x = 0; x < width; x++) {
+        float v = (static_cast<float>(p[x]) - 16.0f) * 255.0f / 219.0f;
+        p[x] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, v)));
+      }
+    }
+  }
 
-  int u_stride;
-  uint8_t* u_dst = heif_image_get_plane(*out_img, heif_channel_Cb, &u_stride);
-  int v_stride;
-  uint8_t* v_dst = heif_image_get_plane(*out_img, heif_channel_Cr, &v_stride);
+  if (!is_mono) {
+    // In the NV12 format, the U and V planes are interleaved (UVUVUV...), whereas
+    // in libheif they are two separate planes. This code splits the interleaved UV
+    // bytes into two separate planes for use in libheif.
 
-  for (int i = 0; i < height / 2; ++i) {
-    uint8_t* uv_src = buffer.get() + uv_offset + i * uv_src_stride;
-    for (int j = 0; j < width / 2; ++j) {
-      u_dst[i * u_stride + j] = uv_src[j * 2];
-      v_dst[i * v_stride + j] = uv_src[j * 2 + 1];
+    int u_stride;
+    uint8_t* u_dst = heif_image_get_plane(*out_img, heif_channel_Cb, &u_stride);
+    int v_stride;
+    uint8_t* v_dst = heif_image_get_plane(*out_img, heif_channel_Cr, &v_stride);
+
+    for (int i = 0; i < height / 2; ++i) {
+      uint8_t* uv_src = buffer.get() + uv_offset + i * uv_src_stride;
+      for (int j = 0; j < width / 2; ++j) {
+        // NV12 chroma data coming from the browser's VideoDecoder API may be using a
+        // limited range (16-240) instead of the full range (0-255). If this is the
+        // case, we need to normalize the data to the full range.
+        if (!is_full_range) {
+          float u = (static_cast<float>(uv_src[j * 2]) - 16.0f) * 255.0f / 224.0f;
+          float v = (static_cast<float>(uv_src[j * 2 + 1]) - 16.0f) * 255.0f / 224.0f;
+          u_dst[i * u_stride + j] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, u)));
+          v_dst[i * v_stride + j] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, v)));
+        } else {
+          u_dst[i * u_stride + j] = uv_src[j * 2];
+          v_dst[i * v_stride + j] = uv_src[j * 2 + 1];
+        }
+      }
     }
   }
 
@@ -645,10 +681,15 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
   // Most HEIC images in the browser will be decoded natively in NV12 pixel
   // format. Using the bytes directly helps retain the original image fidelity.
   if (format == "NV12") {
-    if (planes["length"].as<size_t>() < 2) {
+    bool is_mono = config.chroma_format == 0;
+    if (!is_mono && planes["length"].as<size_t>() < 2) {
       return {heif_error_Decoder_plugin_error,
               heif_suberror_Unspecified,
               "Decoding failed: NV12 format requires at least 2 planes"};
+    } else if (is_mono && planes["length"].as<size_t>() < 1) {
+      return {heif_error_Decoder_plugin_error,
+              heif_suberror_Unspecified,
+              "Decoding failed: NV12 monochrome format requires at least 1 plane"};
     }
 
     emscripten::val y_plane = planes[0];
@@ -658,19 +699,25 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
               "Decoding failed: result.planes[0] is undefined"};
     }
 
-    emscripten::val uv_plane = planes[1];
-    if (uv_plane.isUndefined()) {
-      return {heif_error_Decoder_plugin_error,
-              heif_suberror_Unspecified,
-              "Decoding failed: result.planes[1] is undefined"};
-    }
-
     const int y_offset = y_plane["offset"].as<int>();
     const int y_src_stride = y_plane["stride"].as<int>();
-    const int uv_offset = uv_plane["offset"].as<int>();
-    const int uv_src_stride = uv_plane["stride"].as<int>();
+    int uv_offset = 0;
+    int uv_src_stride = 0;
 
-    return convert_webcodecs_result_to_heif_image(buffer, width, height, y_offset, y_src_stride, uv_offset, uv_src_stride, out_img);
+    if (!is_mono) {
+      emscripten::val uv_plane = planes[1];
+      if (uv_plane.isUndefined()) {
+        return {heif_error_Decoder_plugin_error,
+                heif_suberror_Unspecified,
+                "Decoding failed: result.planes[1] is undefined"};
+      }
+
+      uv_offset = uv_plane["offset"].as<int>();
+      uv_src_stride = uv_plane["stride"].as<int>();
+    }
+
+    bool is_full_range = !result["fullRange"].isUndefined() && result["fullRange"].as<bool>();
+    return convert_webcodecs_result_to_heif_image(buffer, width, height, y_offset, y_src_stride, uv_offset, uv_src_stride, out_img, (heif_chroma)config.chroma_format, is_full_range);
   } else if (format == "RGBA") {
     // Also handle RGBA images as a fallback in cases where the browser returns
     // something other than NV12. As of now only RGBA is handled as an
