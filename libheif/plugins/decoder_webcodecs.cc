@@ -441,7 +441,7 @@ static heif_matrix_coefficients get_heif_matrix(const std::string& m) {
   if (m == "bt709") return heif_matrix_coefficients_ITU_R_BT_709_5;
   if (m == "bt470bg") return heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
   if (m == "smpte170m") return heif_matrix_coefficients_ITU_R_BT_601_6;
-  if (m == "bt2020ncl") return heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
+  if (m == "bt2020-ncl") return heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
   return heif_matrix_coefficients_unspecified;
 }
 
