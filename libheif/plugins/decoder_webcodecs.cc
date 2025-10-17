@@ -20,14 +20,15 @@
 
 #include "decoder_webcodecs.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/codecs/hevc_boxes.h"
-#include "libheif/bitstream.h"
-#include "libheif/plugins/nalu_utils.h"
+#include "codecs/hevc_boxes.h"
+#include "bitstream.h"
+#include "nalu_utils.h"
 
 #include <algorithm>
 #include <assert.h>
 #include <cstring>
 #include <emscripten/emscripten.h>
+#include <cstdio>
 #include <emscripten/bind.h>
 #include <memory>
 #include <queue>
@@ -144,9 +145,6 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
             'codedWidth': decoded.codedWidth, 
             'codedHeight': decoded.codedHeight,
             'fullRange': fullRange,
-            'primaries': decoded.colorSpace && decoded.colorSpace.primaries ? decoded.colorSpace.primaries : "",
-            'transfer': decoded.colorSpace && decoded.colorSpace.transfer ? decoded.colorSpace.transfer : "",
-            'matrix': decoded.colorSpace && decoded.colorSpace.matrix ? decoded.colorSpace.matrix : "",
           }));
 
           decoded.close();
@@ -416,34 +414,6 @@ static struct heif_error webcodecs_push_data(void* decoder_raw, const void* data
   return err;
 }
 
-static heif_color_primaries get_heif_primaries(const std::string& p) {
-  if (p == "bt709") return heif_color_primaries_ITU_R_BT_709_5;
-  if (p == "bt470bg") return heif_color_primaries_ITU_R_BT_470_6_System_B_G;
-  if (p == "smpte170m") return heif_color_primaries_ITU_R_BT_601_6;
-  if (p == "bt2020") return heif_color_primaries_ITU_R_BT_2020_2_and_2100_0;
-  if (p == "smpte431") return heif_color_primaries_SMPTE_RP_431_2;
-  if (p == "smpte432") return heif_color_primaries_SMPTE_EG_432_1;
-  return heif_color_primaries_unspecified;
-}
-
-static heif_transfer_characteristics get_heif_transfer(const std::string& t) {
-  if (t == "bt709") return heif_transfer_characteristic_ITU_R_BT_709_5;
-  if (t == "smpte170m") return heif_transfer_characteristic_ITU_R_BT_601_6;
-  if (t == "iec61966-2-1" || t == "srgb") return heif_transfer_characteristic_IEC_61966_2_1;
-  if (t == "linear") return heif_transfer_characteristic_linear;
-  if (t == "smpte2084" || t == "pq") return heif_transfer_characteristic_ITU_R_BT_2100_0_PQ;
-  if (t == "hlg") return heif_transfer_characteristic_ITU_R_BT_2100_0_HLG;
-  return heif_transfer_characteristic_unspecified;
-}
-
-static heif_matrix_coefficients get_heif_matrix(const std::string& m) {
-  if (m == "rgb") return heif_matrix_coefficients_RGB_GBR;
-  if (m == "bt709") return heif_matrix_coefficients_ITU_R_BT_709_5;
-  if (m == "bt470bg") return heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
-  if (m == "smpte170m") return heif_matrix_coefficients_ITU_R_BT_601_6;
-  if (m == "bt2020-ncl") return heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
-  return heif_matrix_coefficients_unspecified;
-}
 
 static struct heif_error convert_webcodecs_result_to_heif_image(const std::unique_ptr<uint8_t[]>& buffer,
                                                     int width, int height,
@@ -451,10 +421,7 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
                                                     int uv_offset, int uv_src_stride,
                                                     struct heif_image** out_img,
                                                     heif_chroma chroma,
-                                                    bool is_full_range,
-                                                    const std::string& primaries,
-                                                    const std::string& transfer,
-                                                    const std::string& matrix) {
+                                                    bool is_full_range) {
   heif_error err;
   bool is_mono = chroma == heif_chroma_monochrome;
   err = heif_image_create(width,
@@ -465,14 +432,6 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
   if (err.code) {
     return err;
   }
-
-  struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
-  nclx->color_primaries = get_heif_primaries(primaries);
-  nclx->transfer_characteristics = get_heif_transfer(transfer);
-  nclx->matrix_coefficients = get_heif_matrix(matrix);
-  nclx->full_range_flag = is_full_range ? 1 : 0;
-  heif_image_set_nclx_color_profile(*out_img, nclx);
-  heif_nclx_color_profile_free(nclx);
 
   err = heif_image_add_plane(*out_img, heif_channel_Y, width, height, 8);
   if (err.code) {
@@ -505,6 +464,19 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
            width);
   }
 
+  // NV12 luma data coming from the browser's VideoDecoder API may be using a
+  // limited range (16-235) instead of the full range (0-255). If this is the
+  // case, we need to normalize the data to the full range.
+  if (!is_full_range) {
+    for (int y = 0; y < height; y++) {
+      uint8_t* p = y_dst + y * y_stride;
+      for (int x = 0; x < width; x++) {
+        float v = (static_cast<float>(p[x]) - 16.0f) * 255.0f / 219.0f;
+        p[x] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, v + 0.5f)));
+      }
+    }
+  }
+
   if (!is_mono) {
     // In the NV12 format, the U and V planes are interleaved (UVUVUV...), whereas
     // in libheif they are two separate planes. This code splits the interleaved UV
@@ -518,8 +490,18 @@ static struct heif_error convert_webcodecs_result_to_heif_image(const std::uniqu
     for (int i = 0; i < height / 2; ++i) {
       uint8_t* uv_src = buffer.get() + uv_offset + i * uv_src_stride;
       for (int j = 0; j < width / 2; ++j) {
-        u_dst[i * u_stride + j] = uv_src[j * 2];
-        v_dst[i * v_stride + j] = uv_src[j * 2 + 1];
+        // NV12 chroma data coming from the browser's VideoDecoder API may be using a
+        // limited range (16-240) instead of the full range (0-255). If this is the
+        // case, we need to normalize the data to the full range.
+        if (!is_full_range) {
+          float u = (static_cast<float>(uv_src[j * 2]) - 16.0f) * 255.0f / 224.0f;
+          float v = (static_cast<float>(uv_src[j * 2 + 1]) - 16.0f) * 255.0f / 224.0f;
+          u_dst[i * u_stride + j] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, u + 0.5f)));
+          v_dst[i * v_stride + j] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, v + 0.5f)));
+        } else {
+          u_dst[i * u_stride + j] = uv_src[j * 2];
+          v_dst[i * v_stride + j] = uv_src[j * 2 + 1];
+        }
       }
     }
   }
@@ -736,14 +718,7 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
     }
 
     bool is_full_range = !result["fullRange"].isUndefined() && result["fullRange"].as<bool>();
-    std::string primaries = result["primaries"].as<std::string>();
-    std::string transfer = result["transfer"].as<std::string>();
-    std::string matrix = result["matrix"].as<std::string>();
-    return convert_webcodecs_result_to_heif_image(buffer, width, height,
-                                                  y_offset, y_src_stride,
-                                                  uv_offset, uv_src_stride, out_img,
-                                                  (heif_chroma)config.chroma_format, is_full_range,
-                                                  primaries, transfer, matrix);
+    return convert_webcodecs_result_to_heif_image(buffer, width, height, y_offset, y_src_stride, uv_offset, uv_src_stride, out_img, (heif_chroma)config.chroma_format, is_full_range);
   } else if (format == "RGBA") {
     // Also handle RGBA images as a fallback in cases where the browser returns
     // something other than NV12. As of now only RGBA is handled as an
