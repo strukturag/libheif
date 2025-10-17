@@ -26,7 +26,7 @@
 #include "init.h"
 
 #if HAVE_WEBCODECS
-#include "third_party/libheif/libheif/plugins/decoder_webcodecs.h"
+#include "plugins/decoder_webcodecs.h"
 #endif
 
 #if HAVE_LIBDE265
