@@ -256,16 +256,16 @@ If you want to compile SVT-AV1 yourself,
 * Run the `svt.cmd` script in the `third-party` directory to download SVT-AV1
   and compile it.
 
-When running `cmake` or `configure`, make sure that the environment variable
+You have to enable SVT-AV1 with CMake.
+
+When running `cmake`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
-
-You have to enable SVT-AV1 with CMake.
 
 ## Codec plugins
 
 Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin.
-You can choose this individually for each codec backend in the CMake settings.
+You can choose this individually for each codec backend in the CMake settings using `WITH_{codec}_PLUGIN` options.
 Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
 The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.
 
