@@ -478,7 +478,7 @@ std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_pt
   }
 
   auto hdlr = mdia->get_child_box<Box_hdlr>();
-  if (!mdia) {
+  if (!hdlr) {
     return nullptr;
   }
 
