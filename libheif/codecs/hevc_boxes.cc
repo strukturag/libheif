@@ -234,6 +234,9 @@ std::string Box_hvcC::dump(Indent& indent) const
        << indent << "chroma_format: ";
 
   switch (c.chroma_format) {
+    case 0:
+      sstr << "monochrome";
+      break;
     case 1:
       sstr << "4:2:0";
       break;
