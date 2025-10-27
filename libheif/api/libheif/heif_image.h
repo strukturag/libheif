@@ -208,7 +208,7 @@ uint8_t* heif_image_get_plane(heif_image*,
 // These are safer variants of the two functions above.
 // The 'stride' parameter is often multiplied by the image height in the client application.
 // For very large images, this can lead to integer overflows and, consequently, illegal memory accesses.
-// The changed 'stride' parameter types eliminates this common error.
+// The changed 'stride' parameter type eliminates this common error.
 LIBHEIF_API
 const uint8_t* heif_image_get_plane_readonly2(const heif_image*,
                                               enum heif_channel channel,
