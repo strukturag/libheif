@@ -34,8 +34,42 @@
 
 PngEncoder::PngEncoder() = default;
 
-bool PngEncoder::Encode(const struct heif_image_handle* handle,
-                        const struct heif_image* image, const std::string& filename)
+// Returns false if ICC profile recognized invalid and could not be fixed.
+bool fix_icc_profile(uint8_t* profile_data, uint32_t& profile_size)
+{
+  if (profile_size < 128) {
+    return false;
+  }
+
+
+  // --- check that profile size specified in header matches the real size
+
+  uint32_t size_in_header = ((profile_data[0] << 24) |
+                             (profile_data[1] << 16) |
+                             (profile_data[2] << 8) |
+                             (profile_data[3] << 0));
+
+  if (size_in_header != profile_size) {
+
+    // Size in header is smaller than actual size, but alignment indicates that it might
+    // be correct. Replace real data length with size in header.
+    if (size_in_header < profile_size && (size_in_header & 3)==0) {
+      fprintf(stderr, "Input ICC profile has wrong size in header (%d instead of %d). Skipping extra bytes at the end. "
+              "Note that this may still be incorrect and the ICC profile may be broken.\n", size_in_header, profile_size);
+
+      profile_size = size_in_header;
+    }
+    else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+bool PngEncoder::Encode(const heif_image_handle* handle,
+                        const heif_image* image, const std::string& filename)
 {
   png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr,
                                                 nullptr, nullptr);
@@ -94,18 +128,23 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   // --- write ICC profile
 
   if (handle) {
-    size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
+    uint32_t profile_size = static_cast<uint32_t>(heif_image_handle_get_raw_color_profile_size(handle));
     if (profile_size > 0) {
       uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
       heif_image_handle_get_raw_color_profile(handle, profile_data);
-      char profile_name[] = "unknown";
-      png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
+      if (fix_icc_profile(profile_data, profile_size)) {
+        char profile_name[] = "unknown";
+        png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
 #if PNG_LIBPNG_VER < 10500
               (png_charp)profile_data,
 #else
-                   (png_const_bytep) profile_data,
+                     (png_const_bytep) profile_data,
 #endif
-                   (png_uint_32) profile_size);
+                     (png_uint_32) profile_size);
+      }
+      else {
+        fprintf(stderr, "Invalid ICC profile. Writing PNG file without ICC.\n");
+      }
       free(profile_data);
     }
   }
