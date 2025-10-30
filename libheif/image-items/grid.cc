@@ -302,6 +302,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
   int progress_counter = 0;
   bool cancelled = false;
+  std::vector<Error> warnings;
 
   for (uint32_t y = 0; y < grid.get_rows() && !cancelled; y++) {
     uint32_t x0 = 0;
@@ -312,11 +313,33 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       std::shared_ptr<const ImageItem> tileImg = get_context()->get_image(tileID, true);
       if (!tileImg) {
+        if (!options.strict_decoding && reference_idx != 0) {
+          // Skip missing tiles (unless it's the first one).
+          warnings.push_back(Error{
+            heif_error_Invalid_input,
+            heif_suberror_Missing_grid_images,
+          });
+          reference_idx++;
+          x0 += tile_width;
+          continue;
+        }
+
         return Error{heif_error_Invalid_input,
                      heif_suberror_Missing_grid_images,
                      "Nonexistent grid image referenced"};
       }
       if (auto error = tileImg->get_item_error()) {
+        if (!options.strict_decoding && reference_idx != 0) {
+          // Skip missing tiles (unless it's the first one).
+          warnings.push_back(Error{
+            heif_error_Invalid_input,
+            heif_suberror_Missing_grid_images,
+          });
+          reference_idx++;
+          x0 += tile_width;
+          continue;
+        }
+
         return error;
       }
 
@@ -431,6 +454,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     return Error{heif_error_Canceled, heif_suberror_Unspecified, "Decoding the image was canceled"};
   }
 
+  img->add_warnings(warnings);
+
   return img;
 }
 
@@ -442,6 +467,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   std::shared_ptr<HeifPixelImage> tile_img;
 
   auto tileItem = get_context()->get_image(tileID, true);
+  if (!tileItem && !options.strict_decoding) {
+    // We ignore missing images.
+    return Error::Ok;
+  }
+
   assert(tileItem);
   if (auto error = tileItem->get_item_error()) {
     return error;
