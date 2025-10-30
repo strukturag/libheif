@@ -454,7 +454,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     return Error{heif_error_Canceled, heif_suberror_Unspecified, "Decoding the image was canceled"};
   }
 
-  img->add_warnings(warnings);
+  if (img) {
+    img->add_warnings(warnings);
+  }
 
   return img;
 }
@@ -481,6 +483,12 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   auto tileItem = get_context()->get_image(tileID, true);
   if (!tileItem && !options.strict_decoding) {
     // We ignore missing images.
+    if (inout_image) {
+      inout_image->add_warning(Error{
+        heif_error_Invalid_input,
+        heif_suberror_Missing_grid_images,
+      });
+    }
     return progress_and_return_ok(options, progress_counter);
   }
 
@@ -493,6 +501,12 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   if (!decodeResult) {
     if (!options.strict_decoding) {
       // We ignore broken tiles.
+      if (inout_image) {
+        inout_image->add_warning(Error{
+          heif_error_Invalid_input,
+          heif_suberror_Missing_grid_images,
+        });
+      }
       return progress_and_return_ok(options, progress_counter);
     }
 
