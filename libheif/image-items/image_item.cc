@@ -708,6 +708,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   }
 
   auto img = *decodingResult;
+  if (!img) {
+    // Can happen if missing tiled image is decoded in non-strict mode.
+    return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
+  }
 
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
 
