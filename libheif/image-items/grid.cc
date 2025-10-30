@@ -459,6 +459,18 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   return img;
 }
 
+static Error progress_and_return_ok(const heif_decoding_options& options, int& progress_counter) {
+  if (options.on_progress) {
+#if ENABLE_PARALLEL_TILE_DECODING
+    static std::mutex progressMutex;
+    std::lock_guard<std::mutex> lock(progressMutex);
+#endif
+
+    options.on_progress(heif_progress_step_total, ++progress_counter, options.progress_user_data);
+  }
+  return Error::Ok;
+}
+
 Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                                   std::shared_ptr<HeifPixelImage>& inout_image,
                                                   const heif_decoding_options& options,
@@ -469,7 +481,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   auto tileItem = get_context()->get_image(tileID, true);
   if (!tileItem && !options.strict_decoding) {
     // We ignore missing images.
-    return Error::Ok;
+    return progress_and_return_ok(options, progress_counter);
   }
 
   assert(tileItem);
@@ -479,6 +491,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   auto decodeResult = tileItem->decode_image(options, false, 0, 0);
   if (!decodeResult) {
+    if (!options.strict_decoding) {
+      // We ignore broken tiles.
+      return progress_and_return_ok(options, progress_counter);
+    }
+
     return decodeResult.error();
   }
 
@@ -531,16 +548,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   inout_image->copy_image_to(tile_img, x0, y0);
 
-  if (options.on_progress) {
-#if ENABLE_PARALLEL_TILE_DECODING
-    static std::mutex progressMutex;
-    std::lock_guard<std::mutex> lock(progressMutex);
-#endif
-
-    options.on_progress(heif_progress_step_total, ++progress_counter, options.progress_user_data);
-  }
-
-  return Error::Ok;
+  return progress_and_return_ok(options, progress_counter);
 }
 
 
