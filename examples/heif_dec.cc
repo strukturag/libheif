@@ -27,6 +27,7 @@
 
 #include <cstring>
 #include <getopt.h>
+#include <unordered_set>
 #include <filesystem>
 #include "libheif/heif_items.h"
 #include "libheif/heif_experimental.h"
@@ -205,6 +206,21 @@ void show_png_compression_level_usage_warning()
                   "You can also use -1 to use the default compression level.\n");
 }
 
+std::string sanitizeFilename(const std::string& filename) {
+  static const std::unordered_set<char> invalidChars = {'\\','/','*','?','"','<','>','|', ':'};
+  std::string sanitized;
+  sanitized.reserve(filename.size()); // avoid reallocations
+
+  for (char c : filename) {
+    if (invalidChars.find(c) != invalidChars.end()) {
+      sanitized += '_';
+    } else {
+      sanitized += c;
+    }
+  }
+  return sanitized;
+}
+
 
 int decode_single_image(heif_image_handle* handle,
                         std::string filename_stem,
@@ -362,7 +378,7 @@ int decode_single_image(heif_image_handle* handle,
 
           std::ostringstream s;
           s << filename_stem;
-          s << "-" + auxType + ".";
+          s << "-" + sanitizeFilename(auxType) + ".";
           s << filename_suffix;
 
           std::string auxFilename = s.str();
