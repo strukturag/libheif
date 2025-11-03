@@ -382,7 +382,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
           }
         }
 
-        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter);
+        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings);
         if (err) {
           return err;
         }
@@ -430,7 +430,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
                                 data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
-                                std::ref(progress_counter)));
+                                std::ref(progress_counter), std::ref(warnings)));
     }
 
     // check for decoding errors in remaining tiles
@@ -476,19 +476,23 @@ static Error progress_and_return_ok(const heif_decoding_options& options, int& p
 Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                                   std::shared_ptr<HeifPixelImage>& inout_image,
                                                   const heif_decoding_options& options,
-                                                  int& progress_counter) const
+                                                  int& progress_counter, std::vector<Error>& warnings) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
+#if ENABLE_PARALLEL_TILE_DECODING
+  static std::mutex warningsMutex;
+#endif
 
   auto tileItem = get_context()->get_image(tileID, true);
   if (!tileItem && !options.strict_decoding) {
     // We ignore missing images.
-    if (inout_image) {
-      inout_image->add_warning(Error{
-        heif_error_Invalid_input,
-        heif_suberror_Missing_grid_images,
-      });
-    }
+#if ENABLE_PARALLEL_TILE_DECODING
+    std::lock_guard<std::mutex> lock(warningsMutex);
+#endif
+    warnings.push_back(Error{
+      heif_error_Invalid_input,
+      heif_suberror_Missing_grid_images,
+    });
     return progress_and_return_ok(options, progress_counter);
   }
 
@@ -501,12 +505,13 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   if (!decodeResult) {
     if (!options.strict_decoding) {
       // We ignore broken tiles.
-      if (inout_image) {
-        inout_image->add_warning(Error{
-          heif_error_Invalid_input,
-          heif_suberror_Missing_grid_images,
-        });
-      }
+#if ENABLE_PARALLEL_TILE_DECODING
+      std::lock_guard<std::mutex> lock(warningsMutex);
+#endif
+      warnings.push_back(Error{
+        heif_error_Invalid_input,
+        heif_suberror_Missing_grid_images,
+      });
       return progress_and_return_ok(options, progress_counter);
     }
 
