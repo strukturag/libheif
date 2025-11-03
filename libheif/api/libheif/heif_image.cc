@@ -289,7 +289,7 @@ int heif_image_get_decoding_warnings(heif_image* image,
   else {
     const auto& warnings = image->image->get_warnings();
     int n;
-    for (n = 0; n + first_warning_idx < (int) warnings.size(); n++) {
+    for (n = 0; n + first_warning_idx < (int) warnings.size() && n < max_output_buffer_entries; n++) {
       out_warnings[n] = warnings[n + first_warning_idx].error_struct(image->image.get());
     }
     return n;
