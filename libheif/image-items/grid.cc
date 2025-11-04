@@ -227,6 +227,18 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(
   }
 }
 
+#if ENABLE_PARALLEL_TILE_DECODING
+static void wait_for_jobs(std::deque<std::future<Error> >* jobs) {
+  if (jobs->empty()) {
+    return;
+  }
+
+  while (!jobs->empty()) {
+    jobs->front().get();
+    jobs->pop_front();
+  }
+}
+#endif
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options) const
 {
@@ -372,11 +384,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       if (errs.size() >= (size_t) get_context()->get_max_decoding_threads()) {
         Error e = errs.front().get();
+        errs.pop_front();
         if (e) {
+          wait_for_jobs(&errs);
           return e;
         }
-
-        errs.pop_front();
       }
 
 
@@ -402,11 +414,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
     while (!errs.empty()) {
       Error e = errs.front().get();
+      errs.pop_front();
       if (e) {
+        wait_for_jobs(&errs);
         return e;
       }
-
-      errs.pop_front();
     }
   }
 #endif
