@@ -168,7 +168,7 @@ private:
   Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                     std::shared_ptr<HeifPixelImage>& inout_image,
                                     const heif_decoding_options& options, int& progress_counter,
-                                    std::vector<Error>& warnings) const;
+                                    std::shared_ptr<std::vector<Error> > warnings) const;
 };
 
 
