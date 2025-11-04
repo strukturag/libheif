@@ -1074,6 +1074,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
 
+  out_img->add_warnings(get_warnings());
+
   return out_img;
 }
 
@@ -1285,6 +1287,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
+
+  out_img->add_warnings(get_warnings());
 
   return out_img;
 }
