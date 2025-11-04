@@ -331,10 +331,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       if (auto error = tileImg->get_item_error()) {
         if (!options.strict_decoding && reference_idx != 0) {
           // Skip missing tiles (unless it's the first one).
-          warnings.push_back(Error{
-            heif_error_Invalid_input,
-            heif_suberror_Missing_grid_images,
-          });
+          warnings.push_back(error);
           reference_idx++;
           x0 += tile_width;
           continue;
@@ -508,10 +505,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 #if ENABLE_PARALLEL_TILE_DECODING
       std::lock_guard<std::mutex> lock(warningsMutex);
 #endif
-      warnings.push_back(Error{
-        heif_error_Invalid_input,
-        heif_suberror_Missing_grid_images,
-      });
+      warnings.push_back(decodeResult.error());
       return progress_and_return_ok(options, progress_counter);
     }
 
