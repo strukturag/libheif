@@ -492,8 +492,6 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
     in = out;
   }
 
-  out->add_warnings(input->get_warnings());
-
   return out;
 }
 
