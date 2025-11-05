@@ -164,7 +164,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`, `WEBCODECS`.
 
 Further options are:
 
@@ -275,8 +275,10 @@ You can also add plugin directories programmatically.
 
 ### Codec specific notes
 
-* the FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
+* The FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
   correctly with all streams. Thus, libheif still prefers the libde265 decoder if it is available.
+
+* The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
 
 ## Encoder benchmark
 

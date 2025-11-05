@@ -23,6 +23,8 @@ ENABLE_LIBDE265="${ENABLE_LIBDE265:-1}"
 LIBDE265_VERSION="${LIBDE265_VERSION:-1.0.15}"
 ENABLE_AOM="${ENABLE_AOM:-0}"
 AOM_VERSION="${AOM_VERSION:-3.6.1}"
+# Webcodecs is not on by default b/c asyncify increases the binary size considerably
+ENABLE_WEBCODECS="${ENABLE_WEBCODECS:-0}"
 STANDALONE="${STANDALONE:-0}"
 DEBUG="${DEBUG:-0}"
 USE_ES6="${USE_ES6:-0}"
@@ -88,6 +90,11 @@ if [ "$ENABLE_AOM" = "1" ]; then
     LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${AOM_DIR} -laom"
 fi
 
+CONFIGURE_ARGS_WEBCODECS=""
+if [ "$ENABLE_WEBCODECS" = "1" ]; then
+    CONFIGURE_ARGS_WEBCODECS="-DWITH_WEBCODECS=ON"
+fi
+
 EXTRA_EXE_LINKER_FLAGS="-lembind"
 EXTRA_COMPILER_FLAGS=""
 if [ "$STANDALONE" = "1" ]; then
@@ -102,7 +109,8 @@ emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
     -DCMAKE_CXX_FLAGS="${EXTRA_COMPILER_FLAGS}" \
     -DCMAKE_EXE_LINKER_FLAGS="${LIBRARY_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}" \
     $CONFIGURE_ARGS_LIBDE265 \
-    $CONFIGURE_ARGS_AOM
+    $CONFIGURE_ARGS_AOM \
+    $CONFIGURE_ARGS_WEBCODECS
 
 VERBOSE=1 emmake make -j${CORES}
 
@@ -112,6 +120,10 @@ EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols
 echo "Running Emscripten..."
 
 BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM -sDYNAMIC_EXECUTION=$USE_UNSAFE_EVAL"
+
+if [ "$ENABLE_WEBCODECS" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS -sASYNCIFY -sASYNCIFY_IMPORTS=['decode_with_browser_hevc']"
+fi
 
 if [ "$USE_TYPESCRIPT" = "1" ]; then
     BUILD_FLAGS="$BUILD_FLAGS --emit-tsd libheif.d.ts"

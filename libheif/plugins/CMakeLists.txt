@@ -130,3 +130,12 @@ if (WITH_UNCOMPRESSED_CODEC)
             decoder_uncompressed.h
             decoder_uncompressed.cc)
 endif ()
+
+if (WITH_WEBCODECS)
+   target_sources(heif PRIVATE
+   		  decoder_webcodecs.h
+		  decoder_webcodecs.cc)
+   target_compile_definitions(heif PRIVATE HAVE_WEBCODECS=1)
+endif()
+
+
