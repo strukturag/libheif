@@ -226,6 +226,14 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
+      if (unit_info.unit_offset + unit_info.unit_size > compressed_bytes.size()) {
+        return Error{
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "incomplete data in unci image"
+        };
+      }
+
       auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
