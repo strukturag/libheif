@@ -149,7 +149,7 @@ endif ()
 
 # uvg266
 
-plugin_option(UVG266 "uvg266 VVC encoder (experimental)" OFF OFF)
+plugin_option(UVG266 "uvg266 VVC encoder" OFF OFF)
 if (WITH_UVG266)
     find_package(UVG266)
     if ("${HAVE_UVG266_ENABLE_LOGGING}")
@@ -161,7 +161,7 @@ endif ()
 
 # vvdec
 
-plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
+plugin_option(VVDEC "vvdec VVC decoder" OFF OFF)
 if (WITH_VVDEC)
     # TODO: how to do configure vvdec cleanly?
     find_package(Threads REQUIRED)
@@ -173,7 +173,7 @@ endif ()
 
 # vvenc
 
-plugin_option(VVENC "vvenc VVC encoder (experimental)" OFF OFF)
+plugin_option(VVENC "vvenc VVC encoder" OFF OFF)
 if (WITH_VVENC)
     # TODO: how to do configure vvenc cleanly?
     find_package(Threads REQUIRED)
@@ -313,9 +313,9 @@ plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
-plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC encoder (experimental)")
-plugin_compilation_info(VVENC vvenc "vvenc VVC encoder (experimental)")
-plugin_compilation_info(VVDEC vvdec "vvdec VVC decoder (experimental)")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC encoder")
+plugin_compilation_info(VVENC vvenc "vvenc VVC encoder")
+plugin_compilation_info(VVDEC vvdec "vvdec VVC decoder")
 
 # --- show summary which formats are supported
 
