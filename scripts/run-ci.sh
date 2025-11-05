@@ -131,7 +131,7 @@ if [ ! -z "$TESTS" ]; then
     CMAKE_OPTIONS="--preset=testing"
 fi
 if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
-    CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
+    CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF -DWITH_OPENJPH_ENCODER=OFF"
 fi
 	
 if [ "$CURRENT_OS" = "osx" ] ; then
