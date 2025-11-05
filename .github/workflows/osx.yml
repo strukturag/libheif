@@ -10,7 +10,7 @@ jobs:
   build:
     strategy:
       matrix:
-        runner: [ macos-13, macos-15 ]
+        runner: [ macos-15, macos-15-intel ]
         env:
           - { NAME: "nothing" }
           - { NAME: "cmake", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
