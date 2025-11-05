@@ -115,7 +115,7 @@ macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     endif ()
 
     string(LENGTH "${displayName}" len)
-    math(EXPR fill "32 - ${len}")
+    math(EXPR fill "38 - ${len}")
     string(SUBSTRING "                                                   " 0 ${fill} filler)
     message("${displayName}${filler}: ${msg}")
     unset(msg)
@@ -286,15 +286,18 @@ option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed 
 
 # Web codecs
 
-option(WITH_WEBCODECS "Support HEVC decoding through browser web codecs API" OFF)
+option(WITH_WEBCODECS "Support HEVC decoding through browser web codecs API (experimental)" OFF)
 
+if (WITH_WEBCODECS)
+   set(WEBCODECS_FOUND TRUE) # There is no library for web-codecs. Always mark as found.
+endif()
 
 # --- show codec compilation summary
 
 message("\n=== Summary of compiled codecs ===")
 plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
 plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
-plugin_compilation_info(WEBCODECS WEBCODECS "WebCodecs HEVC decoder")
+plugin_compilation_info(WEBCODECS WEBCODECS "WebCodecs HEVC decoder (experimental)")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
 plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
 plugin_compilation_info(AOM_DECODER AOM_DECODER "AOM AV1 decoder")
@@ -310,9 +313,9 @@ plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
-plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
-plugin_compilation_info(VVENC vvenc "vvenc VVC enc. (experimental)")
-plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC encoder (experimental)")
+plugin_compilation_info(VVENC vvenc "vvenc VVC encoder (experimental)")
+plugin_compilation_info(VVDEC vvdec "vvdec VVC decoder (experimental)")
 
 # --- show summary which formats are supported
 
