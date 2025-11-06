@@ -169,15 +169,23 @@ std::shared_ptr<HeifFile> Track::get_file() const
 }
 
 
-Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
+Track::Track(HeifContext* ctx)
 {
   m_heif_context = ctx;
+}
 
+
+Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
+{
   m_trak = trak_box;
 
   auto tkhd = trak_box->get_child_box<Box_tkhd>();
   if (!tkhd) {
-    return; // TODO: error or dummy error track ?
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'tkhd' box."
+    };
   }
 
   m_id = tkhd->get_track_id();
@@ -189,51 +197,87 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
   auto mdia = trak_box->get_child_box<Box_mdia>();
   if (!mdia) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'mdia' box."
+    };
   }
 
   m_tref = trak_box->get_child_box<Box_tref>();
 
   auto hdlr = mdia->get_child_box<Box_hdlr>();
   if (!hdlr) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'hdlr' box."
+    };
   }
 
   m_handler_type = hdlr->get_handler_type();
 
   m_minf = mdia->get_child_box<Box_minf>();
   if (!m_minf) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'minf' box."
+    };
   }
 
   m_mdhd = mdia->get_child_box<Box_mdhd>();
   if (!m_mdhd) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'mdhd' box."
+    };
   }
 
   auto stbl = m_minf->get_child_box<Box_stbl>();
   if (!stbl) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stbl' box."
+    };
   }
 
   m_stsd = stbl->get_child_box<Box_stsd>();
   if (!m_stsd) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stsd' box."
+    };
   }
 
   m_stsc = stbl->get_child_box<Box_stsc>();
   if (!m_stsc) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stsc' box."
+    };
   }
 
   m_stco = stbl->get_child_box<Box_stco>();
   if (!m_stco) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stco' box."
+    };
   }
 
   m_stsz = stbl->get_child_box<Box_stsz>();
   if (!m_stsz) {
-    return;
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stsz' box."
+    };
   }
 
   m_stts = stbl->get_child_box<Box_stts>();
@@ -247,14 +291,22 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
   for (size_t chunk_idx = 0; chunk_idx < chunk_offsets.size(); chunk_idx++) {
     auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(chunk_idx + 1));
     if (!s2c) {
-      return;
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "'stco' box references a non-existing chunk."
+      };
     }
 
     Box_stsc::SampleToChunk sampleToChunk = *s2c;
 
     auto sample_description = m_stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
     if (!sample_description) {
-      return;
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Track references a non-existing sample description."
+      };
     }
 
     if (auto auxi = sample_description->get_child_box<Box_auxi>()) {
@@ -268,7 +320,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       }
     }
 
-    auto chunk = std::make_shared<Chunk>(ctx, m_id,
+    auto chunk = std::make_shared<Chunk>(m_heif_context, m_id,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
                                          m_stco->get_offsets()[chunk_idx],
                                          m_stsz);
@@ -336,7 +388,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
           heif_item_id id = box->get_item_ID();
 
           std::vector<uint8_t> data;
-          Error err = iloc->read_data(id, ctx->get_heif_file()->get_reader(), idat, &data, ctx->get_security_limits());
+          Error err = iloc->read_data(id, m_heif_context->get_heif_file()->get_reader(), idat, &data, m_heif_context->get_security_limits());
           if (err) {
             // TODO
           }
@@ -353,6 +405,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
   }
 
   init_sample_timing_table();
+
+  return {};
 }
 
 
@@ -470,28 +524,54 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
 }
 
 
-std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
+Result<std::shared_ptr<Track>> Track::alloc_track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
 {
   auto mdia = trak->get_child_box<Box_mdia>();
   if (!mdia) {
-    return nullptr;
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'mdia' box."
+    };
   }
 
   auto hdlr = mdia->get_child_box<Box_hdlr>();
   if (!hdlr) {
-    return nullptr;
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'hdlr' box."
+    };
   }
+
+  std::shared_ptr<Track> track;
 
   switch (hdlr->get_handler_type()) {
     case fourcc("pict"):
     case fourcc("vide"):
     case fourcc("auxv"):
-      return std::make_shared<Track_Visual>(ctx, trak);
+      track = std::make_shared<Track_Visual>(ctx);
+      break;
     case fourcc("meta"):
-      return std::make_shared<Track_Metadata>(ctx, trak);
-    default:
-      return nullptr;
+      track = std::make_shared<Track_Metadata>(ctx);
+    default: {
+      std::stringstream sstr;
+      sstr << "Track with unsupported handler type '" << fourcc_to_string(hdlr->get_handler_type()) << "'.";
+      return Error{
+        heif_error_Unsupported_filetype,
+        heif_suberror_Unspecified,
+        sstr.str()
+      };
+    }
   }
+
+  assert(track);
+  Error loadError = track->load(trak);
+  if (loadError) {
+    return loadError;
+  }
+
+  return {track};
 }
 
 

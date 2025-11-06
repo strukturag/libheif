@@ -125,12 +125,15 @@ public:
 
   Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* info, uint32_t handler_type);
 
-  Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
+  Track(HeifContext* ctx);
 
   virtual ~Track() = default;
 
   // Allocate a Track of the correct sub-class (visual or metadata)
-  static std::shared_ptr<Track> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
+  static Result<std::shared_ptr<Track>> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
+
+  // load track from file
+  virtual Error load(const std::shared_ptr<Box_trak>&);
 
   // This is called after creating all Track objects when reading a HEIF file.
   // We can now do initializations that require access to all tracks.

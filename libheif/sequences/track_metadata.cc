@@ -25,9 +25,18 @@
 #include <utility>
 
 
-Track_Metadata::Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
-    : Track(ctx, trak)
+Track_Metadata::Track_Metadata(HeifContext* ctx)
+    : Track(ctx)
 {
+}
+
+Error Track_Metadata::load(const std::shared_ptr<Box_trak>& trak)
+{
+  Error parentLoadError = Track::load(trak);
+  if (parentLoadError) {
+    return parentLoadError;
+  }
+
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
 
   // Metadata tracks are not meant for display
@@ -40,18 +49,28 @@ Track_Metadata::Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>
   if (!chunk_offsets.empty())  {
     auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(1));
     if (!s2c) {
-      return;
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Metadata track has no chunk 1"
+      };
     }
 
     Box_stsc::SampleToChunk sampleToChunk = *s2c;
 
     auto sample_description = m_stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
     if (!sample_description) {
-      return;
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Metadata track has no sample description"
+      };
     }
 
     // TODO: read URI
   }
+
+  return {};
 }
 
 

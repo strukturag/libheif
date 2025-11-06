@@ -1851,12 +1851,12 @@ Error HeifContext::interpret_heif_file_sequences()
 
   auto tracks = moov->get_child_boxes<Box_trak>();
   for (const auto& track_box : tracks) {
-    auto track = Track::alloc_track(this, track_box);
-    if (!track) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Unknown track handler or track error"};
+    auto trackResult = Track::alloc_track(this, track_box);
+    if (!trackResult) {
+      return trackResult.error();
     }
+
+    auto track = *trackResult;
     m_tracks.insert({track->get_id(), track});
 
     if (track->is_visual_track() && m_visual_track_id == 0) {

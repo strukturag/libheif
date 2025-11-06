@@ -33,9 +33,12 @@ public:
 
   Track_Metadata(HeifContext* ctx, uint32_t track_id, std::string uri, const TrackOptions* options);
 
-  Track_Metadata(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
+  Track_Metadata(HeifContext* ctx);
 
   ~Track_Metadata() override = default;
+
+  // load track from file
+  Error load(const std::shared_ptr<Box_trak>&) override;
 
   Error write_raw_metadata(const heif_raw_sequence_sample*);
 

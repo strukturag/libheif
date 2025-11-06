@@ -28,9 +28,18 @@
 #include "codecs/hevc_boxes.h"
 
 
-Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
-    : Track(ctx, trak)
+Track_Visual::Track_Visual(HeifContext* ctx)
+    : Track(ctx)
 {
+}
+
+Error Track_Visual::load(const std::shared_ptr<Box_trak>& trak)
+{
+  Error parentLoadError = Track::load(trak);
+  if (parentLoadError) {
+    return parentLoadError;
+  }
+
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
 
   // Find sequence resolution
@@ -38,24 +47,38 @@ Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& tr
   if (!chunk_offsets.empty()) {
     auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(1));
     if (!s2c) {
-      return;
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Visual track has no chunk 1"
+      };
     }
 
     Box_stsc::SampleToChunk sampleToChunk = *s2c;
 
     auto sample_description = m_stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
     if (!sample_description) {
-      return; // TODO
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Visual track has sample description"
+      };
     }
 
     auto visual_sample_description = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description);
     if (!visual_sample_description) {
-      return; // TODO
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Visual track sample description does not match visual track."
+      };
     }
 
     m_width = visual_sample_description->get_VisualSampleEntry_const().width;
     m_height = visual_sample_description->get_VisualSampleEntry_const().height;
   }
+
+  return {};
 }
 
 

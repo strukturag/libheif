@@ -34,9 +34,12 @@ public:
   Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
                const TrackOptions* options, uint32_t handler_type);
 
-  Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
+  Track_Visual(HeifContext* ctx);
 
   ~Track_Visual() override = default;
+
+  // load track from file
+  Error load(const std::shared_ptr<Box_trak>&) override;
 
   void initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track>>& all_tracks) override;
 
