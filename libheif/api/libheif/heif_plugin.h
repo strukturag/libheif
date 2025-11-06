@@ -248,9 +248,6 @@ typedef struct heif_encoder_plugin
                                          const heif_sequence_encoding_options* options);
   // TODO: is heif_sequence_encoding_options a good choice here?
 
-  // Encode an image.
-  // After pushing an image into the encoder, you should call get_compressed_data() to
-  // get compressed data until it returns a NULL data pointer.
   heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image);
 
   void (* end_sequence_encoding)(void* encoder);

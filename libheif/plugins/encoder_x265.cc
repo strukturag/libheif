@@ -57,6 +57,8 @@ struct parameter
 struct encoder_struct_x265
 {
   x265_encoder* encoder = nullptr;
+  const x265_api* api = nullptr;
+  x265_param* param = nullptr;
 
   x265_nal* nals = nullptr;
   uint32_t num_nals = 0;
@@ -640,12 +642,14 @@ static int rounded_size(int s)
 }
 
 
-static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
-                                    heif_image_input_class input_class)
+static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       const heif_sequence_encoding_options* options)
 {
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
-  // close previous encoder if there is still one hanging around
+
+    // close previous encoder if there is still one hanging around
   if (encoder->encoder) {
     const x265_api* api = x265_api_get(encoder->bit_depth);
     api->encoder_close(encoder->encoder);
@@ -658,6 +662,7 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
   heif_chroma chroma = heif_image_get_chroma_format(image);
 
   const x265_api* api = x265_api_get(bit_depth);
+  encoder->api = api;
   if (api == nullptr) {
     struct heif_error err = {
         heif_error_Encoder_plugin_error,
@@ -668,6 +673,11 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
   }
 
   x265_param* param = api->param_alloc();
+  if (encoder->param) {
+    api->param_free(encoder->param);
+  }
+  encoder->param = param;
+
   api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
 
   if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
@@ -879,17 +889,46 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
+
+  encoder->bit_depth = bit_depth;
+
+  encoder->encoder = api->encoder_open(param);
+
+  return heif_error_ok;
+}
+
+
+static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image)
+{
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+  if (!encoder->api) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "called plugin encode_sequence_frame() without start_sequence_encoding()"
+    };
+  }
+
+  const x265_api* api = encoder->api;
+
+  heif_error err;
+
   // Note: it is ok to cast away the const, as the image content is not changed.
   // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
   err = heif_image_extend_padding_to_size(const_cast<heif_image*>(image),
-                                          param->sourceWidth,
-                                          param->sourceHeight);
+                                          encoder->param->sourceWidth,
+                                          encoder->param->sourceHeight);
   if (err.code) {
     return err;
   }
 
   x265_picture* pic = api->picture_alloc();
-  api->picture_init(param, pic);
+  api->picture_init(encoder->param, pic);
+
+  // TODO: check that all input images use the same color format
+
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   if (isGreyscale) {
     pic->planes[0] = (void*) heif_image_get_plane_readonly(image, heif_channel_Y, &pic->stride[0]);
@@ -900,12 +939,8 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
     pic->planes[2] = (void*) heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
   }
 
-  pic->bitDepth = bit_depth;
+  pic->bitDepth = encoder->bit_depth;
 
-
-  encoder->bit_depth = bit_depth;
-
-  encoder->encoder = api->encoder_open(param);
 
 #if X265_BUILD == 212
   // In x265 build version 212, the signature of the encoder_encode() function was changed. But it was changed back in version 213.
@@ -925,9 +960,36 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
 #endif
 
   api->picture_free(pic);
-  api->param_free(param);
+
+  return heif_error_ok;
+}
+
+
+static void x265_end_sequence_encoding(void* encoder_raw)
+{
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+  encoder->api->param_free(encoder->param);
 
   encoder->nal_output_counter = 0;
+}
+
+
+static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
+                                    heif_image_input_class input_class)
+{
+  heif_error err;
+  err = x265_start_sequence_encoding(encoder_raw, image, input_class, nullptr);
+  if (err.code) {
+    return err;
+  }
+
+  err = x265_encode_sequence_frame(encoder_raw, image);
+  if (err.code) {
+    return err;
+  }
+
+  x265_end_sequence_encoding(encoder_raw);
 
   return heif_error_ok;
 }
@@ -1009,7 +1071,7 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 
 static const heif_encoder_plugin encoder_plugin_x265
     {
-        /* plugin_api_version */ 2,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_HEVC,
         /* id_name */ "x265",
         /* priority */ X265_PLUGIN_PRIORITY,
@@ -1036,7 +1098,11 @@ static const heif_encoder_plugin encoder_plugin_x265
         /* query_input_colorspace */ x265_query_input_colorspace,
         /* encode_image */ x265_encode_image,
         /* get_compressed_data */ x265_get_compressed_data,
-        /* query_input_colorspace (v2) */ x265_query_input_colorspace2
+        /* query_input_colorspace (v2) */ x265_query_input_colorspace2,
+        /* query_encoded_size (v3) */ nullptr,
+        /* start_sequence_encoding (v3) */ x265_start_sequence_encoding,
+        /* encode_sequence_frame (v3) */ x265_encode_sequence_frame,
+        /* end_sequence_encoding (v3) */ x265_end_sequence_encoding
     };
 
 const heif_encoder_plugin* get_encoder_plugin_x265()
