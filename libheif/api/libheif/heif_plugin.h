@@ -20,6 +20,7 @@
 
 #ifndef LIBHEIF_HEIF_PLUGIN_H
 #define LIBHEIF_HEIF_PLUGIN_H
+#include "heif_sequences.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -240,7 +241,21 @@ typedef struct heif_encoder_plugin
   void (* query_encoded_size)(void* encoder, uint32_t input_width, uint32_t input_height,
                               uint32_t* encoded_width, uint32_t* encoded_height);
 
-  // --- version 4 functions will follow below ... ---
+  // --- version 4 ---
+
+  heif_error (* start_sequence_encoding)(void* encoder, const heif_image* image,
+                                         enum heif_image_input_class image_class,
+                                         const heif_sequence_encoding_options* options);
+  // TODO: is heif_sequence_encoding_options a good choice here?
+
+  // Encode an image.
+  // After pushing an image into the encoder, you should call get_compressed_data() to
+  // get compressed data until it returns a NULL data pointer.
+  heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image);
+
+  void (* end_sequence_encoding)(void* encoder);
+
+  // --- version 5 functions will follow below ... ---
 
   // --- Note: when adding new versions, also update `heif_encoder_plugin_latest_version`.
 } heif_encoder_plugin;

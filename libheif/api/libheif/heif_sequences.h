@@ -335,7 +335,6 @@ void heif_track_options_set_gimi_track_id(heif_track_options*,
 
 // --- writing visual tracks
 
-// This structure is for future use. It is not defined yet.
 typedef struct heif_sequence_encoding_options
 {
   uint8_t version;
