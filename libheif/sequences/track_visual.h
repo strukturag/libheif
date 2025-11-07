@@ -69,7 +69,7 @@ private:
   // If there is an alpha-channel track associated with this color track, we reference it from here
   std::shared_ptr<Track_Visual> m_aux_alpha_track;
 
-  Error process_encoded_data(heif_encoder* encoder);
+  Result<bool> process_encoded_data(heif_encoder* encoder);
 };
 
 

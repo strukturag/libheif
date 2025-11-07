@@ -217,10 +217,23 @@ Error Track_Visual::encode_end_of_sequence(heif_encoder* h_encoder)
 {
   auto encoder = m_chunks.back()->get_encoder();
 
-  encoder->encode_sequence_flush(h_encoder);
+  for (;;) {
+    Error err = encoder->encode_sequence_flush(h_encoder);
+    if (err) {
+      return err;
+    }
 
-  Error err = process_encoded_data(h_encoder);
-  return err;
+    Result<bool> processingResult = process_encoded_data(h_encoder);
+    if (processingResult.is_error()) {
+      return processingResult.error();
+    }
+
+    if (!*processingResult) {
+      break;
+    }
+  }
+
+  return {};
 }
 
 
@@ -284,21 +297,27 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   // TODO heif_tai_timestamp_packet* tai = image->get_tai_timestamp();
   // TODO image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 
-  return process_encoded_data(h_encoder);
+  Result<bool> processingResult = process_encoded_data(h_encoder);
+  return processingResult.error();
 }
 
 
-Error Track_Visual::process_encoded_data(heif_encoder* h_encoder)
+Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 {
   auto encoder = m_chunks.back()->get_encoder();
 
-  Result<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_get_data(h_encoder);
+  std::optional<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_get_data();
   if (!encodingResult) {
-    return encodingResult.error();
+    return {};
   }
 
   const Encoder::CodedImageData& data = *encodingResult;
 
+
+  if (data.bitstream.empty() &&
+      data.properties.empty()) {
+    return {false};
+  }
 
   // --- generate SampleDescriptionBox
 
@@ -328,7 +347,7 @@ Error Track_Visual::process_encoded_data(heif_encoder* h_encoder)
     }
   }
 
-  return Error::Ok;
+  return {true};
 }
 
 

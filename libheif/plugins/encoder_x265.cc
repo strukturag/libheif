@@ -33,6 +33,7 @@ extern "C" {
 #include <x265.h>
 }
 
+#include <iostream>
 
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
 static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
@@ -642,9 +643,10 @@ static int rounded_size(int s)
 }
 
 
-static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
-                                       const heif_sequence_encoding_options* options)
+                                       const heif_sequence_encoding_options* options,
+                                       bool image_sequence)
 {
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
@@ -680,7 +682,14 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 
   api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
 
-  if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
+  if (bit_depth == 8) {
+    if (image_sequence) {
+      api->param_apply_profile(param, "main");
+    }
+    else {
+      api->param_apply_profile(param, "mainstillpicture");
+    }
+  }
   else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
   else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
   else {
@@ -689,7 +698,7 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
   }
 
 
-  param->fpsNum = 1;
+  param->fpsNum = 1; // TODO: set to sequence parameters
   param->fpsDenom = 1;
 
 
@@ -894,7 +903,24 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 
   encoder->encoder = api->encoder_open(param);
 
+  if (image_sequence) {
+    api->encoder_headers(encoder->encoder,
+    &encoder->nals,
+    &encoder->num_nals);
+    for (int i=0;i<encoder->num_nals;i++) {
+      std::cout << "he " << i << ": " << encoder->nals[i].type << "\n";
+    }
+  }
+
   return heif_error_ok;
+}
+
+
+static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       const heif_sequence_encoding_options* options)
+{
+  return x265_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
 }
 
 
@@ -952,11 +978,15 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       pic,
                       &out_pic);
 #else
+
   api->encoder_encode(encoder->encoder,
                       &encoder->nals,
                       &encoder->num_nals,
                       pic,
                       NULL);
+  for (int i=0;i<encoder->num_nals;i++) {
+    std::cout << "e2 " << i << ": " << encoder->nals[i].type << "\n";
+  }
 #endif
 
   api->picture_free(pic);
@@ -984,6 +1014,10 @@ static void x265_end_sequence_encoding(void* encoder_raw)
                                    &encoder->num_nals,
                                    NULL,
                                    NULL);
+
+  for (int i=0;i<encoder->num_nals;i++) {
+    std::cout << "e1 " << i << ": " << encoder->nals[i].type << "\n";
+  }
 #endif
   if (result <= 0) {
     // TODO: do we need this ?
@@ -1004,7 +1038,7 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
                                     heif_image_input_class input_class)
 {
   heif_error err;
-  err = x265_start_sequence_encoding(encoder_raw, image, input_class, nullptr);
+  err = x265_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
   if (err.code) {
     return err;
   }

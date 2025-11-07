@@ -79,9 +79,9 @@ public:
                                       const heif_encoding_options& options,
                                       heif_image_input_class input_class) { return {}; }
 
-  virtual void encode_sequence_flush(heif_encoder* encoder) { }
+  virtual Error encode_sequence_flush(heif_encoder* encoder) { return {}; }
 
-  virtual Result<CodedImageData> encode_sequence_get_data(heif_encoder* encoder) { return {}; }
+  virtual std::optional<CodedImageData> encode_sequence_get_data() { return std::nullopt; }
 
   virtual std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const { return {}; }
 };

@@ -47,9 +47,9 @@ public:
                               const heif_encoding_options& options,
                               heif_image_input_class input_class) override;
 
-  void encode_sequence_flush(heif_encoder* encoder) override;
+  Error encode_sequence_flush(heif_encoder* encoder) override;
 
-  Result<CodedImageData> encode_sequence_get_data(heif_encoder* encoder) override;
+  std::optional<CodedImageData> encode_sequence_get_data() override;
 
   std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
 
@@ -66,6 +66,10 @@ private:
 
   int m_encoded_image_width = 0;
   int m_encoded_image_height = 0;
+
+  std::optional<CodedImageData> m_current_output_data;
+
+  Error get_data(heif_encoder*);
 };
 
 
