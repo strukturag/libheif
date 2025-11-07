@@ -56,14 +56,20 @@ public:
                      const heif_encoding_options& options,
                      heif_image_input_class image_class);
 
+  Error encode_end_of_sequence(heif_encoder* encoder);
+
   heif_brand2 get_compatible_brand() const;
 
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;
 
+  int m_sample_duration = 0; // TODO: pass this through encoder or handle it correctly with frame reordering
+
   // If there is an alpha-channel track associated with this color track, we reference it from here
   std::shared_ptr<Track_Visual> m_aux_alpha_track;
+
+  Error process_encoded_data(heif_encoder* encoder);
 };
 
 

@@ -461,6 +461,26 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 }
 
 
+heif_error heif_track_encode_end_of_sequence(heif_track* track,
+                                             heif_encoder* encoder)
+{
+  // the input track must be a visual track
+
+  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track->track);
+  if (!visual_track) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Invalid_parameter_value,
+      "Cannot encode image for non-visual track."
+    };
+  }
+
+  visual_track->encode_end_of_sequence(encoder);
+
+  return heif_error_ok;
+}
+
+
 heif_error heif_track_encode_sequence_image(heif_track* track,
                                             const heif_image* input_image,
                                             heif_encoder* encoder,

@@ -40,7 +40,32 @@ public:
                                 const heif_encoding_options& options,
                                 heif_image_input_class input_class) override;
 
+  bool encode_sequence_started() const override { return m_encoder_active; }
+
+  Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                              heif_encoder* encoder,
+                              const heif_encoding_options& options,
+                              heif_image_input_class input_class) override;
+
+  void encode_sequence_flush(heif_encoder* encoder) override;
+
+  Result<CodedImageData> encode_sequence_get_data(heif_encoder* encoder) override;
+
   std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
+private:
+  bool m_encoder_active = false;
+  bool m_end_of_sequence_reached = false;
+
+  // Whether the hvcC is complete and was returned in an encode_sequence_get_data() call.
+  bool m_hvcC_has_VPS = false;
+  bool m_hvcC_has_SPS = false;
+  bool m_hvcC_has_PPS = false;
+  bool m_hvcC_returned = false; // TODO: can be removed when we send it at the end of sequence
+  std::shared_ptr<class Box_hvcC> m_hvcC;
+
+  int m_encoded_image_width = 0;
+  int m_encoded_image_height = 0;
 };
 
 

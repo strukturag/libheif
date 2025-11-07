@@ -2071,6 +2071,12 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
   std::cout << "\n";
 
+  heif_error error = heif_track_encode_end_of_sequence(track, encoder);
+  if (error.code) {
+    std::cerr << "Cannot end sequence: " << error.message << "\n";
+    return 5;
+  }
+
   if (!vmt_metadata_file.empty()) {
     int ret = encode_vmt_metadata_track(context, track);
     if (ret) {

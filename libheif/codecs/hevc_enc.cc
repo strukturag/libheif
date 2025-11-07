@@ -111,6 +111,134 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 }
 
 
+Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                          heif_encoder* encoder,
+                                          const heif_encoding_options& options,
+                                          heif_image_input_class input_class)
+{
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  if (!m_encoder_active) {
+    encoder->plugin->start_sequence_encoding(encoder->encoder, &c_api_image, input_class,
+                                             nullptr);
+    m_hvcC = std::make_shared<Box_hvcC>();
+    m_encoder_active = true;
+  }
+
+  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image);
+  if (err.code) {
+    return {
+      err.code,
+      err.subcode,
+      err.message
+    };
+  }
+
+  return {};
+}
+
+
+void Encoder_HEVC::encode_sequence_flush(heif_encoder* encoder)
+{
+  encoder->plugin->end_sequence_encoding(encoder->encoder);
+  m_encoder_active = false;
+  m_end_of_sequence_reached = true;
+}
+
+
+Result<Encoder::CodedImageData> Encoder_HEVC::encode_sequence_get_data(heif_encoder* encoder)
+{
+  CodedImageData codedImage;
+
+  bool got_some_data = false;
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+    if (data == nullptr) {
+      break;
+    }
+
+    got_some_data = true;
+
+    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT) {
+      parse_sps_for_hvcC_configuration(data, size,
+                                       &m_hvcC->get_configuration(),
+                                       &m_encoded_image_width, &m_encoded_image_height);
+    }
+
+    switch (data[0] >> 1) {
+      case NAL_UNIT_VPS_NUT:
+        m_hvcC_has_VPS = true;
+        m_hvcC->append_nal_data(data, size);
+        break;
+
+      case NAL_UNIT_SPS_NUT:
+        m_hvcC_has_SPS = true;
+        m_hvcC->append_nal_data(data, size);
+        break;
+
+        case NAL_UNIT_PPS_NUT:
+        m_hvcC_has_PPS = true;
+        m_hvcC->append_nal_data(data, size);
+        break;
+
+      default:
+        codedImage.append_with_4bytes_size(data, size);
+    }
+  }
+
+  if (!got_some_data) {
+    return {};
+  }
+
+  if (!m_encoded_image_width || !m_encoded_image_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
+
+
+  // --- return hvcC when all headers are included and it was not returned yet
+  //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
+  //           and also complete codingConstraints.
+
+  //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
+  if (m_end_of_sequence_reached) {
+    codedImage.properties.push_back(m_hvcC);
+    m_hvcC_returned = true;
+  }
+
+  codedImage.encoded_image_width = m_encoded_image_width;
+  codedImage.encoded_image_height = m_encoded_image_height;
+
+
+  // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
+#if 0
+  if (encoder->plugin->plugin_api_version >= 3 &&
+      encoder->plugin->query_encoded_size != nullptr) {
+    uint32_t check_encoded_width = image->get_width(), check_encoded_height = image->get_height();
+
+    encoder->plugin->query_encoded_size(encoder->encoder,
+                                        image->get_width(), image->get_height(),
+                                        &check_encoded_width,
+                                        &check_encoded_height);
+
+    assert((int)check_encoded_width == encoded_width);
+    assert((int)check_encoded_height == encoded_height);
+      }
+#endif
+
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+
+  return {codedImage};
+}
+
+
 std::shared_ptr<Box_VisualSampleEntry> Encoder_HEVC::get_sample_description_box(const CodedImageData& data) const
 {
   auto hvc1 = std::make_shared<Box_hvc1>();

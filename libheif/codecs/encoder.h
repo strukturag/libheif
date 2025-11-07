@@ -50,6 +50,7 @@ public:
     uint32_t encoded_image_height = 0;
 
     bool is_sync_frame = true; // TODO: set in encoder
+    int reorder_info = 0; // TODO
 
     void append(const uint8_t* data, size_t size);
 
@@ -68,6 +69,19 @@ public:
                                         heif_encoder* encoder,
                                         const heif_encoding_options& options,
                                         heif_image_input_class input_class) { return {}; }
+
+  // --- encode sequence
+
+  virtual bool encode_sequence_started() const { return false; }
+
+  virtual Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                      heif_encoder* encoder,
+                                      const heif_encoding_options& options,
+                                      heif_image_input_class input_class) { return {}; }
+
+  virtual void encode_sequence_flush(heif_encoder* encoder) { }
+
+  virtual Result<CodedImageData> encode_sequence_get_data(heif_encoder* encoder) { return {}; }
 
   virtual std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const { return {}; }
 };

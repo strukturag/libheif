@@ -213,6 +213,17 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
 }
 
 
+Error Track_Visual::encode_end_of_sequence(heif_encoder* h_encoder)
+{
+  auto encoder = m_chunks.back()->get_encoder();
+
+  encoder->encode_sequence_flush(h_encoder);
+
+  Error err = process_encoded_data(h_encoder);
+  return err;
+}
+
+
 Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
                                  heif_encoder* h_encoder,
                                  const heif_encoding_options& in_options,
@@ -223,7 +234,7 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Input image resolution too high"};
-  }
+      }
 
   // === generate compressed image bitstream
 
@@ -259,23 +270,43 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = *srcImageResult;
 
+  m_width = colorConvertedImage->get_width();
+  m_height = colorConvertedImage->get_height();
+
   // --- encode image
 
-  Result<Encoder::CodedImageData> encodeResult = encoder->encode(colorConvertedImage, h_encoder, options, input_class);
-  if (!encodeResult) {
-    return encodeResult.error();
+  Error encodeError = encoder->encode_sequence_frame(colorConvertedImage, h_encoder, options, input_class);
+  if (encodeError) {
+    return encodeError;
   }
 
-  const Encoder::CodedImageData& data = *encodeResult;
+  m_sample_duration = colorConvertedImage->get_sample_duration();
+  // TODO heif_tai_timestamp_packet* tai = image->get_tai_timestamp();
+  // TODO image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
+
+  return process_encoded_data(h_encoder);
+}
+
+
+Error Track_Visual::process_encoded_data(heif_encoder* h_encoder)
+{
+  auto encoder = m_chunks.back()->get_encoder();
+
+  Result<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_get_data(h_encoder);
+  if (!encodingResult) {
+    return encodingResult.error();
+  }
+
+  const Encoder::CodedImageData& data = *encodingResult;
 
 
   // --- generate SampleDescriptionBox
 
-  if (add_sample_description) {
+  if (!data.properties.empty()) {
     auto sample_description_box = encoder->get_sample_description_box(data);
     VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
-    visualSampleEntry.width = static_cast<uint16_t>(colorConvertedImage->get_width());
-    visualSampleEntry.height = static_cast<uint16_t>(colorConvertedImage->get_height());
+    visualSampleEntry.width = static_cast<uint16_t>(m_width);
+    visualSampleEntry.height = static_cast<uint16_t>(m_height);
 
     auto ccst = std::make_shared<Box_ccst>();
     ccst->set_coding_constraints(data.codingConstraints);
@@ -284,14 +315,17 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
     set_sample_description_box(sample_description_box);
   }
 
-  Error err = write_sample_data(data.bitstream,
-                                colorConvertedImage->get_sample_duration(),
-                                data.is_sync_frame,
-                                image->get_tai_timestamp(),
-                                image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
+  if (!data.bitstream.empty()) {
+    Error err = write_sample_data(data.bitstream,
+                                  m_sample_duration, // TODO: get from reordered frame
+                                  data.is_sync_frame,
+                                  nullptr, {}); // TODO: get from reordered frame
+    //image->get_tai_timestamp(),
+    //image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 
-  if (err) {
-    return err;
+    if (err) {
+      return err;
+    }
   }
 
   return Error::Ok;

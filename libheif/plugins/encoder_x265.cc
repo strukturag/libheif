@@ -969,7 +969,32 @@ static void x265_end_sequence_encoding(void* encoder_raw)
 {
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
+  const x265_api* api = encoder->api;
+
+#if X265_BUILD == 212
+  x265_picture* out_pic = NULL;
+  int result = api->encoder_encode(encoder->encoder,
+                                   &encoder->nals,
+                                   &encoder->num_nals,
+                                   NULL,
+                                   &out_pic);
+#else
+  int result = api->encoder_encode(encoder->encoder,
+                                   &encoder->nals,
+                                   &encoder->num_nals,
+                                   NULL,
+                                   NULL);
+#endif
+  if (result <= 0) {
+    // TODO: do we need this ?
+    //*data = nullptr;
+    //*size = 0;
+
+    return; // TODO heif_error_ok;
+  }
+
   encoder->api->param_free(encoder->param);
+  encoder->param = nullptr;
 
   encoder->nal_output_counter = 0;
 }
@@ -1007,9 +1032,9 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
     return heif_error_ok;
   }
 
-  const x265_api* api = x265_api_get(encoder->bit_depth);
+  // const x265_api* api = x265_api_get(encoder->bit_depth);
 
-  for (;;) {
+  /*for (;;)*/ {
     while (encoder->nal_output_counter < encoder->num_nals) {
       *data = encoder->nals[encoder->nal_output_counter].payload;
       *size = encoder->nals[encoder->nal_output_counter].sizeBytes;
@@ -1041,31 +1066,13 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       }
     }
 
-
     encoder->nal_output_counter = 0;
-
-
-#if X265_BUILD == 212
-    x265_picture* out_pic = NULL;
-    int result = api->encoder_encode(encoder->encoder,
-                                     &encoder->nals,
-                                     &encoder->num_nals,
-                                     NULL,
-                                     &out_pic);
-#else
-    int result = api->encoder_encode(encoder->encoder,
-                                     &encoder->nals,
-                                     &encoder->num_nals,
-                                     NULL,
-                                     NULL);
-#endif
-    if (result <= 0) {
-      *data = nullptr;
-      *size = 0;
-
-      return heif_error_ok;
-    }
   }
+
+  *data = nullptr;
+  *size = 0;
+
+  return heif_error_ok;
 }
 
 
