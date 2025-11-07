@@ -248,9 +248,12 @@ typedef struct heif_encoder_plugin
                                          const heif_sequence_encoding_options* options);
   // TODO: is heif_sequence_encoding_options a good choice here?
 
-  heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image);
+  heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image, uintptr_t frame_nr);
 
   void (* end_sequence_encoding)(void* encoder);
+
+  heif_error (* get_compressed_data2)(void* encoder, uint8_t** data, int* size,
+                                      uintptr_t* frame_nr);
 
   // --- version 5 functions will follow below ... ---
 

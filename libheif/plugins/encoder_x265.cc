@@ -760,6 +760,8 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
       };
   }
 
+  // param->bframes = 0;
+
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
@@ -924,7 +926,8 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 }
 
 
-static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image)
+static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image,
+                                             uintptr_t frame_nr)
 {
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
@@ -966,7 +969,7 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
   }
 
   pic->bitDepth = encoder->bit_depth;
-
+  pic->userData = reinterpret_cast<void*>(frame_nr);
 
 #if X265_BUILD == 212
   // In x265 build version 212, the signature of the encoder_encode() function was changed. But it was changed back in version 213.
@@ -978,14 +981,15 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       pic,
                       &out_pic);
 #else
-
+  x265_picture out_pic;
   api->encoder_encode(encoder->encoder,
                       &encoder->nals,
                       &encoder->num_nals,
                       pic,
-                      NULL);
+                      &out_pic);
+  uintptr_t out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
   for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "e2 " << i << ": " << encoder->nals[i].type << "\n";
+    std::cout << "e2 " << i << ": " << encoder->nals[i].type << " nr:" << out_frameNr << "\n";
   }
 #endif
 
@@ -1043,7 +1047,7 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
     return err;
   }
 
-  err = x265_encode_sequence_frame(encoder_raw, image);
+  err = x265_encode_sequence_frame(encoder_raw, image, 0);
   if (err.code) {
     return err;
   }
@@ -1054,8 +1058,8 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
 }
 
 
-static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                           heif_encoded_data_type* type)
+static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
+                                                  uintptr_t* out_frame_nr)
 {
   encoder_struct_x265* encoder = ( encoder_struct_x265*) encoder_raw;
 
@@ -1110,6 +1114,19 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 }
 
 
+static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                           heif_encoded_data_type* type)
+{
+  return x265_get_compressed_data_intern(encoder_raw, data, size, nullptr);
+}
+
+static heif_error x265_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                            uintptr_t* frame_nr)
+{
+  return x265_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
+}
+
+
 static const heif_encoder_plugin encoder_plugin_x265
     {
         /* plugin_api_version */ 4,
@@ -1143,7 +1160,8 @@ static const heif_encoder_plugin encoder_plugin_x265
         /* query_encoded_size (v3) */ nullptr,
         /* start_sequence_encoding (v3) */ x265_start_sequence_encoding,
         /* encode_sequence_frame (v3) */ x265_encode_sequence_frame,
-        /* end_sequence_encoding (v3) */ x265_end_sequence_encoding
+        /* end_sequence_encoding (v3) */ x265_end_sequence_encoding,
+        /* get_compressed_data2 (v3) */ x265_get_compressed_data2
     };
 
 const heif_encoder_plugin* get_encoder_plugin_x265()

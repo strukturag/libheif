@@ -57,6 +57,8 @@ private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
 
+  uintptr_t m_frameNr = 0;
+
   // Whether the hvcC is complete and was returned in an encode_sequence_get_data() call.
   bool m_hvcC_has_VPS = false;
   bool m_hvcC_has_SPS = false;
