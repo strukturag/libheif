@@ -238,7 +238,6 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
   if (m_end_of_sequence_reached && m_hvcC) {
     m_current_output_data->properties.push_back(m_hvcC);
-    m_hvcC_returned = true;
     m_hvcC = nullptr;
   }
 

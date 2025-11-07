@@ -63,7 +63,6 @@ private:
   bool m_hvcC_has_VPS = false;
   bool m_hvcC_has_SPS = false;
   bool m_hvcC_has_PPS = false;
-  bool m_hvcC_returned = false; // TODO: can be removed when we send it at the end of sequence
   std::shared_ptr<class Box_hvcC> m_hvcC;
 
   int m_encoded_image_width = 0;
