@@ -186,7 +186,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     got_some_data = true;
 
     const uint8_t nal_type = (data[0] >> 1);
-    const bool is_idr = (nal_type == 19 || nal_type == 20);
+    const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
 
     if ((data[0] >> 1) == NAL_UNIT_SPS_NUT) {
       parse_sps_for_hvcC_configuration(data, size,
@@ -215,7 +215,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
           m_current_output_data = CodedImageData{};
         }
         m_current_output_data->append_with_4bytes_size(data, size);
-        m_current_output_data->is_sync_frame = is_idr;
+        m_current_output_data->is_sync_frame = is_sync;
     }
   }
 
