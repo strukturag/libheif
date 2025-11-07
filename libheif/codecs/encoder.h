@@ -50,7 +50,7 @@ public:
     uint32_t encoded_image_height = 0;
 
     bool is_sync_frame = true; // TODO: set in encoder
-    int reorder_info = 0; // TODO
+    uintptr_t frame_nr = 0;
 
     void append(const uint8_t* data, size_t size);
 

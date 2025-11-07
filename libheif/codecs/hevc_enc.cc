@@ -179,7 +179,8 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     uint8_t* data;
     int size;
 
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+    uintptr_t frameNr=0;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr);
 
     if (data == nullptr) {
       break;
@@ -218,6 +219,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
         }
         m_current_output_data->append_with_4bytes_size(data, size);
         m_current_output_data->is_sync_frame = is_sync;
+        m_current_output_data->frame_nr = frameNr;
     }
   }
 

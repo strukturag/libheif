@@ -64,6 +64,7 @@ struct encoder_struct_x265
   x265_nal* nals = nullptr;
   uint32_t num_nals = 0;
   uint32_t nal_output_counter = 0;
+  uintptr_t out_frameNr = 0;
   int bit_depth = 0;
 
   heif_chroma chroma;
@@ -980,6 +981,7 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       &encoder->num_nals,
                       pic,
                       &out_pic);
+  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
 #else
   x265_picture out_pic;
   api->encoder_encode(encoder->encoder,
@@ -987,9 +989,9 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       &encoder->num_nals,
                       pic,
                       &out_pic);
-  uintptr_t out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
+  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
   for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "e2 " << i << ": " << encoder->nals[i].type << " nr:" << out_frameNr << "\n";
+    std::cout << "e2 " << i << ": " << encoder->nals[i].type << " nr:" << encoder->out_frameNr << "\n";
   }
 #endif
 
@@ -1012,12 +1014,15 @@ static void x265_end_sequence_encoding(void* encoder_raw)
                                    &encoder->num_nals,
                                    NULL,
                                    &out_pic);
+  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
 #else
+  x265_picture out_pic;
   int result = api->encoder_encode(encoder->encoder,
                                    &encoder->nals,
                                    &encoder->num_nals,
                                    NULL,
-                                   NULL);
+                                   &out_pic);
+  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
 
   for (int i=0;i<encoder->num_nals;i++) {
     std::cout << "e1 " << i << ": " << encoder->nals[i].type << "\n";
@@ -1100,6 +1105,10 @@ static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** d
       else {
         // output NAL
 
+        if (out_frame_nr) {
+          *out_frame_nr = encoder->out_frameNr;
+        }
+
         return heif_error_ok;
       }
     }
@@ -1109,6 +1118,10 @@ static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** d
 
   *data = nullptr;
   *size = 0;
+
+  if (out_frame_nr) {
+    *out_frame_nr = 0;
+  }
 
   return heif_error_ok;
 }
