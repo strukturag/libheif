@@ -554,6 +554,7 @@ Result<std::shared_ptr<Track>> Track::alloc_track(HeifContext* ctx, const std::s
       break;
     case fourcc("meta"):
       track = std::make_shared<Track_Metadata>(ctx);
+      break;
     default: {
       std::stringstream sstr;
       sstr << "Track with unsupported handler type '" << fourcc_to_string(hdlr->get_handler_type()) << "'.";
