@@ -114,7 +114,8 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                                           heif_encoder* encoder,
                                           const heif_encoding_options& options,
-                                          heif_image_input_class input_class)
+                                          heif_image_input_class input_class,
+                                          uintptr_t frame_number)
 {
   heif_image c_api_image;
   c_api_image.image = image;
@@ -139,7 +140,7 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
     return dataErr;
   }
 
-  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image, m_frameNr);
+  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image, frame_number);
   if (err.code) {
     return {
       err.code,
@@ -147,8 +148,6 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
       err.message
     };
   }
-
-  m_frameNr++;
 
   return get_data(encoder);
 }

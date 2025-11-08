@@ -36,7 +36,7 @@ public:
 
   Track_Visual(HeifContext* ctx);
 
-  ~Track_Visual() override = default;
+  ~Track_Visual() override;
 
   // load track from file
   Error load(const std::shared_ptr<Box_trak>&) override;
@@ -63,6 +63,25 @@ public:
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;
+
+  uintptr_t m_current_frame_nr = 0;
+
+  struct FrameUserData
+  {
+    int sample_duration = 0;
+
+    std::optional<std::string> gimi_content_id;
+    heif_tai_timestamp_packet* tai_timestamp = nullptr;
+
+    void release()
+    {
+      heif_tai_timestamp_packet_release(tai_timestamp);
+      tai_timestamp = nullptr;
+    }
+  };
+
+  // map frame number to user data
+  std::map<uintptr_t, FrameUserData> m_frame_user_data;
 
   int m_sample_duration = 0; // TODO: pass this through encoder or handle it correctly with frame reordering
 

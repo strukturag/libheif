@@ -259,7 +259,8 @@ protected:
   // Write the actual sample data. `tai` may be null and `gimi_contentID` may be empty.
   // In these cases, no timestamp or no contentID will be written, respectively.
   Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
-                          const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID);
+                          const heif_tai_timestamp_packet* tai,
+                          const std::optional<std::string>& gimi_contentID);
 };
 
 

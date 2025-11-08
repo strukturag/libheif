@@ -77,7 +77,8 @@ public:
   virtual Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                                       heif_encoder* encoder,
                                       const heif_encoding_options& options,
-                                      heif_image_input_class input_class) { return {}; }
+                                      heif_image_input_class input_class,
+                                      uintptr_t frame_number) { return {}; }
 
   virtual Error encode_sequence_flush(heif_encoder* encoder) { return {}; }
 

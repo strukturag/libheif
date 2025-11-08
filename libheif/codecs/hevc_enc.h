@@ -45,7 +45,8 @@ public:
   Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                               heif_encoder* encoder,
                               const heif_encoding_options& options,
-                              heif_image_input_class input_class) override;
+                              heif_image_input_class input_class,
+                              uintptr_t frame_number) override;
 
   Error encode_sequence_flush(heif_encoder* encoder) override;
 
@@ -56,8 +57,6 @@ public:
 private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
-
-  uintptr_t m_frameNr = 0;
 
   // Whether the hvcC is complete and was returned in an encode_sequence_get_data() call.
   bool m_hvcC_has_VPS = false;

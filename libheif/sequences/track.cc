@@ -733,7 +733,7 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 
 
 Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
-                               const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID)
+                               const heif_tai_timestamp_packet* tai, const std::optional<std::string>& gimi_contentID)
 {
   size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(raw_data);
 
@@ -789,8 +789,8 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   // --- sample content id
 
   if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
-    if (!gimi_contentID.empty()) {
-      auto id = gimi_contentID;
+    if (gimi_contentID) {
+      auto id = *gimi_contentID;
       const char* id_str = id.c_str();
       std::vector<uint8_t> id_vector;
       id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
