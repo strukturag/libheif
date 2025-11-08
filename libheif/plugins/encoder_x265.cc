@@ -761,7 +761,7 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
       };
   }
 
-  // param->bframes = 0;
+   param->bframes = 0;
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;

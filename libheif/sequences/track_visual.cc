@@ -45,7 +45,7 @@ Error Track_Visual::load(const std::shared_ptr<Box_trak>& trak)
   // Find sequence resolution
 
   if (!chunk_offsets.empty()) {
-    auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(1));
+    auto* s2c = m_stsc->get_chunk(1);
     if (!s2c) {
       return {
         heif_error_Invalid_input,
@@ -253,11 +253,8 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   // generate new chunk for first image or when compression formats don't match
 
-  bool add_sample_description = false;
-
   if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
     add_chunk(h_encoder->plugin->compression_format);
-    add_sample_description = true;
   }
 
   // --- check whether we have to convert the image color space
@@ -324,8 +321,8 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
   if (!data.properties.empty()) {
     auto sample_description_box = encoder->get_sample_description_box(data);
     VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
-    visualSampleEntry.width = static_cast<uint16_t>(m_width);
-    visualSampleEntry.height = static_cast<uint16_t>(m_height);
+    visualSampleEntry.width = m_width;
+    visualSampleEntry.height = m_height;
 
     auto ccst = std::make_shared<Box_ccst>();
     ccst->set_coding_constraints(data.codingConstraints);
@@ -338,7 +335,7 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
     Error err = write_sample_data(data.bitstream,
                                   m_sample_duration, // TODO: get from reordered frame
                                   data.is_sync_frame,
-                                  nullptr, {}); // TODO: get from reordered frame
+                                  nullptr, {}); // TODO: get both from reordered frame
     //image->get_tai_timestamp(),
     //image->has_gimi_sample_content_id() ? image->get_gimi_sample_content_id() : std::string{});
 
