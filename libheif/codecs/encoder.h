@@ -62,7 +62,8 @@ public:
 
   Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                           heif_encoder* encoder,
-                                                                          const heif_encoding_options& options,
+                                                                          const heif_color_profile_nclx* user_requested_output_nclx,
+                                                                          const heif_color_conversion_options* color_conversion_options,
                                                                           const heif_security_limits* security_limits);
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
@@ -76,7 +77,7 @@ public:
 
   virtual Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                                       heif_encoder* encoder,
-                                      const heif_encoding_options& options,
+                                      const heif_sequence_encoding_options& options,
                                       heif_image_input_class input_class,
                                       uintptr_t frame_number) { return {}; }
 

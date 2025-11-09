@@ -246,7 +246,7 @@ Error Track_Visual::encode_end_of_sequence(heif_encoder* h_encoder)
 
 Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
                                  heif_encoder* h_encoder,
-                                 const heif_encoding_options& in_options,
+                                 const heif_sequence_encoding_options* in_options,
                                  heif_image_input_class input_class)
 {
   if (image->get_width() > 0xFFFF ||
@@ -271,17 +271,35 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   // The reason for doing the color conversion here is that the input might be an RGBA image and the color conversion
   // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
 
-  heif_encoding_options options = in_options;
-
   auto encoder = m_chunks.back()->get_encoder();
 
-  if (const auto* nclx = encoder->get_forced_output_nclx()) {
-    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+  const heif_color_profile_nclx* output_nclx;
+  heif_color_profile_nclx nclx;
+
+  if (const auto* image_nclx = encoder->get_forced_output_nclx()) {
+    output_nclx = const_cast<heif_color_profile_nclx*>(image_nclx);
+  }
+  else if (in_options) {
+    output_nclx = in_options->output_nclx_profile;
+  }
+  else {
+    if (image->has_nclx_color_profile()) {
+      nclx_profile input_nclx = image->get_color_profile_nclx();
+
+      nclx.version = 1;
+      nclx.color_primaries = (enum heif_color_primaries) input_nclx.get_colour_primaries();
+      nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx.get_transfer_characteristics();
+      nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx.get_matrix_coefficients();
+      nclx.full_range_flag = input_nclx.get_full_range_flag();
+
+      output_nclx = &nclx;
+    }
   }
 
   Result<std::shared_ptr<HeifPixelImage> > srcImageResult = encoder->convert_colorspace_for_encoding(image,
                                                                                                      h_encoder,
-                                                                                                     options,
+                                                                                                     output_nclx,
+                                                                                                     in_options ? &in_options->color_conversion_options : nullptr,
                                                                                                      m_heif_context->get_security_limits());
   if (!srcImageResult) {
     return srcImageResult.error();
@@ -294,8 +312,19 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   // --- encode image
 
-  Error encodeError = encoder->encode_sequence_frame(colorConvertedImage, h_encoder, options, input_class,
+  heif_sequence_encoding_options* local_dummy_options = nullptr;
+  if (!in_options) {
+    local_dummy_options = heif_sequence_encoding_options_alloc();
+  }
+
+  Error encodeError = encoder->encode_sequence_frame(colorConvertedImage, h_encoder,
+                                                     in_options ? *in_options : *local_dummy_options,
+                                                     input_class,
                                                      m_current_frame_nr);
+  if (local_dummy_options) {
+    heif_sequence_encoding_options_release(local_dummy_options);
+  }
+
   if (encodeError) {
     return encodeError;
   }

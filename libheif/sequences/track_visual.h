@@ -53,7 +53,7 @@ public:
 
   Error encode_image(std::shared_ptr<HeifPixelImage> image,
                      heif_encoder* encoder,
-                     const heif_encoding_options& options,
+                     const heif_sequence_encoding_options* options,
                      heif_image_input_class image_class);
 
   Error encode_end_of_sequence(heif_encoder* encoder);

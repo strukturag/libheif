@@ -761,12 +761,28 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
       };
   }
 
-   param->bframes = 0;
+  assert(options);
+  param->keyframeMin = options->keyframe_distance_min;
+  param->keyframeMax = options->keyframe_distance_max;
+
+  switch (options->gop_structure) {
+    case heif_sequence_gop_structure_intra_only:
+      param->bframes = 0;
+      param->keyframeMin=1;
+      param->keyframeMax=1;
+      break;
+    case heif_sequence_gop_structure_p_chain:
+      param->bframes = 0;
+      break;
+    case heif_sequence_gop_structure_bidirectional:
+      param->bframes = 1;
+      break;
+  }
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
-  param->totalFrames = 1;
+  param->totalFrames = image_sequence ? 50 : 1; // TODO
 
   if (isGreyscale) {
     param->internalCsp = X265_CSP_I400;

@@ -113,7 +113,7 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 
 Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                                           heif_encoder* encoder,
-                                          const heif_encoding_options& options,
+                                          const heif_sequence_encoding_options& options,
                                           heif_image_input_class input_class,
                                           uintptr_t frame_number)
 {
@@ -122,7 +122,7 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
 
   if (!m_encoder_active) {
     heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder, &c_api_image, input_class,
-                                                              nullptr);
+                                                              &options);
     if (err.code) {
       return {
         err.code,
@@ -240,6 +240,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   if (m_end_of_sequence_reached && m_hvcC) {
     m_current_output_data->properties.push_back(m_hvcC);
     m_hvcC = nullptr;
+    m_hvcC = std::make_shared<Box_hvcC>(); // TODO: this should not be needed. We should prevent multiple hvcC boxes
   }
 
   m_current_output_data->encoded_image_width = m_encoded_image_width;

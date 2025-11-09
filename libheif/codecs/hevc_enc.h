@@ -44,7 +44,7 @@ public:
 
   Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                               heif_encoder* encoder,
-                              const heif_encoding_options& options,
+                              const heif_sequence_encoding_options& options,
                               heif_image_input_class input_class,
                               uintptr_t frame_number) override;
 

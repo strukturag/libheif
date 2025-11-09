@@ -668,7 +668,10 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult;
-  colorConversionResult = item->get_encoder()->convert_colorspace_for_encoding(image, encoder, *options, get_context()->get_security_limits());
+  colorConversionResult = item->get_encoder()->convert_colorspace_for_encoding(image, encoder,
+                                                                               options->output_nclx_profile,
+                                                                               &options->color_conversion_options,
+                                                                               get_context()->get_security_limits());
   if (!colorConversionResult) {
     heif_encoding_options_free(options);
     return colorConversionResult.error();

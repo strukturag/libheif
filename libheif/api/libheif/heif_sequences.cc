@@ -398,13 +398,19 @@ heif_sequence_encoding_options* heif_sequence_encoding_options_alloc()
 {
   heif_sequence_encoding_options* options = new heif_sequence_encoding_options();
 
-  options->version = 1;
+  options->version = 2;
   options->output_nclx_profile = nullptr;
 
   options->color_conversion_options.version = 1;
   options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options->color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
+  // version 2
+
+  options->gop_structure = heif_sequence_gop_structure_p_chain;
+  options->keyframe_distance_min = 0;
+  options->keyframe_distance_max = 0;
 
   return options;
 }
@@ -497,7 +503,7 @@ heif_error heif_track_encode_sequence_image(heif_track* track,
     };
   }
 
-
+#if 0
   // convert heif_sequence_encoding_options to heif_encoding_options that is used by track->encode_image()
 
   heif_encoding_options* encoding_options = heif_encoding_options_alloc();
@@ -520,14 +526,17 @@ heif_error heif_track_encode_sequence_image(heif_track* track,
       }
     }
   }
+#endif
 
   // encode the image
 
   auto error = visual_track->encode_image(input_image->image,
                                           encoder,
-                                          *encoding_options,
+                                          sequence_encoding_options,
                                           heif_image_input_class_normal);
+#if 0
   heif_encoding_options_free(encoding_options);
+#endif
 
   if (error.error_code) {
     return error.error_struct(track->context.get());

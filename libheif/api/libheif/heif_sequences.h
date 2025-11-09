@@ -335,6 +335,14 @@ void heif_track_options_set_gimi_track_id(heif_track_options*,
 
 // --- writing visual tracks
 
+enum heif_sequence_gop_structure
+{
+  heif_sequence_gop_structure_intra_only,
+  heif_sequence_gop_structure_p_chain,
+  heif_sequence_gop_structure_bidirectional
+};
+
+
 typedef struct heif_sequence_encoding_options
 {
   uint8_t version;
@@ -346,6 +354,12 @@ typedef struct heif_sequence_encoding_options
   const heif_color_profile_nclx* output_nclx_profile;
 
   heif_color_conversion_options color_conversion_options;
+
+  // version 2 options
+
+  enum heif_sequence_gop_structure gop_structure;
+  int keyframe_distance_min; // 0 - undefined
+  int keyframe_distance_max; // 0 - undefined
 } heif_sequence_encoding_options;
 
 

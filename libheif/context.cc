@@ -1469,7 +1469,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
     srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
                                                                                        encoder,
-                                                                                       options,
+                                                                                       options.output_nclx_profile,
+                                                                                       &options.color_conversion_options,
                                                                                        get_security_limits());
     if (!srcImageResult) {
       return srcImageResult.error();

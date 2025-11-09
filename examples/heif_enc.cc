@@ -110,6 +110,11 @@ bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
 
+enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_p_chain;
+int sequence_keyframe_distance_min = 0;
+int sequence_keyframe_distance_max = 0;
+
+
 enum heif_output_nclx_color_profile_preset
 {
   heif_output_nclx_color_profile_preset_custom,  // Default. Use the values provided by the user.
@@ -161,6 +166,9 @@ const int OPTION_SEQUENCES_REPETITIONS = 1020;
 const int OPTION_COLOR_PROFILE_PRESET = 1021;
 const int OPTION_SET_CLLI = 1022;
 const int OPTION_SET_PASP = 1023;
+const int OPTION_SEQUENCES_GOP_STRUCTURE = 1024;
+const int OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE = 1025;
+const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
 
 
 static option long_options[] = {
@@ -216,6 +224,9 @@ static option long_options[] = {
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
 #endif
+    {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
+    {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
+    {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
     {0, 0,                                                           0,  0}
 };
 
@@ -318,13 +329,16 @@ void show_help(const char* argv0)
 #endif
             << "\n"
             << "sequences:\n"
-            << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
-            << "      --timebase #          set clock ticks/second for sequence\n"
-            << "      --duration #          set frame duration (default: 1)\n"
-            << "      --fps #               set timebase and duration based on fps\n"
-            << "      --repetitions #       set how often the sequence should be played back (default=1), special value: 'infinite'\n"
+            << "  -S, --sequence                 encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
+            << "      --timebase #               set clock ticks/second for sequence\n"
+            << "      --duration #               set frame duration (default: 1)\n"
+            << "      --fps #                    set timebase and duration based on fps\n"
+            << "      --repetitions #            set how often the sequence should be played back (default=1), special value: 'infinite'\n"
+            << "      --gop-structure GOP        frame types to use in GOP (intra-only, p-chain, bidirectional)\n"
+            << "      --min-keyframe-distance #  minimum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
+            << "      --vmt-metadata FILE        encode metadata track from VMT file\n"
 #endif
             ;
 }
@@ -1106,6 +1120,12 @@ std::vector<T> parse_comma_separated_numeric_arguments(std::string arg,
   return results;
 }
 
+bool prefix_compare(const char* a, const char* b)
+{
+  auto minLen = std::min(strlen(a), strlen(b));
+  return strncmp(a,b,minLen) == 0;
+}
+
 
 class LibHeifInitializer
 {
@@ -1316,6 +1336,35 @@ int main(int argc, char** argv)
             std::cerr << "Sequence repetitions may not be 0.\n";
             return 5;
           }
+        }
+        break;
+      case OPTION_SEQUENCES_GOP_STRUCTURE:
+        if (prefix_compare(optarg, "intra-only")) {
+          sequence_gop_structure = heif_sequence_gop_structure_intra_only;
+        }
+        else if (prefix_compare(optarg, "p-chain")) {
+          sequence_gop_structure = heif_sequence_gop_structure_p_chain;
+        }
+        else if (prefix_compare(optarg, "bidirectional")) {
+          sequence_gop_structure = heif_sequence_gop_structure_bidirectional;
+        }
+        else {
+          std::cerr << "Invalid GOP structure argument\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_min = atoi(optarg);
+        if (sequence_keyframe_distance_min < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_max = atoi(optarg);
+        if (sequence_keyframe_distance_max < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
         }
         break;
       case OPTION_COLOR_PROFILE_PRESET:
@@ -1994,6 +2043,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   bool first_image = true;
 
   heif_track* track = nullptr;
+  heif_sequence_encoding_options* encoding_options = nullptr;
 
   for (std::string input_filename : args) {
     currImage++;
@@ -2014,11 +2064,17 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     if (first_image) {
       heif_track_options* track_options = heif_track_options_alloc();
+      heif_track_options_enable_sample_gimi_content_ids(track_options, heif_sample_aux_info_presence_optional);
 
       heif_track_options_set_timescale(track_options, sequence_timebase);
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
       heif_context_set_number_of_sequence_repetitions(context, sequence_repetitions);
+
+      encoding_options = heif_sequence_encoding_options_alloc();
+      encoding_options->gop_structure = sequence_gop_structure;
+      encoding_options->keyframe_distance_min = sequence_keyframe_distance_min;
+      encoding_options->keyframe_distance_max = sequence_keyframe_distance_max;
 
       image_width = static_cast<uint16_t>(w);
       image_height = static_cast<uint16_t>(h);
@@ -2027,7 +2083,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
                                              image_width, image_height,
                                              heif_track_type_video,
                                              track_options,
-                                             nullptr,
+                                             encoding_options,
                                              &track);
 
       heif_track_options_release(track_options);
@@ -2049,23 +2105,24 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       return 5;
     }
 
-    auto* seq_options = heif_sequence_encoding_options_alloc();
-
     //seq_options->save_alpha_channel = false; // TODO: sequences with alpha ?
-    seq_options->output_nclx_profile = nclx;
+    encoding_options->output_nclx_profile = nclx;
     //seq_options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
 
     heif_image_set_duration(image.get(), sequence_durations);
 
-    error = heif_track_encode_sequence_image(track, image.get(), encoder, seq_options);
+    static int contentIdNr=0;
+    char buf[100];
+    sprintf(buf, "contentID:%d", contentIdNr++);
+    heif_image_set_gimi_sample_content_id(image.get(), buf);
+
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, encoding_options);
     if (error.code) {
       heif_nclx_color_profile_free(nclx);
-      heif_sequence_encoding_options_release(seq_options);
       std::cerr << "Cannot encode sequence image: " << error.message << "\n";
       return 5;
     }
 
-    heif_sequence_encoding_options_release(seq_options);
     heif_nclx_color_profile_free(nclx);
   }
 
@@ -2085,6 +2142,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   }
 
   heif_track_release(track);
+  heif_sequence_encoding_options_release(encoding_options);
 
   return 0;
 }
