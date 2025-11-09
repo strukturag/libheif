@@ -190,7 +190,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     const uint8_t nal_type = (data[0] >> 1);
     const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
 
-    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT) {
+    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT && m_hvcC) {
       parse_sps_for_hvcC_configuration(data, size,
                                        &m_hvcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
@@ -199,17 +199,17 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     switch (data[0] >> 1) {
       case NAL_UNIT_VPS_NUT:
         m_hvcC_has_VPS = true;
-        m_hvcC->append_nal_data(data, size);
+        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       case NAL_UNIT_SPS_NUT:
         m_hvcC_has_SPS = true;
-        m_hvcC->append_nal_data(data, size);
+        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       case NAL_UNIT_PPS_NUT:
         m_hvcC_has_PPS = true;
-        m_hvcC->append_nal_data(data, size);
+        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       default:
@@ -237,10 +237,10 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   //           and also complete codingConstraints.
 
   //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
-  if (m_end_of_sequence_reached && m_hvcC) {
+  if (m_end_of_sequence_reached && m_hvcC && !m_hvcC_sent) {
     m_current_output_data->properties.push_back(m_hvcC);
     m_hvcC = nullptr;
-    m_hvcC = std::make_shared<Box_hvcC>(); // TODO: this should not be needed. We should prevent multiple hvcC boxes
+    m_hvcC_sent = true;
   }
 
   m_current_output_data->encoded_image_width = m_encoded_image_width;

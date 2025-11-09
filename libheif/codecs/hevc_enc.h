@@ -63,6 +63,7 @@ private:
   bool m_hvcC_has_SPS = false;
   bool m_hvcC_has_PPS = false;
   std::shared_ptr<class Box_hvcC> m_hvcC;
+  bool m_hvcC_sent = false;
 
   int m_encoded_image_width = 0;
   int m_encoded_image_height = 0;
