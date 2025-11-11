@@ -1508,7 +1508,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       if (!has_alpha) {
         memcpy(out_p + out_x0 + (out_y0 + y - in_y0) * out_stride,
                in_p + in_x0 + y * in_stride,
-               in_w - in_x0);
+               in_w);
       }
       else {
         for (uint32_t x = in_x0; x < in_w; x++) {
