@@ -43,6 +43,7 @@ else()
     add_libheif_test(jpeg2000)
     add_libheif_test(avc_box)
     add_libheif_test(file_layout)
+    add_libheif_test(evc_box)
 endif()
 
 if (ENABLE_EXPERIMENTAL_FEATURES AND NOT WITH_REDUCED_VISIBILITY)
