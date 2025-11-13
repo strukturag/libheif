@@ -340,6 +340,7 @@ void show_help(const char* argv0)
             << "      --gop-structure GOP        frame types to use in GOP (intra-only, p-chain, bidirectional)\n"
             << "      --min-keyframe-distance #  minimum distance of keyframes in sequence (0 = undefined)\n"
             << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-frames #             limit sequence length to maximum number of frames\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --vmt-metadata FILE        encode metadata track from VMT file\n"
 #endif
