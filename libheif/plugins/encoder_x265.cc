@@ -818,8 +818,13 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   }
 
   assert(options);
-  param->keyframeMin = options->keyframe_distance_min;
-  param->keyframeMax = options->keyframe_distance_max;
+  if (options->keyframe_distance_min) {
+    param->keyframeMin = options->keyframe_distance_min;
+  }
+
+  if (options->keyframe_distance_max) {
+    param->keyframeMax = options->keyframe_distance_max;
+  }
 
   switch (options->gop_structure) {
     case heif_sequence_gop_structure_intra_only:
