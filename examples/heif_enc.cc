@@ -2131,9 +2131,14 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     heif_image_set_duration(image.get(), sequence_durations);
 
     static int contentIdNr=0;
-    char buf[100];
-    sprintf(buf, "contentID:%d", contentIdNr++);
-    heif_image_set_gimi_sample_content_id(image.get(), buf);
+    std::string contentId;
+    while (contentId.length() < contentIdNr+1) {
+      contentId += std::to_string(contentIdNr+1) + '-';
+    }
+    contentId.resize(contentIdNr+1);
+    //std::cout << "CID: " << contentId << "\n\n";
+    heif_image_set_gimi_sample_content_id(image.get(), contentId.c_str());
+    contentIdNr++;
 
     error = heif_track_encode_sequence_image(track, image.get(), encoder, encoding_options);
     if (error.code) {
