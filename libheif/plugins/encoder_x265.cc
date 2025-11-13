@@ -644,6 +644,62 @@ static int rounded_size(int s)
 }
 
 
+static const char* naltype_table[] = {
+  /*  0 */ "TRAIL_N",
+  /*  1 */ "TRAIL_R",
+  /*  2 */ "TSA_N",
+  /*  3 */ "TSA_R",
+  /*  4 */ "STSA_N",
+  /*  5 */ "STSA_R",
+  /*  6 */ "RADL_N",
+  /*  7 */ "RADL_R",
+  /*  8 */ "RASL_N",
+  /*  9 */ "RASL_R",
+  /* 10 */ "RSV_VCL_N10",
+  /* 11 */ "RSV_VCL_R11",
+  /* 12 */ "RSV_VCL_N12",
+  /* 13 */ "RSV_VCL_R13",
+  /* 14 */ "RSV_VCL_N14",
+  /* 15 */ "RSV_VCL_R15",
+  /* 16 */ "BLA_W_LP",
+  /* 17 */ "BLA_W_RADL",
+  /* 18 */ "BLA_N_LP",
+  /* 19 */ "IDR_W_RADL",
+  /* 20 */ "IDR_N_LP",
+  /* 21 */ "CRA_NUT",
+  /* 22 */ "RSV_IRAP_VCL22",
+  /* 23 */ "RSV_IRAP_VCL23",
+  /* 24 */ "RSV_VCL24",
+  /* 25 */ "RSV_VCL25",
+  /* 26 */ "RSV_VCL26",
+  /* 27 */ "RSV_VCL27",
+  /* 28 */ "RSV_VCL28",
+  /* 29 */ "RSV_VCL29",
+  /* 30 */ "RSV_VCL30",
+  /* 31 */ "RSV_VCL31",
+  /* 32 */ "VPS_NUT",
+  /* 33 */ "SPS_NUT",
+  /* 34 */ "PPS_NUT",
+  /* 35 */ "AUD_NUT",
+  /* 36 */ "EOS_NUT",
+  /* 37 */ "EOB_NUT",
+  /* 38 */ "FD_NUT",
+  /* 39 */ "PREFIX_SEI_NUT",
+  /* 40 */ "SUFFIX_SEI_NUT"
+};
+
+
+static const char* naltype(uint8_t type)
+{
+  if (type <= 40) {
+    return naltype_table[type];
+  }
+  else {
+    return "reserved";
+  }
+}
+
+
 static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
                                        const heif_sequence_encoding_options* options,
@@ -927,7 +983,7 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
     &encoder->nals,
     &encoder->num_nals);
     for (int i=0;i<encoder->num_nals;i++) {
-      std::cout << "he " << i << ": " << encoder->nals[i].type << "\n";
+      std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
     }
   }
 
@@ -1007,7 +1063,7 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       &out_pic);
   encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
   for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "e2 " << i << ": " << encoder->nals[i].type << " nr:" << encoder->out_frameNr << "\n";
+    std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif
 
@@ -1041,7 +1097,7 @@ static void x265_end_sequence_encoding(void* encoder_raw)
   encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
 
   for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "e1 " << i << ": " << encoder->nals[i].type << "\n";
+    std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif
   if (result <= 0) {
