@@ -113,6 +113,7 @@ bool encode_sequence = false;
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_p_chain;
 int sequence_keyframe_distance_min = 0;
 int sequence_keyframe_distance_max = 0;
+int sequence_max_frames = 0; // 0 -> no maximum
 
 
 enum heif_output_nclx_color_profile_preset
@@ -169,6 +170,7 @@ const int OPTION_SET_PASP = 1023;
 const int OPTION_SEQUENCES_GOP_STRUCTURE = 1024;
 const int OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE = 1025;
 const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
+const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
 
 
 static option long_options[] = {
@@ -221,6 +223,7 @@ static option long_options[] = {
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
     {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
     {(char* const) "repetitions",                 required_argument,       nullptr, OPTION_SEQUENCES_REPETITIONS},
+    {(char* const) "max-frames",                  required_argument,       nullptr, OPTION_SEQUENCES_MAX_FRAMES},
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
 #endif
@@ -1367,6 +1370,13 @@ int main(int argc, char** argv)
           return 5;
         }
         break;
+      case OPTION_SEQUENCES_MAX_FRAMES:
+        sequence_max_frames = atoi(optarg);
+        if (sequence_max_frames <= 0) {
+          std::cerr << "Maximum number of frames must be >= 1\n";
+          return 5;
+        }
+        break;
       case OPTION_COLOR_PROFILE_PRESET:
         if (strcmp(optarg, "auto")==0) {
           output_color_profile_preset = heif_output_nclx_color_profile_preset_automatic;
@@ -2035,8 +2045,12 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     args = deflate_input_filenames(args[0]);
   }
 
-  size_t nImages = args.size();
   size_t currImage = 0;
+
+  size_t nImages = args.size();
+  if (sequence_max_frames && nImages > static_cast<size_t>(sequence_max_frames)) {
+    nImages = sequence_max_frames;
+  }
 
   uint16_t image_width=0, image_height=0;
 
@@ -2047,6 +2061,10 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
   for (std::string input_filename : args) {
     currImage++;
+    if (currImage > nImages) {
+      break;
+    }
+
     std::cout << "\rencoding sequence image " << currImage << "/" << nImages;
     std::cout.flush();
 
