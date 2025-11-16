@@ -46,14 +46,7 @@ static emscripten::val heif_js_context_get_image_handle(
   {
     return emscripten::val(err);
   }
-
-#if __EMSCRIPTEN_major__ > 4 ||   \
-    (__EMSCRIPTEN_major__ == 4 && \
-     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
   return emscripten::val(handle, emscripten::allow_raw_pointers());
-#else
-  return emscripten::val(handle);
-#endif
 }
 
 static emscripten::val heif_js_context_get_primary_image_handle(
@@ -467,30 +460,30 @@ static emscripten::val heif_js_depth_img_decode(struct heif_image_handle *handle
   depth_result.set("id", depth_image_id);
   return depth_result;
 }
-static emscripten::val heif_js_get_depth_imgs_decoded(struct heif_image_handle *handle)
-{
-  // similar to https://github.com/bigcat88/pillow_heif/blob/b2bf2744d0e4203088481b938af91974b3a2006f/pillow_heif/_pillow_heif.c#L1094
-  emscripten::val results = emscripten::val::array();
-  if (!handle)
-  {
-    return results;
-  }
-  int n_images = heif_image_handle_get_number_of_depth_images(handle);
-  if (n_images == 0)
-    return results;
-  heif_item_id *ids = (heif_item_id *)malloc(n_images * sizeof(heif_item_id));
+// static emscripten::val heif_js_get_depth_imgs_decoded(struct heif_image_handle *handle)
+// {
+//   // similar to https://github.com/bigcat88/pillow_heif/blob/b2bf2744d0e4203088481b938af91974b3a2006f/pillow_heif/_pillow_heif.c#L1094
+//   emscripten::val results = emscripten::val::array();
+//   if (!handle)
+//   {
+//     return results;
+//   }
+//   int n_images = heif_image_handle_get_number_of_depth_images(handle);
+//   if (n_images == 0)
+//     return results;
+//   heif_item_id *ids = (heif_item_id *)malloc(n_images * sizeof(heif_item_id));
 
-  n_images = heif_image_handle_get_list_of_depth_image_IDs(handle, ids, n_images);
-  for (int i = 0; i < n_images; i++)
-  {
+//   n_images = heif_image_handle_get_list_of_depth_image_IDs(handle, ids, n_images);
+//   for (int i = 0; i < n_images; i++)
+//   {
 
-    struct heif_image_handle *depth_handle;
-    heif_image_handle_get_depth_image_handle(handle, ids[i], &depth_handle);
-    results.call<void>("push", emscripten::val(depth_handle));
-  }
-  free(ids);
-  return results;
-}
+//     struct heif_image_handle *depth_handle;
+//     heif_image_handle_get_depth_image_handle(handle, ids[i], &depth_handle);
+//     results.call<void>("push", emscripten::val(depth_handle, emscripten::allow_raw_pointers()));
+//   }
+//   free(ids);
+//   return results;
+// }
 
 #define EXPORT_HEIF_FUNCTION(name) \
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
