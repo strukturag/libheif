@@ -124,7 +124,7 @@ template <typename T> class Result
 public:
   Result() = default;
 
-  Result(const T& v) : m_data(v) {}
+  Result(T v) : m_data(std::move(v)) {}
 
   Result(const Error& e) : m_data(e) {}
 
