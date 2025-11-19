@@ -27,6 +27,7 @@
 #include <cstring>
 #include <cassert>
 #include <cstdio>
+#include <algorithm>
 #include <limits>
 #include <utility>
 #include <string>
@@ -88,7 +89,7 @@ static int dav1d_does_support_format(heif_compression_format format)
 }
 
 
-heif_error dav1d_new_decoder(void** dec)
+heif_error dav1d_new_decoder_with_options(void** dec, const heif_decoding_options* options)
 {
   auto* decoder = new dav1d_decoder();
 
@@ -103,6 +104,12 @@ heif_error dav1d_new_decoder(void** dec)
 
   decoder->settings.all_layers = 0;
 
+#if DAV1D_API_VERSION_MAJOR >= 6
+  if (options != nullptr && options->num_threads > 0) {
+    decoder->settings.n_threads = std::min(options->num_threads, DAV1D_MAX_THREADS);
+  }
+#endif
+
   if (dav1d_open(&decoder->context, &decoder->settings) != 0) {
     delete decoder;
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
@@ -115,6 +122,11 @@ heif_error dav1d_new_decoder(void** dec)
 
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
+}
+
+heif_error dav1d_new_decoder(void** dec)
+{
+  return dav1d_new_decoder_with_options(dec, nullptr);
 }
 
 
@@ -315,7 +327,7 @@ heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
 
 static const heif_decoder_plugin decoder_dav1d
     {
-        4,
+        5,
         dav1d_plugin_name,
         dav1d_init_plugin,
         dav1d_deinit_plugin,
@@ -326,7 +338,8 @@ static const heif_decoder_plugin decoder_dav1d
         dav1d_decode_image,
         dav1d_set_strict_decoding,
         "dav1d",
-        dav1d_decode_next_image
+        dav1d_decode_next_image,
+        dav1d_new_decoder_with_options
     };
 
 

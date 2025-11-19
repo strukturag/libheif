@@ -269,12 +269,14 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
   heif_error err;
 
   if (!m_decoder) {
-    if (m_decoder_plugin->new_decoder == nullptr) {
+    if (m_decoder_plugin->plugin_api_version >= 5 && m_decoder_plugin->new_decoder_with_options != nullptr) {
+      err = m_decoder_plugin->new_decoder_with_options(&m_decoder, &options);
+    } else if (m_decoder_plugin->new_decoder != nullptr) {
+      err = m_decoder_plugin->new_decoder(&m_decoder);
+    } else {
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
                    "Cannot decode with a dummy decoder plugin.");
     }
-
-    err = m_decoder_plugin->new_decoder(&m_decoder);
     if (err.code != heif_error_Ok) {
       return Error(err.code, err.subcode, err.message);
     }
