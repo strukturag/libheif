@@ -209,7 +209,9 @@ protected:
   uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
 
   // Index into SampleTiming table
-  uint32_t m_next_sample_to_be_processed = 0;
+  uint32_t m_next_sample_to_be_decoded = 0;
+  uint32_t m_next_sample_to_be_processed = 0; // output
+  bool     m_is_flushed = false;
 
   void init_sample_timing_table();
 

@@ -253,15 +253,25 @@ Decoder::~Decoder()
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>>
-Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& options,
-                                                  const heif_security_limits* limits)
+Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
 {
   if (!m_decoder_plugin) {
     m_decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
     if (!m_decoder_plugin) {
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
     }
+  }
+
+  return {};
+}
+
+
+Error Decoder::decode_sequence_frame_from_compressed_data(const heif_decoding_options& options,
+                                                          const heif_security_limits* limits)
+{
+  auto pluginErr = require_decoder_plugin(options);
+  if (pluginErr) {
+    return pluginErr;
   }
 
   // --- decode image with the plugin
@@ -294,12 +304,38 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
     return dataResult.error();
   }
 
+  std::cout << "Decoder::decode_sequence_frame_from_compressed_data push " << dataResult->size() << "\n";
   err = m_decoder_plugin->push_data(m_decoder, dataResult->data(), dataResult->size());
   if (err.code != heif_error_Ok) {
     return Error(err.code, err.subcode, err.message);
   }
 
+  return {};
+}
+
+Error Decoder::flush_decoder()
+{
+  assert(m_decoder_plugin);
+
+  if (m_decoder_plugin->plugin_api_version >= 5) {
+    heif_error err = m_decoder_plugin->flush_data(m_decoder);
+    return Error::from_heif_error(err);
+  }
+
+  return {};
+}
+
+Result<std::shared_ptr<HeifPixelImage> > Decoder::get_decoded_frame(const heif_decoding_options& options,
+                                                                    const heif_security_limits* limits)
+{
+  auto pluginErr = require_decoder_plugin(options);
+  if (pluginErr) {
+    return pluginErr;
+  }
+
   heif_image* decoded_img = nullptr;
+
+  heif_error err;
 
   if (m_decoder_plugin->plugin_api_version >= 4 &&
       m_decoder_plugin->decode_next_image != nullptr) {
@@ -317,8 +353,7 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
   }
 
   if (!decoded_img) {
-    // TODO(farindk): The plugin should return an error in this case.
-    return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
+    return {nullptr};
   }
 
   // -- cleanup
@@ -327,4 +362,19 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
   heif_image_release(decoded_img);
 
   return img;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& options,
+                                                  const heif_security_limits* limits)
+{
+  Error decodeError = decode_sequence_frame_from_compressed_data(options, limits);
+  if (decodeError) {
+    return decodeError;
+  }
+
+  flush_decoder();
+
+  return get_decoded_frame(options, limits);
 }

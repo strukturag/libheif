@@ -94,15 +94,32 @@ public:
 
   // --- decoding
 
+  // Decode a stream image that contains exactly one image. Decoder input is flushed and
+  // it always should return an image.
   virtual Result<std::shared_ptr<HeifPixelImage>>
   decode_single_frame_from_compressed_data(const heif_decoding_options& options,
                                            const heif_security_limits* limits);
+
+  // Push data for one frame into decoder.
+  virtual Error
+  decode_sequence_frame_from_compressed_data(const heif_decoding_options& options,
+                                             const heif_security_limits* limits);
+
+  virtual Error flush_decoder();
+
+  // Get a decoded frame from the decoder.
+  // It may return NULL when there is buffering in the codec.
+  virtual Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
+                                                                     const heif_security_limits* limits);
 
 private:
   DataExtent m_data_extent;
 
   const heif_decoder_plugin* m_decoder_plugin = nullptr;
   void* m_decoder = nullptr;
+
+  // get the decoder plugin if it is not set already
+  Error require_decoder_plugin(const heif_decoding_options& options);
 };
 
 #endif

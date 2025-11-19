@@ -301,6 +301,17 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
       };
     }
 
+#if 0
+    FILE* fh = fopen("data.h265", "a");
+    fputc(0, fh);
+    fputc(0, fh);
+    fputc(1, fh);
+    fwrite(cdata + ptr, nal_size, 1, fh);
+    fclose(fh);
+
+    printf("put nal with size %d %x\n", nal_size, *(cdata+ptr));
+#endif
+
     de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, nullptr);
     ptr += nal_size;
   }
@@ -312,6 +323,17 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
 }
 
 
+static heif_error libde265_flush_data(void* decoder_raw)
+{
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
+
+  de265_flush_data(decoder->ctx);
+
+  return heif_error_ok;
+}
+
+
+
 static heif_error libde265_v1_decode_next_image(void* decoder_raw,
                                                 heif_image** out_img,
                                                 const heif_security_limits* limits)
@@ -319,7 +341,7 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
   libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
-  de265_flush_data(decoder->ctx);
+  // TODO(251119) : de265_flush_data(decoder->ctx);
 
   // TODO(farindk): Set "err" if no image was decoded.
   int more;
@@ -411,7 +433,7 @@ static const heif_decoder_plugin decoder_libde265
 
 static const heif_decoder_plugin decoder_libde265
     {
-        4,
+        5,
         libde265_plugin_name,
         libde265_init_plugin,
         libde265_deinit_plugin,
@@ -422,7 +444,8 @@ static const heif_decoder_plugin decoder_libde265
         libde265_v1_decode_image,
         libde265_set_strict_decoding,
         "libde265",
-        libde265_v1_decode_next_image
+        libde265_v1_decode_next_image,
+      libde265_flush_data,
     };
 
 #endif
