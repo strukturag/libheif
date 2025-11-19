@@ -147,25 +147,67 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     };
   }
 
-  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_processed % m_presentation_timeline.size()];
-  uint32_t sample_idx = sampleTiming.sampleIdx;
-  uint32_t chunk_idx = sampleTiming.chunkIdx;
 
-  const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
+  std::shared_ptr<HeifPixelImage> image;
 
-  auto decoder = chunk->get_decoder();
-  assert(decoder);
+  uint32_t sample_idx;
 
-  decoder->set_data_extent(chunk->get_data_extent_for_sample(sample_idx));
+  for (;;) {
+    const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded % m_presentation_timeline.size()];
+    /*uint32_t*/ sample_idx = sampleTiming.sampleIdx;
+    uint32_t chunk_idx = sampleTiming.chunkIdx;
 
-  Result<std::shared_ptr<HeifPixelImage> > decodingResult = decoder->decode_single_frame_from_compressed_data(options,
-                                                                                                              m_heif_context->get_security_limits());
-  if (!decodingResult) {
-    m_next_sample_to_be_processed++;
-    return decodingResult.error();
+    const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
+
+    auto decoder = chunk->get_decoder();
+    assert(decoder);
+
+    if (m_next_sample_to_be_decoded != 0) {
+      // TODO(251119): hack: avoid calling get_decoded_frame() before starting the decoder.
+      Result<std::shared_ptr<HeifPixelImage> > getFrameResult = decoder->get_decoded_frame(options,
+                                                                                           m_heif_context->get_security_limits());
+      if (getFrameResult.error()) {
+        return getFrameResult.error();
+      }
+
+      if (*getFrameResult != nullptr) {
+        image = *getFrameResult;
+        break;
+      }
+
+      if (m_is_flushed) {
+        return Error(heif_error_Decoder_plugin_error,
+                     heif_suberror_Unspecified,
+                     "Did not decode all frames");
+      }
+    }
+
+    if (m_next_sample_to_be_decoded < m_num_samples) {
+      DataExtent extent = chunk->get_data_extent_for_sample(sample_idx);
+      decoder->set_data_extent(extent);
+
+      std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
+
+      Error decodingError = decoder->decode_sequence_frame_from_compressed_data(options,
+                                                                                m_heif_context->get_security_limits());
+      if (decodingError) {
+        m_next_sample_to_be_decoded++;
+        return decodingError;
+      }
+
+      m_next_sample_to_be_decoded++;
+    }
+    else {
+      std::cout << "FLUSH\n";
+      Error flushError = decoder->flush_decoder();
+      if (flushError) {
+        return flushError;
+      }
+
+      m_is_flushed = true;
+    }
   }
 
-  auto image = *decodingResult;
 
   if (m_stts) {
     image->set_sample_duration(m_stts->get_sample_duration(sample_idx));

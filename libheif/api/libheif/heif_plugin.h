@@ -119,6 +119,8 @@ typedef struct heif_decoder_plugin
 
   // --- version 5 functions will follow below ... ---
 
+  heif_error (* flush_data)(void* decoder);
+
   // --- Note: when adding new versions, also update `heif_decoder_plugin_latest_version`.
 } heif_decoder_plugin;
 
