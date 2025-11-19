@@ -984,9 +984,14 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   encoder->encoder = api->encoder_open(param);
 
   if (image_sequence) {
+    // check that all NALs have been drained
+    assert(encoder->nal_output_counter == encoder->num_nals);
+    encoder->nal_output_counter = 0;
+
     api->encoder_headers(encoder->encoder,
-    &encoder->nals,
-    &encoder->num_nals);
+                         &encoder->nals,
+                         &encoder->num_nals);
+
     for (int i=0;i<encoder->num_nals;i++) {
       std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
     }
@@ -1049,6 +1054,10 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
   pic->bitDepth = encoder->bit_depth;
   pic->userData = reinterpret_cast<void*>(frame_nr);
 
+  // check that all NALs have been drained
+  assert(encoder->nal_output_counter == encoder->num_nals);
+  encoder->nal_output_counter = 0;
+
 #if X265_BUILD == 212
   // In x265 build version 212, the signature of the encoder_encode() function was changed. But it was changed back in version 213.
   // https://bitbucket.org/multicoreware/x265_git/issues/952/crash-in-libheif-tests
@@ -1084,6 +1093,10 @@ static void x265_end_sequence_encoding(void* encoder_raw)
 
   const x265_api* api = encoder->api;
 
+  // check that all NALs have been drained
+  assert(encoder->nal_output_counter == encoder->num_nals);
+  encoder->nal_output_counter = 0;
+
 #if X265_BUILD == 212
   x265_picture* out_pic = NULL;
   int result = api->encoder_encode(encoder->encoder,
@@ -1116,7 +1129,7 @@ static void x265_end_sequence_encoding(void* encoder_raw)
   encoder->api->param_free(encoder->param);
   encoder->param = nullptr;
 
-  encoder->nal_output_counter = 0;
+  encoder->nal_output_counter = 0; // TODO: is this needed ?
 }
 
 
@@ -1189,8 +1202,6 @@ static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** d
         return heif_error_ok;
       }
     }
-
-    encoder->nal_output_counter = 0;
   }
 
   *data = nullptr;
