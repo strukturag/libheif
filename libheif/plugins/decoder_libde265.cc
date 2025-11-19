@@ -394,6 +394,7 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
       heif_nclx_color_profile_free(nclx);
 
       de265_release_next_picture(decoder->ctx);
+      return heif_error_ok;
     }
   } while (more);
 
