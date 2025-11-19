@@ -44,7 +44,7 @@ extern "C" {
 //  1.15         3         3          2
 //  1.20         4         3          2
 
-#define heif_decoder_plugin_latest_version 4
+#define heif_decoder_plugin_latest_version 5
 #define heif_encoder_plugin_latest_version 3
 
 // ====================================================================================================
@@ -52,6 +52,8 @@ extern "C" {
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
+
+struct heif_decoding_options;
 
 typedef struct heif_decoder_plugin
 {
@@ -116,7 +118,13 @@ typedef struct heif_decoder_plugin
   heif_error (* decode_next_image)(void* decoder, heif_image** out_img,
                                    const heif_security_limits* limits);
 
-  // --- version 5 functions will follow below ... ---
+  // --- version 5 functions ---
+
+  // Same as new_decoder with access to decoding options. options may be NULL.
+  // At most one of new_decoder and new_decoder_with_options may be NULL.
+  heif_error (* new_decoder_with_options)(void** decoder, const heif_decoding_options* options);
+
+  // --- version 6 functions will follow below ... ---
 
   // --- Note: when adding new versions, also update `heif_decoder_plugin_latest_version`.
 } heif_decoder_plugin;

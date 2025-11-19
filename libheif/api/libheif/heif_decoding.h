@@ -110,6 +110,12 @@ typedef struct heif_decoding_options
   // version 9 options
 
   heif_color_profile_nclx* output_image_nclx_profile;
+
+  // version 10 options
+
+  // Number of threads. 0 means "default codec setting". 1 means single-threaded decoding.
+  // 2+ means multi-threaded decoding. Default is 0.
+  int num_threads;
 } heif_decoding_options;
 
 

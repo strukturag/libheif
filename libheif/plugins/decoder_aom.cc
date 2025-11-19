@@ -85,13 +85,19 @@ static int aom_does_support_format(heif_compression_format format)
 }
 
 
-heif_error aom_new_decoder(void** dec)
+heif_error aom_new_decoder_with_options(void** dec, const heif_decoding_options* options)
 {
   aom_decoder* decoder = new aom_decoder();
 
   decoder->iface = aom_codec_av1_dx();
 
-  aom_codec_err_t aomerr = aom_codec_dec_init(&decoder->codec, decoder->iface, NULL, 0);
+  aom_codec_dec_cfg_t cfg;
+  memset(&cfg, 0, sizeof(aom_codec_dec_cfg_t));
+  if (options != nullptr && options->num_threads > 0) {
+    cfg.threads = options->num_threads;
+  }
+
+  aom_codec_err_t aomerr = aom_codec_dec_init(&decoder->codec, decoder->iface, &cfg, 0);
   if (aomerr) {
     *dec = NULL;
 
@@ -106,6 +112,12 @@ heif_error aom_new_decoder(void** dec)
 
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
+}
+
+
+heif_error aom_new_decoder(void** dec)
+{
+  return aom_new_decoder_with_options(dec, nullptr);
 }
 
 
@@ -290,7 +302,7 @@ heif_error aom_decode_image(void* decoder_raw, heif_image** out_img)
 
 static const heif_decoder_plugin decoder_aom
     {
-        4,
+        5,
         aom_plugin_name,
         aom_init_plugin,
         aom_deinit_plugin,
@@ -301,7 +313,8 @@ static const heif_decoder_plugin decoder_aom
         aom_decode_image,
         aom_set_strict_decoding,
         "aom",
-        aom_decode_next_image
+        aom_decode_next_image,
+        aom_new_decoder_with_options
     };
 
 
