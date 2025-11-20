@@ -373,7 +373,10 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
       output_nclx = &nclx;
     }
     else {
-      // TODO
+      nclx_profile undefined_nclx;
+      undefined_nclx.copy_to_heif_color_profile_nclx(&nclx);
+
+      output_nclx = &nclx;
     }
   }
 

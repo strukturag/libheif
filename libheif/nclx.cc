@@ -324,6 +324,16 @@ void nclx_profile::set_from_heif_color_profile_nclx(const heif_color_profile_ncl
 }
 
 
+void nclx_profile::copy_to_heif_color_profile_nclx(heif_color_profile_nclx* nclx)
+{
+  assert(nclx);
+  nclx->color_primaries = (enum heif_color_primaries)m_colour_primaries;
+  nclx->transfer_characteristics = (enum heif_transfer_characteristics)m_transfer_characteristics;
+  nclx->matrix_coefficients = (enum heif_matrix_coefficients)m_matrix_coefficients;
+  nclx->full_range_flag = m_full_range_flag;
+}
+
+
 void nclx_profile::replace_undefined_values_with_sRGB_defaults()
 {
   if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {

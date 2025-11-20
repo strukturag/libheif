@@ -162,6 +162,8 @@ struct nclx_profile
   Error get_nclx_color_profile(heif_color_profile_nclx** out_data) const;
 
   void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx);
+
+  void copy_to_heif_color_profile_nclx(heif_color_profile_nclx* nclx);
 };
 
 
