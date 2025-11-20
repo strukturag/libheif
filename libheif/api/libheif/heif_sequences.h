@@ -407,6 +407,10 @@ heif_error heif_track_encode_sequence_image(heif_track*,
                                             heif_encoder* encoder,
                                             const heif_sequence_encoding_options* sequence_encoding_options);
 
+/**
+ * When all sequence frames have been sent, you have to call this function to let the
+ * library know that no more frames will follow. It will then finalize writing the track.
+ */
 LIBHEIF_API
 heif_error heif_track_encode_end_of_sequence(heif_track*,
                                              heif_encoder* encoder);
