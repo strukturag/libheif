@@ -679,13 +679,13 @@ uint32_t Track::get_timescale() const
 }
 
 
-void Track::set_track_duration_in_movie_units(uint64_t total_duration)
+void Track::set_track_duration_in_movie_units(uint64_t total_duration, uint64_t segment_duration)
 {
   m_tkhd->set_duration(total_duration);
 
   if (m_elst) {
     Box_elst::Entry entry;
-    entry.segment_duration = total_duration;
+    entry.segment_duration = segment_duration;
 
     m_elst->add_entry(entry);
   }
