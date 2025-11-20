@@ -216,29 +216,39 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
 }
 
 
-Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
+Result<std::vector<uint8_t>> Decoder::get_compressed_data(bool with_configuration_NALs) const
 {
   // --- get the compressed image data
 
-  // data from configuration blocks
+  if (with_configuration_NALs) {
+    // data from configuration blocks
 
-  Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data();
-  if (!confData) {
-    return confData.error();
+    Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data();
+    if (!confData) {
+      return confData.error();
+    }
+
+    std::vector<uint8_t> data = *confData;
+
+    // append image data
+
+    auto dataResult = m_data_extent.read_data();
+    if (!dataResult) {
+      return dataResult.error();
+    }
+
+    data.insert(data.end(), (*dataResult)->begin(), (*dataResult)->end());
+
+    return data;
   }
+  else {
+    auto dataResult = m_data_extent.read_data();
+    if (!dataResult) {
+      return dataResult.error();
+    }
 
-  std::vector<uint8_t> data = *confData;
-
-  // append image data
-
-  auto dataResult = m_data_extent.read_data();
-  if (!dataResult) {
-    return dataResult.error();
+    return {*(*dataResult)};
   }
-
-  data.insert(data.end(), (*dataResult)->begin(), (*dataResult)->end());
-
-  return data;
 }
 
 
@@ -266,7 +276,8 @@ Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
 }
 
 
-Error Decoder::decode_sequence_frame_from_compressed_data(const heif_decoding_options& options,
+Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
+                                                          const heif_decoding_options& options,
                                                           const heif_security_limits* limits)
 {
   auto pluginErr = require_decoder_plugin(options);
@@ -299,7 +310,7 @@ Error Decoder::decode_sequence_frame_from_compressed_data(const heif_decoding_op
     }
   }
 
-  auto dataResult = get_compressed_data();
+  auto dataResult = get_compressed_data(upload_configuration_NALs);
   if (!dataResult) {
     return dataResult.error();
   }
@@ -369,7 +380,7 @@ Result<std::shared_ptr<HeifPixelImage>>
 Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& options,
                                                   const heif_security_limits* limits)
 {
-  Error decodeError = decode_sequence_frame_from_compressed_data(options, limits);
+  Error decodeError = decode_sequence_frame_from_compressed_data(true, options, limits);
   if (decodeError) {
     return decodeError;
   }
