@@ -134,12 +134,16 @@ Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, 
 
 Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(const heif_decoding_options& options)
 {
+  // --- If we ignore the editlist, we stop when we reached the end of the original samples.
+
   uint64_t num_output_samples = m_num_output_samples;
   if (options.ignore_sequence_editlist) {
     num_output_samples = m_num_samples;
   }
 
-  if (m_next_sample_to_be_processed >= num_output_samples) {
+  // --- Did we reach the end of the sequence?
+
+  if (m_next_sample_to_be_output >= num_output_samples) {
     return Error{
       heif_error_End_of_sequence,
       heif_suberror_Unspecified,
@@ -150,11 +154,13 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
   std::shared_ptr<HeifPixelImage> image;
 
-  uint32_t sample_idx;
+  uint32_t sample_idx_in_chunk;
 
   for (;;) {
-    const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded % m_presentation_timeline.size()];
-    /*uint32_t*/ sample_idx = sampleTiming.sampleIdx;
+    assert(m_next_sample_to_be_decoded < m_presentation_timeline.size());
+
+    const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded /*% m_presentation_timeline.size()*/];
+    sample_idx_in_chunk = sampleTiming.sampleIdx;
     uint32_t chunk_idx = sampleTiming.chunkIdx;
 
     const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
@@ -162,41 +168,58 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     auto decoder = chunk->get_decoder();
     assert(decoder);
 
+    // avoid calling get_decoded_frame() before starting the decoder.
     if (m_next_sample_to_be_decoded != 0) {
-      // TODO(251119): hack: avoid calling get_decoded_frame() before starting the decoder.
       Result<std::shared_ptr<HeifPixelImage> > getFrameResult = decoder->get_decoded_frame(options,
                                                                                            m_heif_context->get_security_limits());
       if (getFrameResult.error()) {
         return getFrameResult.error();
       }
 
+
+      // We received a decoded frame. Exit "push data" / "decode" loop.
+
       if (*getFrameResult != nullptr) {
         image = *getFrameResult;
 
-        if ((m_next_sample_to_be_processed+1) % m_presentation_timeline.size() == 0) {
-          m_is_flushed = false;
+        // If this was the last frame in the EditList segment, reset the 'flushed' flag
+        // in case we have to restart the decoder for another repetition of the segment.
+        if ((m_next_sample_to_be_output + 1) % m_presentation_timeline.size() == 0) {
+          m_decoder_is_flushed = false;
         }
 
         break;
       }
 
-      if (m_is_flushed) {
+      // If the sequence has ended and the decoder was flushed, but we still did not receive
+      // the image, we are waiting for, this is an error.
+      if (m_decoder_is_flushed) {
         return Error(heif_error_Decoder_plugin_error,
                      heif_suberror_Unspecified,
                      "Did not decode all frames");
       }
     }
 
+
+    // --- Push more data into the decoder (or send end-of-sequence).
+
     if (m_next_sample_to_be_decoded < m_num_samples) {
-      DataExtent extent = chunk->get_data_extent_for_sample(sample_idx);
+
+      // --- Find the data extent that stores the compressed frame data.
+
+      DataExtent extent = chunk->get_data_extent_for_sample(sample_idx_in_chunk);
       decoder->set_data_extent(extent);
 
       // std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
 
       // advance decoding index to next in segment
-      m_next_sample_to_be_decoded = (m_next_sample_to_be_decoded + 1) % m_presentation_timeline.size();
+      m_next_sample_to_be_decoded = static_cast<uint32_t>((m_next_sample_to_be_decoded + 1) % m_presentation_timeline.size());
 
-      const bool is_first_sample = (sample_idx == 0);
+      // Send the decoder configuration when we send the first sample of the chunk.
+      // The configuration NALs might change for each chunk.
+      const bool is_first_sample = (sample_idx_in_chunk == 0);
+
+      // --- Push data into the decoder.
 
       Error decodingError = decoder->decode_sequence_frame_from_compressed_data(is_first_sample,
                                                                                 options,
@@ -206,19 +229,24 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       }
     }
     else {
+      // --- End of sequence (Editlist segment) reached.
+
       // std::cout << "FLUSH\n";
       Error flushError = decoder->flush_decoder();
       if (flushError) {
         return flushError;
       }
 
-      m_is_flushed = true;
+      m_decoder_is_flushed = true;
     }
   }
 
 
+  // --- We have received a new decoded image.
+  //     Postprocess decoded image, attach metadata.
+
   if (m_stts) {
-    image->set_sample_duration(m_stts->get_sample_duration(sample_idx));
+    image->set_sample_duration(m_stts->get_sample_duration(sample_idx_in_chunk));
   }
 
   // --- assign alpha if we have an assigned alpha track
@@ -237,7 +265,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx);
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx_in_chunk);
     if (!readResult) {
       return readResult.error();
     }
@@ -251,7 +279,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   }
 
   if (m_aux_reader_tai_timestamps) {
-    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx);
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx_in_chunk);
     if (!readResult) {
       return readResult.error();
     }
@@ -264,7 +292,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     image->set_tai_timestamp(&*resultTai);
   }
 
-  m_next_sample_to_be_processed++;
+  m_next_sample_to_be_output++;
 
   return image;
 }
@@ -344,6 +372,9 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
       output_nclx = &nclx;
     }
+    else {
+      // TODO
+    }
   }
 
   Result<std::shared_ptr<HeifPixelImage> > srcImageResult = encoder->convert_colorspace_for_encoding(image,
@@ -357,8 +388,11 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = *srcImageResult;
 
-  m_width = colorConvertedImage->get_width();
-  m_height = colorConvertedImage->get_height();
+  // integer range is checked at beginning of function.
+  assert(colorConvertedImage->get_width() == image->get_width());
+  assert(colorConvertedImage->get_height() == image->get_height());
+  m_width = static_cast<uint16_t>(colorConvertedImage->get_width());
+  m_height = static_cast<uint16_t>(colorConvertedImage->get_height());
 
   // --- encode image
 
