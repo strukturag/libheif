@@ -34,7 +34,7 @@ Result<std::vector<uint8_t>> Decoder_JPEG2000::read_bitstream_configuration_data
 
 int Decoder_JPEG2000::get_luma_bits_per_pixel() const
 {
-  Result<std::vector<uint8_t>> imageDataResult = get_compressed_data();
+  Result<std::vector<uint8_t>> imageDataResult = get_compressed_data(true);
   if (!imageDataResult) {
     return -1;
   }
@@ -50,7 +50,7 @@ int Decoder_JPEG2000::get_luma_bits_per_pixel() const
 
 int Decoder_JPEG2000::get_chroma_bits_per_pixel() const
 {
-  Result<std::vector<uint8_t>> imageDataResult = get_compressed_data();
+  Result<std::vector<uint8_t>> imageDataResult = get_compressed_data(true);
   if (!imageDataResult) {
     return -1;
   }

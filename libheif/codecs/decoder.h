@@ -90,7 +90,7 @@ public:
   // Returns a stream of packets. Each packet is starts with a 4-byte size (MSB first).
   [[nodiscard]] virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const = 0;
 
-  Result<std::vector<uint8_t>> get_compressed_data() const;
+  Result<std::vector<uint8_t>> get_compressed_data(bool with_configuration_NALs) const;
 
   // --- decoding
 
@@ -102,7 +102,8 @@ public:
 
   // Push data for one frame into decoder.
   virtual Error
-  decode_sequence_frame_from_compressed_data(const heif_decoding_options& options,
+  decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
+                                             const heif_decoding_options& options,
                                              const heif_security_limits* limits);
 
   virtual Error flush_decoder();

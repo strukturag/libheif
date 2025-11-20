@@ -196,7 +196,10 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       // advance decoding index to next in segment
       m_next_sample_to_be_decoded = (m_next_sample_to_be_decoded + 1) % m_presentation_timeline.size();
 
-      Error decodingError = decoder->decode_sequence_frame_from_compressed_data(options,
+      const bool is_first_sample = (sample_idx == 0);
+
+      Error decodingError = decoder->decode_sequence_frame_from_compressed_data(is_first_sample,
+                                                                                options,
                                                                                 m_heif_context->get_security_limits());
       if (decodingError) {
         return decodingError;

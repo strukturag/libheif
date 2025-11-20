@@ -51,7 +51,7 @@ Error Decoder_JPEG::parse_SOF()
 
   // image data, usually from 'mdat'
 
-  auto dataResult = get_compressed_data();
+  auto dataResult = get_compressed_data(true);
   if (!dataResult) {
     return dataResult.error();
   }
