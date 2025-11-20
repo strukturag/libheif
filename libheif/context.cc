@@ -317,6 +317,7 @@ void HeifContext::write(StreamWriter& writer)
       }
 
       uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+      uint64_t unrepeated_movie_duration = movie_duration;
 
       // sequence repetitions
 
@@ -336,7 +337,7 @@ void HeifContext::write(StreamWriter& writer)
         track.second->enable_edit_list_repeat_mode(true);
       }
 
-      track.second->set_track_duration_in_movie_units(movie_duration);
+      track.second->set_track_duration_in_movie_units(movie_duration, unrepeated_movie_duration);
 
       max_sequence_duration = std::max(max_sequence_duration, movie_duration);
     }

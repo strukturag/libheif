@@ -166,7 +166,7 @@ public:
   uint32_t get_timescale() const;
 
   // The context will compute the duration in global movie units and set this.
-  void set_track_duration_in_movie_units(uint64_t total_duration);
+  void set_track_duration_in_movie_units(uint64_t total_duration, uint64_t segment_duration);
 
   void enable_edit_list_repeat_mode(bool enable);
 
