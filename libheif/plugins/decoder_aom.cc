@@ -24,6 +24,7 @@
 #include <memory>
 #include <cstring>
 #include <cassert>
+#include <deque>
 #include <string>
 
 #include <aom/aom_decoder.h>
@@ -32,11 +33,23 @@
 
 struct aom_decoder
 {
+  ~aom_decoder()
+  {
+    // --- free images that are still in the output queue
+
+    for (auto* img : output_queue) {
+      if (img) {
+        heif_image_release(img);
+      }
+    }
+  }
+
   aom_codec_ctx_t codec;
   bool codec_initialized = false;
 
   aom_codec_iface_t* iface;
 
+  std::deque<heif_image*> output_queue;
   bool strict_decoding = false;
   std::string error_message;
 };
@@ -148,22 +161,24 @@ heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_t frame
     return err;
   }
 
-
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
 }
 
 
-heif_error aom_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                        const heif_security_limits* limits)
+static heif_error get_next_image_from_decoder(aom_decoder* decoder,
+                                              aom_codec_iter_t* inout_iter,
+                                              heif_image** out_img,
+                                              const heif_security_limits* limits)
 {
-  aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
+  aom_image_t* img = aom_codec_get_frame(&decoder->codec, inout_iter);
 
-  aom_codec_iter_t iter = NULL;
-  aom_image_t* img = NULL;
+  if (img == NULL) {
+    *out_img = NULL;
+    return {};
+  }
 
-  img = aom_codec_get_frame(&decoder->codec, &iter);
-
+  /*
   if (img == NULL) {
     return {
       heif_error_Decoder_plugin_error,
@@ -171,7 +186,7 @@ heif_error aom_decode_next_image(void* decoder_raw, heif_image** out_img,
       kEmptyString
     };
   }
-
+*/
 
   if (img->fmt != AOM_IMG_FMT_I420 &&
       img->fmt != AOM_IMG_FMT_I42016 &&
@@ -281,6 +296,52 @@ heif_error aom_decode_next_image(void* decoder_raw, heif_image** out_img,
   *out_img = heif_img;
   return err;
 }
+
+
+
+heif_error aom_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                 const heif_security_limits* limits)
+{
+  aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
+
+  // --- if there are images in the output queue, pass them back
+
+  if (!decoder->output_queue.empty()) {
+    heif_image* next_image = decoder->output_queue.front();
+    decoder->output_queue.pop_front();
+
+    *out_img = next_image;
+    return {};
+  }
+
+  aom_codec_iter_t iter = NULL;
+  for (;;) {
+    heif_image* img;
+    heif_error err = get_next_image_from_decoder(decoder, &iter, &img, limits);
+    if (err.code) {
+      return err;
+    }
+
+    if (img) {
+      decoder->output_queue.push_back(img);
+    }
+    else {
+      // push a NULL image to indicate that the decoder needs more
+      // input data before querying the output queue again
+      decoder->output_queue.push_back(nullptr);
+      break;
+    }
+  }
+
+  if (decoder->output_queue.empty()) {
+    *out_img = nullptr;
+    return {};
+  }
+  else {
+    return aom_decode_next_image(decoder_raw, out_img, limits);
+  }
+}
+
 
 heif_error aom_decode_image(void* decoder_raw, heif_image** out_img)
 {
