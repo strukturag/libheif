@@ -653,7 +653,7 @@ Result<std::string> Track::get_first_cluster_urim_uri() const
 bool Track::end_of_sequence_reached() const
 {
   //return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());
-  return m_next_sample_to_be_processed >= m_num_output_samples;
+  return m_next_sample_to_be_output >= m_num_output_samples;
 }
 
 
@@ -755,7 +755,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   m_stsz->append_sample_size((uint32_t)raw_data.size());
 
   if (is_sync_sample) {
-    m_stss->add_sync_sample(m_next_sample_to_be_processed + 1);
+    m_stss->add_sync_sample(m_next_sample_to_be_output + 1);
   }
 
   if (sample_duration == 0) {
@@ -808,7 +808,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
     }
   }
 
-  m_next_sample_to_be_processed++;
+  m_next_sample_to_be_output++;
 
   return Error::Ok;
 }
@@ -890,13 +890,13 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
     num_output_samples = m_num_samples;
   }
 
-  if (m_next_sample_to_be_processed >= num_output_samples) {
+  if (m_next_sample_to_be_output >= num_output_samples) {
     return Error{heif_error_End_of_sequence,
                  heif_suberror_Unspecified,
                  "End of sequence"};
   }
 
-  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_processed % m_presentation_timeline.size()];
+  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
   uint32_t sample_idx = sampleTiming.sampleIdx;
   uint32_t chunk_idx = sampleTiming.chunkIdx;
 
@@ -952,7 +952,7 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
     }
   }
 
-  m_next_sample_to_be_processed++;
+  m_next_sample_to_be_output++;
 
   return sample;
 }
