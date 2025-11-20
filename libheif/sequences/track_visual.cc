@@ -172,6 +172,11 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
       if (*getFrameResult != nullptr) {
         image = *getFrameResult;
+
+        if ((m_next_sample_to_be_processed+1) % m_presentation_timeline.size() == 0) {
+          m_is_flushed = false;
+        }
+
         break;
       }
 
@@ -186,19 +191,19 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       DataExtent extent = chunk->get_data_extent_for_sample(sample_idx);
       decoder->set_data_extent(extent);
 
-      std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
+      // std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
+
+      // advance decoding index to next in segment
+      m_next_sample_to_be_decoded = (m_next_sample_to_be_decoded + 1) % m_presentation_timeline.size();
 
       Error decodingError = decoder->decode_sequence_frame_from_compressed_data(options,
                                                                                 m_heif_context->get_security_limits());
       if (decodingError) {
-        m_next_sample_to_be_decoded++;
         return decodingError;
       }
-
-      m_next_sample_to_be_decoded++;
     }
     else {
-      std::cout << "FLUSH\n";
+      // std::cout << "FLUSH\n";
       Error flushError = decoder->flush_decoder();
       if (flushError) {
         return flushError;
