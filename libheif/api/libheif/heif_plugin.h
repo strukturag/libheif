@@ -255,7 +255,9 @@ typedef struct heif_encoder_plugin
   void (* end_sequence_encoding)(void* encoder);
 
   heif_error (* get_compressed_data2)(void* encoder, uint8_t** data, int* size,
-                                      uintptr_t* frame_nr);
+                                      uintptr_t* frame_nr, int* is_keyframe);
+
+  int does_indicate_keyframes;
 
   // --- version 5 functions will follow below ... ---
 

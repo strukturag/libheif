@@ -180,7 +180,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     int size;
 
     uintptr_t frameNr=0;
-    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr);
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr, nullptr);
 
     if (data == nullptr) {
       break;
