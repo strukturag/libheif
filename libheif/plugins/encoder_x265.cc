@@ -1259,10 +1259,10 @@ static const heif_encoder_plugin encoder_plugin_x265
         /* get_compressed_data */ x265_get_compressed_data,
         /* query_input_colorspace (v2) */ x265_query_input_colorspace2,
         /* query_encoded_size (v3) */ nullptr,
-        /* start_sequence_encoding (v3) */ x265_start_sequence_encoding,
-        /* encode_sequence_frame (v3) */ x265_encode_sequence_frame,
-        /* end_sequence_encoding (v3) */ x265_end_sequence_encoding,
-        /* get_compressed_data2 (v3) */ x265_get_compressed_data2
+        /* start_sequence_encoding (v4) */ x265_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ x265_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ x265_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ x265_get_compressed_data2
     };
 
 const heif_encoder_plugin* get_encoder_plugin_x265()
