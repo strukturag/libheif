@@ -349,9 +349,18 @@ heif_error aom_decode_image(void* decoder_raw, heif_image** out_img)
   return aom_decode_next_image(decoder_raw, out_img, limits);
 }
 
+
+static heif_error aom_flush_data(void* decoder_raw)
+{
+  // aom_decoder* decoder = (aom_decoder*) decoder_raw;
+
+  return heif_error_ok;
+}
+
+
 static const heif_decoder_plugin decoder_aom
     {
-        4,
+        5,
         aom_plugin_name,
         aom_init_plugin,
         aom_deinit_plugin,
@@ -362,7 +371,8 @@ static const heif_decoder_plugin decoder_aom
         aom_decode_image,
         aom_set_strict_decoding,
         "aom",
-        aom_decode_next_image
+        aom_decode_next_image,
+        aom_flush_data
     };
 
 

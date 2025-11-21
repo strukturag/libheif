@@ -134,6 +134,7 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
     }
 
     codedImage.append(data, size);
+    codedImage.frame_nr = out_frame_number;
   }
 
   auto av1C = std::make_shared<Box_av1C>();
@@ -151,7 +152,7 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
 
 Error Encoder_AVIF::encode_sequence_flush(heif_encoder* encoder)
 {
-
+  return {};
 }
 
 
