@@ -28,11 +28,11 @@
 
 
 Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                     struct heif_encoder* encoder,
-                                                     const struct heif_encoding_options& options,
-                                                     enum heif_image_input_class input_class)
+                                                     heif_encoder* encoder,
+                                                     const heif_encoding_options& options,
+                                                     heif_image_input_class input_class)
 {
-  Encoder::CodedImageData codedImage;
+  CodedImageData codedImage;
 
   Box_av1C::configuration config;
 
@@ -43,7 +43,7 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
   heif_image c_api_image;
   c_api_image.image = image;
 
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
   if (err.code) {
     return Error(err.code,
                  err.subcode,
@@ -77,7 +77,91 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
 }
 
 
-std::shared_ptr<class Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(const CodedImageData& data) const
+Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                    heif_encoder* encoder,
+                                    const heif_sequence_encoding_options& options,
+                                    heif_image_input_class input_class,
+                                    uintptr_t frame_number)
+{
+  CodedImageData codedImage;
+
+  // Box_av1C::configuration config;
+
+  // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+  // TODO: maybe we can remove this later.
+  fill_av1C_configuration(&m_config, image);
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  if (!m_encoder_active) {
+    heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder,
+                                                              &c_api_image,
+                                                              input_class,
+                                                              &options);
+    if (err.code) {
+      return {
+        err.code,
+        err.subcode,
+        err.message
+      };
+    }
+
+    //m_hvcC = std::make_shared<Box_hvcC>();
+    m_encoder_active = true;
+  }
+
+
+  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image, frame_number);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    uintptr_t out_frame_number;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number);
+
+    bool found_config = fill_av1C_configuration_from_stream(&m_config, data, size);
+    (void) found_config;
+
+    if (data == nullptr) {
+      break;
+    }
+
+    codedImage.append(data, size);
+  }
+
+  auto av1C = std::make_shared<Box_av1C>();
+  av1C->set_configuration(m_config);
+  codedImage.properties.push_back(av1C);
+
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+
+  m_current_output_data = std::move(codedImage);
+
+  return {};
+}
+
+
+Error Encoder_AVIF::encode_sequence_flush(heif_encoder* encoder)
+{
+
+}
+
+
+std::optional<Encoder::CodedImageData> Encoder_AVIF::encode_sequence_get_data()
+{
+  return std::move(m_current_output_data);
+}
+
+
+std::shared_ptr<Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(const CodedImageData& data) const
 {
   auto av01 = std::make_shared<Box_av01>();
   av01->get_VisualSampleEntry().compressorname = "AVIF";

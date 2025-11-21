@@ -29,6 +29,7 @@
 #include "plugins/nalu_utils.h"
 
 
+// TODO: can we use the new sequences interface for this to avoid duplicate code.
 Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                      heif_encoder* encoder,
                                                      const heif_encoding_options& options,
