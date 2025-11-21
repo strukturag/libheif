@@ -917,6 +917,13 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
   // aom 2.0
   unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
 #endif
+
+  if (image_sequence &&
+      options->gop_structure != heif_sequence_gop_structure_intra_only &&
+      options->keyframe_distance_max != 1) {
+    aomUsage = AOM_USAGE_GOOD_QUALITY;
+  }
+
   if (encoder->realtime_mode) {
     aomUsage = AOM_USAGE_REALTIME;
   }
@@ -956,8 +963,17 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
     // Tell libaom that all frames will be key frames.
     cfg.kf_max_dist = 0;
   }
-  else if (options->keyframe_distance_max) {
-    cfg.kf_max_dist = options->keyframe_distance_max;
+  else if (options->gop_structure == heif_sequence_gop_structure_intra_only) {
+    cfg.kf_max_dist = 0;
+  }
+  else {
+    if (options->keyframe_distance_min) {
+      cfg.kf_min_dist = options->keyframe_distance_min;
+    }
+
+    if (options->keyframe_distance_max) {
+      cfg.kf_max_dist = options->keyframe_distance_max;
+    }
   }
 
   cfg.g_profile = seq_profile;
