@@ -408,6 +408,8 @@ class BitReader
 public:
   BitReader(const uint8_t* buffer, int len);
 
+  void reset();
+
   uint32_t get_bits(int n);
 
   uint8_t get_bits8(int n);
@@ -454,8 +456,9 @@ public:
   }
 
 private:
+  const uint8_t* const data_start;
   const uint8_t* data;
-  int data_length;
+  const int data_length;
   int bytes_remaining;
 
   uint64_t nextbits; // left-aligned bits
