@@ -127,12 +127,12 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
     int is_keyframe = 0;
     encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number, &is_keyframe);
 
-    bool found_config = fill_av1C_configuration_from_stream(&m_config, data, size);
-    (void) found_config;
-
     if (data == nullptr) {
       break;
     }
+
+    bool found_config = fill_av1C_configuration_from_stream(&m_config, data, size);
+    (void) found_config;
 
     codedImage.append(data, size);
     codedImage.frame_nr = out_frame_number;
@@ -148,7 +148,7 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
   codedImage.properties.push_back(av1C);
 
   codedImage.codingConstraints.intra_pred_used = true;
-  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+  codedImage.codingConstraints.all_ref_pics_intra = (options.gop_structure == heif_sequence_gop_structure_intra_only);
 
   m_current_output_data = std::move(codedImage);
 
