@@ -124,7 +124,8 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
     int size;
 
     uintptr_t out_frame_number;
-    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number);
+    int is_keyframe = 0;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number, &is_keyframe);
 
     bool found_config = fill_av1C_configuration_from_stream(&m_config, data, size);
     (void) found_config;
@@ -135,6 +136,11 @@ Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
 
     codedImage.append(data, size);
     codedImage.frame_nr = out_frame_number;
+
+    if (encoder->plugin->plugin_api_version >= 4 &&
+        encoder->plugin->does_indicate_keyframes) {
+      codedImage.is_sync_frame = is_keyframe;
+    }
   }
 
   auto av1C = std::make_shared<Box_av1C>();

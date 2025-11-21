@@ -1222,7 +1222,7 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 }
 
 static heif_error x265_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                            uintptr_t* frame_nr)
+                                            uintptr_t* frame_nr, int* is_keyframe)
 {
   return x265_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
 }
@@ -1262,7 +1262,8 @@ static const heif_encoder_plugin encoder_plugin_x265
         /* start_sequence_encoding (v4) */ x265_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ x265_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ x265_end_sequence_encoding,
-        /* get_compressed_data2 (v4) */ x265_get_compressed_data2
+        /* get_compressed_data2 (v4) */ x265_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 0
     };
 
 const heif_encoder_plugin* get_encoder_plugin_x265()

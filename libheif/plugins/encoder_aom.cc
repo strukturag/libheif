@@ -108,6 +108,7 @@ struct encoder_struct_aom
   {
     std::vector<uint8_t> compressedData;
     uintptr_t frameNr = 0;
+    bool is_keyframe = false;
   };
 
   std::deque<Packet> output_packets;
@@ -1239,6 +1240,7 @@ static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image*
 
       encoder_struct_aom::Packet output_packet;
       output_packet.frameNr = pkt->data.frame.pts;
+      output_packet.is_keyframe = (pkt->data.frame.flags & AOM_FRAME_IS_INTRAONLY);
 
       encoder->output_packets.emplace_back(output_packet);
       encoder->output_packets.back().compressedData.resize(n);
@@ -1322,7 +1324,7 @@ static heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
 
 
 heif_error aom_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
-                                          uintptr_t* out_framenr)
+                                          uintptr_t* out_framenr, int* out_is_keyframe)
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
@@ -1338,6 +1340,10 @@ heif_error aom_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int
       *out_framenr = encoder->output_packets.front().frameNr;
     }
 
+    if (out_is_keyframe) {
+      *out_is_keyframe = encoder->output_packets.front().is_keyframe;
+    }
+
     encoder->output_packets.pop_front();
 
     *size = (int) encoder->active_output_data.size();
@@ -1351,20 +1357,20 @@ heif_error aom_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int
 static heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                           heif_encoded_data_type* type)
 {
-  return aom_get_compressed_data_intern(encoder_raw, data, size, nullptr);
+  return aom_get_compressed_data_intern(encoder_raw, data, size, nullptr, nullptr);
 }
 
 
 static heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                           uintptr_t* frame_nr)
+                                           uintptr_t* frame_nr, int* is_keyframe)
 {
-  return aom_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
+  return aom_get_compressed_data_intern(encoder_raw, data, size, frame_nr, is_keyframe);
 }
 
 
 static const heif_encoder_plugin encoder_plugin_aom
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_AV1,
         /* id_name */ "aom",
         /* priority */ AOM_PLUGIN_PRIORITY,
@@ -1396,7 +1402,8 @@ static const heif_encoder_plugin encoder_plugin_aom
         /* start_sequence_encoding (v4) */ aom_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ aom_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ aom_end_sequence_encoding,
-        /* get_compressed_data2 (v4) */ aom_get_compressed_data2
+        /* get_compressed_data2 (v4) */ aom_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
 const heif_encoder_plugin* get_encoder_plugin_aom()
