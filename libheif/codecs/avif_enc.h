@@ -30,6 +30,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "avif_boxes.h"
 #include "codecs/encoder.h"
 
 
@@ -40,7 +42,29 @@ public:
                                 const heif_encoding_options& options,
                                 heif_image_input_class input_class) override;
 
+  bool encode_sequence_started() const override { return m_encoder_active; }
+
+  Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                      heif_encoder* encoder,
+                                      const heif_sequence_encoding_options& options,
+                                      heif_image_input_class input_class,
+                                      uintptr_t frame_number) override;
+
+  Error encode_sequence_flush(heif_encoder* encoder) override;
+
+  std::optional<CodedImageData> encode_sequence_get_data() override;
+
+
   std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
+private:
+  bool m_encoder_active = false;
+  bool m_end_of_sequence_reached = false;
+
+  bool m_first_frame = true;
+  Box_av1C::configuration m_config;
+
+  std::optional<CodedImageData> m_current_output_data;
 };
 
 
