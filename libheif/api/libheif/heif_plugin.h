@@ -252,7 +252,7 @@ typedef struct heif_encoder_plugin
 
   heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image, uintptr_t frame_nr);
 
-  void (* end_sequence_encoding)(void* encoder);
+  heif_error (* end_sequence_encoding)(void* encoder);
 
   heif_error (* get_compressed_data2)(void* encoder, uint8_t** data, int* size,
                                       uintptr_t* frame_nr, int* is_keyframe);

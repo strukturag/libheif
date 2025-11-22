@@ -1256,7 +1256,7 @@ static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image*
 }
 
 
-static void aom_end_sequence_encoding(void *encoder_raw)
+static heif_error aom_end_sequence_encoding(void *encoder_raw)
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
   aom_codec_ctx_t& codec = encoder->codec;
@@ -1269,7 +1269,7 @@ static void aom_end_sequence_encoding(void *encoder_raw)
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_encoding,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    return; //  err;  // TODO: we need an error return value for end_sequence_encoding()
+    return err;
   }
 
 
@@ -1300,6 +1300,8 @@ static void aom_end_sequence_encoding(void *encoder_raw)
              n);
     }
   }
+
+  return {};
 }
 
 
@@ -1323,8 +1325,8 @@ static heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
 }
 
 
-heif_error aom_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
-                                          uintptr_t* out_framenr, int* out_is_keyframe)
+heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                    uintptr_t* out_framenr, int* out_is_keyframe)
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
@@ -1357,14 +1359,7 @@ heif_error aom_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int
 static heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                           heif_encoded_data_type* type)
 {
-  return aom_get_compressed_data_intern(encoder_raw, data, size, nullptr, nullptr);
-}
-
-
-static heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                           uintptr_t* frame_nr, int* is_keyframe)
-{
-  return aom_get_compressed_data_intern(encoder_raw, data, size, frame_nr, is_keyframe);
+  return aom_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr);
 }
 
 

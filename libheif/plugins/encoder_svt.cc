@@ -25,6 +25,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <deque>
 #include <memory>
 #include <limits>
 
@@ -34,6 +35,14 @@
 
 struct encoder_struct_svt
 {
+  ~encoder_struct_svt()
+  {
+    if (svt_encoder) {
+      svt_av1_enc_deinit(svt_encoder);
+      svt_av1_enc_deinit_handle(svt_encoder);
+    }
+  }
+
   int speed = 12; // 0-13
 
   int quality;
@@ -52,20 +61,44 @@ struct encoder_struct_svt
   int tile_cols = 1; // 1,2,4,8,16,32,64
 
 #if SVT_AV1_CHECK_VERSION(0, 9, 1)
-  enum Tune {
+  enum Tune
+  {
     Tune_VQ = 0,
     Tune_PSNR = 1,
     Tune_SSIM = 2
   };
+
   uint8_t tune = Tune_PSNR;
 #endif
 
-  heif_chroma chroma = heif_chroma_420;  // SVT-AV1 only supports 4:2:0 as of v3.0.0
+  heif_chroma chroma = heif_chroma_420; // SVT-AV1 only supports 4:2:0 as of v3.0.0
+  heif_image_input_class input_class = heif_image_input_class_normal;
+
+  int keyframe_interval = 0;
+
+  // --- Encoder
+
+  EbComponentType* svt_encoder = nullptr;
+  EbSvtAv1EncConfiguration svt_config;
+  EbBufferHeaderType input_buffer;
+
+  uint8_t done_sending_pics = false;
+
 
   // --- output
 
-  std::vector<uint8_t> compressed_data;
-  bool data_read = false;
+  struct Packet
+  {
+    std::vector<uint8_t> compressedData;
+    uintptr_t frameNr = 0;
+    bool is_keyframe = false;
+  };
+
+  std::deque<Packet> output_packets;
+  std::vector<uint8_t> active_output_data;
+
+  //std::vector<uint8_t> compressed_data;
+  //bool data_read = false;
 };
 
 //static const char* kError_out_of_memory = "Out of memory";
@@ -78,7 +111,7 @@ static const char* kParam_speed = "speed";
 
 #if SVT_AV1_CHECK_VERSION(0, 9, 1)
 static const char* kParam_tune = "tune";
-static const char* const kParam_tune_valid_values[] = {"vq","psnr","ssim", nullptr};
+static const char* const kParam_tune_valid_values[] = {"vq", "psnr", "ssim", nullptr};
 #endif
 
 /*
@@ -90,9 +123,11 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
-static heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
-                                                  heif_suberror_Unspecified,
-                                                 "SVT-AV1 error"};
+static heif_error heif_error_codec_library_error = {
+  heif_error_Encoder_plugin_error,
+  heif_suberror_Unspecified,
+  "SVT-AV1 error"
+};
 
 static const int SVT_PLUGIN_PRIORITY = 40;
 
@@ -440,7 +475,7 @@ heif_error svt_get_parameter_integer(void* encoder_raw, const char* name, int* v
 
   get_value(kParam_min_q, min_q);
   get_value(kParam_max_q, max_q);
-  get_value(kParam_qp, qp);  // TODO: what if qp was not set ?
+  get_value(kParam_qp, qp); // TODO: what if qp was not set ?
   get_value(kParam_threads, threads);
   get_value(kParam_speed, speed);
   get_value("tile-rows", tile_rows);
@@ -480,7 +515,7 @@ heif_error svt_get_parameter_boolean(void* encoder_raw, const char* name, int* v
 heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
-  (void)encoder;
+  (void) encoder;
 
 #if 0
   if (strcmp(name, kParam_chroma) == 0) {
@@ -536,7 +571,7 @@ heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
                                     char* value, int value_size)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
-  (void)encoder;
+  (void) encoder;
 
 #if 0
   if (strcmp(name, kParam_chroma) == 0) {
@@ -563,17 +598,17 @@ heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
     switch (encoder->tune) {
       case encoder_struct_svt::Tune_VQ:
         save_strcpy(value, value_size, "vq");
-      break;
+        break;
       case encoder_struct_svt::Tune_PSNR:
         save_strcpy(value, value_size, "psnr");
-      break;
+        break;
       case encoder_struct_svt::Tune_SSIM:
         save_strcpy(value, value_size, "ssim");
-      break;
+        break;
       default:
         assert(false);
 
-      return heif_error_invalid_parameter_value;
+        return heif_error_invalid_parameter_value;
     }
     return heif_error_ok;
   }
@@ -651,13 +686,17 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
 }
 
 
-heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
-                            heif_image_input_class input_class)
+static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                                     enum heif_image_input_class input_class,
+                                                     const heif_sequence_encoding_options* options,
+                                                     bool image_sequence)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
+  encoder->input_class = input_class;
   EbErrorType res = EB_ErrorNone;
+  heif_error err;
 
-  encoder->compressed_data.clear();
+  // encoder->compressed_data.clear();
 
   int w = heif_image_get_width(image, heif_channel_Y);
   int h = heif_image_get_height(image, heif_channel_Y);
@@ -665,25 +704,14 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
   uint32_t encoded_width, encoded_height;
   svt_query_encoded_size(encoder_raw, w, h, &encoded_width, &encoded_height);
 
-  // Note: it is ok to cast away the const, as the image content is not changed.
-  // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
-  heif_error err = heif_image_extend_padding_to_size(const_cast<struct heif_image*>(image),
-                                                     (int) encoded_width,
-                                                     (int) encoded_height);
-  if (err.code) {
-    return err;
-  }
-
   const heif_chroma chroma = heif_image_get_chroma_format(image);
   int bitdepth_y = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
-  uint8_t yShift = 0;
   EbColorFormat color_format = EB_YUV420;
 
   if (input_class == heif_image_input_class_alpha) {
     color_format = EB_YUV420;
     //chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN;
-    yShift = 1;
   }
   else {
     switch (chroma) {
@@ -698,7 +726,6 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
       case heif_chroma_420:
         color_format = EB_YUV420;
         //chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and svt supports this
-        yShift = 1;
         break;
       default:
         return heif_error_codec_library_error;
@@ -708,8 +735,8 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 
   // --- initialize the encoder
 
-  EbComponentType* svt_encoder = nullptr;
-  EbSvtAv1EncConfiguration svt_config;
+  EbComponentType*& svt_encoder = encoder->svt_encoder;
+  EbSvtAv1EncConfiguration& svt_config = encoder->svt_config;
   memset(&svt_config, 0, sizeof(EbSvtAv1EncConfiguration));
 
 #if SVT_AV1_CHECK_VERSION(3, 0, 0)
@@ -780,7 +807,7 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 #endif
 
   // disable 2-pass
-  svt_config.rc_stats_buffer = SvtAv1FixedBuf {nullptr, 0};
+  svt_config.rc_stats_buffer = SvtAv1FixedBuf{nullptr, 0};
 
   svt_config.rate_control_mode = 0; // constant rate factor
   //svt_config.enable_adaptive_quantization = 0;   // 2 is CRF (the default), 0 would be CQP
@@ -804,6 +831,26 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 
   svt_config.enc_mode = (int8_t) encoder->speed;
 
+  if (image_sequence) {
+    svt_config.force_key_frames = true;
+#if 1
+    // TODO: setting pref_structure to SVT_AV1_PRED_LOW_DELAY_B hangs the encoder
+
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
+        //svt_config.intra_period_length = 1;
+        break;
+      case heif_sequence_gop_structure_p_chain:
+        //svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
+        break;
+      case heif_sequence_gop_structure_bidirectional:
+        svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_RANDOM_ACCESS;
+        break;
+    }
+#endif
+  }
+
   if (color_format == EB_YUV422 || bitdepth_y > 10) {
     svt_config.profile = PROFESSIONAL_PROFILE;
   }
@@ -813,22 +860,116 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 
   res = svt_av1_enc_set_parameter(svt_encoder, &svt_config);
   if (res == EB_ErrorBadParameter) {
-    svt_av1_enc_deinit(svt_encoder);
-    svt_av1_enc_deinit_handle(svt_encoder);
+    //svt_av1_enc_deinit(svt_encoder);
+    //svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
 
   res = svt_av1_enc_init(svt_encoder);
   if (res != EB_ErrorNone) {
-    svt_av1_enc_deinit(svt_encoder);
-    svt_av1_enc_deinit_handle(svt_encoder);
+    //svt_av1_enc_deinit(svt_encoder);
+    //svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
+  }
+
+  return {};
+}
+
+
+static heif_error read_encoder_output_packets(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
+  EbComponentType*& svt_encoder = encoder->svt_encoder;
+  EbErrorType res = EB_ErrorNone;
+
+
+  // --- read compressed picture
+
+  int encode_at_eos = 0;
+
+  do {
+    EbBufferHeaderType* output_buf = nullptr;
+
+    res = svt_av1_enc_get_packet(svt_encoder, &output_buf, (uint8_t) encoder->done_sending_pics);
+    if (output_buf != nullptr) {
+      encode_at_eos = ((output_buf->flags & EB_BUFFERFLAG_EOS) == EB_BUFFERFLAG_EOS);
+      if (output_buf->p_buffer && (output_buf->n_filled_len > 0)) {
+        uint8_t* data = output_buf->p_buffer;
+        uint32_t n = output_buf->n_filled_len;
+
+        encoder_struct_svt::Packet output_packet;
+        output_packet.frameNr = output_buf->pts;
+        printf("pictype: %d\n", output_buf->pic_type);
+        output_packet.is_keyframe = (output_buf->pic_type == EbAv1PictureType::EB_AV1_KEY_PICTURE);
+
+        encoder->output_packets.emplace_back(output_packet);
+        encoder->output_packets.back().compressedData.resize(n);
+
+        memcpy(encoder->output_packets.back().compressedData.data(),
+               data, n);
+
+        /* TODO: this is a hack
+         * When using
+         *           svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
+         * svt_av1_enc_get_packet() hangs on the second call. As a workaround, we can leave the
+         * loop when we got the image:
+         */
+        if (output_packet.is_keyframe)
+          break;
+      }
+      svt_av1_enc_release_out_buffer(&output_buf);
+    }
+  } while (res == EB_ErrorNone && !encode_at_eos);
+
+
+  // delete input_buffer.p_buffer;
+
+  if (!encoder->done_sending_pics && ((res == EB_ErrorNone) || (res == EB_NoErrorEmptyQueue))) {
+    return heif_error_ok;
+  }
+  else {
+    return (res == EB_ErrorNone ? heif_error_ok : heif_error_codec_library_error);
+  }
+}
+
+
+static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image* image, uintptr_t frame_nr)
+{
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
+  EbComponentType*& svt_encoder = encoder->svt_encoder;
+  EbErrorType res = EB_ErrorNone;
+
+  int w = heif_image_get_width(image, heif_channel_Y);
+  int h = heif_image_get_height(image, heif_channel_Y);
+  const heif_chroma chroma = heif_image_get_chroma_format(image);
+  int bitdepth_y = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+
+  uint32_t encoded_width, encoded_height;
+  svt_query_encoded_size(encoder_raw, w, h, &encoded_width, &encoded_height);
+
+  // Note: it is ok to cast away the const, as the image content is not changed.
+  // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
+  heif_error err = heif_image_extend_padding_to_size(const_cast<struct heif_image*>(image),
+                                                     (int) encoded_width,
+                                                     (int) encoded_height);
+  if (err.code) {
+    return err;
+  }
+
+
+  uint8_t yShift = 0;
+
+  if (encoder->input_class == heif_image_input_class_alpha) {
+    yShift = 1;
+  }
+  else if (chroma == heif_chroma_420) {
+    yShift = 1;
   }
 
 
   // --- copy libheif image to svt image
 
-  EbBufferHeaderType input_buffer;
+  EbBufferHeaderType& input_buffer = encoder->input_buffer;
   input_buffer.p_buffer = (uint8_t*) (new EbSvtIOFormat());
 
   memset(input_buffer.p_buffer, 0, sizeof(EbSvtIOFormat));
@@ -836,20 +977,31 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
   input_buffer.p_app_private = nullptr;
   input_buffer.pic_type = EB_AV1_INVALID_PICTURE;
   input_buffer.metadata = nullptr;
+  input_buffer.pts = frame_nr;
+  printf("push pts: %d\n", frame_nr);
+
+  if (encoder->keyframe_interval) {
+    if (frame_nr % encoder->keyframe_interval == 0) {
+      input_buffer.pic_type = EB_AV1_KEY_PICTURE;
+    }
+  }
+
 
   auto* input_picture_buffer = (EbSvtIOFormat*) input_buffer.p_buffer;
 
   int bytesPerPixel = bitdepth_y > 8 ? 2 : 1;
   std::vector<uint8_t> dummy_color_plane;
-  if (input_class == heif_image_input_class_alpha) {
+  if (encoder->input_class == heif_image_input_class_alpha) {
     size_t stride64;
     input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly2(image, heif_channel_Y, &stride64);
 
     uint32_t stride32;
     if (stride64 > std::numeric_limits<uint32_t>::max()) {
-      return {heif_error_Encoder_plugin_error,
-              heif_suberror_Unspecified,
-              "Image too wide for encoder"};
+      return {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unspecified,
+        "Image too wide for encoder"
+      };
     }
     else {
       stride32 = static_cast<uint32_t>(stride64);
@@ -870,15 +1022,15 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
       assert(bitdepth_y > 8 && bitdepth_y <= 16);
       uint16_t val = 1 << (bitdepth_y - 1);
       uint8_t high = static_cast<uint8_t>((val >> 8) & 0xFF);
-      uint8_t low  = static_cast<uint8_t>(val & 0xFF);
+      uint8_t low = static_cast<uint8_t>(val & 0xFF);
 
-      for (uint32_t i=0;i<uvWidth*uvHeight;i++) {
-        dummy_color_plane[2*i  ] = low;
-        dummy_color_plane[2*i+1] = high;
+      for (uint32_t i = 0; i < uvWidth * uvHeight; i++) {
+        dummy_color_plane[2 * i] = low;
+        dummy_color_plane[2 * i + 1] = high;
       }
     }
 
-    input_buffer.n_filled_len += 2* uvWidth * uvHeight;
+    input_buffer.n_filled_len += 2 * uvWidth * uvHeight;
     input_picture_buffer->cb_stride = uvWidth;
     input_picture_buffer->cr_stride = uvWidth;
 
@@ -891,9 +1043,11 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 
     uint32_t stride32;
     if (stride64 > std::numeric_limits<uint32_t>::max()) {
-      return {heif_error_Encoder_plugin_error,
-              heif_suberror_Unspecified,
-              "Image too wide for encoder"};
+      return {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unspecified,
+        "Image too wide for encoder"
+      };
     }
     else {
       stride32 = static_cast<uint32_t>(stride64);
@@ -915,7 +1069,7 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
   }
 
   input_buffer.flags = 0;
-  input_buffer.pts = 0;
+  // input_buffer.pts = 0;
 
   EbAv1PictureType frame_type = EB_AV1_KEY_PICTURE;
 
@@ -924,13 +1078,22 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
   res = svt_av1_enc_send_picture(svt_encoder, &input_buffer);
   if (res != EB_ErrorNone) {
     delete input_buffer.p_buffer;
-    svt_av1_enc_deinit(svt_encoder);
-    svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
 
+  return read_encoder_output_packets(encoder_raw);
+}
+
+
+static heif_error svt_end_sequence_encoding(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_svt*) encoder_raw;
+  EbComponentType*& svt_encoder = encoder->svt_encoder;
+  EbBufferHeaderType& input_buffer = encoder->input_buffer;
 
   // --- flush encoder
+
+  encoder->done_sending_pics = true;
 
   EbErrorType ret = EB_ErrorNone;
 
@@ -947,108 +1110,124 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
 
   if (ret != EB_ErrorNone) {
     delete input_buffer.p_buffer;
-    svt_av1_enc_deinit(svt_encoder);
-    svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
 
-
-  // --- read compressed picture
-
-  int encode_at_eos = 0;
-  uint8_t done_sending_pics = true;
-
-  do {
-    EbBufferHeaderType* output_buf = nullptr;
-
-    res = svt_av1_enc_get_packet(svt_encoder, &output_buf, (uint8_t) done_sending_pics);
-    if (output_buf != nullptr) {
-      encode_at_eos = ((output_buf->flags & EB_BUFFERFLAG_EOS) == EB_BUFFERFLAG_EOS);
-      if (output_buf->p_buffer && (output_buf->n_filled_len > 0)) {
-        uint8_t* data = output_buf->p_buffer;
-        uint32_t n = output_buf->n_filled_len;
-
-        size_t oldSize = encoder->compressed_data.size();
-        encoder->compressed_data.resize(oldSize + n);
-
-        memcpy(encoder->compressed_data.data() + oldSize, data, n);
-
-        encoder->data_read = false;
-        // (output_buf->pic_type == EB_AV1_KEY_PICTURE));
-      }
-      svt_av1_enc_release_out_buffer(&output_buf);
-    }
-  } while (res == EB_ErrorNone && !encode_at_eos);
-
-
-  delete input_buffer.p_buffer;
-  svt_av1_enc_deinit(svt_encoder);
-  svt_av1_enc_deinit_handle(svt_encoder);
-
-  if (!done_sending_pics && ((res == EB_ErrorNone) || (res == EB_NoErrorEmptyQueue))) {
-    return heif_error_ok;
-  }
-  else {
-    return (res == EB_ErrorNone ? heif_error_ok : heif_error_codec_library_error);
-  }
+  return read_encoder_output_packets(encoder_raw);
 }
 
 
-heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                   heif_encoded_data_type* type)
+heif_error svt_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                    uintptr_t* out_framenr, int* out_is_keyframe)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
 
-  if (encoder->data_read) {
-    *data = nullptr;
+  encoder->active_output_data.clear();
+
+  if (encoder->output_packets.empty()) {
     *size = 0;
+    *data = nullptr;
   }
   else {
-    *data = encoder->compressed_data.data();
-    *size = (int) encoder->compressed_data.size();
-    encoder->data_read = true;
+    encoder->active_output_data = std::move(encoder->output_packets.front().compressedData);
+    if (out_framenr) {
+      *out_framenr = encoder->output_packets.front().frameNr;
+    }
+
+    if (out_is_keyframe) {
+      *out_is_keyframe = encoder->output_packets.front().is_keyframe;
+      printf("keyframe: %d -> %d\n", *out_framenr, *out_is_keyframe);
+    }
+
+    encoder->output_packets.pop_front();
+
+    *size = (int) encoder->active_output_data.size();
+    *data = encoder->active_output_data.data();
   }
 
   return heif_error_ok;
 }
 
 
+heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                   heif_encoded_data_type* type)
+{
+  return svt_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr);
+}
+
+
+static heif_error svt_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                              enum heif_image_input_class input_class,
+                                              const heif_sequence_encoding_options* options)
+{
+  return svt_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+}
+
+
+heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
+                            heif_image_input_class input_class)
+{
+  heif_error err;
+  err = svt_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = svt_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  err = svt_end_sequence_encoding(encoder_raw);
+  if (err.code) {
+    return err;
+  }
+
+  return {};
+}
+
+
 static const heif_encoder_plugin encoder_plugin_svt
-    {
-        /* plugin_api_version */ 3,
-        /* compression_format */ heif_compression_AV1,
-        /* id_name */ "svt",
-        /* priority */ SVT_PLUGIN_PRIORITY,
-        /* supports_lossy_compression */ true,
+{
+  /* plugin_api_version */ 4,
+                           /* compression_format */ heif_compression_AV1,
+                           /* id_name */ "svt",
+                           /* priority */ SVT_PLUGIN_PRIORITY,
+                           /* supports_lossy_compression */ true,
 #if SVT_AV1_CHECK_VERSION(3, 0, 0)
-        /* supports_lossless_compression */ true,
+                           /* supports_lossless_compression */ true,
 #else
         /* supports_lossless_compression */ false,
 #endif
-        /* get_plugin_name */ svt_plugin_name,
-        /* init_plugin */ svt_init_plugin,
-        /* cleanup_plugin */ svt_cleanup_plugin,
-        /* new_encoder */ svt_new_encoder,
-        /* free_encoder */ svt_free_encoder,
-        /* set_parameter_quality */ svt_set_parameter_quality,
-        /* get_parameter_quality */ svt_get_parameter_quality,
-        /* set_parameter_lossless */ svt_set_parameter_lossless,
-        /* get_parameter_lossless */ svt_get_parameter_lossless,
-        /* set_parameter_logging_level */ svt_set_parameter_logging_level,
-        /* get_parameter_logging_level */ svt_get_parameter_logging_level,
-        /* list_parameters */ svt_list_parameters,
-        /* set_parameter_integer */ svt_set_parameter_integer,
-        /* get_parameter_integer */ svt_get_parameter_integer,
-        /* set_parameter_boolean */ svt_set_parameter_boolean,
-        /* get_parameter_boolean */ svt_get_parameter_boolean,
-        /* set_parameter_string */ svt_set_parameter_string,
-        /* get_parameter_string */ svt_get_parameter_string,
-        /* query_input_colorspace */ svt_query_input_colorspace,
-        /* encode_image */ svt_encode_image,
-        /* get_compressed_data */ svt_get_compressed_data,
-        /* query_input_colorspace (v2) */ svt_query_input_colorspace2,
-        /* query_encoded_size (v3) */ svt_query_encoded_size
-    };
+                           /* get_plugin_name */ svt_plugin_name,
+                           /* init_plugin */ svt_init_plugin,
+                           /* cleanup_plugin */ svt_cleanup_plugin,
+                           /* new_encoder */ svt_new_encoder,
+                           /* free_encoder */ svt_free_encoder,
+                           /* set_parameter_quality */ svt_set_parameter_quality,
+                           /* get_parameter_quality */ svt_get_parameter_quality,
+                           /* set_parameter_lossless */ svt_set_parameter_lossless,
+                           /* get_parameter_lossless */ svt_get_parameter_lossless,
+                           /* set_parameter_logging_level */ svt_set_parameter_logging_level,
+                           /* get_parameter_logging_level */ svt_get_parameter_logging_level,
+                           /* list_parameters */ svt_list_parameters,
+                           /* set_parameter_integer */ svt_set_parameter_integer,
+                           /* get_parameter_integer */ svt_get_parameter_integer,
+                           /* set_parameter_boolean */ svt_set_parameter_boolean,
+                           /* get_parameter_boolean */ svt_get_parameter_boolean,
+                           /* set_parameter_string */ svt_set_parameter_string,
+                           /* get_parameter_string */ svt_get_parameter_string,
+                           /* query_input_colorspace */ svt_query_input_colorspace,
+                           /* encode_image */ svt_encode_image,
+                           /* get_compressed_data */ svt_get_compressed_data,
+                           /* query_input_colorspace (v2) */ svt_query_input_colorspace2,
+                           /* query_encoded_size (v3) */ svt_query_encoded_size,
+                           /* start_sequence_encoding (v4) */ svt_start_sequence_encoding,
+                           /* encode_sequence_frame (v4) */ svt_encode_sequence_frame,
+                           /* end_sequence_encoding (v4) */ svt_end_sequence_encoding,
+                           /* get_compressed_data2 (v4) */ svt_get_compressed_data2,
+                           /* does_indicate_keyframes (v4) */ 1
+};
 
 const heif_encoder_plugin* get_encoder_plugin_svt()
 {
