@@ -27,6 +27,7 @@
 #include <cassert>
 #include <string>
 #include <algorithm>
+#include <deque>
 
 #include <iostream>  // TODO: remove me
 
@@ -35,6 +36,13 @@
 
 struct encoder_struct_rav1e
 {
+  ~encoder_struct_rav1e()
+  {
+    if (rav1eContextRaw) {
+      rav1e_context_unref(rav1eContextRaw);
+    }
+  }
+
   int speed; // 0-10
 
   int quality; // TODO: not sure yet how to map quality to min/max q
@@ -46,13 +54,28 @@ struct encoder_struct_rav1e
 
   heif_chroma chroma;
 
+  // --- encoder
+
+  RaContext* rav1eContextRaw = nullptr;
+  uint8_t yShift = 0;
+
   // --- output
 
-  std::vector<uint8_t> compressed_data;
-  bool data_read = false;
+  struct Packet
+  {
+    std::vector<uint8_t> compressedData;
+    uintptr_t frameNr = 0;
+    bool is_keyframe = false;
+  };
+
+  std::deque<Packet> output_packets;
+  std::vector<uint8_t> active_output_data;
 };
 
 //static const char* kError_out_of_memory = "Out of memory";
+
+static heif_error get_encoder_packets(void* encoder_raw);
+
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_threads = "threads";
@@ -477,14 +500,15 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 }
 
 
-heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
-                              heif_image_input_class input_class)
+heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       const heif_sequence_encoding_options* options,
+                                       bool image_sequence)
 {
   auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
-  uint8_t yShift = 0;
   RaChromaSampling chromaSampling;
   RaChromaSamplePosition chromaPosition;
   RaPixelRange rav1eRange;
@@ -492,7 +516,7 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
   if (input_class == heif_image_input_class_alpha) {
     chromaSampling = RA_CHROMA_SAMPLING_CS420; // I can't seem to get RA_CHROMA_SAMPLING_CS400 to work right now, unfortunately
     chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
-    yShift = 1;
+    encoder->yShift = 1;
   }
   else {
     switch (chroma) {
@@ -507,7 +531,7 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
       case heif_chroma_420:
         chromaSampling = RA_CHROMA_SAMPLING_CS420;
         chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
-        yShift = 1;
+        encoder->yShift = 1;
         break;
       default:
         return heif_error_codec_library_error;
@@ -537,9 +561,33 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
     return heif_error_codec_library_error;
   }
 
-  if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
-    return heif_error_codec_library_error;
+  if (!image_sequence) {
+    if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
+      return heif_error_codec_library_error;
+    }
   }
+
+  if (image_sequence) {
+    if (options->gop_structure == heif_sequence_gop_structure_intra_only) {
+      if (rav1e_config_parse(rav1eConfig.get(), "key_frame_interval", "1") == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+    else if (options->keyframe_distance_max) {
+      if (rav1e_config_parse(rav1eConfig.get(), "key_frame_interval",
+                             std::to_string(options->keyframe_distance_max).c_str()) == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+
+    if (options->keyframe_distance_min) {
+      if (rav1e_config_parse(rav1eConfig.get(), "min_key_frame_interval",
+                             std::to_string(options->keyframe_distance_min).c_str()) == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+  }
+
   if (rav1e_config_parse_int(rav1eConfig.get(), "width", heif_image_get_width(image, heif_channel_Y)) == -1) {
     return heif_error_codec_library_error;
   }
@@ -594,16 +642,36 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
                                        (RaTransferCharacteristics) nclx->transfer_characteristics);
   }
 
-  RaContext* rav1eContextRaw = rav1e_context_new(rav1eConfig.get());
-  if (!rav1eContextRaw) {
+  encoder->rav1eContextRaw = rav1e_context_new(rav1eConfig.get());
+  if (!encoder->rav1eContextRaw) {
     return heif_error_codec_library_error;
   }
-  auto rav1eContext = std::shared_ptr<RaContext>(rav1eContextRaw, [](RaContext* ctx) { rav1e_context_unref(ctx); });
+
+  return {};
+}
+
+
+heif_error rav1e_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       const heif_sequence_encoding_options* options)
+{
+  return rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+}
+
+
+heif_error rav1e_encode_sequence_frame(void* encoder_raw, const heif_image* image, uintptr_t frame_nr)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
+
+  int bitDepth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+
+  int yShift = encoder->yShift;
 
 
   // --- copy libheif image to rav1e image
 
-  auto rav1eFrameRaw = rav1e_frame_new(rav1eContext.get());
+  auto rav1eFrameRaw = rav1e_frame_new(rav1eContext);
   auto rav1eFrame = std::shared_ptr<RaFrame>(rav1eFrameRaw, [](RaFrame* frm) { rav1e_frame_unref(frm); });
 
   int byteWidth = (bitDepth > 8) ? 2 : 1;
@@ -626,31 +694,101 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
     rav1e_frame_fill_plane(rav1eFrame.get(), 2, Cr, strideCr * uvHeight, strideCr, byteWidth);
   }
 
-  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext.get(), rav1eFrame.get());
+  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext, rav1eFrame.get());
   if (encoderStatus != 0) {
     return heif_error_codec_library_error;
   }
+
+  return get_encoder_packets(encoder_raw);
+}
+
+
+heif_error rav1e_end_sequence_encoding(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
 
   // flush encoder
-  encoderStatus = rav1e_send_frame(rav1eContext.get(), nullptr);
+  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext, nullptr);
   if (encoderStatus != 0) {
     return heif_error_codec_library_error;
   }
 
-  RaPacket* pkt = nullptr;
-  encoderStatus = rav1e_receive_packet(rav1eContext.get(), &pkt);
-  if (encoderStatus != 0) {
-    return heif_error_codec_library_error;
+  return get_encoder_packets(encoder_raw);
+}
+
+
+static heif_error get_encoder_packets(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
+
+  for (;;) {
+    RaPacket* pkt = nullptr;
+    RaEncoderStatus encoderStatus = rav1e_receive_packet(rav1eContext, &pkt);
+
+    if (encoderStatus == RA_ENCODER_STATUS_NEED_MORE_DATA) {
+      return {};
+    }
+
+    if (encoderStatus == RA_ENCODER_STATUS_ENCODED) {
+      continue;
+    }
+
+    if (encoderStatus != 0) {
+      return heif_error_codec_library_error;
+    }
+
+    if (pkt && pkt->data && (pkt->len > 0)) {
+      encoder_struct_rav1e::Packet output_packet;
+      output_packet.frameNr = pkt->input_frameno;
+      output_packet.is_keyframe = (pkt->frame_type == RaFrameType::RA_FRAME_TYPE_KEY);
+
+      encoder->output_packets.emplace_back(output_packet);
+      encoder->output_packets.back().compressedData.resize(pkt->len);
+
+      memcpy(encoder->output_packets.back().compressedData.data(),
+             pkt->data,
+             pkt->len);
+    }
+
+    if (pkt) {
+      rav1e_packet_unref(pkt);
+    }
+    else {
+      break;
+    }
   }
 
-  if (pkt && pkt->data && (pkt->len > 0)) {
-    encoder->compressed_data.resize(pkt->len);
-    memcpy(encoder->compressed_data.data(), pkt->data, pkt->len);
-    encoder->data_read = false;
-  }
+  return {};
+}
 
-  if (pkt) {
-    rav1e_packet_unref(pkt);
+
+heif_error rav1e_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                    uintptr_t* out_framenr, int* out_is_keyframe)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+
+  encoder->active_output_data.clear();
+
+  if (encoder->output_packets.empty()) {
+    *size = 0;
+    *data = nullptr;
+  }
+  else {
+    encoder->active_output_data = std::move(encoder->output_packets.front().compressedData);
+    if (out_framenr) {
+      *out_framenr = encoder->output_packets.front().frameNr;
+    }
+
+    if (out_is_keyframe) {
+      *out_is_keyframe = encoder->output_packets.front().is_keyframe;
+    }
+
+    encoder->output_packets.pop_front();
+
+    *size = (int) encoder->active_output_data.size();
+    *data = encoder->active_output_data.data();
   }
 
   return heif_error_ok;
@@ -659,25 +797,34 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
 heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                      heif_encoded_data_type* type)
 {
-  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  return rav1e_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr);
+}
 
-  if (encoder->data_read) {
-    *data = nullptr;
-    *size = 0;
+
+heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
+                              heif_image_input_class input_class)
+{
+  heif_error err;
+  err = rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  if (err.code) {
+    return err;
   }
-  else {
-    *data = encoder->compressed_data.data();
-    *size = (int) encoder->compressed_data.size();
-    encoder->data_read = true;
+
+  err = rav1e_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
   }
+
+  rav1e_end_sequence_encoding(encoder_raw);
 
   return heif_error_ok;
 }
 
 
+
 static const heif_encoder_plugin encoder_plugin_rav1e
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_AV1,
         /* id_name */ "rav1e",
         /* priority */ RAV1E_PLUGIN_PRIORITY,
@@ -705,7 +852,12 @@ static const heif_encoder_plugin encoder_plugin_rav1e
         /* encode_image */ rav1e_encode_image,
         /* get_compressed_data */ rav1e_get_compressed_data,
         /* query_input_colorspace (v2) */ rav1e_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ nullptr,
+        /* start_sequence_encoding (v4) */ rav1e_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ rav1e_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ rav1e_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ rav1e_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
 const heif_encoder_plugin* get_encoder_plugin_rav1e()
