@@ -486,12 +486,19 @@ public:
 
   void add_sync_sample(uint32_t sample_idx) { m_sync_samples.push_back(sample_idx); }
 
+  // when this is set, the Box will compute whether it can be skipped
+  void set_total_number_of_samples(uint32_t num_samples);
+
+  // bool skip_box() const override { return m_all_samples_are_sync_samples; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   std::vector<uint32_t> m_sync_samples;
   MemoryHandle m_memory_handle;
+
+  bool m_all_samples_are_sync_samples = false;
 };
 
 
