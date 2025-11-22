@@ -74,7 +74,7 @@ struct encoder_struct_svt
   heif_chroma chroma = heif_chroma_420; // SVT-AV1 only supports 4:2:0 as of v3.0.0
   heif_image_input_class input_class = heif_image_input_class_normal;
 
-  int keyframe_interval = 0;
+  // int keyframe_interval = 0; TODO: this does not seem to work (see all [1])
 
   // --- Encoder
 
@@ -832,7 +832,8 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
   svt_config.enc_mode = (int8_t) encoder->speed;
 
   if (image_sequence) {
-    svt_config.force_key_frames = true;
+    // svt_config.force_key_frames = true; TODO: this does not seem to work (see all [1])
+
 #if 1
     // TODO: setting pref_structure to SVT_AV1_PRED_LOW_DELAY_B hangs the encoder
 
@@ -899,7 +900,6 @@ static heif_error read_encoder_output_packets(void* encoder_raw)
 
         encoder_struct_svt::Packet output_packet;
         output_packet.frameNr = output_buf->pts;
-        printf("pictype: %d\n", output_buf->pic_type);
         output_packet.is_keyframe = (output_buf->pic_type == EbAv1PictureType::EB_AV1_KEY_PICTURE);
 
         encoder->output_packets.emplace_back(output_packet);
@@ -978,14 +978,14 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
   input_buffer.pic_type = EB_AV1_INVALID_PICTURE;
   input_buffer.metadata = nullptr;
   input_buffer.pts = frame_nr;
-  printf("push pts: %d\n", frame_nr);
 
+  /* TODO: this does not seem to work (see all [1])
   if (encoder->keyframe_interval) {
     if (frame_nr % encoder->keyframe_interval == 0) {
       input_buffer.pic_type = EB_AV1_KEY_PICTURE;
     }
   }
-
+  */
 
   auto* input_picture_buffer = (EbSvtIOFormat*) input_buffer.p_buffer;
 
@@ -1136,7 +1136,6 @@ heif_error svt_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size
 
     if (out_is_keyframe) {
       *out_is_keyframe = encoder->output_packets.front().is_keyframe;
-      printf("keyframe: %d -> %d\n", *out_framenr, *out_is_keyframe);
     }
 
     encoder->output_packets.pop_front();
