@@ -1087,7 +1087,7 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
 }
 
 
-static void x265_end_sequence_encoding(void* encoder_raw)
+static heif_error x265_end_sequence_encoding(void* encoder_raw)
 {
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
@@ -1123,13 +1123,15 @@ static void x265_end_sequence_encoding(void* encoder_raw)
     //*data = nullptr;
     //*size = 0;
 
-    return; // TODO heif_error_ok;
+    return heif_error_ok; // ?
   }
 
   encoder->api->param_free(encoder->param);
   encoder->param = nullptr;
 
   encoder->nal_output_counter = 0; // TODO: is this needed ?
+
+  return heif_error_ok;
 }
 
 

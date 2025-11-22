@@ -63,8 +63,12 @@ private:
 
   bool m_first_frame = true;
   Box_av1C::configuration m_config;
+  bool m_av1C_sent = false;
 
   std::optional<CodedImageData> m_current_output_data;
+
+  bool m_all_refs_intra = false;
+  Error get_data(heif_encoder* encoder);
 };
 
 
