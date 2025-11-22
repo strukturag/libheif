@@ -32,6 +32,8 @@
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
 
+// TODO: for some reason, the SVT encoder outputs only keyframes for me.
+//       It appears to work in libavif, but I didn't find the difference yet.
 
 struct encoder_struct_svt
 {
@@ -81,8 +83,6 @@ struct encoder_struct_svt
   EbComponentType* svt_encoder = nullptr;
   EbSvtAv1EncConfiguration svt_config;
   EbBufferHeaderType input_buffer;
-
-  uint8_t done_sending_pics = false;
 
 
   // --- output
@@ -840,7 +840,6 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
     switch (options->gop_structure) {
       case heif_sequence_gop_structure_intra_only:
         svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
-        //svt_config.intra_period_length = 1;
         break;
       case heif_sequence_gop_structure_p_chain:
         //svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
@@ -848,6 +847,10 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
       case heif_sequence_gop_structure_bidirectional:
         svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_RANDOM_ACCESS;
         break;
+    }
+
+    if (options->keyframe_distance_max) {
+      svt_config.intra_period_length = options->keyframe_distance_max; // TODO -1 ?
     }
 #endif
   }
@@ -861,15 +864,11 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
 
   res = svt_av1_enc_set_parameter(svt_encoder, &svt_config);
   if (res == EB_ErrorBadParameter) {
-    //svt_av1_enc_deinit(svt_encoder);
-    //svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
 
   res = svt_av1_enc_init(svt_encoder);
   if (res != EB_ErrorNone) {
-    //svt_av1_enc_deinit(svt_encoder);
-    //svt_av1_enc_deinit_handle(svt_encoder);
     return heif_error_codec_library_error;
   }
 
@@ -877,7 +876,7 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
 }
 
 
-static heif_error read_encoder_output_packets(void* encoder_raw)
+static heif_error read_encoder_output_packets(void* encoder_raw, bool done_sending_pics)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
   EbComponentType*& svt_encoder = encoder->svt_encoder;
@@ -891,7 +890,7 @@ static heif_error read_encoder_output_packets(void* encoder_raw)
   do {
     EbBufferHeaderType* output_buf = nullptr;
 
-    res = svt_av1_enc_get_packet(svt_encoder, &output_buf, (uint8_t) encoder->done_sending_pics);
+    res = svt_av1_enc_get_packet(svt_encoder, &output_buf, (uint8_t) done_sending_pics);
     if (output_buf != nullptr) {
       encode_at_eos = ((output_buf->flags & EB_BUFFERFLAG_EOS) == EB_BUFFERFLAG_EOS);
       if (output_buf->p_buffer && (output_buf->n_filled_len > 0)) {
@@ -924,7 +923,7 @@ static heif_error read_encoder_output_packets(void* encoder_raw)
 
   // delete input_buffer.p_buffer;
 
-  if (!encoder->done_sending_pics && ((res == EB_ErrorNone) || (res == EB_NoErrorEmptyQueue))) {
+  if (!done_sending_pics && ((res == EB_ErrorNone) || (res == EB_NoErrorEmptyQueue))) {
     return heif_error_ok;
   }
   else {
@@ -1081,7 +1080,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
     return heif_error_codec_library_error;
   }
 
-  return read_encoder_output_packets(encoder_raw);
+  return read_encoder_output_packets(encoder_raw, false);
 }
 
 
@@ -1092,8 +1091,6 @@ static heif_error svt_end_sequence_encoding(void* encoder_raw)
   EbBufferHeaderType& input_buffer = encoder->input_buffer;
 
   // --- flush encoder
-
-  encoder->done_sending_pics = true;
 
   EbErrorType ret = EB_ErrorNone;
 
@@ -1113,7 +1110,7 @@ static heif_error svt_end_sequence_encoding(void* encoder_raw)
     return heif_error_codec_library_error;
   }
 
-  return read_encoder_output_packets(encoder_raw);
+  return read_encoder_output_packets(encoder_raw, true);
 }
 
 
