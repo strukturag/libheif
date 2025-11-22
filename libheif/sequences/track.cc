@@ -664,6 +664,8 @@ void Track::finalize_track()
 
   uint64_t duration = m_stts->get_total_duration(true);
   m_mdhd->set_duration(duration);
+
+  m_stss->set_total_number_of_samples(m_stsz->num_samples());
 }
 
 
