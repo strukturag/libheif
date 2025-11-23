@@ -854,6 +854,8 @@ int main(int argc, char** argv)
     std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
     encoder->UpdateDecodingOptions(nullptr, decode_options.get());
     decode_options->ignore_sequence_editlist = option_ignore_editlist;
+    decode_options->strict_decoding = strict_decoding;
+    decode_options->decoder_id = decoder_id;
 
     struct heif_track* track = heif_context_get_track(ctx, 0);
 
