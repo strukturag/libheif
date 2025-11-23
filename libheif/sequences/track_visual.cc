@@ -336,6 +336,13 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
     };
   }
 
+  if (h_encoder->plugin->plugin_api_version < 4) {
+    return Error{
+      heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
+      "Encoder plugin needs to be at least version 4."
+    };
+  }
+
   // === generate compressed image bitstream
 
   // generate new chunk for first image or when compression formats don't match
