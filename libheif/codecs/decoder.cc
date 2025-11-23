@@ -270,6 +270,13 @@ Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
     if (!m_decoder_plugin) {
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
     }
+
+    if (m_decoder_plugin->plugin_api_version < 5) {
+      return Error{
+        heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
+        "Decoder plugin needs to be at least version 5."
+      };
+    }
   }
 
   return {};
