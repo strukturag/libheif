@@ -56,10 +56,26 @@ public:
   decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
                                            const struct heif_security_limits* limits) override;
 
+
+  // Push data for one frame into decoder.
+  Error
+  decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
+                                             const heif_decoding_options& options,
+                                             const heif_security_limits* limits) override;
+
+  Error flush_decoder() override { return {}; }
+
+  // Get a decoded frame from the decoder.
+  // It may return NULL when there is buffering in the codec.
+  Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
+                                                             const heif_security_limits* limits) override;
+
 private:
   const std::shared_ptr<const Box_uncC> m_uncC;
   const std::shared_ptr<const Box_cmpd> m_cmpd;
   const std::shared_ptr<const Box_ispe> m_ispe;
+
+  std::shared_ptr<HeifPixelImage> m_decoded_image;
 };
 
 #endif
