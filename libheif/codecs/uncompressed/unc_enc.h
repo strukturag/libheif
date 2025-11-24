@@ -41,6 +41,42 @@ public:
                                 enum heif_image_input_class input_class) override;
 
   std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
+  bool encode_sequence_started() const override { return m_codedImageData.has_value(); }
+
+  Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                      heif_encoder* encoder,
+                                      const heif_sequence_encoding_options& options,
+                                      heif_image_input_class input_class,
+                                      uintptr_t frame_number) override
+  {
+    heif_encoding_options dummy_options{};
+
+    auto encodeResult = encode(image, encoder, dummy_options, input_class);
+    if (encodeResult.error()) {
+      return encodeResult.error();
+    }
+
+    m_codedImageData = std::move(*encodeResult);
+
+    m_codedImageData->frame_nr = frame_number;
+    m_codedImageData->is_sync_frame = true;
+
+    return {};
+  }
+
+  Error encode_sequence_flush(heif_encoder* encoder) override
+  {
+    return {};
+  }
+
+  std::optional<CodedImageData> encode_sequence_get_data() override
+  {
+    return std::move(m_codedImageData);
+  }
+
+private:
+  std::optional<CodedImageData> m_codedImageData;
 };
 
 

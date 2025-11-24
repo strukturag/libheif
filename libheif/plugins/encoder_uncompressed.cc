@@ -290,9 +290,34 @@ heif_error uncompressed_get_compressed_data(void* encoder_raw, uint8_t** data, i
 }
 
 
+heif_error uncompressed_start_sequence_encoding(void* encoder, const heif_image* image,
+                                                enum heif_image_input_class image_class,
+                                                const heif_sequence_encoding_options* options)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_encode_sequence_frame(void* encoder, const heif_image* image, uintptr_t frame_nr)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_end_sequence_encoding(void* encoder)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_get_compressed_data2(void* encoder, uint8_t** data, int* size,
+                                             uintptr_t* frame_nr,
+                                             int* is_keyframe, int* more_frame_packets)
+{
+  return heif_error_ok;
+}
+
+
 static const heif_encoder_plugin encoder_plugin_uncompressed
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_uncompressed,
         /* id_name */ "uncompressed",
         /* priority */ PLUGIN_PRIORITY,
@@ -320,7 +345,12 @@ static const heif_encoder_plugin encoder_plugin_uncompressed
         /* encode_image */ uncompressed_encode_image,
         /* get_compressed_data */ uncompressed_get_compressed_data,
         /* query_input_colorspace (v2) */ uncompressed_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ nullptr,
+        /* start_sequence_encoding (v4) */ uncompressed_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ uncompressed_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ uncompressed_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ uncompressed_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
 const heif_encoder_plugin* get_encoder_plugin_uncompressed()
