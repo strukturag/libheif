@@ -596,8 +596,42 @@ void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 }
 
 
+heif_error opj_start_sequence_encoding(void* encoder, const heif_image* image,
+                                       enum heif_image_input_class image_class,
+                                       const heif_sequence_encoding_options* options)
+{
+  return heif_error_ok;
+}
+
+heif_error opj_encode_sequence_frame(void* encoder, const heif_image* image, uintptr_t frame_nr)
+{
+  return opj_encode_image(encoder, image, heif_image_input_class_normal);
+}
+
+heif_error opj_end_sequence_encoding(void* encoder)
+{
+  return heif_error_ok;
+}
+
+heif_error opj_get_compressed_data2(void* encoder, uint8_t** data, int* size,
+                                    uintptr_t* frame_nr,
+                                    int* is_keyframe, int* more_frame_packets)
+{
+  heif_error err = opj_get_compressed_data(encoder, data, size, nullptr);
+
+  if (is_keyframe) {
+    *is_keyframe = true;
+  }
+
+  if (more_frame_packets) {
+    *more_frame_packets = true;
+  }
+
+  return err;
+}
+
 static const heif_encoder_plugin encoder_plugin_openjpeg{
-    /* plugin_api_version */ 3,
+    /* plugin_api_version */ 4,
     /* compression_format */ heif_compression_JPEG2000,
     /* id_name */ "openjpeg",
     /* priority */ OPJ_PLUGIN_PRIORITY,
@@ -625,7 +659,12 @@ static const heif_encoder_plugin encoder_plugin_openjpeg{
     /* encode_image */ opj_encode_image,
     /* get_compressed_data */ opj_get_compressed_data,
     /* query_input_colorspace (v2) */ opj_query_input_colorspace2,
-    /* query_encoded_size (v3) */ opj_query_encoded_size
+    /* query_encoded_size (v3) */ opj_query_encoded_size,
+    /* start_sequence_encoding (v4) */ opj_start_sequence_encoding,
+    /* encode_sequence_frame (v4) */ opj_encode_sequence_frame,
+    /* end_sequence_encoding (v4) */ opj_end_sequence_encoding,
+    /* get_compressed_data2 (v4) */ opj_get_compressed_data2,
+    /* does_indicate_keyframes (v4) */ 1
 };
 
 const heif_encoder_plugin* get_encoder_plugin_openjpeg()

@@ -260,6 +260,12 @@ heif_error openjpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
 {
   auto* decoder = (struct openjpeg_decoder*) decoder_raw;
 
+  if (decoder->encoded_data.empty()) {
+    *out_img = nullptr;
+    return heif_error_ok;
+  }
+
+
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
   std::unique_ptr<opj_codec_t, void (OPJ_CALLCONV *)(opj_codec_t*)> l_codec(opj_create_decompress(OPJ_CODEC_J2K),
@@ -410,9 +416,14 @@ heif_error openjpeg_decode_image(void* decoder_raw, heif_image** out_img)
   return openjpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
+heif_error openjpeg_flush_data(void* decoder)
+{
+  return heif_error_ok;
+}
+
 
 static const heif_decoder_plugin decoder_openjpeg{
-    4,
+    5,
     openjpeg_plugin_name,
     openjpeg_init_plugin,
     openjpeg_deinit_plugin,
@@ -423,7 +434,8 @@ static const heif_decoder_plugin decoder_openjpeg{
     openjpeg_decode_image,
     openjpeg_set_strict_decoding,
     "openjpeg",
-    openjpeg_decode_next_image
+    openjpeg_decode_next_image,
+    openjpeg_flush_data
 };
 
 const heif_decoder_plugin* get_decoder_plugin_openjpeg()
