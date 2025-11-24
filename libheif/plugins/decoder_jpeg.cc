@@ -150,6 +150,12 @@ heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
 {
   jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
+  // When there is no input data yet, return NULL image.
+  if (decoder->data.empty()) {
+    *out_img = nullptr;
+    return heif_error_ok;
+  }
+
   jpeg_decompress_struct cinfo;
   my_error_manager jerr;
 
@@ -363,10 +369,15 @@ heif_error jpeg_decode_image(void* decoder_raw, heif_image** out_img)
   return jpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
+heif_error jpeg_flush_data(void* decoder)
+{
+  return heif_error_ok;
+}
+
 
 static const heif_decoder_plugin decoder_jpeg
     {
-        4,
+        5,
         jpeg_plugin_name,
         jpeg_init_plugin,
         jpeg_deinit_plugin,
@@ -377,7 +388,8 @@ static const heif_decoder_plugin decoder_jpeg
         jpeg_decode_image,
         jpeg_set_strict_decoding,
         "jpeg",
-        jpeg_decode_next_image
+        jpeg_decode_next_image,
+        jpeg_flush_data
     };
 
 
