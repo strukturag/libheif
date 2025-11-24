@@ -191,6 +191,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
 
     const uint8_t nal_type = (data[0] >> 1);
     const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
+    const bool is_image_data = (nal_type >= 0 && nal_type <= 31);
 
     // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
@@ -221,8 +222,11 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
           m_current_output_data = CodedImageData{};
         }
         m_current_output_data->append_with_4bytes_size(data, size);
-        m_current_output_data->is_sync_frame = is_sync;
-        m_current_output_data->frame_nr = frameNr;
+
+        if (is_image_data) {
+          m_current_output_data->is_sync_frame = is_sync;
+          m_current_output_data->frame_nr = frameNr;
+        }
     }
 
     if (!more_frame_packets) {

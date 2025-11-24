@@ -553,6 +553,29 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
   config->width = encoded_width;
   config->height = encoded_height;
 
+  if (image_sequence) {
+    // TODO
+    /*
+    config->target_bitrate = options->sequence_bitrate;
+    config->framerate_num = options->framerate_num;
+    config->framerate_den = options->framerate_den;
+    */
+
+    if (options->keyframe_distance_max) {
+      config->intra_period = options->keyframe_distance_max;
+    }
+
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        config->intra_period = 1;
+        break;
+      case heif_sequence_gop_structure_p_chain:
+        config->gop_lowdelay = 1;
+        break;
+      case heif_sequence_gop_structure_bidirectional:
+        break;
+    }
+  }
 
   kvz_encoder* kvzencoder = encoder->kvzencoder = api->encoder_open(config);
   if (!kvzencoder) {
@@ -566,6 +589,8 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 
   // --- encode headers
 
+  // Not needed. Headers are also output by kvazaar together with the images.
+#if 0
   kvz_data_chunk* data = nullptr;
   uint32_t data_len;
   int success;
@@ -584,7 +609,7 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
     api->chunk_free(data);
     data = nullptr;
   }
-
+#endif
 
   return heif_error_ok;
 }
