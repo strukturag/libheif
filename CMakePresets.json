@@ -44,6 +44,8 @@
         "WITH_OpenJPEG_DECODER_PLUGIN" : "OFF",
         "WITH_OpenJPEG_ENCODER" : "ON",
         "WITH_OpenJPEG_ENCODER_PLUGIN" : "OFF",
+        "WITH_OPENJPH_ENCODER" : "ON",
+        "WITH_OPENJPH_ENCODER_PLUGIN" : "OFF",
         "WITH_FFMPEG_DECODER" : "ON",
         "WITH_FFMPEG_DECODER_PLUGIN" : "OFF",
         "WITH_OpenH264_DECODER" : "ON",
