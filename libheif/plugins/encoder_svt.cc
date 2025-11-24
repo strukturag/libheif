@@ -1115,7 +1115,8 @@ static heif_error svt_end_sequence_encoding(void* encoder_raw)
 
 
 heif_error svt_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                    uintptr_t* out_framenr, int* out_is_keyframe)
+                                    uintptr_t* out_framenr, int* out_is_keyframe,
+                                    int* more_frame_packets)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
 
@@ -1148,7 +1149,7 @@ heif_error svt_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size
 heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                    heif_encoded_data_type* type)
 {
-  return svt_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr);
+  return svt_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr, nullptr);
 }
 
 

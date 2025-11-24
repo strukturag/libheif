@@ -1224,7 +1224,8 @@ static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 }
 
 static heif_error x265_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                            uintptr_t* frame_nr, int* is_keyframe)
+                                            uintptr_t* frame_nr, int* is_keyframe,
+                                            int* more_frame_packets)
 {
   return x265_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
 }

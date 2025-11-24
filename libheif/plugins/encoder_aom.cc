@@ -1319,14 +1319,13 @@ static heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
     return err;
   }
 
-  aom_end_sequence_encoding(encoder_raw);
-
-  return heif_error_ok;
+  return aom_end_sequence_encoding(encoder_raw);
 }
 
 
 heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
-                                    uintptr_t* out_framenr, int* out_is_keyframe)
+                                    uintptr_t* out_framenr, int* out_is_keyframe,
+                                    int* more_frame_packets)
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
@@ -1359,7 +1358,7 @@ heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size
 static heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                           heif_encoded_data_type* type)
 {
-  return aom_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr);
+  return aom_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr, nullptr);
 }
 
 

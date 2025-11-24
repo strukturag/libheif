@@ -180,7 +180,8 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     int size;
 
     uintptr_t frameNr=0;
-    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr, nullptr);
+    int more_frame_packets = 1;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr, nullptr, &more_frame_packets);
 
     if (data == nullptr) {
       break;
@@ -190,6 +191,8 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
 
     const uint8_t nal_type = (data[0] >> 1);
     const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
+
+    // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
     if ((data[0] >> 1) == NAL_UNIT_SPS_NUT && m_hvcC) {
       parse_sps_for_hvcC_configuration(data, size,
@@ -220,6 +223,10 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
         m_current_output_data->append_with_4bytes_size(data, size);
         m_current_output_data->is_sync_frame = is_sync;
         m_current_output_data->frame_nr = frameNr;
+    }
+
+    if (!more_frame_packets) {
+      break;
     }
   }
 

@@ -138,7 +138,7 @@ Error Encoder_AVIF::get_data(heif_encoder* encoder)
 
     uintptr_t out_frame_number;
     int is_keyframe = 0;
-    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number, &is_keyframe);
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number, &is_keyframe, nullptr);
 
     if (data == nullptr) {
       break;
