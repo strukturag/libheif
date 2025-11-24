@@ -294,6 +294,6 @@ std::shared_ptr<Box_VisualSampleEntry> Encoder_HEVC::get_sample_description_box(
     }
   }
 
-  assert(false); // no hvcC generated
+  // box not yet available
   return nullptr;
 }

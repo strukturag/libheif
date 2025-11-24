@@ -65,6 +65,7 @@ private:
   uint16_t m_height = 0;
 
   uintptr_t m_current_frame_nr = 0;
+  bool m_generated_sample_description_box = false;
 
   struct FrameUserData
   {

@@ -471,17 +471,20 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 
   // --- generate SampleDescriptionBox
 
-  if (!data.properties.empty()) {
+  if (!m_generated_sample_description_box) {
     auto sample_description_box = encoder->get_sample_description_box(data);
-    VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
-    visualSampleEntry.width = m_width;
-    visualSampleEntry.height = m_height;
+    if (sample_description_box) {
+      VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
+      visualSampleEntry.width = m_width;
+      visualSampleEntry.height = m_height;
 
-    auto ccst = std::make_shared<Box_ccst>();
-    ccst->set_coding_constraints(data.codingConstraints);
-    sample_description_box->append_child_box(ccst);
+      auto ccst = std::make_shared<Box_ccst>();
+      ccst->set_coding_constraints(data.codingConstraints);
+      sample_description_box->append_child_box(ccst);
 
-    set_sample_description_box(sample_description_box);
+      set_sample_description_box(sample_description_box);
+      m_generated_sample_description_box = true;
+    }
   }
 
   if (!data.bitstream.empty()) {

@@ -209,6 +209,6 @@ std::shared_ptr<Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(
     }
   }
 
-  assert(false); // no av1C generated
+  // box not available yet
   return nullptr;
 }
