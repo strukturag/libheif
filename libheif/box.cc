@@ -4806,7 +4806,13 @@ Error Box_cmex::write(StreamWriter& writer) const
 std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
 {
   std::ostringstream sstr;
-  sstr << indent << "time_uncertainty: " << info.time_uncertainty << "\n";
+  sstr << indent << "time_uncertainty: ";
+  if (info.time_uncertainty == heif_tai_clock_info_time_uncertainty_unknown) {
+    sstr << "unknown\n";
+  }
+  else {
+    sstr << info.time_uncertainty << "\n";
+  }
   sstr << indent << "clock_resolution: " << info.clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
   if (info.clock_drift_rate == heif_tai_clock_info_clock_drift_rate_unknown) {
