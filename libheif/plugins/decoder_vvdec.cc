@@ -25,6 +25,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <deque>
 #include <string>
 
 #include <vvdec/vvdec.h>
@@ -42,7 +43,9 @@ struct vvdec_decoder
 
   bool strict_decoding = false;
 
-  std::vector<std::vector<uint8_t>> nalus;
+  std::deque<std::vector<uint8_t>> nalus;
+  bool end_of_stream_reached = false;
+
   std::string error_message;
 };
 
@@ -169,7 +172,7 @@ heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t fra
     }
   }
 
-  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  return heif_error_ok;
 }
 
 
@@ -199,36 +202,44 @@ heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
 
   // --- feed NALUs into decoder, flush when done
 
-  for (int i = 0;; i++) {
+  for (;;) {
     int ret;
 
-    if (i < (int) decoder->nalus.size()) {
-      const auto& nalu = decoder->nalus[i];
+    // -> end of stream reached
+    if (decoder->nalus.empty() && decoder->end_of_stream_reached) {
+      ret = vvdec_flush(decoder->decoder, &frame);
+    }
+    // -> not enough data to decode an image
+    else if (decoder->nalus.empty()) {
+      *out_img = nullptr;
+      return heif_error_ok;
+    }
+    // -> push NALs from queue into decoder
+    else {
+      const auto& nalu = decoder->nalus.front();
 
       memcpy(decoder->au->payload, nalu.data(), nalu.size());
       decoder->au->payloadUsedSize = (int) nalu.size();
+      decoder->nalus.pop_front();
 
       ret = vvdec_decode(decoder->decoder, decoder->au, &frame);
     }
-    else {
-      ret = vvdec_flush(decoder->decoder, &frame);
-    }
 
-    if (ret != VVDEC_OK && ret != VVDEC_EOF && ret != VVDEC_TRY_AGAIN) {
-      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "vvdec decoding error"};
-    }
-
-    if (frame) {
+    if (ret == VVDEC_OK && frame) {
       break;
     }
 
     if (ret == VVDEC_EOF) {
-      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "no frame decoded"};
+      assert(!frame);
+      *out_img = nullptr;
+      return heif_error_ok;
+    }
+
+    if (ret != VVDEC_OK && ret != VVDEC_TRY_AGAIN) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "vvdec decoding error"};
     }
   }
 
-
-  decoder->nalus.clear();
 
   // --- convert decoded frame to heif_image
 
@@ -336,21 +347,28 @@ heif_error vvdec_decode_image(void* decoder_raw, heif_image** out_img)
   return vvdec_decode_next_image(decoder_raw, out_img, limits);
 }
 
+heif_error vvc_flush_data(void* decoder_raw)
+{
+  auto* decoder = (vvdec_decoder*) decoder_raw;
+  decoder->end_of_stream_reached = true;
+  return heif_error_ok;
+}
 
 static const heif_decoder_plugin decoder_vvdec
     {
-        4,
-        vvdec_plugin_name,
-        vvdec_init_plugin,
-        vvdec_deinit_plugin,
-        vvdec_does_support_format,
-        vvdec_new_decoder,
-        vvdec_free_decoder,
-        vvdec_push_data,
-        vvdec_decode_image,
-        vvdec_set_strict_decoding,
-        "vvdec",
-        vvdec_decode_next_image
+      5,
+      vvdec_plugin_name,
+      vvdec_init_plugin,
+      vvdec_deinit_plugin,
+      vvdec_does_support_format,
+      vvdec_new_decoder,
+      vvdec_free_decoder,
+      vvdec_push_data,
+      vvdec_decode_image,
+      vvdec_set_strict_decoding,
+      "vvdec",
+      vvdec_decode_next_image,
+      vvc_flush_data
     };
 
 
