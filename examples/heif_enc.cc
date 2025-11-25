@@ -102,6 +102,7 @@ bool option_show_parameters = false;
 int thumbnail_bbox_size = 0;
 int output_bit_depth = 10;
 bool force_enc_av1f = false;
+bool force_enc_avc = false;
 bool force_enc_vvc = false;
 bool force_enc_uncompressed = false;
 bool force_enc_jpeg = false;
@@ -171,6 +172,7 @@ const int OPTION_SEQUENCES_GOP_STRUCTURE = 1024;
 const int OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE = 1025;
 const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
 const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
+const int OPTION_USE_AVC_COMPRESSION = 1028;
 
 
 static option long_options[] = {
@@ -190,6 +192,7 @@ static option long_options[] = {
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
+    {(char* const) "avc",                     no_argument,       0,              OPTION_USE_AVC_COMPRESSION},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
     {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
@@ -278,6 +281,7 @@ void show_help(const char* argv0)
             << "codecs:\n"
             << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --vvc                      encode as VVC (experimental)\n"
+            << "      --avc                      encode as AVC (experimental)\n"
             << "      --jpeg                     encode as JPEG\n"
             << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
             << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
@@ -592,6 +596,9 @@ heif_compression_format guess_compression_format_from_filename(const std::string
   else if (ends_with(filename_lowercase, ".vvic")) {
     return heif_compression_VVC;
   }
+  else if (ends_with(filename_lowercase, ".avci")) {
+    return heif_compression_AVC;
+  }
   else if (ends_with(filename_lowercase, ".heic")) {
     return heif_compression_HEVC;
   }
@@ -609,6 +616,7 @@ std::string suffix_for_compression_format(heif_compression_format format)
   switch (format) {
     case heif_compression_AV1: return "avif";
     case heif_compression_VVC: return "vvic";
+    case heif_compression_AVC: return "avci";
     case heif_compression_HEVC: return "heic";
     case heif_compression_JPEG2000: return "hej2";
     default: return "data";
@@ -1222,6 +1230,9 @@ int main(int argc, char** argv)
       case OPTION_USE_VVC_COMPRESSION:
         force_enc_vvc = true;
         break;
+      case OPTION_USE_AVC_COMPRESSION:
+        force_enc_avc = true;
+        break;
       case OPTION_USE_JPEG_COMPRESSION:
         force_enc_jpeg = true;
         break;
@@ -1448,7 +1459,7 @@ int main(int argc, char** argv)
   }
 
   if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
-      (force_enc_jpeg2000 ? 1 : 0) > 1) {
+      (force_enc_jpeg2000 ? 1 : 0) + (force_enc_avc ? 1 : 0)> 1) {
     std::cerr << "Choose at most one output compression format.\n";
     return 5;
   }
@@ -1495,6 +1506,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_vvc) {
     compressionFormat = heif_compression_VVC;
+  }
+  else if (force_enc_avc) {
+    compressionFormat = heif_compression_AVC;
   }
   else if (force_enc_uncompressed) {
     compressionFormat = heif_compression_uncompressed;

@@ -843,7 +843,7 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
-  param->totalFrames = image_sequence ? 50 : 1; // TODO
+  param->totalFrames = image_sequence ? 0 : 1; // TODO
 
   if (isGreyscale) {
     param->internalCsp = X265_CSP_I400;

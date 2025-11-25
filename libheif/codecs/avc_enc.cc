@@ -171,14 +171,18 @@ Error Encoder_AVC::encode_sequence_flush(heif_encoder* encoder)
 
 std::optional<Encoder::CodedImageData> Encoder_AVC::encode_sequence_get_data()
 {
-  return std::move(m_current_output_data);
+  if (m_output_image_complete) {
+    m_output_image_complete = false;
+    return std::move(m_current_output_data);
+  }
+  else {
+    return std::nullopt;
+  }
 }
 
 Error Encoder_AVC::get_data(heif_encoder* encoder)
 {
   //CodedImageData codedImage;
-
-  bool got_some_data = false;
 
   for (;;) {
     uint8_t* data;
@@ -192,11 +196,11 @@ Error Encoder_AVC::get_data(heif_encoder* encoder)
       break;
     }
 
-    got_some_data = true;
-
     const uint8_t nal_type = (data[0] & 0x1f);
     const bool is_sync = (nal_type == 5);
     const bool is_image_data = (nal_type > 0 && nal_type <= AVC_NAL_UNIT_MAX_VCL);
+
+    m_output_image_complete |= is_image_data;
 
     // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
@@ -204,6 +208,10 @@ Error Encoder_AVC::get_data(heif_encoder* encoder)
       parse_sps_for_avcC_configuration(data, size,
                                        &m_avcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
+    }
+
+    if (is_image_data) {
+      more_frame_packets = 0;
     }
 
     switch (nal_type) {
@@ -239,7 +247,7 @@ Error Encoder_AVC::get_data(heif_encoder* encoder)
     }
   }
 
-  if (!got_some_data) {
+  if (!m_output_image_complete) {
     return {};
   }
 
@@ -249,11 +257,10 @@ Error Encoder_AVC::get_data(heif_encoder* encoder)
   }
 
 
-  // --- return hvcC when all headers are included and it was not returned yet
+  // --- return avcC when all headers are included and it was not returned yet
   //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
   //           and also complete codingConstraints.
 
-  //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
   if (m_end_of_sequence_reached && m_avcC && !m_avcC_sent) {
     m_current_output_data->properties.push_back(m_avcC);
     m_avcC = nullptr;

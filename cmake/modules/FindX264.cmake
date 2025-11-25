@@ -23,8 +23,8 @@ if(X264_INCLUDE_DIR)
            ${x264_config_file}
            TMP
            REGEX "#define X264_BUILD .*$")
-      string(REGEX REPLACE "#define X264_BUILD" "" TMP ${TMP})
-      string(REGEX MATCHALL "[0-9.]+" X264_BUILD ${TMP})
+      string(REGEX REPLACE "#define X264_BUILD" "" TMP "${TMP}")
+      string(REGEX MATCHALL "[0-9.]+" X264_BUILD "${TMP}")
   endif()
 endif()
 

@@ -90,6 +90,10 @@
 #include "plugins/encoder_jpeg.h"
 #endif
 
+#if HAVE_X264
+#include "plugins/encoder_x264.h"
+#endif
+
 #if HAVE_OpenH264_DECODER
 #include "plugins/decoder_openh264.h"
 #endif
@@ -217,6 +221,10 @@ void register_default_plugins()
 
 #if HAVE_OpenH264_DECODER
   register_decoder(get_decoder_plugin_openh264());
+#endif
+
+#if HAVE_X264
+  register_encoder(get_encoder_plugin_x264());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

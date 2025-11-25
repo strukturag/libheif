@@ -68,6 +68,7 @@ private:
   int m_encoded_image_height = 0;
 
   std::optional<CodedImageData> m_current_output_data;
+  bool m_output_image_complete = false;
 
   Error get_data(heif_encoder*);
 };

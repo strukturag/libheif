@@ -42,7 +42,7 @@ public:
     uint8_t AVCProfileIndication = 0; // profile_idc
     uint8_t profile_compatibility = 0; // constraint set flags
     uint8_t AVCLevelIndication = 0; // level_idc
-    uint8_t lengthSize = 0;
+    uint8_t lengthSize = 0; // length of NAL size field. Must be one of: 1,2,4
     heif_chroma chroma_format = heif_chroma_420; // Note: avcC integer value can be cast to heif_chroma enum
     uint8_t bit_depth_luma = 8;
     uint8_t bit_depth_chroma = 8;
