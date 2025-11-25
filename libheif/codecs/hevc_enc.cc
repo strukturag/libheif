@@ -203,18 +203,18 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
 
     switch (nal_type) {
       case HEVC_NAL_UNIT_VPS_NUT:
+        if (m_hvcC && !m_hvcC_has_VPS) m_hvcC->append_nal_data(data, size);
         m_hvcC_has_VPS = true;
-        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       case HEVC_NAL_UNIT_SPS_NUT:
+        if (m_hvcC && !m_hvcC_has_SPS) m_hvcC->append_nal_data(data, size);
         m_hvcC_has_SPS = true;
-        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       case HEVC_NAL_UNIT_PPS_NUT:
+        if (m_hvcC && !m_hvcC_has_PPS) m_hvcC->append_nal_data(data, size);
         m_hvcC_has_PPS = true;
-        if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
       default:
