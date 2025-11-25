@@ -841,10 +841,10 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
       case heif_sequence_gop_structure_intra_only:
         svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
         break;
-      case heif_sequence_gop_structure_p_chain:
+      case heif_sequence_gop_structure_lowdelay:
         //svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
         break;
-      case heif_sequence_gop_structure_bidirectional:
+      case heif_sequence_gop_structure_unrestricted:
         svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_RANDOM_ACCESS;
         break;
     }

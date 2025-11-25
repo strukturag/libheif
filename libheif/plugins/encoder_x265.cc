@@ -832,10 +832,10 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
       param->keyframeMin=1;
       param->keyframeMax=1;
       break;
-    case heif_sequence_gop_structure_p_chain:
+    case heif_sequence_gop_structure_lowdelay:
       param->bframes = 0;
       break;
-    case heif_sequence_gop_structure_bidirectional:
+    case heif_sequence_gop_structure_unrestricted:
       param->bframes = 1;
       break;
   }

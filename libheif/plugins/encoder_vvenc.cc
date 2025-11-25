@@ -481,8 +481,8 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
       case heif_sequence_gop_structure_intra_only:
         params.m_IntraPeriod = 1;
         break;
-      case heif_sequence_gop_structure_p_chain:
-      case heif_sequence_gop_structure_bidirectional:
+      case heif_sequence_gop_structure_lowdelay:
+      case heif_sequence_gop_structure_unrestricted:
         ;
     }
   }

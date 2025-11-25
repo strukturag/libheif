@@ -569,10 +569,10 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
       case heif_sequence_gop_structure_intra_only:
         config->intra_period = 1;
         break;
-      case heif_sequence_gop_structure_p_chain:
+      case heif_sequence_gop_structure_lowdelay:
         config->gop_lowdelay = 1;
         break;
-      case heif_sequence_gop_structure_bidirectional:
+      case heif_sequence_gop_structure_unrestricted:
         break;
     }
   }

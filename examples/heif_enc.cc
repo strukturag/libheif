@@ -110,7 +110,7 @@ bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
 
-enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_p_chain;
+enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
 int sequence_keyframe_distance_min = 0;
 int sequence_keyframe_distance_max = 0;
 int sequence_max_frames = 0; // 0 -> no maximum
@@ -1347,10 +1347,10 @@ int main(int argc, char** argv)
           sequence_gop_structure = heif_sequence_gop_structure_intra_only;
         }
         else if (prefix_compare(optarg, "p-chain")) {
-          sequence_gop_structure = heif_sequence_gop_structure_p_chain;
+          sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
         }
         else if (prefix_compare(optarg, "bidirectional")) {
-          sequence_gop_structure = heif_sequence_gop_structure_bidirectional;
+          sequence_gop_structure = heif_sequence_gop_structure_unrestricted;
         }
         else {
           std::cerr << "Invalid GOP structure argument\n";

@@ -408,7 +408,7 @@ heif_sequence_encoding_options* heif_sequence_encoding_options_alloc()
 
   // version 2
 
-  options->gop_structure = heif_sequence_gop_structure_p_chain;
+  options->gop_structure = heif_sequence_gop_structure_lowdelay;
   options->keyframe_distance_min = 0;
   options->keyframe_distance_max = 0;
 

@@ -337,9 +337,15 @@ void heif_track_options_set_gimi_track_id(heif_track_options*,
 
 enum heif_sequence_gop_structure
 {
+  // Only independently decodable keyframes.
   heif_sequence_gop_structure_intra_only,
-  heif_sequence_gop_structure_p_chain,
-  heif_sequence_gop_structure_bidirectional
+
+  // No frame reordering, usually an IPPPP structure.
+  heif_sequence_gop_structure_lowdelay,
+
+  // All frame types are allowed, including frame reordering, to achieve
+  // the best compression ratio.
+  heif_sequence_gop_structure_unrestricted
 };
 
 
