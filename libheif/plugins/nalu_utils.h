@@ -22,12 +22,17 @@
 #include <memory>
 #include "libheif/heif.h"
 
-static const int NAL_UNIT_MAX_VCL    = 31;
-static const int NAL_UNIT_VPS_NUT    = 32;
-static const int NAL_UNIT_SPS_NUT    = 33;
-static const int NAL_UNIT_PPS_NUT    = 34;
-static const int NAL_UNIT_IDR_W_RADL = 19;
-static const int NAL_UNIT_IDR_N_LP   = 20;
+static const int HEVC_NAL_UNIT_MAX_VCL    = 31;
+static const int HEVC_NAL_UNIT_VPS_NUT    = 32;
+static const int HEVC_NAL_UNIT_SPS_NUT    = 33;
+static const int HEVC_NAL_UNIT_PPS_NUT    = 34;
+static const int HEVC_NAL_UNIT_IDR_W_RADL = 19;
+static const int HEVC_NAL_UNIT_IDR_N_LP   = 20;
+
+static const int VVC_NAL_UNIT_MAX_VCL    = 11;
+static const int VVC_NAL_UNIT_VPS_NUT    = 14;
+static const int VVC_NAL_UNIT_SPS_NUT    = 15;
+static const int VVC_NAL_UNIT_PPS_NUT    = 16;
 
 class NalUnit
 {

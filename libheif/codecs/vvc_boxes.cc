@@ -263,7 +263,7 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
     byte = 0;
     if (c.num_sublayers > 1) {
-      uint8_t mask=0x80;
+      uint8_t mask = 0x80;
 
       for (int i = c.num_sublayers - 2; i >= 0; i--) {
         if (ptl.ptl_sublayer_level_present_flag[i]) {
@@ -271,8 +271,9 @@ Error Box_vvcC::write(StreamWriter& writer) const
         }
         mask >>= 1;
       }
+
+      writer.write8(byte);
     }
-    writer.write8(byte);
 
     for (int i=c.num_sublayers-2; i >= 0; i--) {
       if (ptl.ptl_sublayer_level_present_flag[i]) {

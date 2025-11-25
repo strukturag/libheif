@@ -26,6 +26,8 @@
 
 #include <string>
 
+#include "plugins/nalu_utils.h"
+
 
 Result<Encoder::CodedImageData> Encoder_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                     struct heif_encoder* encoder,
@@ -109,6 +111,180 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_VVC::get_sample_description
     }
   }
 
-  assert(false); // no hvcC generated
+  // box not yet available
   return nullptr;
+}
+
+
+Error Encoder_VVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                         heif_encoder* encoder,
+                                         const heif_sequence_encoding_options& options,
+                                         heif_image_input_class input_class,
+                                         uintptr_t frame_number)
+{
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  if (!m_encoder_active) {
+    heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder, &c_api_image, input_class,
+                                                              &options);
+    if (err.code) {
+      return {
+        err.code,
+        err.subcode,
+        err.message
+      };
+    }
+
+    m_vvcC = std::make_shared<Box_vvcC>();
+    m_encoder_active = true;
+  }
+
+  Error dataErr = get_data(encoder);
+  if (dataErr) {
+    return dataErr;
+  }
+
+  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image, frame_number);
+  if (err.code) {
+    return {
+      err.code,
+      err.subcode,
+      err.message
+    };
+  }
+
+  return get_data(encoder);
+}
+
+
+Error Encoder_VVC::encode_sequence_flush(heif_encoder* encoder)
+{
+  encoder->plugin->end_sequence_encoding(encoder->encoder);
+  m_encoder_active = false;
+  m_end_of_sequence_reached = true;
+
+  return get_data(encoder);
+}
+
+
+std::optional<Encoder::CodedImageData> Encoder_VVC::encode_sequence_get_data()
+{
+  return std::move(m_current_output_data);
+}
+
+Error Encoder_VVC::get_data(heif_encoder* encoder)
+{
+  //CodedImageData codedImage;
+
+  bool got_some_data = false;
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    uintptr_t frameNr=0;
+    int more_frame_packets = 1;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &frameNr, nullptr, &more_frame_packets);
+
+    if (data == nullptr) {
+      break;
+    }
+
+    got_some_data = true;
+
+    const uint8_t nal_type = (data[1] >> 3);
+    const bool is_sync = (nal_type == 7 || nal_type == 8 || nal_type == 9);
+    const bool is_image_data = (nal_type >= 0 && nal_type <= VVC_NAL_UNIT_MAX_VCL);
+
+    std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
+
+    if (nal_type == VVC_NAL_UNIT_SPS_NUT && m_vvcC) {
+      parse_sps_for_vvcC_configuration(data, size,
+                                       &m_vvcC->get_configuration(),
+                                       &m_encoded_image_width, &m_encoded_image_height);
+    }
+
+    if (is_image_data) {
+      more_frame_packets = 0;
+    }
+
+    switch (nal_type) {
+      case VVC_NAL_UNIT_VPS_NUT:
+        if (m_vvcC && !m_vvcC_has_VPS) m_vvcC->append_nal_data(data, size);
+        m_vvcC_has_VPS = true;
+        break;
+
+      case VVC_NAL_UNIT_SPS_NUT:
+        if (m_vvcC && !m_vvcC_has_SPS) m_vvcC->append_nal_data(data, size);
+        m_vvcC_has_SPS = true;
+        break;
+
+      case VVC_NAL_UNIT_PPS_NUT:
+        if (m_vvcC && !m_vvcC_has_PPS) m_vvcC->append_nal_data(data, size);
+        m_vvcC_has_PPS = true;
+        break;
+
+      default:
+        if (!m_current_output_data) {
+          m_current_output_data = CodedImageData{};
+        }
+        m_current_output_data->append_with_4bytes_size(data, size);
+
+        if (is_image_data) {
+          m_current_output_data->is_sync_frame = is_sync;
+          m_current_output_data->frame_nr = frameNr;
+        }
+    }
+
+    if (!more_frame_packets) {
+      break;
+    }
+  }
+
+  if (!got_some_data) {
+    return {};
+  }
+
+  if (!m_encoded_image_width || !m_encoded_image_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
+
+
+  // --- return hvcC when all headers are included and it was not returned yet
+  //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
+  //           and also complete codingConstraints.
+
+  //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
+  if (m_end_of_sequence_reached && m_vvcC && !m_vvcC_sent) {
+    m_current_output_data->properties.push_back(m_vvcC);
+    m_vvcC = nullptr;
+    m_vvcC_sent = true;
+  }
+
+  m_current_output_data->encoded_image_width = m_encoded_image_width;
+  m_current_output_data->encoded_image_height = m_encoded_image_height;
+
+
+  // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
+#if 0
+  if (encoder->plugin->plugin_api_version >= 3 &&
+      encoder->plugin->query_encoded_size != nullptr) {
+    uint32_t check_encoded_width = image->get_width(), check_encoded_height = image->get_height();
+
+    encoder->plugin->query_encoded_size(encoder->encoder,
+                                        image->get_width(), image->get_height(),
+                                        &check_encoded_width,
+                                        &check_encoded_height);
+
+    assert((int)check_encoded_width == encoded_width);
+    assert((int)check_encoded_height == encoded_height);
+      }
+#endif
+
+  m_current_output_data->codingConstraints.intra_pred_used = true;
+  m_current_output_data->codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+
+  return {};
 }

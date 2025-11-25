@@ -333,19 +333,19 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
   const unsigned char* heif_pps_data;
   const unsigned char* heif_idrpic_data;
 
-  if ((decoder->nalMap.count(NAL_UNIT_VPS_NUT) > 0)
-      && (decoder->nalMap.count(NAL_UNIT_SPS_NUT) > 0)
-      && (decoder->nalMap.count(NAL_UNIT_PPS_NUT) > 0)
+  if ((decoder->nalMap.count(HEVC_NAL_UNIT_VPS_NUT) > 0)
+      && (decoder->nalMap.count(HEVC_NAL_UNIT_SPS_NUT) > 0)
+      && (decoder->nalMap.count(HEVC_NAL_UNIT_PPS_NUT) > 0)
       )
   {
-      heif_vps_size = decoder->nalMap.size(NAL_UNIT_VPS_NUT);
-      heif_vps_data = decoder->nalMap.data(NAL_UNIT_VPS_NUT);
+      heif_vps_size = decoder->nalMap.size(HEVC_NAL_UNIT_VPS_NUT);
+      heif_vps_data = decoder->nalMap.data(HEVC_NAL_UNIT_VPS_NUT);
 
-      heif_sps_size = decoder->nalMap.size(NAL_UNIT_SPS_NUT);
-      heif_sps_data = decoder->nalMap.data(NAL_UNIT_SPS_NUT);
+      heif_sps_size = decoder->nalMap.size(HEVC_NAL_UNIT_SPS_NUT);
+      heif_sps_data = decoder->nalMap.data(HEVC_NAL_UNIT_SPS_NUT);
 
-      heif_pps_size = decoder->nalMap.size(NAL_UNIT_PPS_NUT);
-      heif_pps_data = decoder->nalMap.data(NAL_UNIT_PPS_NUT);
+      heif_pps_size = decoder->nalMap.size(HEVC_NAL_UNIT_PPS_NUT);
+      heif_pps_data = decoder->nalMap.data(HEVC_NAL_UNIT_PPS_NUT);
   }
   else
   {
@@ -356,17 +356,17 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
       };
   }
 
-  if ((decoder->nalMap.count(NAL_UNIT_IDR_W_RADL) > 0) || (decoder->nalMap.count(NAL_UNIT_IDR_N_LP) > 0))
+  if ((decoder->nalMap.count(HEVC_NAL_UNIT_IDR_W_RADL) > 0) || (decoder->nalMap.count(HEVC_NAL_UNIT_IDR_N_LP) > 0))
   {
-      if (decoder->nalMap.count(NAL_UNIT_IDR_W_RADL) > 0)
+      if (decoder->nalMap.count(HEVC_NAL_UNIT_IDR_W_RADL) > 0)
       {
-          heif_idrpic_data = decoder->nalMap.data(NAL_UNIT_IDR_W_RADL);
-          heif_idrpic_size = decoder->nalMap.size(NAL_UNIT_IDR_W_RADL);
+          heif_idrpic_data = decoder->nalMap.data(HEVC_NAL_UNIT_IDR_W_RADL);
+          heif_idrpic_size = decoder->nalMap.size(HEVC_NAL_UNIT_IDR_W_RADL);
       }
       else
       {
-          heif_idrpic_data = decoder->nalMap.data(NAL_UNIT_IDR_N_LP);
-          heif_idrpic_size = decoder->nalMap.size(NAL_UNIT_IDR_N_LP);
+          heif_idrpic_data = decoder->nalMap.data(HEVC_NAL_UNIT_IDR_N_LP);
+          heif_idrpic_size = decoder->nalMap.size(HEVC_NAL_UNIT_IDR_N_LP);
       }
   }
   else

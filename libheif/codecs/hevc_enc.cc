@@ -63,7 +63,7 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
     }
 
 
-    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT) {
+    if ((data[0] >> 1) == HEVC_NAL_UNIT_SPS_NUT) {
       parse_sps_for_hvcC_configuration(data, size, &hvcC->get_configuration(), &encoded_width, &encoded_height);
 
       codedImage.encoded_image_width = encoded_width;
@@ -71,9 +71,9 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
     }
 
     switch (data[0] >> 1) {
-      case NAL_UNIT_VPS_NUT:
-      case NAL_UNIT_SPS_NUT:
-      case NAL_UNIT_PPS_NUT:
+      case HEVC_NAL_UNIT_VPS_NUT:
+      case HEVC_NAL_UNIT_SPS_NUT:
+      case HEVC_NAL_UNIT_PPS_NUT:
         hvcC->append_nal_data(data, size);
         break;
 
@@ -191,28 +191,28 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
 
     const uint8_t nal_type = (data[0] >> 1);
     const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
-    const bool is_image_data = (nal_type >= 0 && nal_type <= 31);
+    const bool is_image_data = (nal_type >= 0 && nal_type <= HEVC_NAL_UNIT_MAX_VCL);
 
     // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
-    if ((data[0] >> 1) == NAL_UNIT_SPS_NUT && m_hvcC) {
+    if (nal_type == HEVC_NAL_UNIT_SPS_NUT && m_hvcC) {
       parse_sps_for_hvcC_configuration(data, size,
                                        &m_hvcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
     }
 
-    switch (data[0] >> 1) {
-      case NAL_UNIT_VPS_NUT:
+    switch (nal_type) {
+      case HEVC_NAL_UNIT_VPS_NUT:
         m_hvcC_has_VPS = true;
         if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
-      case NAL_UNIT_SPS_NUT:
+      case HEVC_NAL_UNIT_SPS_NUT:
         m_hvcC_has_SPS = true;
         if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
 
-      case NAL_UNIT_PPS_NUT:
+      case HEVC_NAL_UNIT_PPS_NUT:
         m_hvcC_has_PPS = true;
         if (m_hvcC) m_hvcC->append_nal_data(data, size);
         break;
