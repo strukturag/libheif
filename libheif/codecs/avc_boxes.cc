@@ -265,3 +265,33 @@ void Box_avcC::get_header_nals(std::vector<uint8_t>& data) const
     data.insert(data.end(), pps.begin(), pps.end());
   }
 }
+
+
+void Box_avcC::append_sps_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data+size);
+  m_sps.emplace_back(std::move(vec));
+}
+
+void Box_avcC::append_sps_ext_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data+size);
+  m_sps_ext.emplace_back(std::move(vec));
+}
+
+void Box_avcC::append_pps_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data+size);
+  m_pps.emplace_back(std::move(vec));
+}
+
+
+Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_avcC::configuration* inout_config,
+                                       int* width, int* height)
+{
+  // TODO
+  assert(false);
+
+  return {};
+}

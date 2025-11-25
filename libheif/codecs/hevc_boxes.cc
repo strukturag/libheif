@@ -571,7 +571,8 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 }
 
 
-static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
+// Used for AVC, HEVC, and VVC.
+std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
 {
   std::vector<uint8_t> out_data;
 

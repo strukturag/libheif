@@ -155,6 +155,8 @@ public:
 Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
                                    std::vector<std::shared_ptr<SEIMessage>>& msgs);
 
+// Used for AVC, HEVC, and VVC.
+std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size);
 
 Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
                                        HEVCDecoderConfigurationRecord* inout_config,

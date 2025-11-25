@@ -58,6 +58,11 @@ public:
     return m_configuration;
   }
 
+  configuration& get_configuration()
+  {
+    return m_configuration;
+  }
+
   const std::vector< std::vector<uint8_t> > getSequenceParameterSets() const
   {
     return m_sps;
@@ -74,6 +79,12 @@ public:
   }
 
   void get_header_nals(std::vector<uint8_t>& data) const;
+
+  void append_sps_nal(const uint8_t* data, size_t size);
+
+  void append_sps_ext_nal(const uint8_t* data, size_t size);
+
+  void append_pps_nal(const uint8_t* data, size_t size);
 
   std::string dump(Indent &) const override;
 
@@ -101,4 +112,9 @@ public:
     set_short_type(fourcc("avc1"));
   }
 };
+
+Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_avcC::configuration* inout_config,
+                                       int* width, int* height);
+
 #endif

@@ -19,6 +19,7 @@
  */
 
 #include "vvc_boxes.h"
+#include "hevc_boxes.h"
 #include "file.h"
 #include <cstring>
 #include <string>
@@ -391,28 +392,6 @@ std::string Box_vvcC::dump(Indent& indent) const
 
   return sstr.str();
 }
-
-static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
-{
-  std::vector<uint8_t> out_data;
-
-  for (size_t i = 0; i < size; i++) {
-    if (i + 2 < size &&
-        sps[i] == 0 &&
-        sps[i + 1] == 0 &&
-        sps[i + 2] == 3) {
-      out_data.push_back(0);
-      out_data.push_back(0);
-      i += 2;
-    }
-    else {
-      out_data.push_back(sps[i]);
-    }
-  }
-
-  return out_data;
-}
-
 
 
 Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,

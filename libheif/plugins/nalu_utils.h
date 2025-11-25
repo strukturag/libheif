@@ -22,6 +22,11 @@
 #include <memory>
 #include "libheif/heif.h"
 
+static const int AVC_NAL_UNIT_MAX_VCL    = 5;
+static const int AVC_NAL_UNIT_SPS_NUT    = 7;
+static const int AVC_NAL_UNIT_PPS_NUT    = 8;
+static const int AVC_NAL_UNIT_SPS_EXT_NUT = 13;
+
 static const int HEVC_NAL_UNIT_MAX_VCL    = 31;
 static const int HEVC_NAL_UNIT_VPS_NUT    = 32;
 static const int HEVC_NAL_UNIT_SPS_NUT    = 33;
