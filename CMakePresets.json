@@ -33,6 +33,8 @@
         "WITH_SvtEnc_PLUGIN" : "OFF",
         "WITH_X265" : "ON",
         "WITH_X265_PLUGIN" : "OFF",
+        "WITH_X264" : "ON",
+        "WITH_X264_PLUGIN" : "OFF",
         "WITH_JPEG_DECODER" : "ON",
         "WITH_JPEG_DECODER_PLUGIN" : "OFF",
         "WITH_JPEG_ENCODER" : "ON",
