@@ -341,7 +341,7 @@ void show_help(const char* argv0)
             << "      --duration #               set frame duration (default: 1)\n"
             << "      --fps #                    set timebase and duration based on fps\n"
             << "      --repetitions #            set how often the sequence should be played back (default=1), special value: 'infinite'\n"
-            << "      --gop-structure GOP        frame types to use in GOP (intra-only, p-chain, bidirectional)\n"
+            << "      --gop-structure GOP        frame types to use in GOP (intra-only, low-delay, unrestricted)\n"
             << "      --min-keyframe-distance #  minimum distance of keyframes in sequence (0 = undefined)\n"
             << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
             << "      --max-frames #             limit sequence length to maximum number of frames\n"
@@ -1357,10 +1357,10 @@ int main(int argc, char** argv)
         if (prefix_compare(optarg, "intra-only")) {
           sequence_gop_structure = heif_sequence_gop_structure_intra_only;
         }
-        else if (prefix_compare(optarg, "p-chain")) {
+        else if (prefix_compare(optarg, "low-delay")) {
           sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
         }
-        else if (prefix_compare(optarg, "bidirectional")) {
+        else if (prefix_compare(optarg, "unrestricted")) {
           sequence_gop_structure = heif_sequence_gop_structure_unrestricted;
         }
         else {
