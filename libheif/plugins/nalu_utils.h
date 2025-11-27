@@ -38,6 +38,8 @@ static const int VVC_NAL_UNIT_MAX_VCL    = 11;
 static const int VVC_NAL_UNIT_VPS_NUT    = 14;
 static const int VVC_NAL_UNIT_SPS_NUT    = 15;
 static const int VVC_NAL_UNIT_PPS_NUT    = 16;
+static const int VVC_NAL_UNIT_SUFFIX_SEI_NUT = 24;
+
 
 class NalUnit
 {

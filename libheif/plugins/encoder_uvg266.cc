@@ -27,6 +27,11 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <deque>
+#include <iostream>
+
+#include "logging.h"
+#include "nalu_utils.h"
 
 extern "C" {
 #include <uvg266.h>
@@ -44,8 +49,41 @@ struct encoder_struct_uvg266
   int quality = 75;
   bool lossless = false;
 
-  std::vector<uint8_t> output_data;
-  size_t output_idx = 0;
+  // --- encoder
+
+  const uvg_api* api = nullptr;
+  uvg_config* config = nullptr;
+  uvg_encoder* kvzencoder = nullptr;
+
+  uvg_chroma_format kvzChroma;
+  int chroma_stride_shift = 0;
+  int chroma_height_shift = 0;
+  int input_chroma_width = 0;
+  int input_chroma_height = 0;
+
+  // --- output data
+
+  //std::vector<uint8_t> output_data;
+  //size_t output_idx = 0;
+
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t frameNr = 0;
+  };
+
+  std::deque<Packet> output_data;
+
+  std::vector<uint8_t> active_data; // holds the data that we just returned
+
+  void append_chunk_data(uvg_data_chunk* data, int framenr);
+
+  ~encoder_struct_uvg266()
+  {
+    if (config) {
+      api->config_destroy(config);
+    }
+  }
 };
 
 static const int uvg266_PLUGIN_PRIORITY = 50;
@@ -333,24 +371,68 @@ static int rounded_size(int s)
 }
 #endif
 
-static void append_chunk_data(uvg_data_chunk* data, std::vector<uint8_t>& out)
+void encoder_struct_uvg266::append_chunk_data(uvg_data_chunk* data, int framenr)
 {
   if (!data || data->len == 0) {
     return;
   }
 
+  std::vector<uint8_t> input_data;
+  while (data) {
+    input_data.insert(input_data.end(), data->data, data->data + data->len);
+    data = data->next;
+  }
+
 #if 0
   std::cout << "DATA\n";
-  std::cout << write_raw_data_as_hex(data->data, data->len, {}, {});
+  std::cout << write_raw_data_as_hex(input_data.data(), input_data.size(), {}, {});
   std::cout << "---\n";
 #endif
 
-  size_t old_size = out.size();
-  out.resize(old_size + data->len);
-  memcpy(out.data() + old_size, data->data, data->len);
+  //std::vector<uint8_t>& pktdata = encoder->output_data.front().data;
+  size_t start_idx = 0;
 
-  if (data->next) {
-    append_chunk_data(data->next, out);
+  for (;;)
+  {
+    while (start_idx < input_data.size() - 3 &&
+           (input_data[start_idx] != 0 ||
+            input_data[start_idx + 1] != 0 ||
+            input_data[start_idx + 2] != 1)) {
+      start_idx++;
+            }
+
+    size_t end_idx = start_idx + 1;
+
+    while (end_idx < input_data.size() - 3 &&
+           (input_data[end_idx] != 0 ||
+            input_data[end_idx + 1] != 0 ||
+            input_data[end_idx + 2] != 1)) {
+      end_idx++;
+            }
+
+    if (end_idx == input_data.size() - 3) {
+      end_idx = input_data.size();
+    }
+
+    encoder_struct_uvg266::Packet pkt;
+    pkt.data.resize(end_idx - start_idx - 3);
+    memcpy(pkt.data.data(), input_data.data() + start_idx + 3, pkt.data.size());
+    pkt.frameNr = framenr;
+
+    uint8_t nal_type = (pkt.data[1] >> 3);
+
+    std::cout << "append frameNr=" << framenr << " NAL:" << ((int)nal_type) << " size:" << pkt.data.size() << "\n";
+
+    // TODO: plugin should send 'more_frame_packets'.
+    if (nal_type != VVC_NAL_UNIT_SUFFIX_SEI_NUT) {
+      output_data.emplace_back(std::move(pkt));
+    }
+
+    if (end_idx == input_data.size()) {
+      break;
+    }
+
+    start_idx = end_idx;
   }
 }
 
@@ -368,26 +450,30 @@ static void copy_plane(uvg_pixel* out_p, size_t out_stride, const uint8_t* in_p,
 }
 
 
-static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image,
-                                      heif_image_input_class input_class)
+static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                                        heif_image_input_class input_class,
+                                                        const heif_sequence_encoding_options* options,
+                                                        bool image_sequence)
 {
   encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
-  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
-  heif_chroma chroma = heif_image_get_chroma_format(image);
 
   const uvg_api* api = uvg_api_get(bit_depth);
   if (api == nullptr) {
     return {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Unsupported_bit_depth,
-        kError_unsupported_bit_depth
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
     };
   }
 
+  encoder->api = api;
+
   uvg_config* config = api->config_alloc();
   api->config_init(config); // param, encoder->preset.c_str(), encoder->tune.c_str());
+
+  encoder->config = config;
 
 #if HAVE_UVG266_ENABLE_LOGGING
   config->enable_logging_output = 0;
@@ -399,104 +485,39 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
   config->threads = 0;
 #endif
 
-#if 1
-#if 0
-  while (ctuSize > 16 &&
-         (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
-          heif_image_get_height(image, heif_channel_Y) < ctuSize)) {
-    ctuSize /= 2;
-  }
-
-  if (ctuSize < 16) {
-    api->config_destroy(config);
-    struct heif_error err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Invalid_parameter_value,
-        kError_unsupported_image_size
-    };
-    return err;
-  }
-#endif
-#else
-  // TODO: There seems to be a bug in uvg266 where increasing the CTU size between
-  // multiple encoding jobs causes a segmentation fault. E.g. encoding multiple
-  // times with a CTU of 16 works, the next encoding with a CTU of 32 crashes.
-  // Use hardcoded value of 64 and reject images that are too small.
-
-  if (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
-      heif_image_get_height(image, heif_channel_Y) < ctuSize) {
-    api->param_free(param);
-    struct heif_error err = {
-      heif_error_Encoder_plugin_error,
-      heif_suberror_Invalid_parameter_value,
-      kError_unsupported_image_size
-    };
-    return err;
-  }
-#endif
-
-#if 0
-  // ctuSize should be a power of 2 in [16;64]
-  switch (ctuSize) {
-    case 64:
-      ctu = "64";
-      break;
-    case 32:
-      ctu = "32";
-      break;
-    case 16:
-      ctu = "16";
-      break;
-    default:
-      struct heif_error err = {
-          heif_error_Encoder_plugin_error,
-          heif_suberror_Invalid_parameter_value,
-          kError_unsupported_image_size
-      };
-      return err;
-  }
-  (void) ctu;
-#endif
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
+  heif_chroma chroma = heif_image_get_chroma_format(image);
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
-  int input_chroma_width = 0;
-  int input_chroma_height = 0;
-
-  uint32_t encoded_width, encoded_height;
-  uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
-
-  uvg_chroma_format kvzChroma;
-  int chroma_stride_shift = 0;
-  int chroma_height_shift = 0;
 
   if (isGreyscale) {
     config->input_format = UVG_FORMAT_P400;
-    kvzChroma = UVG_CSP_400;
+    encoder->kvzChroma = UVG_CSP_400;
   }
   else if (chroma == heif_chroma_420) {
     config->input_format = UVG_FORMAT_P420;
-    kvzChroma = UVG_CSP_420;
-    chroma_stride_shift = 1;
-    chroma_height_shift = 1;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = (input_height + 1) / 2;
+    encoder->kvzChroma = UVG_CSP_420;
+    encoder->chroma_stride_shift = 1;
+    encoder->chroma_height_shift = 1;
+    encoder->input_chroma_width = (input_width + 1) / 2;
+    encoder->input_chroma_height = (input_height + 1) / 2;
   }
   else if (chroma == heif_chroma_422) {
     config->input_format = UVG_FORMAT_P422;
-    kvzChroma = UVG_CSP_422;
-    chroma_stride_shift = 1;
-    chroma_height_shift = 0;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = input_height;
+    encoder->kvzChroma = UVG_CSP_422;
+    encoder->chroma_stride_shift = 1;
+    encoder->chroma_height_shift = 0;
+    encoder->input_chroma_width = (input_width + 1) / 2;
+    encoder->input_chroma_height = input_height;
   }
   else if (chroma == heif_chroma_444) {
     config->input_format = UVG_FORMAT_P444;
-    kvzChroma = UVG_CSP_444;
-    chroma_stride_shift = 0;
-    chroma_height_shift = 0;
-    input_chroma_width = input_width;
-    input_chroma_height = input_height;
+    encoder->kvzChroma = UVG_CSP_444;
+    encoder->chroma_stride_shift = 0;
+    encoder->chroma_height_shift = 0;
+    encoder->input_chroma_width = input_width;
+    encoder->input_chroma_height = input_height;
   }
   else {
     return heif_error{
@@ -547,8 +568,42 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
 
+  uint32_t encoded_width, encoded_height;
+  uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
+
   config->width = encoded_width;
   config->height = encoded_height;
+
+  uvg_encoder* kvzencoder = api->encoder_open(config);
+  if (!kvzencoder) {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Encoder_encoding,
+      kError_unspecified_error
+    };
+  }
+
+  encoder->kvzencoder = kvzencoder;
+
+  return heif_error_ok;
+}
+
+
+static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_image* image,
+                                               uintptr_t framenr)
+{
+  encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
+
+  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
+  heif_chroma chroma = heif_image_get_chroma_format(image);
+
+
+  int input_width = heif_image_get_width(image, heif_channel_Y);
+  int input_height = heif_image_get_height(image, heif_channel_Y);
+
+  uint32_t encoded_width, encoded_height;
+  uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
 
   // Note: it is ok to cast away the const, as the image content is not changed.
   // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
@@ -561,9 +616,8 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
   }
 */
 
-  uvg_picture* pic = api->picture_alloc_csp(kvzChroma, encoded_width, encoded_height);
+  uvg_picture* pic = encoder->api->picture_alloc_csp(encoder->kvzChroma, encoded_width, encoded_height);
   if (!pic) {
-    api->config_destroy(config);
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
@@ -585,34 +639,25 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
     copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
-    copy_plane(pic->u, pic->stride >> chroma_stride_shift, data, stride, input_chroma_width, input_chroma_height,
-               encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+    copy_plane(pic->u, pic->stride >> encoder->chroma_stride_shift, data, stride,
+               encoder->input_chroma_width, encoder->input_chroma_height,
+               encoded_width >> encoder->chroma_stride_shift,
+               encoded_height >> encoder->chroma_height_shift);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
-    copy_plane(pic->v, pic->stride >> chroma_stride_shift, data, stride, input_chroma_width, input_chroma_height,
-               encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+    copy_plane(pic->v, pic->stride >> encoder->chroma_stride_shift, data, stride,
+               encoder->input_chroma_width, encoder->input_chroma_height,
+               encoded_width >> encoder->chroma_stride_shift, encoded_height >> encoder->chroma_height_shift);
   }
 
-  uvg_encoder* kvzencoder = api->encoder_open(config);
-  if (!kvzencoder) {
-    api->picture_free(pic);
-    api->config_destroy(config);
-
-    return heif_error{
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Encoder_encoding,
-        kError_unspecified_error
-    };
-  }
 
   uvg_data_chunk* data = nullptr;
   uint32_t data_len;
   int success;
-  success = api->encoder_headers(kvzencoder, &data, &data_len);
+#if 0
+  success = encoder->api->encoder_headers(encoder->kvzencoder, &data, &data_len);
   if (!success) {
-    api->picture_free(pic);
-    api->config_destroy(config);
-    api->encoder_close(kvzencoder);
+    encoder->api->picture_free(pic);
 
     return heif_error{
         heif_error_Encoder_plugin_error,
@@ -620,19 +665,23 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
         kError_unspecified_error
     };
   }
+#endif
+
+  pic->pts = framenr;
 
   // If we write this, the data is twice in the output
   //append_chunk_data(data, encoder->output_data);
 
-  success = api->encoder_encode(kvzencoder,
+  uvg_picture* src_out = nullptr;
+
+  success = encoder->api->encoder_encode(encoder->kvzencoder,
                                 pic,
                                 &data, &data_len,
-                                nullptr, nullptr, nullptr);
+                                nullptr, &src_out, nullptr);
   if (!success) {
-    api->chunk_free(data);
-    api->picture_free(pic);
-    api->config_destroy(config);
-    api->encoder_close(kvzencoder);
+    encoder->api->chunk_free(data);
+    encoder->api->picture_free(pic);
+    encoder->api->picture_free(src_out);
 
     return heif_error{
         heif_error_Encoder_plugin_error,
@@ -641,57 +690,47 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
     };
   }
 
-  append_chunk_data(data, encoder->output_data);
+  if (src_out) {
+    encoder->append_chunk_data(data, src_out->pts);
 
-  for (;;) {
-    success = api->encoder_encode(kvzencoder,
-                                  nullptr,
-                                  &data, &data_len,
-                                  nullptr, nullptr, nullptr);
-    if (!success) {
-      api->chunk_free(data);
-      api->picture_free(pic);
-      api->config_destroy(config);
-      api->encoder_close(kvzencoder);
-
-      return heif_error{
-          heif_error_Encoder_plugin_error,
-          heif_suberror_Encoder_encoding,
-          kError_unspecified_error
-      };
-    }
-
-    if (data == nullptr || data->len == 0) {
-      break;
-    }
-
-    append_chunk_data(data, encoder->output_data);
+    encoder->api->picture_free(src_out);
+    src_out = nullptr;
   }
 
-  (void) success;
+  encoder->api->picture_free(pic);
 
-  api->chunk_free(data);
 
-  api->encoder_close(kvzencoder);
-  api->picture_free(pic);
-  api->config_destroy(config);
+  encoder->api->chunk_free(data);
 
   return heif_error_ok;
 }
 
 
-static heif_error uvg266_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                             heif_encoded_data_type* type)
+static heif_error uvg266_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
+                                                    uintptr_t* frame_nr, int* is_keyframe, int* more_frame_packets)
 {
   encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
 
-  if (encoder->output_idx == encoder->output_data.size()) {
+  if (encoder->output_data.empty()) {
     *data = nullptr;
     *size = 0;
 
     return heif_error_ok;
   }
 
+  auto& pkg = encoder->output_data.front();
+
+  if (frame_nr) {
+    *frame_nr = pkg.frameNr;
+  }
+
+  encoder->active_data = std::move(pkg.data);
+  encoder->output_data.pop_front();
+
+  *data = encoder->active_data.data();
+  *size = encoder->active_data.size();
+
+#if 0
   size_t start_idx = encoder->output_idx;
 
   while (start_idx < encoder->output_data.size() - 3 &&
@@ -718,14 +757,107 @@ static heif_error uvg266_get_compressed_data(void* encoder_raw, uint8_t** data, 
   *size = (int) (end_idx - start_idx - 3);
 
   encoder->output_idx = end_idx;
+#endif
+
+  return heif_error_ok;
+}
+
+static heif_error uvg266_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                                 heif_image_input_class input_class,
+                                                 const heif_sequence_encoding_options* options)
+{
+  return uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+}
+
+static heif_error uvg266_end_sequence_encoding(void* encoder_raw)
+{
+  encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
+
+  // --- flush
+
+  uvg_data_chunk* data = nullptr;
+  uint32_t data_len;
+
+  // uvg_picture* src_out = nullptr;
+
+  int success;
+  uvg_picture* src_out = nullptr;
+
+  for (;;) {
+    success = encoder->api->encoder_encode(encoder->kvzencoder,
+                                  nullptr,
+                                  &data, &data_len,
+                                  nullptr, &src_out, nullptr);
+    if (!success) {
+      encoder->api->chunk_free(data);
+      encoder->api->picture_free(src_out);
+
+      return heif_error{
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Encoder_encoding,
+        kError_unspecified_error
+    };
+    }
+
+    if (data == nullptr || data->len == 0) {
+      break;
+    }
+
+    encoder->append_chunk_data(data, src_out->pts);
+
+    encoder->api->picture_free(src_out);
+    src_out = nullptr;
+  }
+
+  (void) success;
+
+  if (src_out) {
+    encoder->append_chunk_data(data, src_out->pts);
+
+    encoder->api->picture_free(src_out);
+    src_out = nullptr;
+  }
+
+
+  return heif_error_ok;
+}
+
+static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image,
+                                      heif_image_input_class input_class)
+{
+  heif_error err;
+  err = uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = uvg266_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  uvg266_end_sequence_encoding(encoder_raw);
 
   return heif_error_ok;
 }
 
 
+static heif_error uvg266_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                             heif_encoded_data_type* type)
+{
+  return uvg266_get_compressed_data_intern(encoder_raw, data, size, nullptr, nullptr, nullptr);
+}
+
+static heif_error uvg266_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                            uintptr_t* frame_nr, int* is_keyframe, int* more_frame_packets)
+{
+  return uvg266_get_compressed_data_intern(encoder_raw, data, size, frame_nr, is_keyframe, more_frame_packets);
+}
+
+
 static const heif_encoder_plugin encoder_plugin_uvg266
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_VVC,
         /* id_name */ "uvg266",
         /* priority */ uvg266_PLUGIN_PRIORITY,
@@ -753,7 +885,12 @@ static const heif_encoder_plugin encoder_plugin_uvg266
         /* encode_image */ uvg266_encode_image,
         /* get_compressed_data */ uvg266_get_compressed_data,
         /* query_input_colorspace (v2) */ uvg266_query_input_colorspace2,
-        /* query_encoded_size (v3) */ uvg266_query_encoded_size
+        /* query_encoded_size (v3) */ uvg266_query_encoded_size,
+        /* start_sequence_encoding (v4) */ uvg266_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ uvg266_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ uvg266_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ uvg266_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 0
     };
 
 const struct heif_encoder_plugin* get_encoder_plugin_uvg266() {
