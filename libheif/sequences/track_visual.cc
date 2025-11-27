@@ -265,7 +265,6 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    std::cout << "sample idx " << sample_idx_in_chunk << "\n";
     auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx_in_chunk);
     if (!readResult) {
       return readResult.error();

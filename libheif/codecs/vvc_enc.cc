@@ -197,16 +197,12 @@ Error Encoder_VVC::get_data(heif_encoder* encoder)
     const bool is_sync = (nal_type == 7 || nal_type == 8 || nal_type == 9);
     const bool is_image_data = (nal_type >= 0 && nal_type <= VVC_NAL_UNIT_MAX_VCL);
 
-    std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
+    // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
     if (nal_type == VVC_NAL_UNIT_SPS_NUT && m_vvcC) {
       parse_sps_for_vvcC_configuration(data, size,
                                        &m_vvcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
-    }
-
-    if (is_image_data) {
-      more_frame_packets = 0;
     }
 
     switch (nal_type) {

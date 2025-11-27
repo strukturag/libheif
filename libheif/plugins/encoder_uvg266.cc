@@ -70,6 +70,7 @@ struct encoder_struct_uvg266
   {
     std::vector<uint8_t> data;
     uintptr_t frameNr = 0;
+    bool more_nals = false;
   };
 
   std::deque<Packet> output_data;
@@ -418,21 +419,23 @@ void encoder_struct_uvg266::append_chunk_data(uvg_data_chunk* data, int framenr)
     pkt.data.resize(end_idx - start_idx - 3);
     memcpy(pkt.data.data(), input_data.data() + start_idx + 3, pkt.data.size());
     pkt.frameNr = framenr;
+    pkt.more_nals = true; // will be set to 'false' for last NAL below
 
     uint8_t nal_type = (pkt.data[1] >> 3);
 
     std::cout << "append frameNr=" << framenr << " NAL:" << ((int)nal_type) << " size:" << pkt.data.size() << "\n";
 
-    // TODO: plugin should send 'more_frame_packets'.
-    if (nal_type != VVC_NAL_UNIT_SUFFIX_SEI_NUT) {
-      output_data.emplace_back(std::move(pkt));
-    }
+    output_data.emplace_back(std::move(pkt));
 
     if (end_idx == input_data.size()) {
       break;
     }
 
     start_idx = end_idx;
+  }
+
+  if (!output_data.empty()) {
+    output_data.back().more_nals = false;
   }
 }
 
@@ -722,6 +725,10 @@ static heif_error uvg266_get_compressed_data_intern(void* encoder_raw, uint8_t**
 
   if (frame_nr) {
     *frame_nr = pkg.frameNr;
+  }
+
+  if (more_frame_packets) {
+    *more_frame_packets = pkg.more_nals;
   }
 
   encoder->active_data = std::move(pkg.data);

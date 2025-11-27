@@ -59,6 +59,7 @@ struct encoder_struct_vvenc
   {
     std::vector<uint8_t> data;
     uintptr_t frameNr = 0;
+    bool more_nals = false;
   };
 
   std::deque<Packet> output_data;
@@ -352,7 +353,7 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
                               uintptr_t pts)
 {
 #if 0
-  std::cout << "DATA\n";
+  std::cout << "DATA pts=" << pts << "\n";
   std::cout << write_raw_data_as_hex(au->payload, au->payloadUsedSize, {}, {});
   std::cout << "---\n";
 #endif
@@ -389,6 +390,7 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
     pkt.data.resize(end_idx - start_idx - 3);
     memcpy(pkt.data.data(), au->payload + start_idx + 3, pkt.data.size());
     pkt.frameNr = pts;
+    pkt.more_nals = true; // will be set to 'false' for last NAL below.
 
     std::cout << "append frameNr=" << pts << " NAL:" << ((int)pkt.data[1]>>3) << " size:" << pkt.data.size() << "\n";
 
@@ -399,6 +401,10 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
     }
 
     start_idx = end_idx;
+  }
+
+  if (!encoder->output_data.empty()) {
+    encoder->output_data.back().more_nals = false;
   }
 }
 
@@ -796,11 +802,16 @@ static heif_error vvenc_get_compressed_data_intern(void* encoder_raw, uint8_t** 
   if (frame_nr) {
     *frame_nr = encoder->output_data.front().frameNr;
   }
-
+/*
   if (more_frame_packets &&
       encoder->output_data.size() > 1 &&
       encoder->output_data[0].frameNr == encoder->output_data[1].frameNr) {
     *more_frame_packets = 1;
+  }
+*/
+
+  if (more_frame_packets) {
+    *more_frame_packets = encoder->output_data.front().more_nals;
   }
 
   encoder->active_data = std::move(pktdata);
