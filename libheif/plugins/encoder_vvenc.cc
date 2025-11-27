@@ -458,7 +458,8 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
 
   int ret = vvenc_init_default(&params,
                                encoder->encoded_width, encoder->encoded_height,
-                               25, 0, // TODO: framerate
+                               25,  // TODO: framerate
+                               0,
                                encoder_quality,
                                VVENC_MEDIUM);
   if (ret != VVENC_OK) {
@@ -488,13 +489,23 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
         params.m_IntraPeriod = 1;
         break;
       case heif_sequence_gop_structure_lowdelay:
+        params.m_picReordering = 0;
+        params.m_GOPSize = 8; // as of vvcenc 1.13.1, this only works with GOPSize=8. see https://github.com/fraunhoferhhi/vvenc/issues/284
+        params.m_DecodingRefreshType = VVENC_DRT_NONE;
+        params.m_poc0idr = true;
+        break;
       case heif_sequence_gop_structure_unrestricted:
         ;
     }
   }
 
   vvencEncoder* vvencoder = encoder->vvencoder = vvenc_encoder_create();
+
+  //ret = vvenc_check_config(vvencoder, &params);
+  //const char* err = vvenc_get_last_error(vvencoder);
+
   ret = vvenc_encoder_open(vvencoder, &params);
+  //err = vvenc_get_last_error(vvencoder);
   if (ret != VVENC_OK) {
     // TODO: cleanup memory
 
