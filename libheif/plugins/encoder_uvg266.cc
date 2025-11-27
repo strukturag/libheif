@@ -571,6 +571,23 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
 
+  if (image_sequence) {
+    if (options->keyframe_distance_max) {
+      config->intra_period = options->keyframe_distance_max;
+    }
+
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        config->intra_period = 1;
+        break;
+      case heif_sequence_gop_structure_lowdelay:
+        config->gop_lowdelay = 1;
+        break;
+      case heif_sequence_gop_structure_unrestricted:
+        break;
+    }
+  }
+
   uint32_t encoded_width, encoded_height;
   uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
 

@@ -1357,10 +1357,10 @@ int main(int argc, char** argv)
         if (prefix_compare(optarg, "intra-only")) {
           sequence_gop_structure = heif_sequence_gop_structure_intra_only;
         }
-        else if (prefix_compare(optarg, "low-delay")) {
+        else if (prefix_compare(optarg, "low-delay") || prefix_compare(optarg, "p")) {
           sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
         }
-        else if (prefix_compare(optarg, "unrestricted")) {
+        else if (prefix_compare(optarg, "unrestricted") || prefix_compare(optarg, "b")) {
           sequence_gop_structure = heif_sequence_gop_structure_unrestricted;
         }
         else {
