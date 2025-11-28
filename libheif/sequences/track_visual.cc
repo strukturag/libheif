@@ -157,9 +157,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   uint32_t sample_idx_in_chunk;
 
   for (;;) {
-    assert(m_next_sample_to_be_decoded < m_presentation_timeline.size());
-
-    const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded /*% m_presentation_timeline.size()*/];
+    const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded % m_presentation_timeline.size()];
     sample_idx_in_chunk = sampleTiming.sampleIdx;
     uint32_t chunk_idx = sampleTiming.chunkIdx;
 
@@ -203,7 +201,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
     // --- Push more data into the decoder (or send end-of-sequence).
 
-    if (m_next_sample_to_be_decoded < m_num_samples) {
+    if (m_next_sample_to_be_decoded < m_num_output_samples) {
 
       // --- Find the data extent that stores the compressed frame data.
 
@@ -213,7 +211,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       // std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
 
       // advance decoding index to next in segment
-      m_next_sample_to_be_decoded = static_cast<uint32_t>((m_next_sample_to_be_decoded + 1) % m_presentation_timeline.size());
+      m_next_sample_to_be_decoded++;
 
       // Send the decoder configuration when we send the first sample of the chunk.
       // The configuration NALs might change for each chunk.

@@ -208,7 +208,9 @@ protected:
   std::vector<SampleTiming> m_presentation_timeline;
   uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
 
-  // Index into m_presentation_timeline SampleTiming table
+  // Continuous counting through all repetitions. You have to take the modulo operation to get the
+  // index into m_presentation_timeline SampleTiming table.
+  // (At 30 fps, this 32 bit integer will overflow in >4 years. I think this is acceptable.)
   uint32_t m_next_sample_to_be_decoded = 0;
 
   // Total sequence output index.
