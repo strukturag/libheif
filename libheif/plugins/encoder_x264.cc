@@ -25,7 +25,6 @@
 #include <sstream>
 #include <string>
 #include <cstring>
-#include <cstdio>
 #include <cassert>
 #include <deque>
 #include <vector>
@@ -38,9 +37,46 @@ extern "C" {
 
 #include <iostream>
 
+
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by x264";
 static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
 static const char* kError_unsupported_ctu_size = "Unsupported CTU size";
+
+static const char* naltype_table[] = {
+  /*  0 */ "unspecified",
+  /*  1 */ "non-IDR",
+  /*  2 */ "partition A",
+  /*  3 */ "partition B",
+  /*  4 */ "partition C",
+  /*  5 */ "IDR",
+  /*  6 */ "SEI",
+  /*  7 */ "SPS",
+  /*  8 */ "PPS",
+  /*  9 */ "AU-delimiter",
+  /* 10 */ "EOSequence",
+  /* 11 */ "EOStream",
+  /* 12 */ "FillerData",
+  /* 13 */ "SPS-extension",
+  /* 14 */ "Prefix-NAL",
+  /* 15 */ "Subset-SPS",
+  /* 16 */ "reserved",
+  /* 17 */ "reserved",
+  /* 18 */ "reserved",
+  /* 19 */ "aux-coded-picture",
+  /* 20 */ "slice-in-scalable-extension"
+};
+
+
+static const char* naltype(uint8_t type)
+{
+  if (type <= 20) {
+    return naltype_table[type];
+  }
+  else {
+    return "reserved";
+  }
+}
+
 
 
 enum parameter_type
@@ -62,10 +98,6 @@ struct encoder_struct_x264
 {
   x264_t* encoder = nullptr;
   x264_param_t param{};
-
-  //x264_nal_t* nals = nullptr;
-  //int num_nals = 0;
-  //uint32_t nal_output_counter = 0;
 
   uintptr_t out_frameNr = 0;
   int bit_depth = 0;
@@ -112,7 +144,13 @@ struct encoder_struct_x264
 
 void encoder_struct_x264::append_nals(const x264_nal_t* nals, int num_nals, uintptr_t frameNr)
 {
+#if 0
   std::cout << "append " << num_nals << " NALs for frame " << frameNr << "\n";
+
+  for (int i=0;i<num_nals;i++) {
+    std::cout << "dequeue header NAL : " << naltype(nals[i].i_type) << "\n";
+  }
+#endif
 
   for (int i=0;i<num_nals;i++) {
     const auto& nal = nals[i];
@@ -675,44 +713,8 @@ static int rounded_size(int s)
 }
 
 
-static const char* naltype_table[] = {
-  /*  0 */ "unspecified",
-  /*  1 */ "non-IDR",
-  /*  2 */ "partition A",
-  /*  3 */ "partition B",
-  /*  4 */ "partition C",
-  /*  5 */ "IDR",
-  /*  6 */ "SEI",
-  /*  7 */ "SPS",
-  /*  8 */ "PPS",
-  /*  9 */ "AU-delimiter",
-  /* 10 */ "EOSequence",
-  /* 11 */ "EOStream",
-  /* 12 */ "FillerData",
-  /* 13 */ "SPS-extension",
-  /* 14 */ "Prefix-NAL",
-  /* 15 */ "Subset-SPS",
-  /* 16 */ "reserved",
-  /* 17 */ "reserved",
-  /* 18 */ "reserved",
-  /* 19 */ "aux-coded-picture",
-  /* 20 */ "slice-in-scalable-extension"
-};
-
-
-static const char* naltype(uint8_t type)
-{
-  if (type <= 20) {
-    return naltype_table[type];
-  }
-  else {
-    return "reserved";
-  }
-}
-
-
 static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
-                                       enum heif_image_input_class input_class,
+                                       heif_image_input_class input_class,
                                        const heif_sequence_encoding_options* options,
                                        bool image_sequence)
 {
@@ -901,13 +903,20 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   param.i_width = rounded_size(param.i_width);
   param.i_height = rounded_size(param.i_height);
 
+#if 0
+  // This enforces that x264 will not queue frames.
+  // Without this, it needs to be flushed 18x until it returns some NALs.
+  // -> we now use x264_encoder_delayed_frames(), which works fine.
+
   param.b_sliced_threads = 1;
   param.i_slice_count_max = 1;
   param.i_slice_count = 1;
   param.i_slice_max_mbs = 0;
   param.i_slice_max_size = 0;
+#endif
 
-  param.b_annexb = 0; // output NALs with size, no startcodes
+  // output NALs with size, no startcodes (actually, we don't care since we skip the 4 bytes anyways)
+  param.b_annexb = 0;
 
   encoder->bit_depth = bit_depth;
 
@@ -921,20 +930,12 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   }
 
   if (image_sequence) {
-    // check that all NALs have been drained
-    //assert(encoder->nal_output_counter == encoder->num_nals);
-    //encoder->nal_output_counter = 0;
-
     x264_nal_t* nals = nullptr;
     int num_nals = 0;
 
     x264_encoder_headers(encoder->encoder,
                          &nals,
                          &num_nals);
-
-    for (int i=0;i<num_nals;i++) {
-      std::cout << "dequeue header NAL : " << naltype(nals[i].i_type) << "\n";
-    }
 
     if (num_nals) {
       encoder->append_nals(nals, num_nals, 0);
@@ -979,17 +980,7 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
   }
 
   x264_picture_t pic;
-  //int res = x264_picture_alloc(&pic, param.i_csp, param.i_width, param.i_height);
   x264_picture_init(&pic);
-  /*
-  if (res < 0) {
-    return heif_error{
-      heif_error_Memory_allocation_error,
-      heif_suberror_Unspecified,
-      "Cannot allocate x264 picture"
-    };
-  }
-*/
 
   pic.img.i_csp = param.i_csp;
 
@@ -1009,10 +1000,6 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
   // pic->bitDepth = encoder->bit_depth;
   pic.i_pts = frame_nr;
 
-  // check that all NALs have been drained
-  //assert(encoder->nal_output_counter == encoder->num_nals);
-  //encoder->nal_output_counter = 0;
-
   x264_nal_t* nals = nullptr;
   int num_nals = 0;
 
@@ -1022,16 +1009,10 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
                       &num_nals,
                       &pic,
                       &out_pic);
-  //encoder->out_frameNr = out_pic.i_pts;
-  for (int i=0;i<num_nals;i++) {
-    std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(nals[i].i_type) << "\n";
-  }
 
   if (num_nals) {
     encoder->append_nals(nals, num_nals, out_pic.i_pts);
   }
-
-  //x264_picture_clean(&pic);
 
   return heif_error_ok;
 }
@@ -1055,28 +1036,19 @@ static heif_error x264_end_sequence_encoding(void* encoder_raw)
   x264_nal_t* nals = nullptr;
   int num_nals = 0;
 
-  x264_picture_t out_pic;
-  int result = x264_encoder_encode(encoder->encoder,
-                                   &nals,
-                                   &num_nals,
-                                   nullptr,
-                                   &out_pic);
-  encoder->out_frameNr = out_pic.i_pts;
+  while (x264_encoder_delayed_frames(encoder->encoder) > 0) {
+    x264_picture_t out_pic;
+    int result = x264_encoder_encode(encoder->encoder,
+                                     &nals,
+                                     &num_nals,
+                                     nullptr,
+                                     &out_pic);
+    encoder->out_frameNr = out_pic.i_pts;
 
-  for (int i=0;i<num_nals;i++) {
-    std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(nals[i].i_type) << "\n";
-  }
-
-  if (num_nals) {
-    encoder->append_nals(nals, num_nals, out_pic.i_pts);
-  }
-
-  if (result <= 0) {
-    // TODO: do we need this ?
-    //*data = nullptr;
-    //*size = 0;
-
-    return heif_error_ok; // ?
+    if (num_nals) {
+      encoder->append_nals(nals, num_nals, out_pic.i_pts);
+      break;
+    }
   }
 
   x264_param_cleanup(&encoder->param);
