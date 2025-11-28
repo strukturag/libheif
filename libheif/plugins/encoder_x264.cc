@@ -715,27 +715,28 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   param.i_fps_den = 1;
 
 
-  assert(options);
-  if (options->keyframe_distance_min) {
-    param.i_keyint_min = options->keyframe_distance_min;
-  }
+  if (options) {
+    if (options->keyframe_distance_min) {
+      param.i_keyint_min = options->keyframe_distance_min;
+    }
 
-  if (options->keyframe_distance_max) {
-    param.i_keyint_max = options->keyframe_distance_max;
-  }
+    if (options->keyframe_distance_max) {
+      param.i_keyint_max = options->keyframe_distance_max;
+    }
 
-  switch (options->gop_structure) {
-    case heif_sequence_gop_structure_intra_only:
-      param.i_bframe = 0;
-      param.i_keyint_min=1;
-      param.i_keyint_max=1;
-      break;
-    case heif_sequence_gop_structure_lowdelay:
-      param.i_bframe = 0;
-      break;
-    case heif_sequence_gop_structure_unrestricted:
-      //param.i_bframe = 1;
-      break;
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        param.i_bframe = 0;
+        param.i_keyint_min=1;
+        param.i_keyint_max=1;
+        break;
+      case heif_sequence_gop_structure_lowdelay:
+        param.i_bframe = 0;
+        break;
+      case heif_sequence_gop_structure_unrestricted:
+        //param.i_bframe = 1;
+        break;
+    }
   }
 
   // BPG uses CQP. It does not seem to be better though.
