@@ -394,5 +394,15 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
 
   flush_decoder();
 
-  return get_decoded_frame(options, limits);
+  for (;;) {
+    Result<std::shared_ptr<HeifPixelImage>> imgResult;
+    imgResult = get_decoded_frame(options, limits);
+    if (imgResult.error()) {
+      return imgResult.error();
+    }
+
+    if (*imgResult != nullptr) {
+      return imgResult;
+    }
+  }
 }
