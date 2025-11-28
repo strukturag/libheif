@@ -1,6 +1,7 @@
 /*
  * HEIF AVC codec.
  * Copyright (c) 2023 Brad Hards <bradh@frogmouth.net>
+ * Copyright (c) 2025 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -33,9 +34,9 @@
 class ImageItem_AVC : public ImageItem
 {
 public:
-  ImageItem_AVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_AVC(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_AVC(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_AVC(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("avc1"); }
 
@@ -52,13 +53,11 @@ public:
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
-public:
-  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                         heif_encoder* encoder,
-                                         const heif_encoding_options& options,
-                                         heif_image_input_class input_class) override;
+  std::shared_ptr<Encoder> get_encoder() const override;
 
+public:
   std::shared_ptr<class Decoder_AVC> m_decoder;
+  std::shared_ptr<class Encoder_AVC> m_encoder;
 };
 
 #endif

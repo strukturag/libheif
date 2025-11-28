@@ -211,7 +211,7 @@ Error Encoder_AVC::get_data(heif_encoder* encoder)
     }
 
     if (is_image_data) {
-      more_frame_packets = 0;
+      // more_frame_packets = 0;
     }
 
     switch (nal_type) {

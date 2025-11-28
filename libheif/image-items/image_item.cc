@@ -223,6 +223,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
       return std::make_shared<ImageItem_AVIF>(ctx);
     case heif_compression_VVC:
       return std::make_shared<ImageItem_VVC>(ctx);
+    case heif_compression_AVC:
+      return std::make_shared<ImageItem_AVC>(ctx);
 #if WITH_UNCOMPRESSED_CODEC
     case heif_compression_uncompressed:
       return std::make_shared<ImageItem_uncompressed>(ctx);

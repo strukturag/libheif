@@ -27,7 +27,10 @@
 #include <cstring>
 #include <cstdio>
 #include <cassert>
+#include <deque>
 #include <vector>
+
+#include "logging.h"
 
 extern "C" {
 #include <x264.h>
@@ -60,9 +63,10 @@ struct encoder_struct_x264
   x264_t* encoder = nullptr;
   x264_param_t param{};
 
-  x264_nal_t* nals = nullptr;
-  int num_nals = 0;
-  uint32_t nal_output_counter = 0;
+  //x264_nal_t* nals = nullptr;
+  //int num_nals = 0;
+  //uint32_t nal_output_counter = 0;
+
   uintptr_t out_frameNr = 0;
   int bit_depth = 0;
 
@@ -88,8 +92,41 @@ struct encoder_struct_x264
 
   int logLevel = X264_LOG_NONE;
 
+  // --- output
+
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t frameNr = 0;
+    bool more_packets = false;
+  };
+
+  std::deque<Packet> m_output_packets;
+  std::vector<uint8_t> m_active_output;
+
+  void append_nals(const x264_nal_t* nals, int num_nals, uintptr_t frameNr);
+
   std::string last_error_message;
 };
+
+
+void encoder_struct_x264::append_nals(const x264_nal_t* nals, int num_nals, uintptr_t frameNr)
+{
+  std::cout << "append " << num_nals << " NALs for frame " << frameNr << "\n";
+
+  for (int i=0;i<num_nals;i++) {
+    const auto& nal = nals[i];
+
+    Packet pkt;
+    pkt.data.insert(pkt.data.end(), nal.p_payload, nal.p_payload + nal.i_payload);
+    pkt.more_packets = true; // below, it will be set to 'false' for the last packet
+    pkt.frameNr = frameNr;
+
+    m_output_packets.emplace_back(std::move(pkt));
+  }
+
+  m_output_packets.back().more_packets = false;
+}
 
 
 void encoder_struct_x264::add_param(const parameter& p)
@@ -314,9 +351,6 @@ static heif_error x264_new_encoder(void** enc)
   // encoder has to be allocated in x264_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
 
-  encoder->nals = nullptr;
-  encoder->num_nals = 0;
-  encoder->nal_output_counter = 0;
   encoder->bit_depth = 8;
 
   *enc = encoder;
@@ -867,6 +901,14 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   param.i_width = rounded_size(param.i_width);
   param.i_height = rounded_size(param.i_height);
 
+  param.b_sliced_threads = 1;
+  param.i_slice_count_max = 1;
+  param.i_slice_count = 1;
+  param.i_slice_max_mbs = 0;
+  param.i_slice_max_size = 0;
+
+  param.b_annexb = 0; // output NALs with size, no startcodes
+
   encoder->bit_depth = bit_depth;
 
   encoder->encoder = x264_encoder_open(&param);
@@ -880,15 +922,22 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
 
   if (image_sequence) {
     // check that all NALs have been drained
-    assert(encoder->nal_output_counter == encoder->num_nals);
-    encoder->nal_output_counter = 0;
+    //assert(encoder->nal_output_counter == encoder->num_nals);
+    //encoder->nal_output_counter = 0;
+
+    x264_nal_t* nals = nullptr;
+    int num_nals = 0;
 
     x264_encoder_headers(encoder->encoder,
-                         &encoder->nals,
-                         &encoder->num_nals);
+                         &nals,
+                         &num_nals);
 
-    for (int i=0;i<encoder->num_nals;i++) {
-      std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].i_type) << "\n";
+    for (int i=0;i<num_nals;i++) {
+      std::cout << "dequeue header NAL : " << naltype(nals[i].i_type) << "\n";
+    }
+
+    if (num_nals) {
+      encoder->append_nals(nals, num_nals, 0);
     }
   }
 
@@ -961,18 +1010,25 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
   pic.i_pts = frame_nr;
 
   // check that all NALs have been drained
-  assert(encoder->nal_output_counter == encoder->num_nals);
-  encoder->nal_output_counter = 0;
+  //assert(encoder->nal_output_counter == encoder->num_nals);
+  //encoder->nal_output_counter = 0;
+
+  x264_nal_t* nals = nullptr;
+  int num_nals = 0;
 
   x264_picture_t out_pic;
   x264_encoder_encode(encoder->encoder,
-                      &encoder->nals,
-                      &encoder->num_nals,
+                      &nals,
+                      &num_nals,
                       &pic,
                       &out_pic);
-  encoder->out_frameNr = out_pic.i_pts;
-  for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].i_type) << "\n";
+  //encoder->out_frameNr = out_pic.i_pts;
+  for (int i=0;i<num_nals;i++) {
+    std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(nals[i].i_type) << "\n";
+  }
+
+  if (num_nals) {
+    encoder->append_nals(nals, num_nals, out_pic.i_pts);
   }
 
   //x264_picture_clean(&pic);
@@ -985,20 +1041,34 @@ static heif_error x264_end_sequence_encoding(void* encoder_raw)
 {
   encoder_struct_x264* encoder = (encoder_struct_x264*) encoder_raw;
 
+#if 0
+  // TODO (hack)
+  if (encoder->nal_output_counter < encoder->num_nals) {
+    return heif_error_ok;
+  }
+#endif
+
   // check that all NALs have been drained
-  assert(encoder->nal_output_counter == encoder->num_nals);
-  encoder->nal_output_counter = 0;
+  //assert(encoder->nal_output_counter == encoder->num_nals);
+  //encoder->nal_output_counter = 0;
+
+  x264_nal_t* nals = nullptr;
+  int num_nals = 0;
 
   x264_picture_t out_pic;
   int result = x264_encoder_encode(encoder->encoder,
-                                   &encoder->nals,
-                                   &encoder->num_nals,
-                                   NULL,
+                                   &nals,
+                                   &num_nals,
+                                   nullptr,
                                    &out_pic);
   encoder->out_frameNr = out_pic.i_pts;
 
-  for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].i_type) << "\n";
+  for (int i=0;i<num_nals;i++) {
+    std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(nals[i].i_type) << "\n";
+  }
+
+  if (num_nals) {
+    encoder->append_nals(nals, num_nals, out_pic.i_pts);
   }
 
   if (result <= 0) {
@@ -1011,7 +1081,7 @@ static heif_error x264_end_sequence_encoding(void* encoder_raw)
 
   x264_param_cleanup(&encoder->param);
 
-  encoder->nal_output_counter = 0; // TODO: is this needed ?
+  //encoder->nal_output_counter = 0; // TODO: is this needed ?
 
   return heif_error_ok;
 }
@@ -1038,7 +1108,7 @@ static heif_error x264_encode_image(void* encoder_raw, const heif_image* image,
 
 
 static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
-                                                  uintptr_t* out_frame_nr)
+                                                  uintptr_t* out_frame_nr, int* more_packets)
 {
   encoder_struct_x264* encoder = ( encoder_struct_x264*) encoder_raw;
 
@@ -1049,6 +1119,30 @@ static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** d
     return heif_error_ok;
   }
 
+  if (encoder->m_output_packets.empty()) {
+    *data = nullptr;
+    *size = 0;
+
+    return heif_error_ok;
+  }
+
+  auto& pkt = encoder->m_output_packets.front();
+  encoder->m_active_output = std::move(pkt.data);
+
+  if (out_frame_nr) {
+    *out_frame_nr = pkt.frameNr;
+  }
+
+  if (more_packets) {
+    *more_packets = pkt.more_packets;
+  }
+
+  *data = encoder->m_active_output.data() + 4;
+  *size = encoder->m_active_output.size() - 4;
+
+  encoder->m_output_packets.pop_front();
+
+#if 0
   // const x264_api* api = x264_api_get(encoder->bit_depth);
 
   /*for (;;)*/ {
@@ -1069,6 +1163,11 @@ static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** d
       (*data)++;
       (*size)--;
 
+      const uint8_t nal_type = ((*data)[0] & 0x1f);
+      std::cout << "NAL type: " << ((int)nal_type) << "\n";
+      std::cout << write_raw_data_as_hex(*data, *size,
+                              "data: ",
+                              "      ");
 
       // --- skip NALs with irrelevant data ---
 
@@ -1094,6 +1193,7 @@ static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** d
   if (out_frame_nr) {
     *out_frame_nr = 0;
   }
+#endif
 
   return heif_error_ok;
 }
@@ -1102,14 +1202,14 @@ static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** d
 static heif_error x264_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
                                            heif_encoded_data_type* type)
 {
-  return x264_get_compressed_data_intern(encoder_raw, data, size, nullptr);
+  return x264_get_compressed_data_intern(encoder_raw, data, size, nullptr, nullptr);
 }
 
 static heif_error x264_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
                                             uintptr_t* frame_nr, int* is_keyframe,
                                             int* more_frame_packets)
 {
-  return x264_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
+  return x264_get_compressed_data_intern(encoder_raw, data, size, frame_nr, more_frame_packets);
 }
 
 
