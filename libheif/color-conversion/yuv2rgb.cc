@@ -611,6 +611,23 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   }
 
   if (has_alpha) {
+    if (input->get_width(heif_channel_Alpha) != width ||
+        input->get_height(heif_channel_Alpha) != height) {
+      return Error{
+        heif_error_Unsupported_feature,
+        heif_suberror_Unspecified,
+        "Color conversion cannot handle alpha images with sizes differing from the main image size."
+      };
+    }
+
+    if (input->get_bits_per_pixel(heif_channel_Alpha) != bpp) {
+      return Error{
+        heif_error_Unsupported_feature,
+        heif_suberror_Unspecified,
+        "Color conversion cannot handle alpha images with bits-per-pixel differing from the main image."
+      };
+    }
+
     if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, bpp, limits)) {
       return err;
     }
