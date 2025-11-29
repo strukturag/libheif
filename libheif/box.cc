@@ -1254,6 +1254,14 @@ Error Box_ftyp::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint64_t n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
 
+  if (n_minor_brands > limits->max_number_of_file_brands) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Number of minor brands in file exceeds security limit"
+    };
+  }
+
   for (uint64_t i = 0; i < n_minor_brands && !range.error(); i++) {
     m_compatible_brands.push_back(range.read32());
   }
