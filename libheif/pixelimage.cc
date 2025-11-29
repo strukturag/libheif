@@ -1086,10 +1086,10 @@ void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
   uint32_t w = m_width;
   uint32_t h = m_height;
 
-  uint32_t in_stride = stride / uint32_t(sizeof(T));
+  size_t in_stride = stride / sizeof(T);
   const T* in_data = static_cast<const T*>(mem);
 
-  uint32_t out_stride = out_plane.stride / uint32_t(sizeof(T));
+  size_t out_stride = out_plane.stride / sizeof(T);
   T* out_data = static_cast<T*>(out_plane.mem);
 
   if (angle_degrees == 270) {
@@ -1297,10 +1297,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 void HeifPixelImage::ImagePlane::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
                                       int bytes_per_pixel, ImagePlane& out_plane) const
 {
-  uint32_t in_stride = stride;
+  size_t in_stride = stride;
   auto* in_data = static_cast<const uint8_t*>(mem);
 
-  uint32_t out_stride = out_plane.stride;
+  size_t out_stride = out_plane.stride;
   auto* out_data = static_cast<uint8_t*>(out_plane.mem);
 
   for (uint32_t y = top; y <= bottom; y++) {
