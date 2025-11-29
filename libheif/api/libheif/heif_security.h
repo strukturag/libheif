@@ -63,6 +63,11 @@ typedef struct heif_security_limits
   uint64_t max_total_memory;
   uint32_t max_sample_description_box_entries;
   uint32_t max_sample_group_description_box_entries;
+
+  // --- version 3
+
+  uint32_t max_sequence_frames;
+  uint32_t max_number_of_file_brands;
 } heif_security_limits;
 
 

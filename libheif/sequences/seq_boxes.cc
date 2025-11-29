@@ -552,6 +552,14 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
+  if (entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   if (auto err = m_memory_handle.alloc(entry_count * sizeof(TimeToSample),
                                        limits, "the 'stts' table")) {
     return err;
@@ -560,6 +568,18 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_entries.resize(entry_count);
 
   for (uint32_t i = 0; i < entry_count; i++) {
+    if (range.eof()) {
+      std::stringstream sstr;
+      sstr << "stts box should contain " << entry_count << " entries, but box only contained "
+          << i << " entries";
+
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_End_of_data,
+        sstr.str()
+      };
+    }
+
     TimeToSample entry{};
     entry.sample_count = range.read32();
     entry.sample_delta = range.read32();
@@ -830,12 +850,32 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   if (m_fixed_sample_size == 0) {
     // check required memory
 
+    if (m_sample_count > limits->max_sequence_frames) {
+      return {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Security_limit_exceeded,
+        "Security limit for maximum number of sequence frames exceeded"
+      };
+    }
+
     uint64_t mem_size = m_sample_count * sizeof(uint32_t);
     if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
       return err;
     }
 
     for (uint32_t i = 0; i < m_sample_count; i++) {
+      if (range.eof()) {
+        std::stringstream sstr;
+        sstr << "stsz box should contain " << m_sample_count << " entries, but box only contained "
+            << i << " entries";
+
+        return {
+          heif_error_Invalid_input,
+          heif_suberror_End_of_data,
+          sstr.str()
+        };
+      }
+
       m_sample_sizes.push_back(range.read32());
 
       if (range.error()) {
