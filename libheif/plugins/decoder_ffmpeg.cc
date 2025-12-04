@@ -44,7 +44,13 @@ struct ffmpeg_decoder
 {
   // --- input data
 
-  std::deque<std::vector<uint8_t>> input_data;
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t user_data;
+  };
+
+  std::deque<Packet> input_data;
   bool strict_decoding = false;
 
   // --- decoder
@@ -148,14 +154,13 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
   decoder->strict_decoding = flag;
 }
 
-static heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_t size)
+static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t size, uintptr_t user_data)
 {
-
   ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
 
-  std::vector<uint8_t> pkt;
+  ffmpeg_decoder::Packet pkt;
 
   size_t ptr = 0;
   while (ptr < size)
@@ -179,19 +184,25 @@ static heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_
       };
     }
 
-    pkt.push_back(0);
-    pkt.push_back(0);
-    pkt.push_back(1);
-    pkt.insert(pkt.end(), cdata + ptr, cdata + ptr + nal_size);
+    pkt.data.push_back(0);
+    pkt.data.push_back(0);
+    pkt.data.push_back(1);
+    pkt.data.insert(pkt.data.end(), cdata + ptr, cdata + ptr + nal_size);
 
     ptr += nal_size;
   }
 
-  decoder->input_data.push_back(pkt);
+  pkt.user_data = user_data;
+
+  decoder->input_data.emplace_back(std::move(pkt));
 
   return heif_error_success;
 }
 
+static heif_error ffmpeg_push_data(void *decoder_raw, const void *data, size_t size)
+{
+  return ffmpeg_push_data2(decoder_raw, data, size, 0);
+}
 
 
 static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
@@ -295,6 +306,7 @@ static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
 }
 
 static heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, heif_image** image,
+                              uintptr_t* out_user_data,
                               const heif_security_limits* limits)
 {
   int ret;
@@ -309,6 +321,9 @@ static heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_receive_frame"};
   }
 
+  if (out_user_data) {
+    *out_user_data = hevc_frame->pts;
+  }
 
   heif_chroma chroma = ffmpeg_get_chroma_format(hevc_dec_ctx->pix_fmt);
   if (chroma != heif_chroma_undefined) {
@@ -390,9 +405,10 @@ static heif_error hevc_decode(ffmpeg_decoder* decoder, AVCodecContext* hevc_dec_
   }
 }
 
-static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
-                                              heif_image** out_img,
-                                              const heif_security_limits* limits)
+static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
+                                            heif_image** out_img,
+                                            uintptr_t* out_user_data,
+                                            const heif_security_limits* limits)
 {
   ffmpeg_decoder* decoder = (ffmpeg_decoder*) decoder_raw;
 
@@ -408,7 +424,7 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
     uint8_t* parse_hevc_data = NULL;
     int parse_hevc_data_size = 0;
 
-    std::vector<uint8_t>& first_pkt = decoder->input_data.front();
+    ffmpeg_decoder::Packet& first_pkt = decoder->input_data.front();
 
     hevc_pkt = av_packet_alloc();
     auto pkt_deleter = std::unique_ptr<AVPacket, void (*)(AVPacket*)>(hevc_pkt, [](AVPacket* pkt){av_packet_free(&pkt);});
@@ -417,8 +433,8 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
       return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "av_packet_alloc returned error" };
     }
 
-    parse_hevc_data = first_pkt.data();
-    parse_hevc_data_size = (int) first_pkt.size();
+    parse_hevc_data = first_pkt.data.data();
+    parse_hevc_data_size = (int) first_pkt.data.size();
     size_t n_bytes_consumed = 0;
 
     while (parse_hevc_data_size > 0) {
@@ -437,6 +453,8 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
       n_bytes_consumed += ret;
 
       if (hevc_pkt->size) {
+        hevc_pkt->pts = first_pkt.user_data;
+
         ret = avcodec_send_packet(decoder->hevc_codecContext, hevc_pkt);
         if (ret < 0) {
           return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
@@ -447,13 +465,13 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
       }
     }
 
-    if (n_bytes_consumed == first_pkt.size()) {
+    if (n_bytes_consumed == first_pkt.data.size()) {
       decoder->input_data.pop_front();
     }
     else {
       if (n_bytes_consumed > 0) {
-        memmove(first_pkt.data(), first_pkt.data() + n_bytes_consumed,
-                first_pkt.size() - n_bytes_consumed);
+        memmove(first_pkt.data.data(), first_pkt.data.data() + n_bytes_consumed,
+                first_pkt.data.size() - n_bytes_consumed);
         decoder->input_data.resize(decoder->input_data.size() - n_bytes_consumed);
       }
     }
@@ -468,7 +486,7 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
     return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "av_frame_alloc returned error" };
   }
 
-  err = hevc_decode(decoder, decoder->hevc_codecContext, hevc_frame, out_img, limits);
+  err = hevc_decode(decoder, decoder->hevc_codecContext, hevc_frame, out_img, out_user_data, limits);
   if (err.code != heif_error_Ok)
     return err;
 
@@ -509,11 +527,19 @@ static heif_error ffmpeg_v1_decode_next_image(void* decoder_raw,
   return heif_error_ok;
 }
 
-static heif_error ffmpeg_v1_decode_image(void* decoder_raw,
+static heif_error ffmpeg_decode_next_image(void* decoder_raw,
+                                            heif_image** out_img,
+                                            const heif_security_limits* limits)
+{
+  return ffmpeg_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
+
+
+static heif_error ffmpeg_decode_image(void* decoder_raw,
                                          heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
-  return ffmpeg_v1_decode_next_image(decoder_raw, out_img, limits);
+  return ffmpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
 heif_error ffmpeg_flush_data(void* decoder_raw)
@@ -538,12 +564,14 @@ static const heif_decoder_plugin decoder_ffmpeg
         ffmpeg_does_support_format,
         ffmpeg_new_decoder,
         ffmpeg_free_decoder,
-        ffmpeg_v1_push_data,
-        ffmpeg_v1_decode_image,
+        ffmpeg_push_data,
+        ffmpeg_decode_image,
         ffmpeg_set_strict_decoding,
         "ffmpeg",
-        ffmpeg_v1_decode_next_image,
-        ffmpeg_flush_data
+        ffmpeg_decode_next_image,
+        ffmpeg_flush_data,
+        ffmpeg_push_data2,
+        ffmpeg_decode_next_image2
     };
 
 const heif_decoder_plugin* get_decoder_plugin_ffmpeg()
