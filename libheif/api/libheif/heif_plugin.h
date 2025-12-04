@@ -121,6 +121,12 @@ typedef struct heif_decoder_plugin
 
   heif_error (* flush_data)(void* decoder);
 
+  heif_error (* push_data2)(void* decoder, const void* data, size_t size, uintptr_t user_data);
+
+  heif_error (* decode_next_image2)(void* decoder, heif_image** out_img,
+                                    uintptr_t* out_user_data,
+                                    const heif_security_limits* limits);
+
   // --- Note: when adding new versions, also update `heif_decoder_plugin_latest_version`.
 } heif_decoder_plugin;
 

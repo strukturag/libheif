@@ -104,6 +104,7 @@ public:
   virtual Error
   decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
                                              const heif_decoding_options& options,
+                                             uintptr_t user_data,
                                              const heif_security_limits* limits);
 
   virtual Error flush_decoder();
@@ -111,6 +112,7 @@ public:
   // Get a decoded frame from the decoder.
   // It may return NULL when there is buffering in the codec.
   virtual Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
+                                                                     uintptr_t* out_user_data,
                                                                      const heif_security_limits* limits);
 
 private:

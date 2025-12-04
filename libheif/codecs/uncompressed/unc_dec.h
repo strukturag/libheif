@@ -61,6 +61,7 @@ public:
   Error
   decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
                                              const heif_decoding_options& options,
+                                             uintptr_t user_data,
                                              const heif_security_limits* limits) override;
 
   Error flush_decoder() override { return {}; }
@@ -68,6 +69,7 @@ public:
   // Get a decoded frame from the decoder.
   // It may return NULL when there is buffering in the codec.
   Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
+                                                             uintptr_t* out_user_data,
                                                              const heif_security_limits* limits) override;
 
 private:
@@ -76,6 +78,7 @@ private:
   const std::shared_ptr<const Box_ispe> m_ispe;
 
   std::shared_ptr<HeifPixelImage> m_decoded_image;
+  uintptr_t m_decoded_image_user_data;
 };
 
 #endif

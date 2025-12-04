@@ -155,6 +155,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   std::shared_ptr<HeifPixelImage> image;
 
   uint32_t sample_idx_in_chunk;
+  uintptr_t decoded_sample_idx = 0; // TODO: map this to sample idx + chunk
 
   for (;;) {
     const SampleTiming& sampleTiming = m_presentation_timeline[m_next_sample_to_be_decoded % m_presentation_timeline.size()];
@@ -169,6 +170,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     // avoid calling get_decoded_frame() before starting the decoder.
     if (m_next_sample_to_be_decoded != 0) {
       Result<std::shared_ptr<HeifPixelImage> > getFrameResult = decoder->get_decoded_frame(options,
+                                                                                           &decoded_sample_idx,
                                                                                            m_heif_context->get_security_limits());
       if (getFrameResult.error()) {
         return getFrameResult.error();
@@ -218,9 +220,9 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       const bool is_first_sample = (sample_idx_in_chunk == 0);
 
       // --- Push data into the decoder.
-
       Error decodingError = decoder->decode_sequence_frame_from_compressed_data(is_first_sample,
                                                                                 options,
+                                                                                sample_idx_in_chunk, // user data
                                                                                 m_heif_context->get_security_limits());
       if (decodingError) {
         return decodingError;
@@ -263,7 +265,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), sample_idx_in_chunk);
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), decoded_sample_idx);
     if (!readResult) {
       return readResult.error();
     }
@@ -277,7 +279,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   }
 
   if (m_aux_reader_tai_timestamps) {
-    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), sample_idx_in_chunk);
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), decoded_sample_idx);
     if (!readResult) {
       return readResult.error();
     }

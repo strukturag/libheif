@@ -274,7 +274,7 @@ static heif_error libde265_v2_decode_image(void* decoder_raw,
 }
 #else
 
-static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+static heif_error libde265_v1_push_data2(void* decoder_raw, const void* data, size_t size, uintptr_t user_data)
 {
   libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
 
@@ -312,7 +312,7 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
     printf("put nal with size %d %x\n", nal_size, *(cdata+ptr));
 #endif
 
-    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, nullptr);
+    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data);
     ptr += nal_size;
   }
 
@@ -322,6 +322,10 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
+static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+{
+  return libde265_v1_push_data2(decoder_raw, data, size, 0);
+}
 
 static heif_error libde265_flush_data(void* decoder_raw)
 {
@@ -334,9 +338,10 @@ static heif_error libde265_flush_data(void* decoder_raw)
 
 
 
-static heif_error libde265_v1_decode_next_image(void* decoder_raw,
-                                                heif_image** out_img,
-                                                const heif_security_limits* limits)
+static heif_error libde265_v1_decode_next_image2(void* decoder_raw,
+                                                 heif_image** out_img,
+                                                 uintptr_t* out_user_data,
+                                                 const heif_security_limits* limits)
 {
   libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -363,6 +368,11 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
       if (*out_img) {
         heif_image_release(*out_img);
       }
+
+      if (out_user_data) {
+        *out_user_data = (uintptr_t)de265_get_image_user_data(image);
+      }
+
       err = convert_libde265_image_to_heif_image(decoder, image, out_img, limits);
       if (err.code != heif_error_Ok) {
         return err;
@@ -401,6 +411,13 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
   return err;
 }
 
+
+static heif_error libde265_v1_decode_next_image(void* decoder_raw,
+                                                heif_image** out_img,
+                                                const heif_security_limits* limits)
+{
+  return libde265_v1_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
 
 static heif_error libde265_v1_decode_image(void* decoder_raw,
                                            heif_image** out_img)
@@ -446,7 +463,9 @@ static const heif_decoder_plugin decoder_libde265
         libde265_set_strict_decoding,
         "libde265",
         libde265_v1_decode_next_image,
-      libde265_flush_data,
+        libde265_flush_data,
+        libde265_v1_push_data2,
+        libde265_v1_decode_next_image2
     };
 
 #endif

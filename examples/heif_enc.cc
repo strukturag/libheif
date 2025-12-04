@@ -2149,7 +2149,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     while (contentId.length() < contentIdNr+1) {
       contentId += std::to_string(contentIdNr+1) + '-';
     }
-    contentId.resize(std::min(254, contentIdNr+1));
+    contentId.resize(std::min(254, contentIdNr));
     //std::cout << "CID: " << contentId << "\n\n";
     heif_image_set_gimi_sample_content_id(image.get(), contentId.c_str());
     contentIdNr++;
