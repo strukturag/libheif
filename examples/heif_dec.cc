@@ -856,6 +856,8 @@ int main(int argc, char** argv)
       }
 
       std::cout << "\n";
+
+      heif_track_release(track);
     }
 
     std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
