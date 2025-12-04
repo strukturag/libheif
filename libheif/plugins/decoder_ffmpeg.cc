@@ -107,7 +107,12 @@ static int ffmpeg_does_support_format(heif_compression_format format)
 }
 
 
-static heif_error ffmpeg_new_decoder(void** dec)
+static int ffmpeg_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return ffmpeg_does_support_format(format->format);
+}
+
+static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   ffmpeg_decoder* decoder = new ffmpeg_decoder();
   *dec = decoder;
@@ -137,6 +142,16 @@ static heif_error ffmpeg_new_decoder(void** dec)
 
 
   return heif_error_success;
+}
+
+static heif_error ffmpeg_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_HEVC;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return ffmpeg_new_decoder2(dec, &options);
 }
 
 static void ffmpeg_free_decoder(void* decoder_raw)
@@ -569,8 +584,10 @@ static const heif_decoder_plugin decoder_ffmpeg
         ffmpeg_set_strict_decoding,
         "ffmpeg",
         ffmpeg_decode_next_image,
-        ffmpeg_flush_data,
+        ffmpeg_does_support_format2,
+        ffmpeg_new_decoder2,
         ffmpeg_push_data2,
+        ffmpeg_flush_data,
         ffmpeg_decode_next_image2
     };
 

@@ -88,7 +88,12 @@ static int dav1d_does_support_format(heif_compression_format format)
 }
 
 
-heif_error dav1d_new_decoder(void** dec)
+static int dav1d_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return dav1d_does_support_format(format->format);
+}
+
+heif_error dav1d_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   auto* decoder = new dav1d_decoder();
 
@@ -108,11 +113,24 @@ heif_error dav1d_new_decoder(void** dec)
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
   }
 
+  if (options->num_threads) {
+    decoder->settings.n_threads = options->num_threads;
+  }
+
   *dec = decoder;
 
   return heif_error_ok;
 }
 
+heif_error dav1d_new_decoder(void** dec)
+{
+  struct heif_decoder_plugin_options options;
+  options.format = heif_compression_AV1;
+  options.strict_decoding = false;
+  options.num_threads = 0;
+
+  return dav1d_new_decoder2(dec, &options);
+}
 
 void dav1d_free_decoder(void* decoder_raw)
 {
@@ -409,8 +427,10 @@ static const heif_decoder_plugin decoder_dav1d
         dav1d_set_strict_decoding,
         "dav1d",
         dav1d_decode_next_image,
-        dav1d_flush_data,
+        dav1d_does_support_format2,
+        dav1d_new_decoder2,
         dav1d_push_data2,
+        dav1d_flush_data,
         dav1d_decode_next_image2
     };
 

@@ -99,13 +99,22 @@ static int vvdec_does_support_format(heif_compression_format format)
 }
 
 
-heif_error vvdec_new_decoder(void** dec)
+static int vvdec_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return vvdec_does_support_format(format->format);
+}
+
+heif_error vvdec_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   auto* decoder = new vvdec_decoder();
 
   vvdecParams params;
   vvdec_params_default(&params);
   params.logLevel = VVDEC_INFO;
+
+  if (options->num_threads) {
+    params.threads = options->num_threads;
+  }
   decoder->decoder = vvdec_decoder_open(&params);
 
   const int MaxNaluSize = 256 * 1024;
@@ -116,6 +125,17 @@ heif_error vvdec_new_decoder(void** dec)
   *dec = decoder;
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+
+heif_error vvdec_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_VVC;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  vvdec_new_decoder2(dec, &options);
 }
 
 
@@ -390,8 +410,10 @@ static const heif_decoder_plugin decoder_vvdec
       vvdec_set_strict_decoding,
       "vvdec",
       vvdec_decode_next_image,
-      vvdec_flush_data,
+      vvdec_does_support_format2,
+      vvdec_new_decoder2,
       vvdec_push_data2,
+      vvdec_flush_data,
       vvdec_decode_next_image2
     };
 

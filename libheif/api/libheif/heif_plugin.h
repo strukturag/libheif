@@ -44,15 +44,32 @@ extern "C" {
 //  1.13         2         3          2
 //  1.15         3         3          2
 //  1.20         4         3          2
+//  1.21         5         4          2
 
-#define heif_decoder_plugin_latest_version 4
-#define heif_encoder_plugin_latest_version 3
+#define heif_decoder_plugin_latest_version 5
+#define heif_encoder_plugin_latest_version 4
 
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
+
+typedef struct heif_decoder_plugin_compressed_format_description
+{
+  enum heif_compression_format format;
+
+} heif_decoder_plugin_compressed_format_description;
+
+
+typedef struct heif_decoder_plugin_options
+{
+  enum heif_compression_format format;
+  int strict_decoding; // bool
+  int num_threads; // 0 - undefined, use decoder default
+
+} heif_decoder_plugin_options;
+
 
 typedef struct heif_decoder_plugin
 {
@@ -119,9 +136,17 @@ typedef struct heif_decoder_plugin
 
   // --- version 5 functions will follow below ... ---
 
-  heif_error (* flush_data)(void* decoder);
+  // Query whether the plugin supports decoding of the given format
+  // Result is a priority value. The plugin with the largest value wins.
+  // Default priority is 100. Returning 0 indicates that the plugin cannot decode this format.
+  int (* does_support_format2)(const heif_decoder_plugin_compressed_format_description* format);
+
+  // Create a new decoder context for decoding an image
+  heif_error (* new_decoder2)(void** decoder, const heif_decoder_plugin_options*);
 
   heif_error (* push_data2)(void* decoder, const void* data, size_t size, uintptr_t user_data);
+
+  heif_error (* flush_data)(void* decoder);
 
   heif_error (* decode_next_image2)(void* decoder, heif_image** out_img,
                                     uintptr_t* out_user_data,

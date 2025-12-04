@@ -103,8 +103,13 @@ static int openh264_does_support_format(heif_compression_format format)
   }
 }
 
+static int openh264_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return openh264_does_support_format(format->format);
+}
 
-heif_error openh264_new_decoder(void** dec)
+
+heif_error openh264_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   auto* decoder = new openh264_decoder();
   *dec = decoder;
@@ -132,6 +137,16 @@ heif_error openh264_new_decoder(void** dec)
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
+
+heif_error openh264_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_AVC;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return openh264_new_decoder2(dec, &options);
+}
 
 void openh264_free_decoder(void* decoder_raw)
 {
@@ -164,6 +179,11 @@ heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t 
   decoder->input_data.push_back(std::move(pkt));
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+heif_error openh264_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
+{
+  return openh264_push_data(decoder_raw, frame_data, frame_size);
 }
 
 
@@ -376,6 +396,15 @@ heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
   return heif_error_ok;
 }
 
+heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                       uintptr_t* out_user_data,
+                                       const heif_security_limits* limits)
+{
+  *out_user_data = 0; // TODO: not supported by openH264
+
+  return openh264_decode_next_image(decoder_raw, out_img, limits);
+}
+
 heif_error openh264_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
@@ -406,7 +435,11 @@ static const heif_decoder_plugin decoder_openh264{
   openh264_set_strict_decoding,
   "openh264",
   openh264_decode_next_image,
-  openh264_flush_data
+  openh264_does_support_format2,
+  openh264_new_decoder2,
+  openh264_push_data2,
+  openh264_flush_data,
+  openh264_decode_next_image2
 };
 
 

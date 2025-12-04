@@ -87,12 +87,28 @@ static int jpeg_does_support_format(heif_compression_format format)
 }
 
 
-heif_error jpeg_new_decoder(void** dec)
+static int jpeg_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return jpeg_does_support_format(format->format);
+}
+
+heif_error jpeg_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   struct jpeg_decoder* decoder = new jpeg_decoder();
   *dec = decoder;
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+
+heif_error jpeg_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_JPEG;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return jpeg_new_decoder2(dec, &options);
 }
 
 
@@ -408,8 +424,10 @@ static const heif_decoder_plugin decoder_jpeg
         jpeg_set_strict_decoding,
         "jpeg",
         jpeg_decode_next_image,
-        jpeg_flush_data,
+        jpeg_does_support_format2,
+        jpeg_new_decoder2,
         jpeg_push_data2,
+        jpeg_flush_data,
         jpeg_decode_next_image2,
     };
 

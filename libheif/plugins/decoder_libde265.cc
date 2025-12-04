@@ -85,6 +85,13 @@ static int libde265_does_support_format(heif_compression_format format)
 }
 
 
+static int libde265_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return libde265_does_support_format(format->format);
+}
+
+
+
 static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder,
                                                        const de265_image* de265img,
                                                        heif_image** image,
@@ -162,7 +169,9 @@ static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder
 }
 
 
-static heif_error libde265_new_decoder(void** dec)
+
+// Create a new decoder context for decoding an image
+heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   libde265_decoder* decoder = new libde265_decoder();
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -173,12 +182,27 @@ static heif_error libde265_new_decoder(void** dec)
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_DEBLOCKING, 1);
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_SAO, 1);
 #else
+  int nThreads = (options->num_threads ? options->num_threads : 1);
+
   // Worker threads are not supported when running on Emscripten.
-  de265_start_worker_threads(decoder->ctx, 1);
+  de265_start_worker_threads(decoder->ctx, nThreads);
 #endif
+
+  decoder->strict_decoding = options->strict_decoding;
 
   *dec = decoder;
   return err;
+}
+
+
+static heif_error libde265_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_HEVC;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return libde265_new_decoder2(dec, &options);
 }
 
 static void libde265_free_decoder(void* decoder_raw)
@@ -463,8 +487,10 @@ static const heif_decoder_plugin decoder_libde265
         libde265_set_strict_decoding,
         "libde265",
         libde265_v1_decode_next_image,
-        libde265_flush_data,
+        libde265_does_support_format2,
+        libde265_new_decoder2,
         libde265_v1_push_data2,
+        libde265_flush_data,
         libde265_v1_decode_next_image2
     };
 
