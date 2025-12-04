@@ -43,7 +43,12 @@ struct vvdec_decoder
 
   bool strict_decoding = false;
 
-  std::deque<std::vector<uint8_t>> nalus;
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t user_data;
+  };
+  std::deque<Packet> nalus;
   bool end_of_stream_reached = false;
 
   std::string error_message;
@@ -144,7 +149,8 @@ void vvdec_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error vvdec_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size,
+                            uintptr_t user_data)
 {
   auto* decoder = (vvdec_decoder*) decoder_raw;
 
@@ -164,7 +170,7 @@ heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t fra
     nalu.push_back(1);
     nalu.insert(nalu.end(), data, data + size);
 
-    decoder->nalus.push_back(nalu);
+    decoder->nalus.push_back({std::move(nalu), user_data});
     data += size;
     frame_size -= 4 + size;
     if (frame_size == 0) {
@@ -175,9 +181,14 @@ heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t fra
   return heif_error_ok;
 }
 
+heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+{
+  return vvdec_push_data2(decoder_raw, frame_data, frame_size, 0);
+}
 
-heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                   const heif_security_limits* limits)
+heif_error vvdec_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                    uintptr_t* out_user_data,
+                                    const heif_security_limits* limits)
 {
   auto* decoder = (vvdec_decoder*) decoder_raw;
 
@@ -187,7 +198,7 @@ heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
 
   size_t max_payload_size = 0;
   for (const auto& nalu : decoder->nalus) {
-    max_payload_size = std::max(max_payload_size, nalu.size());
+    max_payload_size = std::max(max_payload_size, nalu.data.size());
   }
 
   if (decoder->au == nullptr || max_payload_size > (size_t) decoder->au->payloadSize) {
@@ -218,10 +229,11 @@ heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
     else {
       const auto& nalu = decoder->nalus.front();
 
-      memcpy(decoder->au->payload, nalu.data(), nalu.size());
-      decoder->au->payloadUsedSize = (int) nalu.size();
+      memcpy(decoder->au->payload, nalu.data.data(), nalu.data.size());
+      decoder->au->payloadUsedSize = (int) nalu.data.size();
+      decoder->au->cts = nalu.user_data;
+      decoder->au->ctsValid = true;
       decoder->nalus.pop_front();
-
       ret = vvdec_decode(decoder->decoder, decoder->au, &frame);
     }
 
@@ -238,6 +250,10 @@ heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
     if (ret != VVDEC_OK && ret != VVDEC_TRY_AGAIN) {
       return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "vvdec decoding error"};
     }
+  }
+
+  if (out_user_data) {
+    *out_user_data = frame->cts;
   }
 
 
@@ -341,13 +357,19 @@ heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
   return err;
 }
 
+heif_error vvdec_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                   const heif_security_limits* limits)
+{
+  return vvdec_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
+
 heif_error vvdec_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return vvdec_decode_next_image(decoder_raw, out_img, limits);
 }
 
-heif_error vvc_flush_data(void* decoder_raw)
+heif_error vvdec_flush_data(void* decoder_raw)
 {
   auto* decoder = (vvdec_decoder*) decoder_raw;
   decoder->end_of_stream_reached = true;
@@ -368,7 +390,9 @@ static const heif_decoder_plugin decoder_vvdec
       vvdec_set_strict_decoding,
       "vvdec",
       vvdec_decode_next_image,
-      vvc_flush_data
+      vvdec_flush_data,
+      vvdec_push_data2,
+      vvdec_decode_next_image2
     };
 
 
