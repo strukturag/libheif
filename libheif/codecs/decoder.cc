@@ -303,17 +303,30 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
                    "Cannot decode with a dummy decoder plugin.");
     }
 
-    err = m_decoder_plugin->new_decoder(&m_decoder);
-    if (err.code != heif_error_Ok) {
-      return Error(err.code, err.subcode, err.message);
+    if (m_decoder_plugin->plugin_api_version >= 5) {
+      heif_decoder_plugin_options plugin_options;
+      plugin_options.format = get_compression_format();
+      plugin_options.num_threads = options.num_codec_threads;
+      plugin_options.strict_decoding = options.strict_decoding;
+
+      err = m_decoder_plugin->new_decoder2(&m_decoder, &plugin_options);
+      if (err.code != heif_error_Ok) {
+        return Error(err.code, err.subcode, err.message);
+      }
     }
+    else {
+      err = m_decoder_plugin->new_decoder(&m_decoder);
+      if (err.code != heif_error_Ok) {
+        return Error(err.code, err.subcode, err.message);
+      }
 
-    // automatically delete decoder plugin when we leave the scope
-    //std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(m_decoder, m_decoder_plugin->free_decoder);
+      // automatically delete decoder plugin when we leave the scope
+      //std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(m_decoder, m_decoder_plugin->free_decoder);
 
-    if (m_decoder_plugin->plugin_api_version >= 2) {
-      if (m_decoder_plugin->set_strict_decoding) {
-        m_decoder_plugin->set_strict_decoding(m_decoder, options.strict_decoding);
+      if (m_decoder_plugin->plugin_api_version >= 2) {
+        if (m_decoder_plugin->set_strict_decoding) {
+          m_decoder_plugin->set_strict_decoding(m_decoder, options.strict_decoding);
+        }
       }
     }
   }

@@ -110,6 +110,11 @@ typedef struct heif_decoding_options
   // version 9 options
 
   heif_color_profile_nclx* output_image_nclx_profile;
+
+  // version 10 options (v1.21.0)
+
+  int num_library_threads; // 0 = let libheif decide (TODO, currently ignored)
+  int num_codec_threads; // 0 = use decoder default
 } heif_decoding_options;
 
 

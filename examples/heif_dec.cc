@@ -113,7 +113,8 @@ static void show_help(const char* argv0)
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
                "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
                "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
-               "      --disable-limits           disable all security limits (do not use in production environment)\n";
+               "      --disable-limits           disable all security limits (do not use in production environment)\n"
+               "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n";
 }
 
 
@@ -145,6 +146,7 @@ int option_output_tiles = 0;
 int option_disable_limits = 0;
 int option_sequence = 0;
 int option_ignore_editlist = 0;
+int option_num_codec_threads = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -152,6 +154,7 @@ std::string transparency_composition_mode = "checkerboard";
 
 #define OPTION_PNG_COMPRESSION_LEVEL 1000
 #define OPTION_TRANSPARENCY_COMPOSITION_MODE 1001
+#define OPTION_CODEC_THREADS 1002
 
 static option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -174,6 +177,7 @@ static option long_options[] = {
     {(char* const) "version",          no_argument,       0,                        'v'},
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
     {(char* const) "ignore-editlist", no_argument, &option_ignore_editlist, 1},
+    {(char* const) "codec-threads", required_argument, 0,                     OPTION_CODEC_THREADS},
     {nullptr, no_argument, nullptr, 0}
 };
 
@@ -665,6 +669,9 @@ int main(int argc, char** argv)
       case 'S':
         option_sequence = 1;
         break;
+      case OPTION_CODEC_THREADS:
+        option_num_codec_threads = atoi(optarg);
+        break;
     }
   }
 
@@ -856,8 +863,9 @@ int main(int argc, char** argv)
     decode_options->ignore_sequence_editlist = option_ignore_editlist;
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
+    decode_options->num_codec_threads = option_num_codec_threads;
 
-    struct heif_track* track = heif_context_get_track(ctx, 0);
+    heif_track* track = heif_context_get_track(ctx, 0);
 
     const char* track_contentId = heif_track_get_gimi_track_content_id(track);
     if (track_contentId) {
@@ -979,6 +987,7 @@ int main(int argc, char** argv)
 
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
+    decode_options->num_codec_threads = option_num_codec_threads;
 
     if (!option_quiet) {
       decode_options->start_progress = start_progress;
