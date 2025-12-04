@@ -409,20 +409,17 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
 }
 
 
-static void copy_plane(int16_t*& out_p, size_t& out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
+static void copy_plane(int16_t* dst_p, size_t dst_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
 {
-  out_stride = padded_width;
-  out_p = new int16_t[out_stride * w * h];
-
   for (int y = 0; y < padded_height; y++) {
     int sy = std::min(y, h - 1); // source y
 
     for (int x = 0; x < w; x++) {
-      out_p[y * out_stride + x] = in_p[sy * in_stride + x];
+      dst_p[y * dst_stride + x] = in_p[sy * in_stride + x];
     }
 
     for (int x = w; x < padded_width; x++) {
-      out_p[y * out_stride + x] = in_p[sy * in_stride + w - 1];
+      dst_p[y * dst_stride + x] = in_p[sy * in_stride + w - 1];
     }
   }
 }
@@ -657,42 +654,22 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
     size_t stride;
     const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
-    copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
-
-    yuvbuf->planes[0].ptr = yptr;
-    yuvbuf->planes[0].width = encoded_width;
-    yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = (int)ystride;
+    copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
   }
   else {
     size_t stride;
     const uint8_t* data;
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
-    copy_plane(yptr, ystride, data, stride, input_width, input_height, encoded_width, encoded_height);
+    copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
-    copy_plane(cbptr, cbstride, data, stride, input_chroma_width, input_chroma_height,
+    copy_plane(yuvbuf->planes[1].ptr, yuvbuf->planes[1].stride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
-    copy_plane(crptr, crstride, data, stride, input_chroma_width, input_chroma_height,
+    copy_plane(yuvbuf->planes[2].ptr, yuvbuf->planes[2].stride, data, stride, input_chroma_width, input_chroma_height,
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
-
-    yuvbuf->planes[0].ptr = yptr;
-    yuvbuf->planes[0].width = encoded_width;
-    yuvbuf->planes[0].height = encoded_height;
-    yuvbuf->planes[0].stride = (int)ystride;
-
-    yuvbuf->planes[1].ptr = cbptr;
-    yuvbuf->planes[1].width = encoded_width >> chroma_stride_shift;
-    yuvbuf->planes[1].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[1].stride = (int)cbstride;
-
-    yuvbuf->planes[2].ptr = crptr;
-    yuvbuf->planes[2].width = encoded_width >> chroma_stride_shift;
-    yuvbuf->planes[2].height = encoded_height >> chroma_height_shift;
-    yuvbuf->planes[2].stride = (int)crstride;
   }
 
 
@@ -705,7 +682,8 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
   int ret = vvenc_encode(vvencoder, yuvbuf, au, &encDone);
   if (ret != VVENC_OK) {
     //vvenc_encoder_close(vvencoder);
-    vvenc_YUVBuffer_free(yuvbuf, true); // release storage and payload memory
+    vvenc_YUVBuffer_free_buffer(yuvbuf);
+    vvenc_YUVBuffer_free(yuvbuf, false); // release storage and payload memory
     vvenc_accessUnit_free(au, true); // release storage and payload memory
 
     return heif_error{
@@ -719,7 +697,8 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
     append_chunk_data(encoder, au, au->cts);
   }
 
-  vvenc_YUVBuffer_free(yuvbuf, true); // release storage and payload memory
+  vvenc_YUVBuffer_free_buffer(yuvbuf);
+  vvenc_YUVBuffer_free(yuvbuf, false); // release storage and payload memory
   vvenc_accessUnit_free(au, true); // release storage and payload memory
 
   /*
@@ -742,7 +721,7 @@ static heif_error vvenc_end_sequence_encoding(void* encoder_raw)
   const int auSizeScale = (encoder->vvencChroma <= VVENC_CHROMA_420 ? 2 : 3);
   vvenc_accessUnit_alloc_payload(au, auSizeScale * encoder->encoded_width * encoder->encoded_height + 1024);
 
-  bool encDone;
+  bool encDone = false;
 
   while (!encDone) {
     int ret = vvenc_encode(vvencoder, nullptr, au, &encDone);
