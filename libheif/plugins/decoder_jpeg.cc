@@ -37,6 +37,8 @@ extern "C" {
 struct jpeg_decoder
 {
   std::vector<uint8_t> data;
+  uintptr_t user_data;
+
   std::string error_message;
 };
 
@@ -112,15 +114,21 @@ void jpeg_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error jpeg_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
 {
   jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
   const uint8_t* input_data = (const uint8_t*)frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
+  decoder->user_data = user_data;
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+{
+  return jpeg_push_data2(decoder_raw, frame_data, frame_size, 0);
 }
 
 
@@ -145,8 +153,9 @@ void on_jpeg_error(j_common_ptr cinfo)
 }
 
 
-heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                  const heif_security_limits* limits)
+heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                   uintptr_t* out_user_data,
+                                   const heif_security_limits* limits)
 {
   jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
@@ -349,6 +358,10 @@ heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
     *out_img = heif_img;
   }
 
+  if (out_user_data) {
+    *out_user_data = decoder->user_data;
+  }
+
 //  if (embeddedIccFlag && iccLen > 0) {
 //    heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
 //  }
@@ -361,6 +374,12 @@ heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
   decoder->data.clear();
 
   return heif_error_ok;
+}
+
+heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                  const heif_security_limits* limits)
+{
+  return jpeg_decode_next_image2(decoder_raw, out_img, nullptr, limits);
 }
 
 heif_error jpeg_decode_image(void* decoder_raw, heif_image** out_img)
@@ -389,7 +408,9 @@ static const heif_decoder_plugin decoder_jpeg
         jpeg_set_strict_decoding,
         "jpeg",
         jpeg_decode_next_image,
-        jpeg_flush_data
+        jpeg_flush_data,
+        jpeg_push_data2,
+        jpeg_decode_next_image2,
     };
 
 
