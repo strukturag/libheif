@@ -266,11 +266,12 @@ heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
       idx += size;
     }
 
-    decoder->input_data.pop_front();
-
     if (idx != indata.size()) {
+      decoder->input_data.pop_front();
       return kError_EOF;
     }
+
+    decoder->input_data.pop_front();
 
     // input: encoded bitstream start position; should include start code prefix
     unsigned char* pBuf = scdata.data();
