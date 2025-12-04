@@ -178,7 +178,7 @@ static heif_error push_pending_data_into_decoder(dav1d_decoder* decoder)
 }
 
 
-heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error dav1d_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
 {
   auto* decoder = (struct dav1d_decoder*) decoder_raw;
 
@@ -193,6 +193,8 @@ heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t fra
 
   memcpy(d, frame_data, frame_size);
 
+  packet.m.user_data.data = (uint8_t*)user_data;
+
   // --- put data into queue
 
   decoder->queued_data.push_back(packet);
@@ -203,8 +205,15 @@ heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t fra
 }
 
 
-heif_error dav1d_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                   const heif_security_limits* limits)
+heif_error dav1d_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+{
+  return dav1d_push_data2(decoder_raw, frame_data, frame_size, 0);
+}
+
+
+heif_error dav1d_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                    uintptr_t* out_user_data,
+                                    const heif_security_limits* limits)
 {
   auto* decoder = (struct dav1d_decoder*) decoder_raw;
 
@@ -281,6 +290,9 @@ heif_error dav1d_decode_next_image(void* decoder_raw, heif_image** out_img,
     }
   }
 
+  if (out_user_data) {
+    *out_user_data = (uintptr_t)frame.m.user_data.data;
+  }
 
   heif_image* heif_img = nullptr;
   err = heif_image_create(frame.p.w, frame.p.h,
@@ -353,6 +365,13 @@ heif_error dav1d_decode_next_image(void* decoder_raw, heif_image** out_img,
 }
 
 
+heif_error dav1d_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                   const heif_security_limits* limits)
+{
+  return dav1d_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
+
+
 heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
@@ -390,7 +409,9 @@ static const heif_decoder_plugin decoder_dav1d
         dav1d_set_strict_decoding,
         "dav1d",
         dav1d_decode_next_image,
-        dav1d_flush_data
+        dav1d_flush_data,
+        dav1d_push_data2,
+        dav1d_decode_next_image2
     };
 
 
