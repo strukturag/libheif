@@ -1246,7 +1246,7 @@ int main(int argc, char** argv)
         int nPlugins;
         heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
         if (error.code) {
-          std::cerr << "Error loading libheif plugins.\n";
+          std::cerr << "Error loading libheif plugins: " << error.message << "\n";
           return 1;
         }
 

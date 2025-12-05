@@ -49,6 +49,10 @@ extern "C" {
 #define heif_decoder_plugin_latest_version 5
 #define heif_encoder_plugin_latest_version 4
 
+// The minimum plugin versions that can be used with this libheif version.
+#define heif_decoder_plugin_minimum_version 5
+#define heif_encoder_plugin_minimum_version 4
+
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
