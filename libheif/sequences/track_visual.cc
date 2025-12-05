@@ -478,9 +478,13 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
       visualSampleEntry.width = m_width;
       visualSampleEntry.height = m_height;
 
-      auto ccst = std::make_shared<Box_ccst>();
-      ccst->set_coding_constraints(data.codingConstraints);
-      sample_description_box->append_child_box(ccst);
+      // add Coding-Constraints box (ccst) only if we are generating an image sequence
+
+      if (m_hdlr->get_handler_type() == heif_track_type_image_sequence) {
+        auto ccst = std::make_shared<Box_ccst>();
+        ccst->set_coding_constraints(data.codingConstraints);
+        sample_description_box->append_child_box(ccst);
+      }
 
       set_sample_description_box(sample_description_box);
       m_generated_sample_description_box = true;
