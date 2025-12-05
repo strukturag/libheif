@@ -969,9 +969,11 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
   // --- copy libheif image to svt image
 
   EbBufferHeaderType& input_buffer = encoder->input_buffer;
-  input_buffer.p_buffer = (uint8_t*) (new EbSvtIOFormat());
 
+  auto svt_io_format = std::make_unique<EbSvtIOFormat>();
+  input_buffer.p_buffer = (uint8_t*) svt_io_format.get();
   memset(input_buffer.p_buffer, 0, sizeof(EbSvtIOFormat));
+
   input_buffer.size = sizeof(EbBufferHeaderType);
   input_buffer.p_app_private = nullptr;
   input_buffer.pic_type = EB_AV1_INVALID_PICTURE;
