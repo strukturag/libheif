@@ -32,7 +32,7 @@ Supported codecs:
 | HEIC         | libde265, ffmpeg    | x265, kvazaar                |
 | AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1          |
 | VVC          | vvdec               | vvenc, uvg266                |
-| AVC          | openh264            | x264                         |
+| AVC          | openh264, ffmpeg    | x264                         |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
 | HTJ2K        | OpenJPEG            | OpenJPH                      |
