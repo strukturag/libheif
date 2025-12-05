@@ -81,6 +81,10 @@ struct encoder_struct_uvg266
 
   ~encoder_struct_uvg266()
   {
+    if (kvzencoder) {
+      api->encoder_close(kvzencoder);
+    }
+
     if (config) {
       api->config_destroy(config);
     }
