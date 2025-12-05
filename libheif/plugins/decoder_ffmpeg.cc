@@ -98,6 +98,8 @@ static void ffmpeg_deinit_plugin()
 
 static int ffmpeg_does_support_format(heif_compression_format format)
 {
+  // TODO: it should work at least also for AV1 and JPEG. Check why it isn't decoding.
+
   if (format == heif_compression_HEVC) {
     return FFMPEG_DECODER_PLUGIN_PRIORITY;
   }
