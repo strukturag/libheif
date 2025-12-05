@@ -110,6 +110,7 @@ bool force_enc_jpeg2000 = false;
 bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
+bool use_video_handler = false;
 
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
 int sequence_keyframe_distance_min = 0;
@@ -222,6 +223,7 @@ static option long_options[] = {
     {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
     {(char* const) "add-pyramid-group",           no_argument,       &add_pyramid_group, 1},
     {(char* const) "sequence",                    no_argument, 0, 'S'},
+    {(char* const) "video",                       no_argument, 0, 'V'},
     {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
     {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
@@ -337,6 +339,7 @@ void show_help(const char* argv0)
             << "\n"
             << "sequences:\n"
             << "  -S, --sequence                 encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
+            << "  -V, --video                    encode as video instead of image sequence\n"
             << "      --timebase #               set clock ticks/second for sequence\n"
             << "      --duration #               set frame duration (default: 1)\n"
             << "      --fps #                    set timebase and duration based on fps\n"
@@ -1324,6 +1327,9 @@ int main(int argc, char** argv)
       case 'S':
         encode_sequence = true;
         break;
+      case 'V':
+        use_video_handler = true;
+        break;
       case OPTION_SEQUENCES_TIMEBASE:
         sequence_timebase = atoi(optarg);
         break;
@@ -2114,7 +2120,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
       heif_context_add_visual_sequence_track(context,
                                              image_width, image_height,
-                                             heif_track_type_video,
+                                             use_video_handler ? heif_track_type_video : heif_track_type_image_sequence,
                                              track_options,
                                              encoding_options,
                                              &track);
