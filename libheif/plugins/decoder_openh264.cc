@@ -64,7 +64,10 @@ struct openh264_decoder
 
 static const char kSuccess[] = "Success";
 
-static const int OpenH264_PLUGIN_PRIORITY = 100;
+// Reduced priority because OpenH264 cannot pass through user-data.
+// We need this feature for decoding sequences with SAI.
+// Prefer to use the FFMPEG plugin.
+static const int OpenH264_PLUGIN_PRIORITY = 70;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 

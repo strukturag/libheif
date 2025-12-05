@@ -101,6 +101,24 @@ static int ffmpeg_does_support_format(heif_compression_format format)
   if (format == heif_compression_HEVC) {
     return FFMPEG_DECODER_PLUGIN_PRIORITY;
   }
+  else if (format == heif_compression_AVC) {
+    return FFMPEG_DECODER_PLUGIN_PRIORITY;
+  }
+#if 0
+  else if (format == heif_compression_VVC) {
+    return FFMPEG_DECODER_PLUGIN_PRIORITY;
+  }
+  else if (format == heif_compression_AV1) {
+    return FFMPEG_DECODER_PLUGIN_PRIORITY;
+  }
+  else if (format == heif_compression_JPEG) {
+    return FFMPEG_DECODER_PLUGIN_PRIORITY;
+  }
+  else if (format == heif_compression_JPEG2000 ||
+           format == heif_compression_HTJ2K) {
+    return FFMPEG_DECODER_PLUGIN_PRIORITY;
+  }
+#endif
   else {
     return 0;
   }
@@ -119,10 +137,39 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
 
 
   // Find HEVC video decoder
-  decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
+  switch (options->format) {
+    case heif_compression_AVC:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+      break;
+    case heif_compression_HEVC:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
+      break;
+#if 0
+    case heif_compression_VVC:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_VVC);
+      break;
+    case heif_compression_AV1:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_AV1);
+      break;
+    case heif_compression_JPEG:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_MJPEG);
+      break;
+    case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K:
+      decoder->hevc_codec = avcodec_find_decoder(AV_CODEC_ID_JPEG2000);
+      break;
+#endif
+    default:
+      assert(false);
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "FFMPEG plugin started with unsupported codec."
+      };
+  }
 
   if (!decoder->hevc_codec) {
-    return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_find_decoder(AV_CODEC_ID_HEVC) returned error" };
+    return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_find_decoder() returned error" };
   }
 
   decoder->hevc_parser = av_parser_init(decoder->hevc_codec->id);
