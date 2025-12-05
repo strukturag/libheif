@@ -424,6 +424,7 @@ static const heif_decoder_plugin decoder_jpeg
         jpeg_set_strict_decoding,
         "jpeg",
         jpeg_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         jpeg_does_support_format2,
         jpeg_new_decoder2,
         jpeg_push_data2,

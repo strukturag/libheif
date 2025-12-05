@@ -410,6 +410,7 @@ static const heif_decoder_plugin decoder_vvdec
       vvdec_set_strict_decoding,
       "vvdec",
       vvdec_decode_next_image,
+      /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
       vvdec_does_support_format2,
       vvdec_new_decoder2,
       vvdec_push_data2,

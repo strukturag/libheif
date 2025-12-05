@@ -660,6 +660,7 @@ static const heif_encoder_plugin encoder_plugin_openjpeg{
     /* get_compressed_data */ opj_get_compressed_data,
     /* query_input_colorspace (v2) */ opj_query_input_colorspace2,
     /* query_encoded_size (v3) */ opj_query_encoded_size,
+    /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
     /* start_sequence_encoding (v4) */ opj_start_sequence_encoding,
     /* encode_sequence_frame (v4) */ opj_encode_sequence_frame,
     /* end_sequence_encoding (v4) */ opj_end_sequence_encoding,

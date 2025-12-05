@@ -140,6 +140,8 @@ typedef struct heif_decoder_plugin
 
   // --- version 5 functions will follow below ... ---
 
+  uint32_t minimum_required_libheif_version;
+
   // Query whether the plugin supports decoding of the given format
   // Result is a priority value. The plugin with the largest value wins.
   // Default priority is 100. Returning 0 indicates that the plugin cannot decode this format.
@@ -279,6 +281,8 @@ typedef struct heif_encoder_plugin
                               uint32_t* encoded_width, uint32_t* encoded_height);
 
   // --- version 4 ---
+
+  uint32_t minimum_required_libheif_version;
 
   heif_error (* start_sequence_encoding)(void* encoder, const heif_image* image,
                                          enum heif_image_input_class image_class,

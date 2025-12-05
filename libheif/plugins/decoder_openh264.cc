@@ -436,6 +436,7 @@ static const heif_decoder_plugin decoder_openh264{
   openh264_set_strict_decoding,
   "openh264",
   openh264_decode_next_image,
+  /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
   openh264_does_support_format2,
   openh264_new_decoder2,
   openh264_push_data2,

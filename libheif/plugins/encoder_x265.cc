@@ -1263,6 +1263,7 @@ static const heif_encoder_plugin encoder_plugin_x265
         /* get_compressed_data */ x265_get_compressed_data,
         /* query_input_colorspace (v2) */ x265_query_input_colorspace2,
         /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         /* start_sequence_encoding (v4) */ x265_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ x265_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ x265_end_sequence_encoding,

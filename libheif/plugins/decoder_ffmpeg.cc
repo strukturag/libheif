@@ -584,6 +584,7 @@ static const heif_decoder_plugin decoder_ffmpeg
         ffmpeg_set_strict_decoding,
         "ffmpeg",
         ffmpeg_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         ffmpeg_does_support_format2,
         ffmpeg_new_decoder2,
         ffmpeg_push_data2,

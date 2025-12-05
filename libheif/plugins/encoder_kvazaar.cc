@@ -943,6 +943,7 @@ static const heif_encoder_plugin encoder_plugin_kvazaar
         /* get_compressed_data */ kvazaar_get_compressed_data,
         /* query_input_colorspace (v2) */ kvazaar_query_input_colorspace2,
         /* query_encoded_size (v3) */ kvazaar_query_encoded_size,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         /* start_sequence_encoding (v4) */ kvazaar_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ kvazaar_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ kvazaar_end_sequence_encoding,

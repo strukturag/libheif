@@ -62,6 +62,7 @@ static const heif_decoder_plugin decoder_uncompressed
         nullptr,
         "uncompressed",
         nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,0,0),
         nullptr
     };
 

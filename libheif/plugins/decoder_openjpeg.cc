@@ -467,6 +467,7 @@ static const heif_decoder_plugin decoder_openjpeg{
     openjpeg_set_strict_decoding,
     "openjpeg",
     openjpeg_decode_next_image,
+    /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
     openjpeg_does_support_format2,
     openjpeg_new_decoder2,
     openjpeg_push_data2,

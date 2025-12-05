@@ -914,6 +914,7 @@ static const heif_encoder_plugin encoder_plugin_uvg266
         /* get_compressed_data */ uvg266_get_compressed_data,
         /* query_input_colorspace (v2) */ uvg266_query_input_colorspace2,
         /* query_encoded_size (v3) */ uvg266_query_encoded_size,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         /* start_sequence_encoding (v4) */ uvg266_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ uvg266_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ uvg266_end_sequence_encoding,

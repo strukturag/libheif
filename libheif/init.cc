@@ -256,6 +256,15 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
         };
       }
 
+      if (encoder_plugin->plugin_api_version >= 4 &&
+          encoder_plugin->minimum_required_libheif_version > heif_get_version_number()) {
+        return {
+          heif_error_Plugin_loading_error,
+          heif_suberror_Unsupported_plugin_version,
+          "Encoder plugin requires at least libheif version " LIBHEIF_VERSION
+        };
+      }
+
       struct heif_error err = heif_register_encoder_plugin(encoder_plugin);
       if (err.code) {
         return err;
@@ -269,6 +278,15 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
         return {heif_error_Plugin_loading_error,
                 heif_suberror_Unsupported_plugin_version,
                 "Decoder plugin needs to be at least version " STRINGIFY(heif_decoder_plugin_latest_version)
+        };
+      }
+
+      if (decoder_plugin->plugin_api_version >= 4 &&
+          decoder_plugin->minimum_required_libheif_version > heif_get_version_number()) {
+        return {
+          heif_error_Plugin_loading_error,
+          heif_suberror_Unsupported_plugin_version,
+          "Decoder plugin requires at least libheif version " LIBHEIF_VERSION
         };
       }
 

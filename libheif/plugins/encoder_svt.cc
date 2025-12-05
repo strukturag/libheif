@@ -1221,6 +1221,7 @@ static const heif_encoder_plugin encoder_plugin_svt
                            /* get_compressed_data */ svt_get_compressed_data,
                            /* query_input_colorspace (v2) */ svt_query_input_colorspace2,
                            /* query_encoded_size (v3) */ svt_query_encoded_size,
+                           /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
                            /* start_sequence_encoding (v4) */ svt_start_sequence_encoding,
                            /* encode_sequence_frame (v4) */ svt_encode_sequence_frame,
                            /* end_sequence_encoding (v4) */ svt_end_sequence_encoding,

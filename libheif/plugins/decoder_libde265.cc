@@ -487,6 +487,7 @@ static const heif_decoder_plugin decoder_libde265
         libde265_set_strict_decoding,
         "libde265",
         libde265_v1_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         libde265_does_support_format2,
         libde265_new_decoder2,
         libde265_v1_push_data2,

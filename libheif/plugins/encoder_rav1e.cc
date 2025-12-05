@@ -854,6 +854,7 @@ static const heif_encoder_plugin encoder_plugin_rav1e
         /* get_compressed_data */ rav1e_get_compressed_data,
         /* query_input_colorspace (v2) */ rav1e_query_input_colorspace2,
         /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         /* start_sequence_encoding (v4) */ rav1e_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ rav1e_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ rav1e_end_sequence_encoding,

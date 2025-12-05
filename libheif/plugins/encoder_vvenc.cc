@@ -858,6 +858,7 @@ static const heif_encoder_plugin encoder_plugin_vvenc
         /* get_compressed_data */ vvenc_get_compressed_data,
         /* query_input_colorspace (v2) */ vvenc_query_input_colorspace2,
         /* query_encoded_size (v3) */ vvenc_query_encoded_size,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         /* start_sequence_encoding (v4) */ vvenc_start_sequence_encoding,
         /* encode_sequence_frame (v4) */ vvenc_encode_sequence_frame,
         /* end_sequence_encoding (v4) */ vvenc_end_sequence_encoding,

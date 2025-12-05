@@ -420,6 +420,7 @@ static const heif_decoder_plugin decoder_aom
         aom_set_strict_decoding,
         "aom",
         aom_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
         aom_does_support_format2,
         aom_new_decoder2,
         aom_push_data2,
