@@ -66,7 +66,6 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format
 #endif
     case heif_compression_undefined:
     default:
-      assert(false);
       m_encoder = nullptr;
       break;
   }

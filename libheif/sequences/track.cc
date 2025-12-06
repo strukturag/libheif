@@ -188,6 +188,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
+  m_tkhd = tkhd;
+
   m_id = tkhd->get_track_id();
 
   auto edts = trak_box->get_child_box<Box_edts>();
