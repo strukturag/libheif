@@ -112,6 +112,8 @@ int heif_image_handle_get_pixel_aspect_ratio(const heif_image_handle*, uint32_t*
 LIBHEIF_API
 heif_context* heif_image_handle_get_context(const heif_image_handle* handle);
 
+LIBHEIF_API
+const char* heif_image_handle_get_gimi_content_id(const heif_image_handle* handle);
 
 #ifdef __cplusplus
 }

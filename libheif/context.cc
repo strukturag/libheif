@@ -677,6 +677,13 @@ Error HeifContext::interpret_heif_file_images()
         // TODO: apply irot to camera extrinsic matrix
       }
     }
+
+
+    // --- assign GIMI content-ID to image
+
+    if (auto box_gimi_content_id = image->get_property<Box_gimi_content_id>()) {
+      image->set_gimi_sample_content_id(box_gimi_content_id->get_content_id());
+    }
   }
 
 

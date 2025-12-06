@@ -148,3 +148,16 @@ heif_context* heif_image_handle_get_context(const heif_image_handle* handle)
   ctx->context = handle->context;
   return ctx;
 }
+
+
+const char* heif_image_handle_get_gimi_content_id(const heif_image_handle* handle)
+{
+  std::string id = handle->image->get_gimi_sample_content_id();
+  if (id.empty()) {
+    return nullptr;
+  }
+
+  char* idstring = new char[id.size() + 1];
+  strcpy(idstring, id.c_str());
+  return idstring;
+}
