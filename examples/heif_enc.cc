@@ -65,7 +65,7 @@ int list_encoders = 0;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
-int metadata_compression = 0;
+heif_metadata_compression metadata_compression_method = heif_metadata_compression_off;
 int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
@@ -182,6 +182,7 @@ const int OPTION_BINARY_METADATA_TRACK = 1029;
 const int OPTION_METADATA_TRACK_URI = 1030;
 const int OPTION_ADD_MIME_ITEM = 1031;
 const int OPTION_MIME_ITEM_FILE = 1032;
+const int OPTION_METADATA_COMPRESSION = 1033;
 
 
 static option long_options[] = {
@@ -220,7 +221,7 @@ static option long_options[] = {
     {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
     {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
+    {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
@@ -285,7 +286,15 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #              bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "      --premultiplied-alpha      input image has premultiplied alpha\n"
 #if WITH_HEADER_COMPRESSION
-            << "      --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+            << "      --enable-metadata-compression ALGO  enable metadata item compression (experimental)\n"
+            << "                                          Choose algorithm from {off"; // TODO: add 'auto', but it currently equals 'off'
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_deflate)) {
+    std::cerr << ",deflate,zlib";
+  }
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_brotli)) {
+    std::cerr << ",brotli";
+  }
+  std::cerr << "}.\n"
 #endif
             << "  -C, --chroma-downsampling ALGO force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
@@ -1160,6 +1169,36 @@ bool prefix_compare(const char* a, const char* b)
 }
 
 
+bool set_metadata_compression_method(const std::string& arg)
+{
+  if (arg == "auto") {
+    metadata_compression_method = heif_metadata_compression_auto;
+    return true;
+  }
+  else if (arg == "off") {
+    metadata_compression_method = heif_metadata_compression_off;
+    return true;
+  }
+  else if (arg == "brotli") {
+    metadata_compression_method = heif_metadata_compression_brotli;
+    return true;
+  }
+  else if (arg == "deflate") {
+    metadata_compression_method = heif_metadata_compression_deflate;
+    return true;
+  }
+  else if (arg == "zlib") {
+    metadata_compression_method = heif_metadata_compression_zlib;
+    return true;
+  }
+  else {
+    std::cerr << "Unknown metadata compression method '" << arg << "'. Choose between {auto,off,deflate,zlib,brotli}\n";
+    return false;
+  }
+}
+
+
+
 class LibHeifInitializer
 {
 public:
@@ -1486,6 +1525,13 @@ int main(int argc, char** argv)
       case OPTION_MIME_ITEM_FILE:
         option_mime_item_file = optarg;
         break;
+      case OPTION_METADATA_COMPRESSION: {
+        bool success = set_metadata_compression_method(optarg);
+        if (!success) {
+          exit(5);
+        }
+        break;
+      }
     }
   }
 
@@ -1854,7 +1900,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (!input_image.xmp.empty()) {
       error = heif_context_add_XMP_metadata2(context, handle,
                                              input_image.xmp.data(), (int) input_image.xmp.size(),
-                                             metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
+                                             metadata_compression_method);
       if (error.code != 0) {
         heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
@@ -1961,7 +2007,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     istr.read(reinterpret_cast<char*>(buffer.data()), size);
 
     heif_context_add_mime_item(context, option_mime_item_type.c_str(),
-                               heif_metadata_compression_zlib,
+                               metadata_compression_method,
                                buffer.data(), buffer.size(),
                                nullptr);
   }

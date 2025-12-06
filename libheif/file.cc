@@ -1069,13 +1069,21 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
   else if (compression == heif_metadata_compression_deflate) {
 #if HAVE_ZLIB
     data_array = compress_deflate((const uint8_t*) data, size);
-    item->set_content_encoding("compress_zlib");
+    item->set_content_encoding("deflate");
 #else
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_header_compression_method);
 #endif
   }
-  // TODO: brotli
+  else if (compression == heif_metadata_compression_brotli) {
+#if HAVE_BROTLI
+    data_array = compress_brotli((const uint8_t*)data, size);
+    item->set_content_encoding("br");
+#else
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method);
+#endif
+  }
   else {
     // uncompressed data, plain copy
 

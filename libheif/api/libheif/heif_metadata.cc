@@ -30,6 +30,34 @@
 #include <array>
 
 
+int heif_metadata_compression_method_supported(enum heif_metadata_compression method)
+{
+  switch (method) {
+    case heif_metadata_compression_off:
+    case heif_metadata_compression_auto:
+      return true;
+
+    case heif_metadata_compression_deflate:
+    case heif_metadata_compression_zlib:
+#if HAVE_ZLIB
+      return true;
+#else
+      return false;
+#endif
+
+    case heif_metadata_compression_brotli:
+#if HAVE_BROTLI
+      return true;
+#else
+      return false;
+#endif
+
+    default:
+      return false;
+  }
+}
+
+
 int heif_image_handle_get_number_of_metadata_blocks(const heif_image_handle* handle,
                                                     const char* type_filter)
 {
