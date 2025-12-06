@@ -52,6 +52,7 @@
 #include <cstdio>
 #include <filesystem>
 #include "common.h"
+#include "libheif/heif_items.h"
 
 
 /*
@@ -895,6 +896,25 @@ int main(int argc, char** argv)
       }
 
       heif_track_release(track);
+    }
+  }
+
+  // ==============================================================================
+
+  {
+    int nItems = heif_context_get_number_of_items(context);
+    if (nItems > 0) {
+      std::cout << "MIME items:\n";
+      std::vector<heif_item_id> item_ids(nItems);
+      heif_context_get_list_of_item_IDs(context, item_ids.data(), nItems);
+
+      for (auto id : item_ids) {
+        uint32_t type = heif_item_get_item_type(context, id);
+        if (type == heif_item_type_mime) {
+          std::string mimeType = heif_item_get_mime_item_content_type(context, id);
+          std::cout << "  " << id << " : " << mimeType << "\n";
+        }
+      }
     }
   }
 
