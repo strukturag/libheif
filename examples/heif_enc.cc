@@ -94,6 +94,7 @@ uint32_t sequence_durations = 1;
 uint32_t sequence_repetitions = 1;
 std::string vmt_metadata_file;
 bool binary_metadata_track = false;
+std::string metadata_track_uri = "vmt:metadata";
 
 int quality = 50;
 bool lossless = false;
@@ -176,6 +177,7 @@ const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
 const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
 const int OPTION_USE_AVC_COMPRESSION = 1028;
 const int OPTION_BINARY_METADATA_TRACK = 1029;
+const int OPTION_METADATA_TRACK_URI = 1030;
 
 
 static option long_options[] = {
@@ -234,6 +236,7 @@ static option long_options[] = {
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
     {(char* const) "binary-metadata-track",       no_argument,             nullptr, OPTION_BINARY_METADATA_TRACK},
+    {(char* const) "metadata-track-uri",          required_argument,       nullptr, OPTION_METADATA_TRACK_URI},
 #endif
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
@@ -354,6 +357,7 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --vmt-metadata FILE        encode metadata track from VMT file\n"
             << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary\n"
+            << "      --metadata-track-uri URI   uses the URI identifier for the metadata track\n"
 #endif
             ;
 }
@@ -1429,6 +1433,9 @@ int main(int argc, char** argv)
       case OPTION_BINARY_METADATA_TRACK:
         binary_metadata_track = true;
         break;
+      case OPTION_METADATA_TRACK_URI:
+        metadata_track_uri = optarg;
+        break;
       case OPTION_SET_CLLI: {
         auto clli_args = parse_comma_separated_numeric_arguments<uint16_t>(optarg,
                                                                            {
@@ -2244,7 +2251,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   }
 
   if (!vmt_metadata_file.empty()) {
-    int ret = encode_vmt_metadata_track(context, track, "vmt:metadata", binary_metadata_track);
+    int ret = encode_vmt_metadata_track(context, track, metadata_track_uri, binary_metadata_track);
     if (ret) {
       return ret;
     }
