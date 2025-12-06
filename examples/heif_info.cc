@@ -911,7 +911,7 @@ int main(int argc, char** argv)
       for (auto id : item_ids) {
         uint32_t type = heif_item_get_item_type(context, id);
         if (type == heif_item_type_mime) {
-          std::string mimeType = heif_item_get_mime_item_content_type(context, id);
+          const char* mimeType = heif_item_get_mime_item_content_type(context, id);
           std::cout << "  " << id << " : " << mimeType << "\n";
         }
       }

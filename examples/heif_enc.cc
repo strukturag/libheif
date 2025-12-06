@@ -113,6 +113,8 @@ bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
 bool use_video_handler = false;
+std::string option_mime_item_type;
+std::string option_mime_item_file;
 
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
 int sequence_keyframe_distance_min = 0;
@@ -178,6 +180,8 @@ const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
 const int OPTION_USE_AVC_COMPRESSION = 1028;
 const int OPTION_BINARY_METADATA_TRACK = 1029;
 const int OPTION_METADATA_TRACK_URI = 1030;
+const int OPTION_ADD_MIME_ITEM = 1031;
+const int OPTION_MIME_ITEM_FILE = 1032;
 
 
 static option long_options[] = {
@@ -237,6 +241,8 @@ static option long_options[] = {
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
     {(char* const) "binary-metadata-track",       no_argument,             nullptr, OPTION_BINARY_METADATA_TRACK},
     {(char* const) "metadata-track-uri",          required_argument,       nullptr, OPTION_METADATA_TRACK_URI},
+    {(char* const) "add-mime-item",               required_argument,       nullptr, OPTION_ADD_MIME_ITEM},
+    {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
 #endif
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
@@ -285,6 +291,10 @@ void show_help(const char* argv0)
             << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                measure encoding time, PSNR, and output file size\n"
             << "      --pitm-description TEXT    (experimental) set user description for primary image\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --add-mime-item TYPE       add a mime item of the specified content type\n"
+            << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item\n"
+#endif
             << "\n"
             << "codecs:\n"
             << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
@@ -1470,6 +1480,12 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_ADD_MIME_ITEM:
+        option_mime_item_type = optarg;
+        break;
+      case OPTION_MIME_ITEM_FILE:
+        option_mime_item_file = optarg;
+        break;
     }
   }
 
@@ -1916,6 +1932,39 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     }
   }
 #endif
+
+  // --- add extra MIME item with user data
+
+  if (!option_mime_item_file.empty() || !option_mime_item_type.empty()) {
+    if (option_mime_item_file.empty() || option_mime_item_type.empty()) {
+      std::cerr << "Options --add-mime-item and --mime-item-file have to be used together\n";
+      return 5;
+    }
+
+    std::ifstream istr(option_mime_item_file.c_str(), std::ios::binary | std::ios::ate);
+    if (!istr) {
+      std::cerr << "Failed to open file for MIME item: '" << option_mime_item_file << "'\n";
+      return 5;
+    }
+
+    // Get size by seeking to the end (thanks to ios::ate)
+    std::streamsize size = istr.tellg();
+    if (size < 0) {
+      std::cerr << "Querying size of file '" << option_mime_item_file << "' failed.\n";
+      return 5;
+    }
+
+    std::vector<uint8_t> buffer(size);
+
+    // Seek back to beginning and read
+    istr.seekg(0, std::ios::beg);
+    istr.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    heif_context_add_mime_item(context, option_mime_item_type.c_str(),
+                               heif_metadata_compression_zlib,
+                               buffer.data(), buffer.size(),
+                               nullptr);
+  }
 
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);

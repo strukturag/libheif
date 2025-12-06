@@ -114,7 +114,8 @@ static void show_help(const char* argv0)
                "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
                "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n"
-               "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n";
+               "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n"
+               "      --extract-mime-item TYPE   extract the MIME item with the given content type into a file (mime-item.bin)\n";
 }
 
 
@@ -147,6 +148,7 @@ int option_disable_limits = 0;
 int option_sequence = 0;
 int option_ignore_editlist = 0;
 int option_num_codec_threads = 0;
+std::string option_extract_mime_item_type;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -155,6 +157,7 @@ std::string transparency_composition_mode = "checkerboard";
 #define OPTION_PNG_COMPRESSION_LEVEL 1000
 #define OPTION_TRANSPARENCY_COMPOSITION_MODE 1001
 #define OPTION_CODEC_THREADS 1002
+#define OPTION_EXTRACT_MIME_ITEM 1003
 
 static option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -178,6 +181,7 @@ static option long_options[] = {
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
     {(char* const) "ignore-editlist", no_argument, &option_ignore_editlist, 1},
     {(char* const) "codec-threads", required_argument, 0,                     OPTION_CODEC_THREADS},
+    {(char* const) "extract-mime-item", required_argument, 0, OPTION_EXTRACT_MIME_ITEM},
     {nullptr, no_argument, nullptr, 0}
 };
 
@@ -672,6 +676,9 @@ int main(int argc, char** argv)
       case OPTION_CODEC_THREADS:
         option_num_codec_threads = atoi(optarg);
         break;
+      case OPTION_EXTRACT_MIME_ITEM:
+        option_extract_mime_item_type = optarg;
+        break;
     }
   }
 
@@ -1049,6 +1056,33 @@ int main(int argc, char** argv)
     heif_image_handle_release(handle);
 
     image_index++;
+  }
+
+
+  // --- extract MIME item data
+
+  if (!option_extract_mime_item_type.empty()) {
+    int nItems = heif_context_get_number_of_items(ctx);
+    if (nItems > 0) {
+      std::vector<heif_item_id> item_ids(nItems);
+      heif_context_get_list_of_item_IDs(ctx, item_ids.data(), nItems);
+
+      for (auto id : item_ids) {
+        uint32_t type = heif_item_get_item_type(ctx, id);
+        if (type == heif_item_type_mime) {
+          const char* mimeType = heif_item_get_mime_item_content_type(ctx, id);
+          if (option_extract_mime_item_type == mimeType) {
+            uint8_t* data = nullptr;
+            size_t data_size;
+            heif_item_get_item_data(ctx, id, nullptr, &data, &data_size);
+            std::ofstream ostr("mime-item.bin");
+            ostr.write((const char*)data, data_size);
+            heif_release_item_data(ctx, &data);
+          }
+        }
+      }
+    }
+
   }
 
   return 0;

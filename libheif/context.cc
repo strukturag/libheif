@@ -891,6 +891,7 @@ Error HeifContext::interpret_heif_file_images()
                      "No vvcC property in vvc1 type image");
       }
     }
+    // TODO: check for AV1, AVC, JPEG, J2K
   }
 
 
