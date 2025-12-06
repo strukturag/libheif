@@ -427,7 +427,7 @@ void encoder_struct_uvg266::append_chunk_data(uvg_data_chunk* data, int framenr)
 
     uint8_t nal_type = (pkt.data[1] >> 3);
 
-    std::cout << "append frameNr=" << framenr << " NAL:" << ((int)nal_type) << " size:" << pkt.data.size() << "\n";
+    // std::cout << "append frameNr=" << framenr << " NAL:" << ((int)nal_type) << " size:" << pkt.data.size() << "\n";
 
     output_data.emplace_back(std::move(pkt));
 

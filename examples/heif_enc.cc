@@ -115,6 +115,7 @@ bool encode_sequence = false;
 bool use_video_handler = false;
 std::string option_mime_item_type;
 std::string option_mime_item_file;
+std::string option_mime_item_name;
 
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
 int sequence_keyframe_distance_min = 0;
@@ -182,7 +183,8 @@ const int OPTION_BINARY_METADATA_TRACK = 1029;
 const int OPTION_METADATA_TRACK_URI = 1030;
 const int OPTION_ADD_MIME_ITEM = 1031;
 const int OPTION_MIME_ITEM_FILE = 1032;
-const int OPTION_METADATA_COMPRESSION = 1033;
+const int OPTION_MIME_ITEM_NAME = 1033;
+const int OPTION_METADATA_COMPRESSION = 1034;
 
 
 static option long_options[] = {
@@ -244,6 +246,7 @@ static option long_options[] = {
     {(char* const) "metadata-track-uri",          required_argument,       nullptr, OPTION_METADATA_TRACK_URI},
     {(char* const) "add-mime-item",               required_argument,       nullptr, OPTION_ADD_MIME_ITEM},
     {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
+    {(char* const) "mime-item-name",              required_argument,       nullptr, OPTION_MIME_ITEM_NAME},
 #endif
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
@@ -1525,6 +1528,9 @@ int main(int argc, char** argv)
       case OPTION_MIME_ITEM_FILE:
         option_mime_item_file = optarg;
         break;
+      case OPTION_MIME_ITEM_NAME:
+        option_mime_item_name = optarg;
+        break;
       case OPTION_METADATA_COMPRESSION: {
         bool success = set_metadata_compression_method(optarg);
         if (!success) {
@@ -2006,10 +2012,15 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     istr.seekg(0, std::ios::beg);
     istr.read(reinterpret_cast<char*>(buffer.data()), size);
 
+    heif_item_id itemId;
     heif_context_add_mime_item(context, option_mime_item_type.c_str(),
                                metadata_compression_method,
                                buffer.data(), buffer.size(),
-                               nullptr);
+                               &itemId);
+
+    if (!option_mime_item_name.empty()) {
+      heif_item_set_item_name(context, itemId, option_mime_item_name.c_str());
+    }
   }
 
   if (run_benchmark) {

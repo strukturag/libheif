@@ -994,7 +994,7 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
                          &encoder->num_nals);
 
     for (int i=0;i<encoder->num_nals;i++) {
-      std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
+      //std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
     }
   }
 
@@ -1116,7 +1116,7 @@ static heif_error x265_end_sequence_encoding(void* encoder_raw)
   encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
 
   for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
+    //std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif
   if (result <= 0) {

@@ -392,7 +392,7 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
     pkt.frameNr = pts;
     pkt.more_nals = true; // will be set to 'false' for last NAL below.
 
-    std::cout << "append frameNr=" << pts << " NAL:" << ((int)pkt.data[1]>>3) << " size:" << pkt.data.size() << "\n";
+    //std::cout << "append frameNr=" << pts << " NAL:" << ((int)pkt.data[1]>>3) << " size:" << pkt.data.size() << "\n";
 
     encoder->output_data.emplace_back(std::move(pkt));
 
