@@ -749,6 +749,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x43, 0x63, 0xe9, 0x14, 0x5b, 0x7d, 0x4a, 0xab, 0x97, 0xae, 0xbe, 0xa6, 0x98, 0x03, 0xb4, 0x34}) {
         box = std::make_shared<Box_cmex>();
       }
+      else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x26, 0x1e, 0xf3, 0x74, 0x1d, 0x97, 0x5b, 0xba, 0xac, 0xbd, 0x9d, 0x2c, 0x8e, 0xa7, 0x35, 0x22}) {
+        box = std::make_shared<Box_gimi_content_id>();
+      }
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
       }
@@ -4996,3 +4999,33 @@ Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   return range.get_error();
 }
 
+
+Error Box_gimi_content_id::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  m_content_id = range.read_string_until_eof();
+
+  return range.get_error();
+}
+
+
+Error Box_gimi_content_id::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_content_id, false);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_gimi_content_id::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "content ID: " << m_content_id << "\n";
+
+  return sstr.str();
+}

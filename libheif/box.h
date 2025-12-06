@@ -1818,6 +1818,38 @@ private:
   heif_tai_timestamp_packet m_timestamp;
 };
 
+class Box_gimi_content_id : public Box
+{
+public:
+  Box_gimi_content_id()
+  {
+    set_uuid_type(std::vector<uint8_t>{0x26, 0x1e, 0xf3, 0x74, 0x1d, 0x97, 0x5b, 0xba, 0xac, 0xbd, 0x9d, 0x2c, 0x8e, 0xa7, 0x35, 0x22});
+  }
+
+  bool is_essential() const override { return false; }
+
+  bool is_transformative_property() const override { return false; }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "GIMI Content ID"; }
+
+  std::string get_content_id() const { return m_content_id; }
+
+  void set_content_id(const std::string& id) { m_content_id = id; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  std::string m_content_id;
+};
+
+
 bool operator==(const heif_tai_timestamp_packet& a,
                 const heif_tai_timestamp_packet& b);
 
