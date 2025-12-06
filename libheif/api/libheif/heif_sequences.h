@@ -206,7 +206,8 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(const heif_track*);
  * @param out_uri A string with the URI will be returned. Free this string with `heif_string_release()`.
  */
 LIBHEIF_API
-heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track* track, const char** out_uri);
+heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track*,
+                                                                 const char** out_uri);
 
 
 /** Sequence sample object that can hold any raw byte data.
@@ -405,6 +406,8 @@ void heif_image_set_duration(heif_image*, uint32_t duration);
  * Encode the image into a visual track.
  * If the passed track is no visual track, an error will be returned.
  *
+ * @param image                     The input image to append to the sequence.
+ * @param encoder                   The encoder used for encoding the image.
  * @param sequence_encoding_options Options for sequence encoding. If NULL, default options will be used.
  */
 LIBHEIF_API
@@ -425,10 +428,13 @@ heif_error heif_track_encode_end_of_sequence(heif_track*,
 
 /**
  * Add a metadata track.
+ * The track is created as a 'urim' "URI Meta Sample Entry".
  * The track content type is specified by the 'uri' parameter.
- * This will be created as a 'urim' "URI Meta Sample Entry".
  *
- * @param options Optional track creation options. If NULL, default options will be used.
+ * @param uri       Track content type.
+ * @param options   Optional track creation options. If NULL, default options will be used.
+ * @param out_track Returns the created track object. If this is not NULL, you have to
+ *                  free the returned track with {@link heif_track_release}.
  */
 LIBHEIF_API
 heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,

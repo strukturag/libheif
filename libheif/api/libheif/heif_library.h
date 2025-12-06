@@ -65,6 +65,9 @@ extern "C" {
 #define LIBHEIF_API
 #endif
 
+/**
+ * Build a 32 bit integer from a 4-character code.
+ */
 #define heif_fourcc(a, b, c, d) ((uint32_t)((a<<24) | (b<<16) | (c<<8) | d))
 
 #include <libheif/heif_version.h>
