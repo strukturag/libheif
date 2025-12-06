@@ -379,17 +379,17 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
     if (!reader.get_uvlc(&value)) {
       return invalidUVLC;
     }
-    config->bit_depth_luma = 8 + value;
+    config->bit_depth_luma = static_cast<uint8_t>(8 + value);
 
     if (!reader.get_uvlc(&value)) {
       return invalidUVLC;
     }
-    config->bit_depth_chroma = 8 + value;
+    config->bit_depth_chroma = static_cast<uint8_t>(8 + value);
 
     reader.skip_bits(1);
     int seq_scaling_matrix_present_flag = reader.get_bits(1);
     if (seq_scaling_matrix_present_flag) {
-      for (int i = 0; i < (config->chroma_format != heif_chroma_444) ? 8 : 12; i++) {
+      for (int i = 0; i < ((config->chroma_format != heif_chroma_444) ? 8 : 12); i++) {
         int scaling_list_present_flag = reader.get_bits(1);
         if (scaling_list_present_flag) {
           if (i < 6) {
