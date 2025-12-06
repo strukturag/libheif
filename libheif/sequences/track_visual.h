@@ -58,6 +58,8 @@ public:
 
   Error encode_end_of_sequence(heif_encoder* encoder);
 
+  Error finalize_track() override;
+
   heif_brand2 get_compatible_brand() const;
 
 private:
@@ -88,6 +90,8 @@ private:
 
   // If there is an alpha-channel track associated with this color track, we reference it from here
   std::shared_ptr<Track_Visual> m_aux_alpha_track;
+
+  heif_encoder* m_active_encoder = nullptr;
 
   Result<bool> process_encoded_data(heif_encoder* encoder);
 };

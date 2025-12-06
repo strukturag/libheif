@@ -336,6 +336,17 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
     };
   }
 
+  if (!m_active_encoder) {
+    m_active_encoder = h_encoder;
+  }
+  else if (m_active_encoder != h_encoder) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "You may not switch the heif_encoder while encoding a sequence."
+    };
+  }
+
   if (h_encoder->plugin->plugin_api_version < 4) {
     return Error{
       heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
@@ -511,6 +522,19 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
   }
 
   return {true};
+}
+
+
+Error Track_Visual::finalize_track()
+{
+  if (m_active_encoder) {
+    Error err = encode_end_of_sequence(m_active_encoder);
+    if (err) {
+      return err;
+    }
+  }
+
+  return Track::finalize_track();
 }
 
 

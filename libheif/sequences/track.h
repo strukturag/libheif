@@ -175,7 +175,7 @@ public:
   bool end_of_sequence_reached() const;
 
   // Compute some parameters after all frames have been encoded (for example: track duration).
-  void finalize_track();
+  virtual Error finalize_track();
 
   const TrackOptions& get_track_info() const { return m_track_info; }
 

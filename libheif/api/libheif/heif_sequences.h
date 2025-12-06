@@ -417,8 +417,14 @@ heif_error heif_track_encode_sequence_image(heif_track*,
                                             const heif_sequence_encoding_options* sequence_encoding_options);
 
 /**
- * When all sequence frames have been sent, you have to call this function to let the
- * library know that no more frames will follow. It will then finalize writing the track.
+ * When all sequence frames have been sent, you can to call this function to let the
+ * library know that no more frames will follow. This is strongly recommended, but optional
+ * for backwards compatibility.
+ * If you do not end the sequence explicitly with this function, it will be closed
+ * automatically when the HEIF file is written. Using this function has the advantage
+ * that you can free the {@link heif_encoder} afterwards (with {@link heif_encoder_release}).
+ * If you do not use call function, you have to keep the {@link heif_encoder} alive
+ * until the HEIF file is written.
  */
 LIBHEIF_API
 heif_error heif_track_encode_end_of_sequence(heif_track*,

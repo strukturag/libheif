@@ -657,7 +657,7 @@ bool Track::end_of_sequence_reached() const
 }
 
 
-void Track::finalize_track()
+Error Track::finalize_track()
 {
   if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
   if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_all(m_stbl, get_file());
@@ -666,6 +666,8 @@ void Track::finalize_track()
   m_mdhd->set_duration(duration);
 
   m_stss->set_total_number_of_samples(m_stsz->num_samples());
+
+  return {};
 }
 
 
