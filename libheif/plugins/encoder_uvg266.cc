@@ -425,8 +425,7 @@ void encoder_struct_uvg266::append_chunk_data(uvg_data_chunk* data, int framenr)
     pkt.frameNr = framenr;
     pkt.more_nals = true; // will be set to 'false' for last NAL below
 
-    uint8_t nal_type = (pkt.data[1] >> 3);
-
+    // uint8_t nal_type = (pkt.data[1] >> 3);
     // std::cout << "append frameNr=" << framenr << " NAL:" << ((int)nal_type) << " size:" << pkt.data.size() << "\n";
 
     output_data.emplace_back(std::move(pkt));
@@ -618,10 +617,7 @@ static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_ima
 {
   encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
 
-  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
-  heif_chroma chroma = heif_image_get_chroma_format(image);
-
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
@@ -715,7 +711,7 @@ static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_ima
   }
 
   if (src_out) {
-    encoder->append_chunk_data(data, src_out->pts);
+    encoder->append_chunk_data(data, (int)src_out->pts);
 
     encoder->api->picture_free(src_out);
     src_out = nullptr;
@@ -756,7 +752,7 @@ static heif_error uvg266_get_compressed_data_intern(void* encoder_raw, uint8_t**
   encoder->output_data.pop_front();
 
   *data = encoder->active_data.data();
-  *size = encoder->active_data.size();
+  *size = (int)encoder->active_data.size();
 
 #if 0
   size_t start_idx = encoder->output_idx;
@@ -831,7 +827,7 @@ static heif_error uvg266_end_sequence_encoding(void* encoder_raw)
       break;
     }
 
-    encoder->append_chunk_data(data, src_out->pts);
+    encoder->append_chunk_data(data, (int)src_out->pts);
 
     encoder->api->picture_free(src_out);
     src_out = nullptr;
@@ -840,7 +836,7 @@ static heif_error uvg266_end_sequence_encoding(void* encoder_raw)
   (void) success;
 
   if (src_out) {
-    encoder->append_chunk_data(data, src_out->pts);
+    encoder->append_chunk_data(data, (int)src_out->pts);
 
     encoder->api->picture_free(src_out);
     src_out = nullptr;

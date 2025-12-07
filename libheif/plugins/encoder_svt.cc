@@ -1016,12 +1016,12 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
     dummy_color_plane.resize(uvWidth * uvHeight);
 
     if (bitdepth_y <= 8) {
-      uint8_t val = 1 << (bitdepth_y - 1);
+      uint8_t val = static_cast<uint8_t>(1 << (bitdepth_y - 1));
       memset(dummy_color_plane.data(), val, uvWidth * uvHeight * bytesPerPixel);
     }
     else {
       assert(bitdepth_y > 8 && bitdepth_y <= 16);
-      uint16_t val = 1 << (bitdepth_y - 1);
+      uint16_t val = static_cast<uint16_t>(1 << (bitdepth_y - 1));
       uint8_t high = static_cast<uint8_t>((val >> 8) & 0xFF);
       uint8_t low = static_cast<uint8_t>(val & 0xFF);
 

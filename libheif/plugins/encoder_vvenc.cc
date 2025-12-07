@@ -643,13 +643,6 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
 
   // vvenc_init_pass( encoder, pass, statsfilename );
 
-  int16_t* yptr = nullptr;
-  int16_t* cbptr = nullptr;
-  int16_t* crptr = nullptr;
-  size_t ystride = 0;
-  size_t cbstride = 0;
-  size_t crstride = 0;
-
   if (isGreyscale) {
     size_t stride;
     const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);

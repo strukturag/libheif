@@ -265,7 +265,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), decoded_sample_idx);
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), (uint32_t)decoded_sample_idx);
     if (!readResult) {
       return readResult.error();
     }
@@ -279,7 +279,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   }
 
   if (m_aux_reader_tai_timestamps) {
-    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), decoded_sample_idx);
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), (uint32_t)decoded_sample_idx);
     if (!readResult) {
       return readResult.error();
     }

@@ -2015,7 +2015,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     heif_item_id itemId;
     heif_context_add_mime_item(context, option_mime_item_type.c_str(),
                                metadata_compression_method,
-                               buffer.data(), buffer.size(),
+                               buffer.data(), (int)buffer.size(),
                                &itemId);
 
     if (!option_mime_item_name.empty()) {
@@ -2127,7 +2127,7 @@ static std::vector<uint8_t> hex_to_binary(const std::string& line)
     auto v = nibble_to_val(c);
     if (v) {
       if (high_nibble) {
-        current_value = *v << 4;
+        current_value = static_cast<uint8_t>(*v << 4);
         high_nibble = false;
       }
       else {
@@ -2330,7 +2330,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     static int contentIdNr=0;
     std::string contentId;
-    while (contentId.length() < contentIdNr+1) {
+    while (contentId.length() < (size_t)(contentIdNr+1)) {
       contentId += std::to_string(contentIdNr+1) + '-';
     }
     contentId.resize(std::min(254, contentIdNr));

@@ -643,7 +643,7 @@ static int rounded_size(int s)
   return s;
 }
 
-
+#if 0
 static const char* naltype_table[] = {
   /*  0 */ "TRAIL_N",
   /*  1 */ "TRAIL_R",
@@ -698,7 +698,7 @@ static const char* naltype(uint8_t type)
     return "reserved";
   }
 }
-
+#endif
 
 static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
@@ -993,7 +993,7 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
                          &encoder->nals,
                          &encoder->num_nals);
 
-    for (int i=0;i<encoder->num_nals;i++) {
+    for (uint32_t i = 0; i < encoder->num_nals; i++) {
       //std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
     }
   }
@@ -1077,8 +1077,8 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
                       pic,
                       &out_pic);
   encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
-  for (int i=0;i<encoder->num_nals;i++) {
-    std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
+  for (uint32_t i = 0; i < encoder->num_nals; i++) {
+    //std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif
 
@@ -1115,7 +1115,7 @@ static heif_error x265_end_sequence_encoding(void* encoder_raw)
                                    &out_pic);
   encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
 
-  for (int i=0;i<encoder->num_nals;i++) {
+  for (uint32_t i = 0; i < encoder->num_nals; i++) {
     //std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif

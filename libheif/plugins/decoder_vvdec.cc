@@ -136,6 +136,8 @@ heif_error vvdec_new_decoder(void** dec)
   options.strict_decoding = false;
 
   vvdec_new_decoder2(dec, &options);
+
+  return {};
 }
 
 

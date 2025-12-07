@@ -37,11 +37,7 @@ extern "C" {
 
 #include <iostream>
 
-
-static const char* kError_unsupported_bit_depth = "Bit depth not supported by x264";
-static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
-static const char* kError_unsupported_ctu_size = "Unsupported CTU size";
-
+#if 0
 static const char* naltype_table[] = {
   /*  0 */ "unspecified",
   /*  1 */ "non-IDR",
@@ -76,7 +72,7 @@ static const char* naltype(uint8_t type)
     return "reserved";
   }
 }
-
+#endif
 
 
 enum parameter_type
@@ -864,7 +860,7 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
       // quality=50  -> crf=25
       // quality=100 -> crf=0
 
-      param.rc.f_rf_constant = (100 - p.value_int) / 2.0;
+      param.rc.f_rf_constant = (float)(100 - p.value_int) / 2.0f;
     }
     else if (p.name == heif_encoder_parameter_name_lossless) {
       if (p.value_int) {
@@ -1004,11 +1000,12 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
   int num_nals = 0;
 
   x264_picture_t out_pic;
-  x264_encoder_encode(encoder->encoder,
-                      &nals,
-                      &num_nals,
-                      &pic,
-                      &out_pic);
+  int result = x264_encoder_encode(encoder->encoder,
+                                   &nals,
+                                   &num_nals,
+                                   &pic,
+                                   &out_pic);
+  (void)result; // TODO: check for error
 
   if (num_nals) {
     encoder->append_nals(nals, num_nals, out_pic.i_pts);
@@ -1043,6 +1040,7 @@ static heif_error x264_end_sequence_encoding(void* encoder_raw)
                                      &num_nals,
                                      nullptr,
                                      &out_pic);
+    (void)result; // TODO: check for error
     encoder->out_frameNr = out_pic.i_pts;
 
     if (num_nals) {
@@ -1110,7 +1108,7 @@ static heif_error x264_get_compressed_data_intern(void* encoder_raw, uint8_t** d
   }
 
   *data = encoder->m_active_output.data() + 4;
-  *size = encoder->m_active_output.size() - 4;
+  *size = (int)encoder->m_active_output.size() - 4;
 
   encoder->m_output_packets.pop_front();
 

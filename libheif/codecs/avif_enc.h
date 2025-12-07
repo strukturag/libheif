@@ -61,7 +61,6 @@ private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
 
-  bool m_first_frame = true;
   Box_av1C::configuration m_config;
   bool m_av1C_sent = false;
 
