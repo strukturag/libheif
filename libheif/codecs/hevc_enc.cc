@@ -248,8 +248,9 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
   //           and also complete codingConstraints.
 
-  //if (hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_returned) {
-  if (m_end_of_sequence_reached && m_hvcC && !m_hvcC_sent) {
+  if (!m_current_output_data->bitstream.empty() &&
+      m_hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_sent) {
+  //if (/*m_end_of_sequence_reached &&*/ m_hvcC && !m_hvcC_sent) {
     m_current_output_data->properties.push_back(m_hvcC);
     m_hvcC = nullptr;
     m_hvcC_sent = true;
