@@ -2314,7 +2314,6 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     if (first_image) {
       heif_track_options* track_options = heif_track_options_alloc();
-      heif_track_options_enable_sample_gimi_content_ids(track_options, heif_sample_aux_info_presence_optional);
       heif_track_options_set_timescale(track_options, sequence_timebase);
 
       if (!option_gimi_track_id.empty()) {
