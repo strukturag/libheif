@@ -2377,11 +2377,15 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     // --- set SAI data
 
     if (currImage-1 < sai_data.gimi_content_ids.size()) {
-      heif_image_set_gimi_sample_content_id(image.get(), sai_data.gimi_content_ids[currImage-1].c_str());
+      if (!sai_data.gimi_content_ids[currImage-1].empty()) {
+        heif_image_set_gimi_sample_content_id(image.get(), sai_data.gimi_content_ids[currImage-1].c_str());
+      }
     }
 
     if (currImage-1 < sai_data.tai_timestamps.size()) {
-      heif_image_set_tai_timestamp(image.get(), sai_data.tai_timestamps[currImage-1]);
+      if (sai_data.tai_timestamps[currImage-1]) {
+        heif_image_set_tai_timestamp(image.get(), sai_data.tai_timestamps[currImage-1]);
+      }
     }
 
     // --- encode image

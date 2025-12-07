@@ -116,31 +116,36 @@ void SAI_datafile::handleMainEntry(const std::vector<std::string>& values, int l
       exit(5);
     }
 
-    heif_tai_timestamp_packet* tai = heif_tai_timestamp_packet_alloc();
-    for (size_t i=0;i<values.size();i++) {
-      int64_t val = std::stoll(values[i]);
-      if (i>=1 && i<=3 && (val < 0 || val > 1)) {
-        std::cerr << "Invalid SAI timestamp entry in line " << line << "\n";
-        exit(5);
-      }
-
-      switch (i) {
-        case 0:
-          tai->tai_timestamp = val;
-          break;
-        case 1:
-          tai->synchronization_state = static_cast<uint8_t>(val);
-          break;
-        case 2:
-          tai->timestamp_generation_failure = static_cast<uint8_t>(val);
-          break;
-        case 3:
-          tai->timestamp_is_modified = static_cast<uint8_t>(val);
-          break;
-      }
+    if (values.empty()) {
+      tai_timestamps.push_back(nullptr);
     }
+    else {
+      heif_tai_timestamp_packet* tai = heif_tai_timestamp_packet_alloc();
+      for (size_t i=0;i<values.size();i++) {
+        int64_t val = std::stoll(values[i]);
+        if (i>=1 && i<=3 && (val < 0 || val > 1)) {
+          std::cerr << "Invalid SAI timestamp entry in line " << line << "\n";
+          exit(5);
+        }
 
-    tai_timestamps.push_back(tai);
+        switch (i) {
+          case 0:
+            tai->tai_timestamp = val;
+            break;
+          case 1:
+            tai->synchronization_state = static_cast<uint8_t>(val);
+            break;
+          case 2:
+            tai->timestamp_generation_failure = static_cast<uint8_t>(val);
+            break;
+          case 3:
+            tai->timestamp_is_modified = static_cast<uint8_t>(val);
+            break;
+        }
+      }
+
+      tai_timestamps.push_back(tai);
+    }
   }
 }
 
