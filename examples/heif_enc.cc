@@ -1573,6 +1573,11 @@ int main(int argc, char** argv)
     return 5;
   }
 
+  if (encode_sequence && !option_mime_item_file.empty()) {
+    std::cerr << "MIME item cannot be added to sequence-only files.\n";
+    return 5;
+  }
+
   if (logging_level > 0) {
     logging_level += 2;
 
