@@ -284,12 +284,15 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       return readResult.error();
     }
 
-    auto resultTai = Box_itai::decode_tai_from_vector(*readResult);
-    if (!resultTai) {
-      return resultTai.error();
-    }
+    std::vector<uint8_t>& tai_data = *readResult;
+    if (!tai_data.empty()) {
+      auto resultTai = Box_itai::decode_tai_from_vector(tai_data);
+      if (!resultTai) {
+        return resultTai.error();
+      }
 
-    image->set_tai_timestamp(&*resultTai);
+      image->set_tai_timestamp(&*resultTai);
+    }
   }
 
   m_next_sample_to_be_output++;
