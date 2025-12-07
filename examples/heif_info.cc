@@ -895,6 +895,12 @@ int main(int argc, char** argv)
         }
       }
 
+      const char* gimi_track_id = heif_track_get_gimi_track_content_id(track);
+      if (gimi_track_id) {
+        std::cout << "  GIMI track id: " << gimi_track_id << "\n";
+        heif_string_release(gimi_track_id);
+      }
+
       heif_track_release(track);
     }
   }

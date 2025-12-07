@@ -121,6 +121,7 @@ enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_stru
 int sequence_keyframe_distance_min = 0;
 int sequence_keyframe_distance_max = 0;
 int sequence_max_frames = 0; // 0 -> no maximum
+std::string option_gimi_track_id;
 
 
 enum heif_output_nclx_color_profile_preset
@@ -185,7 +186,7 @@ const int OPTION_ADD_MIME_ITEM = 1031;
 const int OPTION_MIME_ITEM_FILE = 1032;
 const int OPTION_MIME_ITEM_NAME = 1033;
 const int OPTION_METADATA_COMPRESSION = 1034;
-
+const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -251,6 +252,7 @@ static option long_options[] = {
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
     {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
+    {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
     {0, 0,                                                           0,  0}
 };
 
@@ -380,6 +382,7 @@ void show_help(const char* argv0)
             << "      --vmt-metadata FILE        encode metadata track from VMT file\n"
             << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary\n"
             << "      --metadata-track-uri URI   uses the URI identifier for the metadata track\n"
+            << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track\n"
 #endif
             ;
 }
@@ -1538,6 +1541,9 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_SEQUENCES_GIMI_TRACK_ID:
+        option_gimi_track_id = optarg;
+        break;
     }
   }
 
@@ -2282,8 +2288,11 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     if (first_image) {
       heif_track_options* track_options = heif_track_options_alloc();
       heif_track_options_enable_sample_gimi_content_ids(track_options, heif_sample_aux_info_presence_optional);
-
       heif_track_options_set_timescale(track_options, sequence_timebase);
+
+      if (!option_gimi_track_id.empty()) {
+        heif_track_options_set_gimi_track_id(track_options, option_gimi_track_id.c_str());
+      }
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
       heif_context_set_number_of_sequence_repetitions(context, sequence_repetitions);
