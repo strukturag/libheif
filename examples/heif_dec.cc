@@ -115,7 +115,7 @@ static void show_help(const char* argv0)
                "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n"
                "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n"
-               "      --extract-mime-item TYPE   extract the MIME item with the given content type into a file (mime-item.bin)\n";
+               "      --extract-mime-item TYPE   extract the MIME item with the given content type into a file (mime-item.data)\n";
 }
 
 
@@ -1075,7 +1075,7 @@ int main(int argc, char** argv)
             uint8_t* data = nullptr;
             size_t data_size;
             heif_item_get_item_data(ctx, id, nullptr, &data, &data_size);
-            std::ofstream ostr("mime-item.bin");
+            std::ofstream ostr("mime-item.data");
             ostr.write((const char*)data, data_size);
             heif_release_item_data(ctx, &data);
           }
