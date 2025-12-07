@@ -266,6 +266,14 @@ Decoder::~Decoder()
 Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
 {
   if (!m_decoder_plugin) {
+    if (options.decoder_id && !has_decoder(get_compression_format(), options.decoder_id)) {
+      return {
+        heif_error_Plugin_loading_error,
+        heif_suberror_Unspecified,
+        "No decoder with that ID found."
+      };
+    }
+
     m_decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
     if (!m_decoder_plugin) {
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);

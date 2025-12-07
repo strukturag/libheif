@@ -246,6 +246,21 @@ void register_decoder(const heif_decoder_plugin* decoder_plugin)
 }
 
 
+bool has_decoder(heif_compression_format type, const char* name_id)
+{
+  load_plugins_if_not_initialized_yet();
+
+  for (const auto* plugin : s_decoder_plugins) {
+    int priority = plugin->does_support_format(type);
+    if (priority > 0 && strcmp(name_id, plugin->id_name) == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 const heif_decoder_plugin* get_decoder(heif_compression_format type, const char* name_id)
 {
   load_plugins_if_not_initialized_yet();
