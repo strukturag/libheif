@@ -304,10 +304,10 @@ void show_help(const char* argv0)
             << "  -C, --chroma-downsampling ALGO force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                measure encoding time, PSNR, and output file size\n"
-            << "      --pitm-description TEXT    (experimental) set user description for primary image\n"
+            << "      --pitm-description TEXT    set user description for primary image (experimental)\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --add-mime-item TYPE       add a mime item of the specified content type\n"
-            << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item\n"
+            << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
+            << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
 #endif
             << "\n"
             << "codecs:\n"
@@ -317,10 +317,10 @@ void show_help(const char* argv0)
             << "      --jpeg                     encode as JPEG\n"
             << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
             << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
-            #if WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
             << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
-            #endif
+#endif
             << "      --list-encoders            list all available encoders for all compression formats\n"
             << "  -e, --encoder ID               select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR     load all codec plugins in the directory\n"
@@ -356,7 +356,7 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES || WITH_UNCOMPRESSED_CODEC
             << "      --tiling-method METHOD    choose one of these methods: grid"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-               ", tili"
+               ", tili (experimental)"
 #endif
 #if WITH_UNCOMPRESSED_CODEC
                ", unci"
@@ -364,7 +364,7 @@ void show_help(const char* argv0)
                ". The default is 'grid'.\n"
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
+            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group. (experimental)\n"
 #endif
             << "\n"
             << "sequences:\n"
@@ -379,10 +379,10 @@ void show_help(const char* argv0)
             << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
             << "      --max-frames #             limit sequence length to maximum number of frames\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --vmt-metadata FILE        encode metadata track from VMT file\n"
-            << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary\n"
-            << "      --metadata-track-uri URI   uses the URI identifier for the metadata track\n"
-            << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track\n"
+            << "      --vmt-metadata FILE        encode metadata track from VMT file (experimental)\n"
+            << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary (experimental)\n"
+            << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
+            << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
 #endif
             ;
 }
