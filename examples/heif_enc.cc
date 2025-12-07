@@ -52,6 +52,7 @@
 
 #include "benchmark.h"
 #include "common.h"
+#include "SAI_datafile.h"
 #include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_sequences.h"
@@ -122,6 +123,7 @@ int sequence_keyframe_distance_min = 0;
 int sequence_keyframe_distance_max = 0;
 int sequence_max_frames = 0; // 0 -> no maximum
 std::string option_gimi_track_id;
+std::string option_sai_data_file;
 
 
 enum heif_output_nclx_color_profile_preset
@@ -187,6 +189,7 @@ const int OPTION_MIME_ITEM_FILE = 1032;
 const int OPTION_MIME_ITEM_NAME = 1033;
 const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
+const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -253,6 +256,7 @@ static option long_options[] = {
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
     {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
     {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
+    {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
     {0, 0,                                                           0,  0}
 };
 
@@ -383,6 +387,7 @@ void show_help(const char* argv0)
             << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary (experimental)\n"
             << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
             << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
+            << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
 #endif
             ;
 }
@@ -1544,6 +1549,9 @@ int main(int argc, char** argv)
       case OPTION_SEQUENCES_GIMI_TRACK_ID:
         option_gimi_track_id = optarg;
         break;
+      case OPTION_SEQUENCES_SAI_DATA_FILE:
+        option_sai_data_file = optarg;
+        break;
     }
   }
 
@@ -1575,6 +1583,11 @@ int main(int argc, char** argv)
 
   if (encode_sequence && !option_mime_item_file.empty()) {
     std::cerr << "MIME item cannot be added to sequence-only files.\n";
+    return 5;
+  }
+
+  if (!option_sai_data_file.empty() && !encode_sequence) {
+    std::cerr << "Image SAI data can only be used with sequences.\n";
     return 5;
   }
 
@@ -2249,6 +2262,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
 }
 
 
+
 int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, std::vector<std::string> args)
 {
   if (args.size() == 1) {
@@ -2261,6 +2275,14 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   if (sequence_max_frames && nImages > static_cast<size_t>(sequence_max_frames)) {
     nImages = sequence_max_frames;
   }
+
+  // --- optionally load SAI data to be used for the frames
+
+  SAI_datafile sai_data;
+  if (!option_sai_data_file.empty()) {
+    sai_data.load_sai_data_from_file(option_sai_data_file.c_str());
+  }
+
 
   uint16_t image_width=0, image_height=0;
 
@@ -2297,6 +2319,17 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
       if (!option_gimi_track_id.empty()) {
         heif_track_options_set_gimi_track_id(track_options, option_gimi_track_id.c_str());
+      }
+
+      if (sai_data.tai_clock_info) {
+        heif_track_options_enable_sample_tai_timestamps(track_options,
+                                                        sai_data.tai_clock_info,
+                                                        heif_sample_aux_info_presence_optional);
+      }
+
+      if (!sai_data.gimi_content_ids.empty()) {
+        heif_track_options_enable_sample_gimi_content_ids(track_options,
+                                                          heif_sample_aux_info_presence_optional);
       }
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
@@ -2342,15 +2375,17 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     heif_image_set_duration(image.get(), sequence_durations);
 
-    static int contentIdNr=0;
-    std::string contentId;
-    while (contentId.length() < (size_t)(contentIdNr+1)) {
-      contentId += std::to_string(contentIdNr+1) + '-';
+    // --- set SAI data
+
+    if (currImage-1 < sai_data.gimi_content_ids.size()) {
+      heif_image_set_gimi_sample_content_id(image.get(), sai_data.gimi_content_ids[currImage-1].c_str());
     }
-    contentId.resize(std::min(254, contentIdNr));
-    //std::cout << "CID: " << contentId << "\n\n";
-    heif_image_set_gimi_sample_content_id(image.get(), contentId.c_str());
-    contentIdNr++;
+
+    if (currImage-1 < sai_data.tai_timestamps.size()) {
+      heif_image_set_tai_timestamp(image.get(), sai_data.tai_timestamps[currImage-1]);
+    }
+
+    // --- encode image
 
     error = heif_track_encode_sequence_image(track, image.get(), encoder, encoding_options);
     if (error.code) {

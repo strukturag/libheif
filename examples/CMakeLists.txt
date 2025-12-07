@@ -41,7 +41,9 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.h
         benchmark.cc
         common.cc
-        common.h)
+        common.h
+        SAI_datafile.cc
+        SAI_datafile.h)
 target_link_libraries(heif-enc PRIVATE heif heifio)
 target_include_directories(heif-enc PRIVATE ${libheif_SOURCE_DIR})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
