@@ -489,53 +489,66 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
 
     ffmpeg_decoder::Packet& first_pkt = decoder->input_data.front();
 
-    av_pkt = av_packet_alloc();
-    auto pkt_deleter = std::unique_ptr<AVPacket, void (*)(AVPacket*)>(av_pkt, [](AVPacket* pkt){av_packet_free(&pkt);});
-
-    if (!av_pkt) {
-      return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "av_packet_alloc returned error" };
-    }
-
-    parse_av_data = first_pkt.data.data();
-    parse_av_data_size = (int) first_pkt.data.size();
-    size_t n_bytes_consumed = 0;
-
-    while (parse_av_data_size > 0) {
-      decoder->av_codec_parser_context->flags = PARSER_FLAG_COMPLETE_FRAMES;
-      ret = av_parser_parse2(decoder->av_codec_parser_context, decoder->av_codec_context, &av_pkt->data, &av_pkt->size,
-                             parse_av_data, parse_av_data_size,
-                             AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+    if (first_pkt.data.empty()) {
+      // send 'flush' packet
+      int ret = avcodec_send_packet(decoder->av_codec_context, nullptr);
       if (ret < 0) {
-        return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "av_parser_parse2 returned error"};
+        return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
       }
 
-      // std::cout << "decode packet of size: " << ret << "\n";
-
-      parse_av_data += ret;
-      parse_av_data_size -= ret;
-      n_bytes_consumed += ret;
-
-      if (av_pkt->size) {
-        av_pkt->pts = first_pkt.user_data;
-
-        ret = avcodec_send_packet(decoder->av_codec_context, av_pkt);
-        if (ret < 0) {
-          return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
-        }
-      }
-      else {
-        break;
-      }
-    }
-
-    if (n_bytes_consumed == first_pkt.data.size()) {
       decoder->input_data.pop_front();
     }
     else {
-      if (n_bytes_consumed > 0) {
-        memmove(first_pkt.data.data(), first_pkt.data.data() + n_bytes_consumed,
-                first_pkt.data.size() - n_bytes_consumed);
-        decoder->input_data.resize(decoder->input_data.size() - n_bytes_consumed);
+      av_pkt = av_packet_alloc();
+      auto pkt_deleter = std::unique_ptr<AVPacket, void (*)(AVPacket*)>(av_pkt, [](AVPacket* pkt){av_packet_free(&pkt);});
+
+      if (!av_pkt) {
+        return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "av_packet_alloc returned error" };
+      }
+
+      parse_av_data = first_pkt.data.data();
+      parse_av_data_size = (int) first_pkt.data.size();
+      size_t n_bytes_consumed = 0;
+
+      while (parse_av_data_size > 0) {
+        decoder->av_codec_parser_context->flags = PARSER_FLAG_COMPLETE_FRAMES;
+        ret = av_parser_parse2(decoder->av_codec_parser_context, decoder->av_codec_context, &av_pkt->data, &av_pkt->size,
+                               parse_av_data, parse_av_data_size,
+                               AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+        if (ret < 0) {
+          return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "av_parser_parse2 returned error"};
+        }
+
+        // std::cout << "decode packet of size: " << ret << "\n";
+
+        parse_av_data += ret;
+        parse_av_data_size -= ret;
+        n_bytes_consumed += ret;
+
+        if (av_pkt->size) {
+          av_pkt->pts = first_pkt.user_data;
+
+          ret = avcodec_send_packet(decoder->av_codec_context, av_pkt);
+          if (ret < 0) {
+            char buf[100];
+            av_make_error_string(buf, 100, ret);
+            return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
+          }
+        }
+        else {
+          break;
+        }
+      }
+
+      if (n_bytes_consumed == first_pkt.data.size()) {
+        decoder->input_data.pop_front();
+      }
+      else {
+        if (n_bytes_consumed > 0) {
+          memmove(first_pkt.data.data(), first_pkt.data.data() + n_bytes_consumed,
+                  first_pkt.data.size() - n_bytes_consumed);
+          decoder->input_data.resize(decoder->input_data.size() - n_bytes_consumed);
+        }
       }
     }
   }
@@ -609,10 +622,7 @@ heif_error ffmpeg_flush_data(void* decoder_raw)
 {
   auto* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
-  int ret = avcodec_send_packet(decoder->av_codec_context, nullptr);
-  if (ret < 0) {
-    return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet" };
-  }
+  decoder->input_data.push_back({});
 
   return heif_error_ok;
 }
