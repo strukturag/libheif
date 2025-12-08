@@ -30,6 +30,9 @@
 #include <wels/codec_api.h>
 #include <string>
 
+// TODO: the openh264 decoder seems to fail with some images.
+//       I have not figured out yet which images are affected.
+//       Maybe it has something to do with the image size. I got the error with large images.
 
 struct openh264_decoder
 {
@@ -404,7 +407,9 @@ heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
                                        uintptr_t* out_user_data,
                                        const heif_security_limits* limits)
 {
-  *out_user_data = 0; // TODO: not supported by openH264
+  if (out_user_data) {
+    *out_user_data = 0; // TODO: not supported by openH264
+  }
 
   return openh264_decode_next_image(decoder_raw, out_img, limits);
 }
