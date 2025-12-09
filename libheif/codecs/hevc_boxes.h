@@ -105,7 +105,7 @@ public:
 
   const char* debug_box_name() const override { return "HEVC Configuration Item"; }
 
-  bool get_headers(std::vector<uint8_t>* dest) const;
+  bool get_header_nals(std::vector<uint8_t>* dest) const;
 
   void set_configuration(const HEVCDecoderConfigurationRecord& config) { m_configuration = config; }
 
@@ -113,6 +113,10 @@ public:
 
   HEVCDecoderConfigurationRecord& get_configuration() { return m_configuration; }
 
+  // Add a header NAL to the hvcC. The data is the raw NAL data without any start-code or NAL size field.
+  //
+  // Note: we expect that all header NALs are added to the hvcC and
+  // there are no additional header NALs in the bitstream.
   void append_nal_data(const std::vector<uint8_t>& nal);
 
   void append_nal_data(const uint8_t* data, size_t size);
