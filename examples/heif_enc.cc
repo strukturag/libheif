@@ -106,6 +106,7 @@ int thumbnail_bbox_size = 0;
 int output_bit_depth = 10;
 bool force_enc_av1f = false;
 bool force_enc_avc = false;
+bool force_enc_hevc = false;
 bool force_enc_vvc = false;
 bool force_enc_uncompressed = false;
 bool force_enc_jpeg = false;
@@ -190,6 +191,7 @@ const int OPTION_MIME_ITEM_NAME = 1033;
 const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
+const int OPTION_USE_HEVC_COMPRESSION = 1037;
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -207,6 +209,7 @@ static option long_options[] = {
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
+    {(char* const) "hevc",                    no_argument,       0,              OPTION_USE_HEVC_COMPRESSION},
     {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
     {(char* const) "avc",                     no_argument,       0,              OPTION_USE_AVC_COMPRESSION},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
@@ -316,6 +319,7 @@ void show_help(const char* argv0)
             << "\n"
             << "codecs:\n"
             << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --hevc                     encode as HEVC (default)\n"
             << "      --vvc                      encode as VVC (experimental)\n"
             << "      --avc                      encode as AVC (experimental)\n"
             << "      --jpeg                     encode as JPEG\n"
@@ -1298,6 +1302,9 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_USE_HEVC_COMPRESSION:
+        force_enc_hevc = true;
+        break;
       case OPTION_USE_VVC_COMPRESSION:
         force_enc_vvc = true;
         break;
@@ -1561,7 +1568,7 @@ int main(int argc, char** argv)
   }
 
   if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
-      (force_enc_jpeg2000 ? 1 : 0) + (force_enc_avc ? 1 : 0)> 1) {
+      (force_enc_jpeg2000 ? 1 : 0) + (force_enc_avc ? 1 : 0) + (force_enc_hevc ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
     return 5;
   }
@@ -1633,6 +1640,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_htj2k) {
     compressionFormat = heif_compression_HTJ2K;
+  }
+  else if (force_enc_hevc) {
+    compressionFormat = heif_compression_HEVC;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);
