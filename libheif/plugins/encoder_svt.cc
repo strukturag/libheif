@@ -1089,8 +1089,9 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
 static heif_error svt_end_sequence_encoding(void* encoder_raw)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
+
   EbComponentType*& svt_encoder = encoder->svt_encoder;
-  EbBufferHeaderType& input_buffer = encoder->input_buffer;
+  //EbBufferHeaderType& input_buffer = encoder->input_buffer;
 
   // --- flush encoder
 
@@ -1108,7 +1109,7 @@ static heif_error svt_end_sequence_encoding(void* encoder_raw)
   ret = svt_av1_enc_send_picture(svt_encoder, &flush_input_buffer);
 
   if (ret != EB_ErrorNone) {
-    delete input_buffer.p_buffer;
+    // delete input_buffer.p_buffer;
     return heif_error_codec_library_error;
   }
 
