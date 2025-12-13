@@ -84,6 +84,7 @@ struct encoder_struct_svt
   EbSvtAv1EncConfiguration svt_config;
   EbBufferHeaderType input_buffer;
 
+  bool still_image_mode = false;
 
   // --- output
 
@@ -853,6 +854,11 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
       svt_config.intra_period_length = options->keyframe_distance_max; // TODO -1 ?
     }
 #endif
+  }
+  else {
+    // TODO: enable when https://gitlab.com/AOMediaCodec/SVT-AV1/-/issues/2245 is resolved
+    // svt_config.avif = true;
+    // encoder->still_image_mode = true;
   }
 
   if (color_format == EB_YUV422 || bitdepth_y > 10) {
