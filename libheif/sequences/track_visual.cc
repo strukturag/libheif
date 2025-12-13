@@ -19,6 +19,8 @@
  */
 
 #include "track_visual.h"
+
+#include <memory>
 #include "codecs/decoder.h"
 #include "codecs/encoder.h"
 #include "chunk.h"
@@ -321,6 +323,16 @@ Error Track_Visual::encode_end_of_sequence(heif_encoder* h_encoder)
     }
   }
 
+
+  // --- also end alpha track
+
+  if (m_aux_alpha_track) {
+    auto err = m_aux_alpha_track->encode_end_of_sequence(m_alpha_track_encoder.get());
+    if (err) {
+      return err;
+    }
+  }
+
   return {};
 }
 
@@ -338,6 +350,50 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
       "Input image resolution too high"
     };
   }
+
+  m_image_class = input_class;
+
+
+  // --- If input has an alpha channel, add an alpha auxiliary track.
+
+  if (in_options->save_alpha_channel && image->has_alpha() && !m_aux_alpha_track) {
+    if (m_active_encoder) {
+      return {
+        heif_error_Usage_error,
+        heif_suberror_Unspecified,
+        "Input images must all either have an alpha channel or none of them."
+      };
+    }
+    else {
+      // alpha track uses default options, same timescale as color track
+
+      TrackOptions alphaOptions;
+      alphaOptions.track_timescale = m_track_info.track_timescale;
+
+      auto newAlphaTrackResult = m_heif_context->add_visual_sequence_track(&alphaOptions,
+                                                                           heif_track_type_auxiliary,
+                                                                           static_cast<uint16_t>(image->get_width()),
+                                                                           static_cast<uint16_t>(image->get_height()));
+
+      if (auto err = newAlphaTrackResult.error()) {
+        return err;
+      }
+
+      // add a reference to the color track
+
+      m_aux_alpha_track = *newAlphaTrackResult;
+      m_aux_alpha_track->add_reference_to_track(fourcc("auxl"), m_id);
+
+      // make a copy of the encoder from the color track for encoding the alpha track
+
+      m_alpha_track_encoder = std::make_unique<heif_encoder>(h_encoder->plugin);
+      heif_error err = m_alpha_track_encoder->alloc();
+      if (err.code) {
+        return {err.code, err.subcode, err.message};
+      }
+    }
+  }
+
 
   if (!m_active_encoder) {
     m_active_encoder = h_encoder;
@@ -462,7 +518,32 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   // --- get compressed data from encoder
 
   Result<bool> processingResult = process_encoded_data(h_encoder);
-  return processingResult.error();
+  if (auto err = processingResult.error()) {
+    return err;
+  }
+
+
+  // --- encode alpha channel into auxiliary track
+
+  if (m_aux_alpha_track) {
+    auto alphaImageResult = create_alpha_image_from_image_alpha_channel(colorConvertedImage,
+                                                                        m_heif_context->get_security_limits());
+    if (auto err = alphaImageResult.error()) {
+      return err;
+    }
+
+    (*alphaImageResult)->set_sample_duration(colorConvertedImage->get_sample_duration());
+
+    auto err = m_aux_alpha_track->encode_image(*alphaImageResult,
+                                               m_alpha_track_encoder.get(),
+                                               in_options,
+                                               heif_image_input_class_alpha);
+    if (err) {
+      return err;
+    }
+  }
+
+  return {};
 }
 
 
@@ -494,10 +575,17 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 
       // add Coding-Constraints box (ccst) only if we are generating an image sequence
 
+      // TODO: does the alpha track also need a ccst box?
       if (m_hdlr->get_handler_type() == heif_track_type_image_sequence) {
         auto ccst = std::make_shared<Box_ccst>();
         ccst->set_coding_constraints(data.codingConstraints);
         sample_description_box->append_child_box(ccst);
+      }
+
+      if (m_image_class == heif_image_input_class_alpha) {
+        auto auxi_box = std::make_shared<Box_auxi>();
+        auxi_box->set_aux_track_type_urn(get_track_auxiliary_info_type(h_encoder->plugin->compression_format));
+        sample_description_box->append_child_box(auxi_box);
       }
 
       set_sample_description_box(sample_description_box);

@@ -92,6 +92,7 @@ void SampleAuxInfoHelper::add_nonpresent_sample()
 void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<HeifFile>& file)
 {
   if (m_interleaved && !m_data.empty()) {
+    // TODO: I think this does not work because the image data does not know that there is SAI in-between
     uint64_t pos = file->append_mdat_data(m_data);
     m_saio->add_sample_offset(pos);
 
@@ -601,7 +602,21 @@ heif_auxiliary_track_info_type Track::get_auxiliary_info_type() const
   }
 }
 
+const char* get_track_auxiliary_info_type(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_HEVC:
+      return cAuxType_alpha_hevc;
+    case heif_compression_AVC:
+      return cAuxType_alpha_avc;
+    case heif_compression_AV1:
+      return cAuxType_alpha_miaf;
+    default:
+      return cAuxType_alpha_miaf; // TODO: is this correct for all remaining compression types ?
+  }
+}
 
+// TODO: is this correct or should we set the aux_info_type depending on the compression format?
 void Track::set_auxiliary_info_type(heif_auxiliary_track_info_type type)
 {
   switch (type) {
@@ -661,6 +676,28 @@ bool Track::end_of_sequence_reached() const
 
 Error Track::finalize_track()
 {
+  // --- write active chunk data
+
+  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(m_chunk_data);
+  m_chunk_data.clear();
+
+  // first sample in chunk? -> write chunk offset
+
+  if (true) { // m_stsc->last_chunk_empty()) {
+    // TODO: we will have to call this at the end of a chunk to dump the current SAI queue
+
+    // if auxiliary data is interleaved, write it between the chunks
+    if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_interleaved(get_file());
+
+    // TODO
+    assert(data_start < 0xFF000000); // add some headroom for header data
+    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
+  }
+
+
+  // --- write rest of data
+
   if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
   if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
@@ -742,19 +779,7 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
                                const heif_tai_timestamp_packet* tai, const std::optional<std::string>& gimi_contentID)
 {
-  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(raw_data);
-
-  // first sample in chunk? -> write chunk offset
-
-  if (m_stsc->last_chunk_empty()) {
-    // if auxiliary data is interleaved, write it between the chunks
-    if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_interleaved(get_file());
-    if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_interleaved(get_file());
-
-    // TODO
-    assert(data_start < 0xFF000000); // add some headroom for header data
-    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
-  }
+  m_chunk_data.insert(m_chunk_data.end(), raw_data.begin(), raw_data.end());
 
   m_stsc->increase_samples_in_chunk(1);
 
@@ -849,7 +874,8 @@ void Track::init_sample_timing_table()
     timing.sample_duration_media_time = m_stts->get_sample_duration(i);
     current_decoding_time += timing.sample_duration_media_time;
 
-    while (i > m_chunks[current_chunk]->last_sample_number()) {
+    while (current_chunk < m_chunks.size() &&
+           i > m_chunks[current_chunk]->last_sample_number()) {
       current_chunk++;
 
       if (current_chunk > m_chunks.size()) {

@@ -65,6 +65,7 @@ public:
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;
+  heif_image_input_class m_image_class;
 
   uintptr_t m_current_frame_nr = 0;
   bool m_generated_sample_description_box = false;
@@ -92,6 +93,7 @@ private:
   std::shared_ptr<Track_Visual> m_aux_alpha_track;
 
   heif_encoder* m_active_encoder = nullptr;
+  std::unique_ptr<heif_encoder> m_alpha_track_encoder;
 
   Result<bool> process_encoded_data(heif_encoder* encoder);
 };

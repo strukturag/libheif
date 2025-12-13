@@ -119,6 +119,9 @@ struct TrackOptions
 };
 
 
+const char* get_track_auxiliary_info_type(heif_compression_format format);
+
+
 class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
@@ -220,6 +223,7 @@ protected:
   void init_sample_timing_table();
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
+  std::vector<uint8_t> m_chunk_data;
 
   std::shared_ptr<Box_moov> m_moov;
   std::shared_ptr<Box_trak> m_trak;

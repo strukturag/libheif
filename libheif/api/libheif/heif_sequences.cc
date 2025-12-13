@@ -411,6 +411,7 @@ heif_sequence_encoding_options* heif_sequence_encoding_options_alloc()
   options->gop_structure = heif_sequence_gop_structure_lowdelay;
   options->keyframe_distance_min = 0;
   options->keyframe_distance_max = 0;
+  options->save_alpha_channel = 1;
 
   return options;
 }

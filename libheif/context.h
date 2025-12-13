@@ -54,6 +54,11 @@ class Track;
 struct TrackOptions;
 
 
+Result<std::shared_ptr<HeifPixelImage>>
+create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
+                                            const heif_security_limits* limits);
+
+
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
 // The class also handles automatic color-space conversion.

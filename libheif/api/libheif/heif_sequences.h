@@ -312,6 +312,8 @@ void heif_track_options_set_timescale(heif_track_options*, uint32_t timescale);
  *
  * If 'false', all aux_info will be written as one block after the compressed image data.
  * This has the advantage that no aux_info offsets have to be written.
+ *
+ * Note: currently ignored. Interleaved writing is disabled.
  */
 LIBHEIF_API
 void heif_track_options_set_interleaved_sample_aux_infos(heif_track_options*, int interleaved_flag);
@@ -367,6 +369,8 @@ typedef struct heif_sequence_encoding_options
   enum heif_sequence_gop_structure gop_structure;
   int keyframe_distance_min; // 0 - undefined
   int keyframe_distance_max; // 0 - undefined
+
+  int save_alpha_channel;
 } heif_sequence_encoding_options;
 
 

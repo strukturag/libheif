@@ -2348,6 +2348,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       encoding_options->gop_structure = sequence_gop_structure;
       encoding_options->keyframe_distance_min = sequence_keyframe_distance_min;
       encoding_options->keyframe_distance_max = sequence_keyframe_distance_max;
+      encoding_options->save_alpha_channel = master_alpha;
 
       image_width = static_cast<uint16_t>(w);
       image_height = static_cast<uint16_t>(h);

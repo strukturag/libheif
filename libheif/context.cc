@@ -1404,7 +1404,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
 }
 
 
-static Result<std::shared_ptr<HeifPixelImage>>
+Result<std::shared_ptr<HeifPixelImage>>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
                                             const heif_security_limits* limits)
 {
