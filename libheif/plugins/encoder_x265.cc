@@ -1225,7 +1225,7 @@ static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** d
   encoder->output_data.pop_front();
 
   *data = encoder->active_output_nal.data();
-  *size = encoder->active_output_nal.size();
+  *size = static_cast<int>(encoder->active_output_nal.size());
 
   return heif_error_ok;
 }
