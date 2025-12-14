@@ -603,7 +603,9 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
       // add Coding-Constraints box (ccst) only if we are generating an image sequence
 
       // TODO: does the alpha track also need a ccst box?
-      if (m_hdlr->get_handler_type() == heif_track_type_image_sequence) {
+      //       ComplianceWarden says so (and it makes sense), but HEIF says that 'ccst' shall be present
+      //       if the handler is 'pict'. However, the alpha track is 'auxv'.
+      if (true) { // m_hdlr->get_handler_type() == heif_track_type_image_sequence) {
         auto ccst = std::make_shared<Box_ccst>();
         ccst->set_coding_constraints(data.codingConstraints);
         sample_description_box->append_child_box(ccst);
