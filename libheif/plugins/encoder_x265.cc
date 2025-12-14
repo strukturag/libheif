@@ -27,6 +27,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cassert>
+#include <deque>
 #include <vector>
 
 extern "C" {
@@ -61,14 +62,23 @@ struct encoder_struct_x265
   const x265_api* api = nullptr;
   x265_param* param = nullptr;
 
-  x265_nal* nals = nullptr;
-  uint32_t num_nals = 0;
-  uint32_t nal_output_counter = 0;
-  uintptr_t out_frameNr = 0;
   int bit_depth = 0;
 
   heif_chroma chroma;
 
+
+  // --- output
+
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t frameNr = 0;
+  };
+
+  std::deque<Packet> output_data;
+  std::vector<uint8_t> active_output_nal;
+
+  void append_nal_packets(x265_nal* nals, uint32_t num_nals, uintptr_t frameNr);
 
   // --- parameters
 
@@ -317,9 +327,6 @@ static heif_error x265_new_encoder(void** enc)
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
 
-  encoder->nals = nullptr;
-  encoder->num_nals = 0;
-  encoder->nal_output_counter = 0;
   encoder->bit_depth = 8;
 
   *enc = encoder;
@@ -700,6 +707,44 @@ static const char* naltype(uint8_t type)
 }
 #endif
 
+void encoder_struct_x265::append_nal_packets(x265_nal* nals, uint32_t num_nals, uintptr_t frameNr)
+{
+  for (uint32_t nal_idx=0 ; nal_idx < num_nals; nal_idx++) {
+    uint8_t* data = nals[nal_idx].payload;
+    uint32_t size = nals[nal_idx].sizeBytes;
+
+    // --- skip start code ---
+
+    // skip '0' bytes
+    while (*data == 0 && size > 0) {
+      data++;
+      size--;
+    }
+
+    // skip '1' byte
+    data++;
+    size--;
+
+
+    // --- skip NALs with irrelevant data ---
+
+    if (size >= 3 && data[0] == 0x4e && data[2] == 5) {
+      // skip "unregistered user data SEI"
+    }
+    else {
+      // output NAL
+
+      Packet pkt;
+      pkt.data.resize(size);
+      memcpy(pkt.data.data(), data, size);
+      pkt.frameNr = frameNr;
+
+      output_data.push_back(pkt);
+    }
+  }
+}
+
+
 static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
                                        const heif_sequence_encoding_options* options,
@@ -985,15 +1030,16 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   encoder->encoder = api->encoder_open(param);
 
   if (image_sequence) {
-    // check that all NALs have been drained
-    assert(encoder->nal_output_counter == encoder->num_nals);
-    encoder->nal_output_counter = 0;
+    x265_nal* nals = nullptr;
+    uint32_t num_nals = 0;
 
     api->encoder_headers(encoder->encoder,
-                         &encoder->nals,
-                         &encoder->num_nals);
+                         &nals,
+                         &num_nals);
 
-    for (uint32_t i = 0; i < encoder->num_nals; i++) {
+    encoder->append_nal_packets(nals, num_nals, 0);
+
+    for (uint32_t i = 0; i < num_nals; i++) {
       //std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
     }
   }
@@ -1055,31 +1101,34 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
   pic->bitDepth = encoder->bit_depth;
   pic->userData = reinterpret_cast<void*>(frame_nr);
 
-  // check that all NALs have been drained
-  assert(encoder->nal_output_counter == encoder->num_nals);
-  encoder->nal_output_counter = 0;
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
 
 #if X265_BUILD == 212
   // In x265 build version 212, the signature of the encoder_encode() function was changed. But it was changed back in version 213.
   // https://bitbucket.org/multicoreware/x265_git/issues/952/crash-in-libheif-tests
   x265_picture* out_pic = NULL;
   api->encoder_encode(encoder->encoder,
-                      &encoder->nals,
-                      &encoder->num_nals,
+                      &nals,
+                      &num_nals,
                       pic,
                       &out_pic);
-  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
 #else
   x265_picture out_pic;
   api->encoder_encode(encoder->encoder,
-                      &encoder->nals,
-                      &encoder->num_nals,
+                      &nals,
+                      &num_nals,
                       pic,
                       &out_pic);
-  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
-  for (uint32_t i = 0; i < encoder->num_nals; i++) {
+
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
+  for (uint32_t i = 0; i < num_nals; i++) {
     //std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
+
+  encoder->append_nal_packets(nals, num_nals, frameNr);
+
 #endif
 
   api->picture_free(pic);
@@ -1094,28 +1143,27 @@ static heif_error x265_end_sequence_encoding(void* encoder_raw)
 
   const x265_api* api = encoder->api;
 
-  // check that all NALs have been drained
-  assert(encoder->nal_output_counter == encoder->num_nals);
-  encoder->nal_output_counter = 0;
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
 
 #if X265_BUILD == 212
   x265_picture* out_pic = NULL;
   int result = api->encoder_encode(encoder->encoder,
-                                   &encoder->nals,
-                                   &encoder->num_nals,
+                                   &nals,
+                                   &num_nals,
                                    NULL,
                                    &out_pic);
-  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
 #else
   x265_picture out_pic;
   int result = api->encoder_encode(encoder->encoder,
-                                   &encoder->nals,
-                                   &encoder->num_nals,
+                                   &nals,
+                                   &num_nals,
                                    NULL,
                                    &out_pic);
-  encoder->out_frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
 
-  for (uint32_t i = 0; i < encoder->num_nals; i++) {
+  for (uint32_t i = 0; i < num_nals; i++) {
     //std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
   }
 #endif
@@ -1127,10 +1175,10 @@ static heif_error x265_end_sequence_encoding(void* encoder_raw)
     return heif_error_ok; // ?
   }
 
+  encoder->append_nal_packets(nals, num_nals, frameNr);
+
   encoder->api->param_free(encoder->param);
   encoder->param = nullptr;
-
-  encoder->nal_output_counter = 0; // TODO: is this needed ?
 
   return heif_error_ok;
 }
@@ -1161,58 +1209,23 @@ static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** d
 {
   encoder_struct_x265* encoder = ( encoder_struct_x265*) encoder_raw;
 
-  if (encoder->encoder == nullptr) {
+  if (encoder->output_data.empty()) {
     *data = nullptr;
     *size = 0;
 
     return heif_error_ok;
   }
 
-  // const x265_api* api = x265_api_get(encoder->bit_depth);
-
-  /*for (;;)*/ {
-    while (encoder->nal_output_counter < encoder->num_nals) {
-      *data = encoder->nals[encoder->nal_output_counter].payload;
-      *size = encoder->nals[encoder->nal_output_counter].sizeBytes;
-      encoder->nal_output_counter++;
-
-      // --- skip start code ---
-
-      // skip '0' bytes
-      while (**data == 0 && *size > 0) {
-        (*data)++;
-        (*size)--;
-      }
-
-      // skip '1' byte
-      (*data)++;
-      (*size)--;
-
-
-      // --- skip NALs with irrelevant data ---
-
-      if (*size >= 3 && (*data)[0] == 0x4e && (*data)[2] == 5) {
-        // skip "unregistered user data SEI"
-
-      }
-      else {
-        // output NAL
-
-        if (out_frame_nr) {
-          *out_frame_nr = encoder->out_frameNr;
-        }
-
-        return heif_error_ok;
-      }
-    }
-  }
-
-  *data = nullptr;
-  *size = 0;
+  encoder->active_output_nal = std::move(encoder->output_data.front().data);
 
   if (out_frame_nr) {
-    *out_frame_nr = 0;
+    *out_frame_nr = encoder->output_data.front().frameNr;
   }
+
+  encoder->output_data.pop_front();
+
+  *data = encoder->active_output_nal.data();
+  *size = encoder->active_output_nal.size();
 
   return heif_error_ok;
 }
