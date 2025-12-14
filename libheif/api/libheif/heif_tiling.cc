@@ -260,7 +260,7 @@ heif_error heif_context_add_image_tile(heif_context* ctx,
   }
 #if WITH_UNCOMPRESSED_CODEC
   else if (auto unci = std::dynamic_pointer_cast<ImageItem_uncompressed>(tiled_image->image)) {
-    Error err = unci->add_image_tile(tile_x, tile_y, image->image);
+    Error err = unci->add_image_tile(tile_x, tile_y, image->image, true); // TODO: how do we handle 'save_alpha=false' ?
     return err.error_struct(ctx->context.get());
   }
 #endif

@@ -52,6 +52,8 @@ public:
   {
     heif_encoding_options dummy_options{};
 
+    dummy_options.save_alpha_channel = static_cast<uint8_t>(options.save_alpha_channel);
+
     auto encodeResult = encode(image, encoder, dummy_options, input_class);
     if (encodeResult.error()) {
       return encodeResult.error();
