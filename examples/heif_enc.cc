@@ -2429,5 +2429,12 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   heif_track_release(track);
   heif_sequence_encoding_options_release(encoding_options);
 
+
+  // --- add first image as image item
+
+  if (!use_video_handler) {
+    do_encode_images(context, encoder, options, {args[0]});
+  }
+
   return 0;
 }
