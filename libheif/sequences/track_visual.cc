@@ -28,6 +28,7 @@
 #include "context.h"
 #include "api_structs.h"
 #include "codecs/hevc_boxes.h"
+#include "codecs/uncompressed/unc_boxes.h"
 
 
 Track_Visual::Track_Visual(HeifContext* ctx)
@@ -131,6 +132,31 @@ Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, 
 
   auto vmhd = std::make_shared<Box_vmhd>();
   m_minf->append_child_box(vmhd);
+}
+
+
+bool Track_Visual::has_alpha_channel() const
+{
+  if (m_aux_alpha_track != nullptr) {
+    return true;
+  }
+
+  // --- special case: 'uncv' with alpha component
+
+  if (m_stsd) {
+    auto sampleEntry = m_stsd->get_sample_entry(0);
+    if (sampleEntry) {
+      if (auto box_uncv = std::dynamic_pointer_cast<const Box_uncv>(sampleEntry)) {
+        if (auto cmpd = box_uncv->get_child_box<const Box_cmpd>()) {
+          if (cmpd->has_component(component_type_alpha)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 
@@ -356,7 +382,8 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   // --- If input has an alpha channel, add an alpha auxiliary track.
 
-  if (in_options->save_alpha_channel && image->has_alpha() && !m_aux_alpha_track) {
+  if (in_options->save_alpha_channel && image->has_alpha() && !m_aux_alpha_track &&
+      h_encoder->plugin->compression_format != heif_compression_uncompressed) { // TODO: ask plugin
     if (m_active_encoder) {
       return {
         heif_error_Usage_error,

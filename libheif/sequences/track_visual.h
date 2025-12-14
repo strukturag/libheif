@@ -47,7 +47,7 @@ public:
 
   uint16_t get_height() const { return m_height; }
 
-  bool has_alpha_channel() const override { return m_aux_alpha_track != nullptr; }
+  bool has_alpha_channel() const override;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const heif_decoding_options& options);
 
