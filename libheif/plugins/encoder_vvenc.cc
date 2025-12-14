@@ -476,6 +476,11 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
   params.m_internalBitDepth[0] = bit_depth;
   params.m_internalBitDepth[1] = bit_depth;
 
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
+  if (isGreyscale) {
+    params.m_internChromaFormat = VVENC_CHROMA_400;
+  }
+
   if (image_sequence) {
     if (options->keyframe_distance_max) {
       params.m_IntraPeriod = options->keyframe_distance_max;
