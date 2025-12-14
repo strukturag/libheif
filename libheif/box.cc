@@ -4255,7 +4255,15 @@ Error Box_dref::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write32(m_children.size());
+  if (m_children.size() > 0xFFFF) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Too many dref children boxes."
+    };
+  }
+
+  writer.write32(static_cast<uint32_t>(m_children.size()));
   write_children(writer);
 
   prepend_header(writer, box_start);
