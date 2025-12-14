@@ -868,20 +868,20 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     cmpd->add_component(bComponent);
 
     if (save_alpha_channel &&
-        image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
-        image->has_channel(heif_channel_Alpha)) {
+        (image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
+         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
+         image->has_channel(heif_channel_Alpha))) {
       Box_cmpd::Component alphaComponent = {component_type_alpha};
       cmpd->add_component(alphaComponent);
     }
 
-    if ((image->get_chroma_format() == heif_chroma_interleaved_RGB) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE)) {
+    if (image->get_chroma_format() == heif_chroma_interleaved_RGB ||
+        image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
+        image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE ||
+        image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
+        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE) {
       uncC->set_interleave_type(interleave_mode_pixel);
       int bpp = image->get_bits_per_pixel(heif_channel_interleaved);
       uint8_t component_align = 1;
