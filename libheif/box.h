@@ -1188,6 +1188,11 @@ protected:
 class Box_dinf : public Box
 {
 public:
+  Box_dinf()
+  {
+    set_short_type(fourcc("dinf"));
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Information"; }
@@ -1200,9 +1205,16 @@ protected:
 class Box_dref : public FullBox
 {
 public:
+  Box_dref()
+  {
+    set_short_type(fourcc("dref"));
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Reference"; }
+
+  Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1212,11 +1224,23 @@ protected:
 class Box_url : public FullBox
 {
 public:
+  Box_url()
+  {
+    set_short_type(fourcc("url "));
+    set_flags(1);
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Entry URL"; }
 
   bool is_same_file() const { return m_location.empty(); }
+
+  void set_location(const std::string& loc) { m_location = loc; set_flags(m_location.empty() ? 1 : 0); }
+
+  void set_location_same_file() { m_location.clear(); set_flags(1); }
+
+  Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;

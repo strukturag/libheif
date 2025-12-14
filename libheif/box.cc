@@ -4251,6 +4251,18 @@ Error Box_dref::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
+Error Box_dref::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_children.size());
+  write_children(writer);
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
 std::string Box_dref::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -4278,6 +4290,23 @@ Error Box_url::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   return range.get_error();
+}
+
+
+Error Box_url::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_location.empty()) {
+    assert(get_flags() == 1);
+  }
+  else {
+    assert(get_flags() == 0);
+    writer.write(m_location);
+  }
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
 }
 
 

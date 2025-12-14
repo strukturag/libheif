@@ -460,6 +460,15 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
   m_minf = std::make_shared<Box_minf>();
   mdia->append_child_box(m_minf);
 
+  // add (unused) 'dinf'
+
+  auto dinf = std::make_shared<Box_dinf>();
+  auto dref = std::make_shared<Box_dref>();
+  auto url  = std::make_shared<Box_url>();
+  m_minf->append_child_box(dinf);
+  dinf->append_child_box(dref);
+  dref->append_child_box(url);
+
   // vmhd is added in Track_Visual
 
   m_stbl = std::make_shared<Box_stbl>();
