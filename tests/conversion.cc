@@ -261,17 +261,36 @@ static bool NclxMatches(heif_colorspace colorspace,
   return true;
 }
 
+void nclx_default_if_undefined(ColorState& state)
+{
+  if (state.nclx.get_colour_primaries() == heif_color_primaries_unspecified) {
+    state.nclx.set_colour_primaries(1);
+  }
+
+  if (state.nclx.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
+    state.nclx.set_matrix_coefficients(6);
+  }
+
+  if (state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_unspecified) {
+    state.nclx.set_transfer_characteristics(13);
+  }
+}
+
+
 // Converts from 'input_state' to 'target_state' and checks that the resulting
 // image has the expected shape. If the reverse conversion is also supported,
 // does a round-trip back to the original state and checks the PSNR.
 // If 'require_supported' is true, checks that the conversion from 'input_state'
 // to 'target_state' is supported, otherwise, exists silently for unsupported
 // conversions.
-void TestConversion(const std::string& test_name, const ColorState& input_state,
-                    const ColorState& target_state,
+void TestConversion(const std::string& test_name, ColorState input_state,
+                    ColorState target_state,
                     const heif_color_conversion_options& options,
                     const heif_color_conversion_options_ext& options_ext,
                     bool require_supported = true) {
+  nclx_default_if_undefined(input_state);
+  nclx_default_if_undefined(target_state);
+
   INFO(test_name);
   INFO("downsampling=" << options.preferred_chroma_downsampling_algorithm
                        << " upsampling="
