@@ -13,7 +13,6 @@ jobs:
         env:
           - { NAME: "nothing" }
           - { NAME: "libde265 (1) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
-          - { NAME: "libde265 (2) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 2 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-22.04
     steps:

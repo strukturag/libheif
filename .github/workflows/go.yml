@@ -12,7 +12,6 @@ jobs:
       matrix:
         libde265-version:
           - "1"
-          - "2"
     env:
       WITH_LIBDE265: ${{ matrix.libde265-version }}
       WITH_X265: 1
