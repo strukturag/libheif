@@ -374,6 +374,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
                                                                                       const heif_encoding_options* encoding_options,
                                                                                       const std::shared_ptr<const HeifPixelImage>& prototype)
 {
+  assert(encoding_options != nullptr);
+
   // Check input parameters
 
   if (parameters->image_width % parameters->tile_width != 0 ||

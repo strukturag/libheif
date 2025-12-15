@@ -87,8 +87,18 @@ heif_error heif_context_add_empty_unci_image(heif_context* ctx,
     return heif_error_null_pointer_argument;
   }
 
+  heif_encoding_options* default_options = nullptr;
+  if (encoding_options == nullptr) {
+    default_options = heif_encoding_options_alloc();
+    encoding_options = default_options;
+  }
+
   Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
   unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
+
+  if (encoding_options) {
+    heif_encoding_options_free(default_options);
+  }
 
   if (!unciImageResult) {
     return unciImageResult.error_struct(ctx->context.get());
