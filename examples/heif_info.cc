@@ -52,6 +52,7 @@
 #include <cstdio>
 #include <filesystem>
 #include "common.h"
+#include "libheif/heif_items.h"
 
 
 /*
@@ -651,6 +652,8 @@ int main(int argc, char** argv)
 
     // user descriptions
 
+    bool properties_shown = false;
+
     heif_property_id propertyIds[MAX_PROPERTIES];
     int count;
     count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_user_description,
@@ -669,6 +672,7 @@ int main(int argc, char** argv)
           printf("    name: %s\n", udes->name);
           printf("    description: %s\n", udes->description);
           printf("    tags: %s\n", udes->tags);
+          properties_shown = true;
 
           heif_property_user_description_release(udes);
         }
@@ -684,6 +688,7 @@ int main(int argc, char** argv)
       printf("    focal length: %f; %f\n", matrix.focal_length_x, matrix.focal_length_y);
       printf("    principal point: %f; %f\n", matrix.principal_point_x, matrix.principal_point_y);
       printf("    skew: %f\n", matrix.skew);
+      properties_shown = true;
     }
 
     if (heif_image_handle_has_camera_extrinsic_matrix(handle)) {
@@ -697,20 +702,23 @@ int main(int argc, char** argv)
       printf("      %6.3f %6.3f %6.3f\n", rot[3], rot[4], rot[5]);
       printf("      %6.3f %6.3f %6.3f\n", rot[6], rot[7], rot[8]);
       heif_camera_extrinsic_matrix_release(matrix);
+      properties_shown = true;
     }
 
 
     uint32_t aspect_h, aspect_v;
     int has_pasp = heif_image_handle_get_pixel_aspect_ratio(handle, &aspect_h, &aspect_v);
     if (has_pasp) {
-      std::cout << "pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
+      std::cout << "  pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
+      properties_shown = true;
     }
 
     heif_content_light_level clli{};
     if (heif_image_handle_get_content_light_level(handle, &clli)) {
-      std::cout << "content light level (clli):\n"
-                << "  max content light level: " << clli.max_content_light_level << "\n"
-                << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
+      std::cout << "  content light level (clli):\n"
+                << "    max content light level: " << clli.max_content_light_level << "\n"
+                << "    max pic average light level: " << clli.max_pic_average_light_level << "\n";
+      properties_shown = true;
     }
 
     heif_mastering_display_colour_volume mdcv;
@@ -719,15 +727,29 @@ int main(int argc, char** argv)
       heif_decoded_mastering_display_colour_volume decoded_mdcv;
       err = heif_mastering_display_colour_volume_decode(&mdcv, &decoded_mdcv);
 
-      std::cout << "mastering display color volume:\n"
-                << "  display_primaries (x,y): "
+      std::cout << "  mastering display color volume:\n"
+                << "    display_primaries (x,y): "
                 << "(" << decoded_mdcv.display_primaries_x[0] << ";" << decoded_mdcv.display_primaries_y[0] << "), "
                 << "(" << decoded_mdcv.display_primaries_x[1] << ";" << decoded_mdcv.display_primaries_y[1] << "), "
                 << "(" << decoded_mdcv.display_primaries_x[2] << ";" << decoded_mdcv.display_primaries_y[2] << ")\n";
 
-      std::cout << "  white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
-      std::cout << "  max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
-      std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
+      std::cout << "    white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
+      std::cout << "    max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
+      std::cout << "    min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
+      properties_shown = true;
+    }
+
+    // --- GIMI
+
+    const char* id = heif_image_handle_get_gimi_content_id(handle);
+    if (id) {
+      std::cout << "  GIMI content ID: " << id << "\n";
+      heif_string_release(id);
+      properties_shown = true;
+    }
+
+    if (!properties_shown) {
+      std::cout << "none\n";
     }
 
     heif_image_handle_release(handle);
@@ -873,7 +895,32 @@ int main(int argc, char** argv)
         }
       }
 
+      const char* gimi_track_id = heif_track_get_gimi_track_content_id(track);
+      if (gimi_track_id) {
+        std::cout << "  GIMI track id: " << gimi_track_id << "\n";
+        heif_string_release(gimi_track_id);
+      }
+
       heif_track_release(track);
+    }
+  }
+
+  // ==============================================================================
+
+  {
+    int nItems = heif_context_get_number_of_items(context);
+    if (nItems > 0) {
+      std::cout << "MIME items:\n";
+      std::vector<heif_item_id> item_ids(nItems);
+      heif_context_get_list_of_item_IDs(context, item_ids.data(), nItems);
+
+      for (auto id : item_ids) {
+        uint32_t type = heif_item_get_item_type(context, id);
+        if (type == heif_item_type_mime) {
+          const char* mimeType = heif_item_get_mime_item_content_type(context, id);
+          std::cout << "  " << id << " : " << mimeType << "\n";
+        }
+      }
     }
   }
 

@@ -87,7 +87,7 @@ public:
                                                                 const heif_encoding_options* encoding_options,
                                                                 const std::shared_ptr<const HeifPixelImage>& prototype);
 
-  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
+  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image, bool save_alpha);
 
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;

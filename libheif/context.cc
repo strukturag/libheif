@@ -317,6 +317,7 @@ void HeifContext::write(StreamWriter& writer)
       }
 
       uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+      uint64_t unrepeated_movie_duration = movie_duration;
 
       // sequence repetitions
 
@@ -336,7 +337,7 @@ void HeifContext::write(StreamWriter& writer)
         track.second->enable_edit_list_repeat_mode(true);
       }
 
-      track.second->set_track_duration_in_movie_units(movie_duration);
+      track.second->set_track_duration_in_movie_units(movie_duration, unrepeated_movie_duration);
 
       max_sequence_duration = std::max(max_sequence_duration, movie_duration);
     }
@@ -676,6 +677,13 @@ Error HeifContext::interpret_heif_file_images()
         // TODO: apply irot to camera extrinsic matrix
       }
     }
+
+
+    // --- assign GIMI content-ID to image
+
+    if (auto box_gimi_content_id = image->get_property<Box_gimi_content_id>()) {
+      image->set_gimi_sample_content_id(box_gimi_content_id->get_content_id());
+    }
   }
 
 
@@ -883,6 +891,7 @@ Error HeifContext::interpret_heif_file_images()
                      "No vvcC property in vvc1 type image");
       }
     }
+    // TODO: check for AV1, AVC, JPEG, J2K
   }
 
 
@@ -1395,7 +1404,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
 }
 
 
-static Result<std::shared_ptr<HeifPixelImage>>
+Result<std::shared_ptr<HeifPixelImage>>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
                                             const heif_security_limits* limits)
 {
@@ -1469,7 +1478,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
     srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
                                                                                        encoder,
-                                                                                       options,
+                                                                                       options.output_nclx_profile,
+                                                                                       &options.color_conversion_options,
                                                                                        get_security_limits());
     if (!srcImageResult) {
       return srcImageResult.error();

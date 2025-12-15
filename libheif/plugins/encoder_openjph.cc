@@ -850,8 +850,43 @@ const char* ojph_plugin_name()
   return plugin_name;
 }
 
+
+heif_error ojph_start_sequence_encoding(void* encoder, const heif_image* image,
+                                       enum heif_image_input_class image_class,
+                                       const heif_sequence_encoding_options* options)
+{
+  return heif_error_ok;
+}
+
+heif_error ojph_encode_sequence_frame(void* encoder, const heif_image* image, uintptr_t frame_nr)
+{
+  return ojph_encode_image(encoder, image, heif_image_input_class_normal);
+}
+
+heif_error ojph_end_sequence_encoding(void* encoder)
+{
+  return heif_error_ok;
+}
+
+heif_error ojph_get_compressed_data2(void* encoder, uint8_t** data, int* size,
+                                    uintptr_t* frame_nr,
+                                    int* is_keyframe, int* more_frame_packets)
+{
+  heif_error err = ojph_get_compressed_data(encoder, data, size, nullptr);
+
+  if (is_keyframe) {
+    *is_keyframe = true;
+  }
+
+  if (more_frame_packets) {
+    *more_frame_packets = true;
+  }
+
+  return err;
+}
+
 static const heif_encoder_plugin encoder_plugin_openjph {
-    /* plugin_api_version */ 3,
+    /* plugin_api_version */ 4,
     /* compression_format */ heif_compression_HTJ2K,
     /* id_name */ "openjph",
     /* priority */ OJPH_PLUGIN_PRIORITY,
@@ -879,7 +914,13 @@ static const heif_encoder_plugin encoder_plugin_openjph {
     /* encode_image */ ojph_encode_image,
     /* get_compressed_data */ ojph_get_compressed_data,
     /* query_input_colorspace (v2) */ ojph_query_input_colorspace2,
-    /* query_encoded_size (v3) */ nullptr
+    /* query_encoded_size (v3) */ nullptr,
+    /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+    /* start_sequence_encoding (v4) */ ojph_start_sequence_encoding,
+    /* encode_sequence_frame (v4) */ ojph_encode_sequence_frame,
+    /* end_sequence_encoding (v4) */ ojph_end_sequence_encoding,
+    /* get_compressed_data2 (v4) */ ojph_get_compressed_data2,
+    /* does_indicate_keyframes (v4) */ 1
 };
 
 const heif_encoder_plugin* get_encoder_plugin_openjph()

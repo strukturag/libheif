@@ -60,6 +60,8 @@ public:
 
   const std::vector<Component>& get_components() const { return m_components; }
 
+  bool has_component(heif_uncompressed_component_type) const;
+
   void add_component(const Component& component)
   {
     m_components.push_back(component);

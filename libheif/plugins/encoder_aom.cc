@@ -32,6 +32,7 @@
 #include <utility>
 #include "encoder_aom.h"
 
+#include <deque>
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
 #include <mutex>
@@ -57,7 +58,14 @@ struct encoder_struct_aom
     for (auto* error : aom_errors) {
       delete[] error;
     }
+
+    // automatically destroy aom_codec_ctx_t when we leave the function
+//    auto codec_ctx_deleter = std::unique_ptr<aom_codec_ctx_t, aom_codec_err_t (*)(aom_codec_ctx_t*)>(&codec, aom_codec_destroy);
+
+    aom_codec_destroy(&codec);
   }
+
+  aom_codec_ctx_t codec;
 
   // --- parameters
 
@@ -96,8 +104,17 @@ struct encoder_struct_aom
 
   // --- output
 
-  std::vector<uint8_t> compressedData;
-  bool data_read = false;
+  struct Packet
+  {
+    std::vector<uint8_t> compressedData;
+    uintptr_t frameNr = 0;
+    bool is_keyframe = false;
+  };
+
+  std::deque<Packet> output_packets;
+  std::vector<uint8_t> active_output_data;
+
+  //bool data_read = false;
 
   // --- error message copies
 
@@ -794,9 +811,56 @@ if (check_aom_error(aom_error, &codec, encoder, &err)) { \
   return err; \
 }
 
+struct chroma_info
+{
+  aom_img_fmt_t img_format = AOM_IMG_FMT_NONE;
+  int chroma_height = 0;
+  int chroma_sample_position = AOM_CSP_UNKNOWN;
+};
 
-heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
-                            heif_image_input_class input_class)
+
+chroma_info get_chroma_info(heif_chroma chroma,
+                            int bpp_y, int source_height)
+{
+  chroma_info info;
+
+  switch (chroma) {
+    case heif_chroma_420:
+    case heif_chroma_monochrome:
+      info.img_format = AOM_IMG_FMT_I420;
+      info.chroma_height = (source_height+1)/2;
+      info.chroma_sample_position = AOM_CSP_UNKNOWN; // TODO: change this to CSP_CENTER in the future (https://github.com/AOMediaCodec/av1-avif/issues/88)
+      break;
+    case heif_chroma_422:
+      info.img_format = AOM_IMG_FMT_I422;
+      info.chroma_height = (source_height+1)/2;
+      info.chroma_sample_position = AOM_CSP_COLOCATED;
+      break;
+    case heif_chroma_444:
+      info.img_format = AOM_IMG_FMT_I444;
+      info.chroma_height = source_height;
+      info.chroma_sample_position = AOM_CSP_COLOCATED;
+      break;
+    default:
+      info.img_format = AOM_IMG_FMT_NONE;
+      info.chroma_sample_position = AOM_CSP_UNKNOWN;
+      assert(false);
+      break;
+  }
+
+  if (bpp_y > 8) {
+    info.img_format = (aom_img_fmt_t) (info.img_format | AOM_IMG_FMT_HIGHBITDEPTH);
+  }
+
+  return info;
+}
+
+
+
+static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                                     enum heif_image_input_class input_class,
+                                                     const heif_sequence_encoding_options* options,
+                                                     bool image_sequence)
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
@@ -828,41 +892,258 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
 
   // --- copy libheif image to aom image
 
-  aom_img_fmt_t img_format = AOM_IMG_FMT_NONE;
+  chroma_info chroma_info = get_chroma_info(chroma, bpp_y, source_height);
 
-  int chroma_height = 0;
-  int chroma_sample_position = AOM_CSP_UNKNOWN;
 
-  switch (chroma) {
-    case heif_chroma_420:
-    case heif_chroma_monochrome:
-      img_format = AOM_IMG_FMT_I420;
-      chroma_height = (source_height+1)/2;
-      chroma_sample_position = AOM_CSP_UNKNOWN; // TODO: change this to CSP_CENTER in the future (https://github.com/AOMediaCodec/av1-avif/issues/88)
-      break;
-    case heif_chroma_422:
-      img_format = AOM_IMG_FMT_I422;
-      chroma_height = (source_height+1)/2;
-      chroma_sample_position = AOM_CSP_COLOCATED;
-      break;
-    case heif_chroma_444:
-      img_format = AOM_IMG_FMT_I444;
-      chroma_height = source_height;
-      chroma_sample_position = AOM_CSP_COLOCATED;
-      break;
-    default:
-      img_format = AOM_IMG_FMT_NONE;
-      chroma_sample_position = AOM_CSP_UNKNOWN;
-      assert(false);
-      break;
+  // --- configure codec
+
+  aom_codec_iface_t* iface;
+  aom_codec_ctx_t& codec = encoder->codec;
+
+  iface = aom_codec_av1_cx();
+  //encoder->encoder = get_aom_encoder_by_name("av1");
+  if (!iface) {
+    return {
+      heif_error_Unsupported_feature,
+      heif_suberror_Unsupported_codec,
+      "Unsupported codec: AOMedia Project AV1 Encoder"
+    };
   }
 
+
+#if defined(AOM_USAGE_ALL_INTRA)
+  // aom 3.1.0
+  unsigned int aomUsage = AOM_USAGE_ALL_INTRA;
+#else
+  // aom 2.0
+  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
+#endif
+
+  if (image_sequence &&
+      options->gop_structure != heif_sequence_gop_structure_intra_only &&
+      options->keyframe_distance_max != 1) {
+    aomUsage = AOM_USAGE_GOOD_QUALITY;
+  }
+
+  if (encoder->realtime_mode) {
+    aomUsage = AOM_USAGE_REALTIME;
+  }
+
+  aom_codec_enc_cfg_t cfg;
+  aom_codec_err_t res = aom_codec_enc_config_default(iface, &cfg, aomUsage);
+  if (res) {
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Encoder_initialization,
+           kError_codec_enc_config_default};
+    return err;
+  }
+
+  int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel_range(image, heif_channel_Y),
+                                         heif_image_get_chroma_format(image));
+
+  cfg.g_w = source_width;
+  cfg.g_h = source_height;
+  // Set the max number of frames to encode to 1. This makes the libaom encoder
+  // set still_picture and reduced_still_picture_header to 1 in the AV1 sequence
+  // header OBU.
+  if (!image_sequence) {
+    cfg.g_limit = 1;
+  }
+
+  // Use the default settings of the new AOM_USAGE_ALL_INTRA (added in
+  // https://crbug.com/aomedia/2959).
+  //
+  // Set g_lag_in_frames to 0 to reduce the number of frame buffers (from 20
+  // to 2) in libaom's lookahead structure. This reduces memory consumption when
+  // encoding a single image.
+  cfg.g_lag_in_frames = 0;
+  // Disable automatic placement of key frames by the encoder.
+  cfg.kf_mode = AOM_KF_DISABLED;
+
+  if (!image_sequence) {
+    // Tell libaom that all frames will be key frames.
+    cfg.kf_max_dist = 0;
+  }
+  else if (options->gop_structure == heif_sequence_gop_structure_intra_only) {
+    cfg.kf_max_dist = 0;
+  }
+  else {
+    if (options->keyframe_distance_min) {
+      cfg.kf_min_dist = options->keyframe_distance_min;
+    }
+
+    if (options->keyframe_distance_max) {
+      cfg.kf_max_dist = options->keyframe_distance_max;
+    }
+  }
+
+  cfg.g_profile = seq_profile;
+  cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
+  cfg.g_input_bit_depth = bpp_y;
+
+  cfg.rc_end_usage = AOM_Q;
+
+  int min_q = encoder->min_q;
+  int max_q = encoder->max_q;
+
+  if (input_class == heif_image_input_class_alpha && encoder->alpha_min_q_set && encoder->alpha_max_q_set) {
+    min_q = encoder->alpha_min_q;
+    max_q = encoder->alpha_max_q;
+  }
+
+  int quality = encoder->quality;
+
+  if (input_class == heif_image_input_class_alpha && encoder->alpha_quality_set) {
+    quality = encoder->alpha_quality;
+  }
+
+  int cq_level = ((100 - quality) * 63 + 50) / 100;
+
+  // Work around the bug in libaom v2.0.2 or older fixed by
+  // https://aomedia-review.googlesource.com/c/aom/+/113064. If using a libaom
+  // release with the bug, set cfg.rc_min_quantizer to cq_level to prevent
+  // libaom from incorrectly using a quantizer index lower than cq_level.
+  bool aom_2_0_2_or_older = aom_codec_version() <= 0x020002;
+
+  cfg.rc_min_quantizer = aom_2_0_2_or_older ? cq_level : min_q;
+  cfg.rc_max_quantizer = max_q;
+  cfg.g_error_resilient = 0;
+  cfg.g_threads = encoder->threads;
+
+  if (chroma == heif_chroma_monochrome) {
+    cfg.monochrome = 1;
+  }
+
+  // --- initialize codec
+
+  aom_codec_flags_t encoder_flags = 0;
   if (bpp_y > 8) {
-    img_format = (aom_img_fmt_t) (img_format | AOM_IMG_FMT_HIGHBITDEPTH);
+    encoder_flags = (aom_codec_flags_t) (encoder_flags | AOM_CODEC_USE_HIGHBITDEPTH);
   }
 
-  std::unique_ptr<aom_image_t, void (*)(aom_image_t*)> input_image(aom_img_alloc(nullptr, img_format,
-                                                                                 source_width, source_height, 1),
+  // allocate aom_codec_ctx_t
+  if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
+    // AOM makes sure that the error text returned by aom_codec_error_detail() is always a static
+    // text that is valid even though the codec allocation failed (#788).
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Encoder_initialization,
+           encoder->set_aom_error(aom_codec_error_detail(&codec))};
+    return err;
+  }
+
+  aom_codec_err_t aom_error;
+
+  aom_error = aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used); CHECK_ERROR;
+
+  aom_error = aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level); CHECK_ERROR;
+
+  if (encoder->threads > 1) {
+#if defined(AOM_CTRL_AV1E_SET_ROW_MT)
+    // aom 2.0
+    aom_error = aom_codec_control(&codec, AV1E_SET_ROW_MT, 1); CHECK_ERROR;
+#endif
+  }
+
+#if defined(AOM_CTRL_AV1E_SET_AUTO_TILES)
+  // aom 3.10.0
+  aom_error = aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles); CHECK_ERROR;
+#endif
+
+  // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
+
+
+  heif_color_profile_nclx* nclx = nullptr;
+  err = heif_image_get_nclx_color_profile(image, &nclx);
+  if (err.code != heif_error_Ok) {
+    assert(nclx == nullptr);
+  }
+
+  // make sure NCLX profile is deleted at end of function
+  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
+
+  // In aom, color_range defaults to limited range (0). Set it to full range (1).
+  aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1); CHECK_ERROR;
+  aom_error = aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_info.chroma_sample_position); CHECK_ERROR;
+
+  if (nclx &&
+      (input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail)) {
+    aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries); CHECK_ERROR
+    aom_error = aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients); CHECK_ERROR;
+    aom_error = aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics); CHECK_ERROR;
+       }
+
+  aom_error = aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune); CHECK_ERROR;
+
+  if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
+    aom_error = aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1); CHECK_ERROR;
+  }
+
+#if defined(AOM_CTRL_AV1E_SET_SKIP_POSTPROC_FILTERING)
+  if (cfg.g_usage == AOM_USAGE_ALL_INTRA) {
+    // Enable AV1E_SET_SKIP_POSTPROC_FILTERING for still-picture encoding,
+    // which is disabled by default.
+    aom_error = aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1); CHECK_ERROR;
+  }
+#endif
+
+  aom_error = aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy); CHECK_ERROR;
+
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+  // Apply the custom AOM encoder options.
+  // These should always be applied last as they can override the values that were set above.
+  for (const auto& p : encoder->custom_options) {
+    if (aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str()) != AOM_CODEC_OK) {
+      std::stringstream sstr;
+      sstr << "Cannot set AOM encoder option (name: " << p.name << ", value: " << p.value << "): "
+           << aom_codec_error(&codec) << " - " << aom_codec_error_detail(&codec);
+
+      err = {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unsupported_parameter,
+        encoder->set_aom_error(sstr.str().c_str())
+      };
+      return err;
+    }
+  }
+#endif
+
+  return {};
+}
+
+
+
+static heif_error aom_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       const heif_sequence_encoding_options* options)
+{
+  return aom_start_sequence_encoding_intern(encoder_raw, image, input_class, options,
+    true);
+}
+
+
+static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image* image,
+                                            uintptr_t frame_nr)
+{
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
+  aom_codec_ctx_t& codec = encoder->codec;
+
+  heif_error err;
+
+  const int source_width = heif_image_get_width(image, heif_channel_Y);
+  const int source_height = heif_image_get_height(image, heif_channel_Y);
+
+  const heif_chroma chroma = heif_image_get_chroma_format(image);
+
+  int bpp_y = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+
+  chroma_info chroma_info = get_chroma_info(chroma, bpp_y, source_height);
+
+  std::unique_ptr<aom_image_t, void (*)(aom_image_t*)> input_image(aom_img_alloc(nullptr,
+                                                                                 chroma_info.img_format,
+                                                                                 source_width,
+                                                                                 source_height,
+                                                                                 1),
                                                                    aom_img_free);
   if (!input_image) {
     err = {heif_error_Memory_allocation_error,
@@ -878,12 +1159,12 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
 
     if (chroma == heif_chroma_monochrome && plane != 0) {
       if (bpp_y == 8) {
-        memset(buf, 128, chroma_height * stride);
+        memset(buf, 128, chroma_info.chroma_height * stride);
       }
       else {
         uint16_t* buf16 = (uint16_t*) buf;
         uint16_t half_range = (uint16_t) (1 << (bpp_y - 1));
-        for (int i = 0; i < chroma_height * stride / 2; i++) {
+        for (int i = 0; i < chroma_info.chroma_height * stride / 2; i++) {
           buf16[i] = half_range;
         }
       }
@@ -921,206 +1202,14 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
     }
   }
 
-
-
-  // --- configure codec
-
-  aom_codec_iface_t* iface;
-  aom_codec_ctx_t codec;
-
-  iface = aom_codec_av1_cx();
-  //encoder->encoder = get_aom_encoder_by_name("av1");
-  if (!iface) {
-    return {
-      heif_error_Unsupported_feature,
-      heif_suberror_Unsupported_codec,
-      "Unsupported codec: AOMedia Project AV1 Encoder"
-    };
-  }
-
-
-#if defined(AOM_USAGE_ALL_INTRA)
-  // aom 3.1.0
-  unsigned int aomUsage = AOM_USAGE_ALL_INTRA;
-#else
-  // aom 2.0
-  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
-#endif
-  if (encoder->realtime_mode) {
-    aomUsage = AOM_USAGE_REALTIME;
-  }
-
-  aom_codec_enc_cfg_t cfg;
-  aom_codec_err_t res = aom_codec_enc_config_default(iface, &cfg, aomUsage);
-  if (res) {
-    err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Encoder_initialization,
-           kError_codec_enc_config_default};
-    return err;
-  }
-
-  int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel_range(image, heif_channel_Y),
-                                         heif_image_get_chroma_format(image));
-
-  cfg.g_w = source_width;
-  cfg.g_h = source_height;
-  // Set the max number of frames to encode to 1. This makes the libaom encoder
-  // set still_picture and reduced_still_picture_header to 1 in the AV1 sequence
-  // header OBU.
-  cfg.g_limit = 1;
-
-  // Use the default settings of the new AOM_USAGE_ALL_INTRA (added in
-  // https://crbug.com/aomedia/2959).
-  //
-  // Set g_lag_in_frames to 0 to reduce the number of frame buffers (from 20
-  // to 2) in libaom's lookahead structure. This reduces memory consumption when
-  // encoding a single image.
-  cfg.g_lag_in_frames = 0;
-  // Disable automatic placement of key frames by the encoder.
-  cfg.kf_mode = AOM_KF_DISABLED;
-  // Tell libaom that all frames will be key frames.
-  cfg.kf_max_dist = 0;
-
-  cfg.g_profile = seq_profile;
-  cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
-  cfg.g_input_bit_depth = bpp_y;
-
-  cfg.rc_end_usage = AOM_Q;
-
-  int min_q = encoder->min_q;
-  int max_q = encoder->max_q;
-
-  if (input_class == heif_image_input_class_alpha && encoder->alpha_min_q_set && encoder->alpha_max_q_set) {
-      min_q = encoder->alpha_min_q;
-      max_q = encoder->alpha_max_q;
-  }
-
-  int quality = encoder->quality;
-
-  if (input_class == heif_image_input_class_alpha && encoder->alpha_quality_set) {
-      quality = encoder->alpha_quality;
-  }
-
-  int cq_level = ((100 - quality) * 63 + 50) / 100;
-
-  // Work around the bug in libaom v2.0.2 or older fixed by
-  // https://aomedia-review.googlesource.com/c/aom/+/113064. If using a libaom
-  // release with the bug, set cfg.rc_min_quantizer to cq_level to prevent
-  // libaom from incorrectly using a quantizer index lower than cq_level.
-  bool aom_2_0_2_or_older = aom_codec_version() <= 0x020002;
-
-  cfg.rc_min_quantizer = aom_2_0_2_or_older ? cq_level : min_q;
-  cfg.rc_max_quantizer = max_q;
-  cfg.g_error_resilient = 0;
-  cfg.g_threads = encoder->threads;
-
-  if (chroma == heif_chroma_monochrome) {
-    cfg.monochrome = 1;
-  }
-
-  // --- initialize codec
-
-  aom_codec_flags_t encoder_flags = 0;
-  if (bpp_y > 8) {
-    encoder_flags = (aom_codec_flags_t) (encoder_flags | AOM_CODEC_USE_HIGHBITDEPTH);
-  }
-
-  // allocate aom_codec_ctx_t
-  if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
-    // AOM makes sure that the error text returned by aom_codec_error_detail() is always a static
-    // text that is valid even though the codec allocation failed (#788).
-    err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Encoder_initialization,
-           encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    return err;
-  }
-
-  // automatically destroy aom_codec_ctx_t when we leave the function
-  auto codec_ctx_deleter = std::unique_ptr<aom_codec_ctx_t, aom_codec_err_t (*)(aom_codec_ctx_t*)>(&codec, aom_codec_destroy);
-
-  aom_codec_err_t aom_error;
-
-  aom_error = aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used); CHECK_ERROR;
-
-  aom_error = aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level); CHECK_ERROR;
-
-  if (encoder->threads > 1) {
-#if defined(AOM_CTRL_AV1E_SET_ROW_MT)
-    // aom 2.0
-    aom_error = aom_codec_control(&codec, AV1E_SET_ROW_MT, 1); CHECK_ERROR;
-#endif
-  }
-
-#if defined(AOM_CTRL_AV1E_SET_AUTO_TILES)
-  // aom 3.10.0
-  aom_error = aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles); CHECK_ERROR;
-#endif
-
-  // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
-
-
-  heif_color_profile_nclx* nclx = nullptr;
-  err = heif_image_get_nclx_color_profile(image, &nclx);
-  if (err.code != heif_error_Ok) {
-    assert(nclx == nullptr);
-  }
-
-  // make sure NCLX profile is deleted at end of function
-  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
-
-  // In aom, color_range defaults to limited range (0). Set it to full range (1).
-  aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1); CHECK_ERROR;
-  aom_error = aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position); CHECK_ERROR;
-
-  if (nclx &&
-      (input_class == heif_image_input_class_normal ||
-       input_class == heif_image_input_class_thumbnail)) {
-    aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries); CHECK_ERROR
-    aom_error = aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients); CHECK_ERROR;
-    aom_error = aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics); CHECK_ERROR;
-  }
-
-  aom_error = aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune); CHECK_ERROR;
-
-  if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
-    aom_error = aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1); CHECK_ERROR;
-  }
-
-#if defined(AOM_CTRL_AV1E_SET_SKIP_POSTPROC_FILTERING)
-  if (cfg.g_usage == AOM_USAGE_ALL_INTRA) {
-    // Enable AV1E_SET_SKIP_POSTPROC_FILTERING for still-picture encoding,
-    // which is disabled by default.
-    aom_error = aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1); CHECK_ERROR;
-  }
-#endif
-
-  aom_error = aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy); CHECK_ERROR;
-
-#if defined(HAVE_AOM_CODEC_SET_OPTION)
-  // Apply the custom AOM encoder options.
-  // These should always be applied last as they can override the values that were set above.
-  for (const auto& p : encoder->custom_options) {
-    if (aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str()) != AOM_CODEC_OK) {
-      std::stringstream sstr;
-      sstr << "Cannot set AOM encoder option (name: " << p.name << ", value: " << p.value << "): "
-           << aom_codec_error(&codec) << " - " << aom_codec_error_detail(&codec);
-
-      err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Unsupported_parameter,
-        encoder->set_aom_error(sstr.str().c_str())
-      };
-      return err;
-    }
-  }
-#endif
+  //input_image->user_priv = (void*)frame_nr;
 
   // --- encode frame
 
-  res = aom_codec_encode(&codec, input_image.get(),
-                         0, // only encoding a single frame
-                         1,
-                         0); // no flags
+  aom_codec_err_t res = aom_codec_encode(&codec, input_image.get(),
+                                         frame_nr, // PTS (only encoding a single frame) TODO
+                                         1,
+                                         0); // no flags
 
   if (res != AOM_CODEC_OK) {
     err = {
@@ -1131,7 +1220,8 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
     return err;
   }
 
-  encoder->compressedData.clear();
+  // TODO: do we need this ? encoder->compressedData.clear();
+
   const aom_codec_cx_pkt_t* pkt = NULL;
   aom_codec_iter_t iter = NULL; // for extracting the compressed packets
 
@@ -1147,19 +1237,34 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
       // This allows libheif to easily extract the sequence header for the av1C header
 
       size_t n = pkt->data.frame.sz;
-      size_t oldSize = encoder->compressedData.size();
-      encoder->compressedData.resize(oldSize + n);
 
-      memcpy(encoder->compressedData.data() + oldSize,
+      encoder_struct_aom::Packet output_packet;
+      output_packet.frameNr = pkt->data.frame.pts;
+      output_packet.is_keyframe = (pkt->data.frame.flags & AOM_FRAME_IS_INTRAONLY);
+
+      encoder->output_packets.emplace_back(output_packet);
+      encoder->output_packets.back().compressedData.resize(n);
+
+      memcpy(encoder->output_packets.back().compressedData.data(),
              pkt->data.frame.buf,
              n);
-
-      encoder->data_read = false;
     }
   }
 
+
+  return heif_error_ok;
+}
+
+
+static heif_error aom_end_sequence_encoding(void *encoder_raw)
+{
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
+  aom_codec_ctx_t& codec = encoder->codec;
+
+  heif_error err;
+
   int flags = 0;
-  res = aom_codec_encode(&codec, NULL, -1, 0, flags);
+  aom_codec_err_t res = aom_codec_encode(&codec, NULL, -1, 0, flags);
   if (res != AOM_CODEC_OK) {
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_encoding,
@@ -1167,8 +1272,10 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
     return err;
   }
 
-  iter = NULL;
 
+  aom_codec_iter_t iter = NULL; // for extracting the compressed packets
+
+  const aom_codec_cx_pkt_t* pkt = NULL;
   while ((pkt = aom_codec_get_cx_data(&codec, &iter)) != NULL) {
 
     if (pkt->kind == AOM_CODEC_CX_FRAME_PKT) {
@@ -1181,43 +1288,83 @@ heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
       // This allows libheif to easily extract the sequence header for the av1C header
 
       size_t n = pkt->data.frame.sz;
-      size_t oldSize = encoder->compressedData.size();
-      encoder->compressedData.resize(oldSize + n);
 
-      memcpy(encoder->compressedData.data() + oldSize,
+      encoder_struct_aom::Packet output_packet;
+      output_packet.frameNr = pkt->data.frame.pts;
+
+      encoder->output_packets.emplace_back(output_packet);
+      encoder->output_packets.back().compressedData.resize(n);
+
+      memcpy(encoder->output_packets.back().compressedData.data(),
              pkt->data.frame.buf,
              n);
-
-      encoder->data_read = false;
     }
+  }
+
+  return {};
+}
+
+
+static heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
+                                   heif_image_input_class input_class)
+{
+  heif_error err;
+  err = aom_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = aom_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  return aom_end_sequence_encoding(encoder_raw);
+}
+
+
+heif_error aom_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                    uintptr_t* out_framenr, int* out_is_keyframe,
+                                    int* more_frame_packets)
+{
+  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
+
+  encoder->active_output_data.clear();
+
+  if (encoder->output_packets.empty()) {
+    *size = 0;
+    *data = nullptr;
+  }
+  else {
+    encoder->active_output_data = std::move(encoder->output_packets.front().compressedData);
+    if (out_framenr) {
+      *out_framenr = encoder->output_packets.front().frameNr;
+    }
+
+    if (out_is_keyframe) {
+      *out_is_keyframe = encoder->output_packets.front().is_keyframe;
+    }
+
+    encoder->output_packets.pop_front();
+
+    *size = (int) encoder->active_output_data.size();
+    *data = encoder->active_output_data.data();
   }
 
   return heif_error_ok;
 }
 
 
-heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                   heif_encoded_data_type* type)
+static heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                          heif_encoded_data_type* type)
 {
-  encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
-
-  if (encoder->data_read) {
-    *size = 0;
-    *data = nullptr;
-  }
-  else {
-    *size = (int) encoder->compressedData.size();
-    *data = encoder->compressedData.data();
-    encoder->data_read = true;
-  }
-
-  return heif_error_ok;
+  return aom_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr, nullptr);
 }
 
 
 static const heif_encoder_plugin encoder_plugin_aom
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_AV1,
         /* id_name */ "aom",
         /* priority */ AOM_PLUGIN_PRIORITY,
@@ -1245,7 +1392,13 @@ static const heif_encoder_plugin encoder_plugin_aom
         /* encode_image */ aom_encode_image,
         /* get_compressed_data */ aom_get_compressed_data,
         /* query_input_colorspace (v2) */ aom_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        /* start_sequence_encoding (v4) */ aom_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ aom_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ aom_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ aom_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
 const heif_encoder_plugin* get_encoder_plugin_aom()

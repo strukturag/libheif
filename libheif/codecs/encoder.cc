@@ -114,8 +114,9 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 extern void fill_default_color_conversion_options_ext(heif_color_conversion_options_ext& options);
 
 Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
-                                                                                 struct heif_encoder* encoder,
-                                                                                 const struct heif_encoding_options& options,
+                                                                                 heif_encoder* encoder,
+                                                                                 const heif_color_profile_nclx* user_requested_output_nclx,
+                                                                                 const heif_color_conversion_options* color_conversion_options,
                                                                                  const heif_security_limits* security_limits)
 {
   const heif_color_profile_nclx* output_nclx_profile;
@@ -123,7 +124,7 @@ Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding
   if (const auto* nclx = get_forced_output_nclx()) {
     output_nclx_profile = nclx;
   } else {
-    output_nclx_profile = options.output_nclx_profile;
+    output_nclx_profile = user_requested_output_nclx;
   }
 
 
@@ -162,6 +163,6 @@ Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding
   //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
 
   return convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                            output_bpp, options.color_conversion_options, nullptr,
+                            output_bpp, *color_conversion_options, nullptr,
                             security_limits);
 }

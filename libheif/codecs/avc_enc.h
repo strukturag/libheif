@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2025 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HEIF_ENCODER_VVC_H
-#define HEIF_ENCODER_VVC_H
+#ifndef HEIF_ENCODER_AVC_H
+#define HEIF_ENCODER_AVC_H
 
 #include "libheif/heif.h"
 #include "box.h"
@@ -33,15 +33,12 @@
 #include "codecs/encoder.h"
 
 
-class Encoder_VVC : public Encoder {
+class Encoder_AVC : public Encoder {
 public:
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 heif_encoder* encoder,
                                 const heif_encoding_options& options,
                                 heif_image_input_class input_class) override;
-
-  std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
-
 
   bool encode_sequence_started() const override { return m_encoder_active; }
 
@@ -55,21 +52,23 @@ public:
 
   std::optional<CodedImageData> encode_sequence_get_data() override;
 
+  std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
 private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
 
-  // Whether the vvcC is complete and was returned in an encode_sequence_get_data() call.
-  bool m_vvcC_has_VPS = false;
-  bool m_vvcC_has_SPS = false;
-  bool m_vvcC_has_PPS = false;
-  std::shared_ptr<class Box_vvcC> m_vvcC;
-  bool m_vvcC_sent = false;
+  // Whether the hvcC is complete and was returned in an encode_sequence_get_data() call.
+  bool m_avcC_has_SPS = false;
+  bool m_avcC_has_PPS = false;
+  std::shared_ptr<class Box_avcC> m_avcC;
+  bool m_avcC_sent = false;
 
   int m_encoded_image_width = 0;
   int m_encoded_image_height = 0;
 
   std::optional<CodedImageData> m_current_output_data;
+  bool m_output_image_complete = false;
 
   Error get_data(heif_encoder*);
 };

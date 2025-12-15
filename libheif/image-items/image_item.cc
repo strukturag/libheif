@@ -223,6 +223,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
       return std::make_shared<ImageItem_AVIF>(ctx);
     case heif_compression_VVC:
       return std::make_shared<ImageItem_VVC>(ctx);
+    case heif_compression_AVC:
+      return std::make_shared<ImageItem_AVC>(ctx);
 #if WITH_UNCOMPRESSED_CODEC
     case heif_compression_uncompressed:
       return std::make_shared<ImageItem_uncompressed>(ctx);
@@ -892,6 +894,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     auto itai = get_property<Box_itai>();
     if (itai) {
       img->set_tai_timestamp(itai->get_tai_timestamp_packet());
+    }
+
+    // GIMI content ID
+
+    auto gimi_content_id = get_property<Box_gimi_content_id>();
+    if (gimi_content_id) {
+      img->set_gimi_sample_content_id(gimi_content_id->get_content_id());
     }
   }
 

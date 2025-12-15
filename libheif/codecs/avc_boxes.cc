@@ -26,6 +26,7 @@
 #include "file.h"
 #include "context.h"
 #include "avc_dec.h"
+#include "hevc_boxes.h"
 
 
 Error Box_avcC::parse(BitstreamRange& range, const heif_security_limits* limits)
@@ -85,35 +86,43 @@ Error Box_avcC::write(StreamWriter& writer) const
   writer.write8(lengthSizeMinusOneWithReserved);
 
   if (m_sps.size() > 0b00011111) {
-    return {heif_error_Encoding_error,
-            heif_suberror_Unspecified,
-            "Cannot write more than 31 PPS into avcC box."};
+    return {
+      heif_error_Encoding_error,
+      heif_suberror_Unspecified,
+      "Cannot write more than 31 PPS into avcC box."
+    };
   }
 
   uint8_t numSpsWithReserved = 0b11100000 | (m_sps.size() & 0b00011111);
   writer.write8(numSpsWithReserved);
   for (const auto& sps : m_sps) {
     if (sps.size() > 0xFFFF) {
-      return {heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Cannot write SPS larger than 65535 bytes into avcC box."};
+      return {
+        heif_error_Encoding_error,
+        heif_suberror_Unspecified,
+        "Cannot write SPS larger than 65535 bytes into avcC box."
+      };
     }
     writer.write16((uint16_t) sps.size());
     writer.write(sps);
   }
 
   if (m_pps.size() > 0xFF) {
-    return {heif_error_Encoding_error,
-            heif_suberror_Unspecified,
-            "Cannot write more than 255 PPS into avcC box."};
+    return {
+      heif_error_Encoding_error,
+      heif_suberror_Unspecified,
+      "Cannot write more than 255 PPS into avcC box."
+    };
   }
 
   writer.write8(m_pps.size() & 0xFF);
   for (const auto& pps : m_pps) {
     if (pps.size() > 0xFFFF) {
-      return {heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Cannot write PPS larger than 65535 bytes into avcC box."};
+      return {
+        heif_error_Encoding_error,
+        heif_suberror_Unspecified,
+        "Cannot write PPS larger than 65535 bytes into avcC box."
+      };
     }
     writer.write16((uint16_t) pps.size());
     writer.write(pps);
@@ -127,17 +136,21 @@ Error Box_avcC::write(StreamWriter& writer) const
     writer.write8(m_configuration.bit_depth_chroma - 8);
 
     if (m_sps_ext.size() > 0xFF) {
-      return {heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Cannot write more than 255 SPS-Ext into avcC box."};
+      return {
+        heif_error_Encoding_error,
+        heif_suberror_Unspecified,
+        "Cannot write more than 255 SPS-Ext into avcC box."
+      };
     }
 
     writer.write8(m_sps_ext.size() & 0xFF);
     for (const auto& spsext : m_sps_ext) {
       if (spsext.size() > 0xFFFF) {
-        return {heif_error_Encoding_error,
-                heif_suberror_Unspecified,
-                "Cannot write SPS-Ext larger than 65535 bytes into avcC box."};
+        return {
+          heif_error_Encoding_error,
+          heif_suberror_Unspecified,
+          "Cannot write SPS-Ext larger than 65535 bytes into avcC box."
+        };
       }
       writer.write16((uint16_t) spsext.size());
       writer.write(spsext);
@@ -154,10 +167,10 @@ std::string Box_avcC::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "configuration_version: " << ((int) m_configuration.configuration_version) << "\n"
-       << indent << "AVCProfileIndication: " << ((int) m_configuration.AVCProfileIndication) << " (" << profileIndicationAsText() << ")\n"
-       << indent << "profile_compatibility: " << ((int) m_configuration.profile_compatibility) << "\n"
-       << indent << "AVCLevelIndication: " << ((int) m_configuration.AVCLevelIndication) << "\n"
-       << indent << "Chroma format: ";
+      << indent << "AVCProfileIndication: " << ((int) m_configuration.AVCProfileIndication) << " (" << profileIndicationAsText() << ")\n"
+      << indent << "profile_compatibility: " << ((int) m_configuration.profile_compatibility) << "\n"
+      << indent << "AVCLevelIndication: " << ((int) m_configuration.AVCLevelIndication) << "\n"
+      << indent << "Chroma format: ";
 
   switch (m_configuration.chroma_format) {
     case heif_chroma_monochrome:
@@ -178,7 +191,7 @@ std::string Box_avcC::dump(Indent& indent) const
   }
 
   sstr << indent << "Bit depth luma: " << ((int) m_configuration.bit_depth_luma) << "\n"
-       << indent << "Bit depth chroma: " << ((int) m_configuration.bit_depth_chroma) << "\n";
+      << indent << "Bit depth chroma: " << ((int) m_configuration.bit_depth_chroma) << "\n";
 
   for (const auto& sps : m_sps) {
     sstr << indent << "SPS: ";
@@ -264,4 +277,181 @@ void Box_avcC::get_header_nals(std::vector<uint8_t>& data) const
 
     data.insert(data.end(), pps.begin(), pps.end());
   }
+}
+
+
+void Box_avcC::append_sps_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data + size);
+  m_sps.emplace_back(std::move(vec));
+}
+
+void Box_avcC::append_sps_ext_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data + size);
+  m_sps_ext.emplace_back(std::move(vec));
+}
+
+void Box_avcC::append_pps_nal(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> vec(data, data + size);
+  m_pps.emplace_back(std::move(vec));
+}
+
+void skip_scaling_list(BitReader& reader, int sizeOfScalingList)
+{
+  int lastScale = 8;
+  int nextScale = 8;
+
+  // TODO: it seems that this can be simplified by exiting the loop
+  //       as soon as nextScale==0.
+
+#if 0
+  // original version
+  for (int j = 0; j < sizeOfScalingList; j++) {
+    if (nextScale != 0) {
+      int delta_scale;
+      reader.get_svlc(&delta_scale);
+      nextScale = (lastScale + delta_scale + 256) % 256;
+    }
+
+    lastScale = (nextScale == 0) ? lastScale : nextScale;
+  }
+#else
+  // fast version
+  for (int j = 0; j < sizeOfScalingList; j++) {
+    int delta_scale;
+    reader.get_svlc(&delta_scale);
+    nextScale = (lastScale + delta_scale + 256) % 256;
+
+    if (nextScale == 0) {
+      break;
+    }
+
+    lastScale = nextScale;
+  }
+#endif
+}
+
+
+Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_avcC::configuration* config,
+                                       int* width, int* height)
+{
+  // remove start-code emulation bytes from SPS header stream
+
+  std::vector<uint8_t> sps_no_emul = remove_start_code_emulation(sps, size);
+
+  sps = sps_no_emul.data();
+  size = sps_no_emul.size();
+
+
+  BitReader reader(sps, (int) size);
+
+  // skip NAL header
+  reader.skip_bits(8);
+
+  config->configuration_version = 1;
+  config->AVCProfileIndication = reader.get_bits8(8);
+  config->profile_compatibility = reader.get_bits8(8);
+  config->AVCLevelIndication = reader.get_bits8(8);
+  config->lengthSize = 4;
+
+  int value;
+  reader.get_uvlc(&value); // SPS ID
+
+  Error invalidUVLC{
+    heif_error_Invalid_input,
+    heif_suberror_Unspecified,
+    "Invalid variable length code in AVC SPS header"
+  };
+
+  if (std::set<int>{100, 110, 122, 244, 44, 83, 86}.contains(config->AVCProfileIndication)) {
+    if (!reader.get_uvlc(&value)) {
+      return invalidUVLC;
+    }
+
+    config->chroma_format = (heif_chroma) value;
+    if (config->chroma_format == heif_chroma_444) {
+      reader.skip_bits(1);
+    }
+
+    if (!reader.get_uvlc(&value)) {
+      return invalidUVLC;
+    }
+    config->bit_depth_luma = static_cast<uint8_t>(8 + value);
+
+    if (!reader.get_uvlc(&value)) {
+      return invalidUVLC;
+    }
+    config->bit_depth_chroma = static_cast<uint8_t>(8 + value);
+
+    reader.skip_bits(1);
+    int seq_scaling_matrix_present_flag = reader.get_bits(1);
+    if (seq_scaling_matrix_present_flag) {
+      for (int i = 0; i < ((config->chroma_format != heif_chroma_444) ? 8 : 12); i++) {
+        int scaling_list_present_flag = reader.get_bits(1);
+        if (scaling_list_present_flag) {
+          if (i < 6) {
+            skip_scaling_list(reader, 16);
+          }
+          else {
+            skip_scaling_list(reader, 64);
+          }
+        }
+      }
+    }
+  }
+  else {
+    config->chroma_format = heif_chroma_420;
+    config->bit_depth_luma = 8;
+    config->bit_depth_chroma = 8;
+  }
+
+  reader.get_uvlc(&value); // log2_max_frame_num_minus4
+  int pic_order_cnt_type;
+  reader.get_uvlc(&pic_order_cnt_type);
+  if (pic_order_cnt_type == 0) {
+    reader.get_uvlc(&value);
+  }
+  else if (pic_order_cnt_type == 1) {
+    reader.get_bits(1);
+    reader.get_svlc(&value);
+    reader.get_svlc(&value);
+    int num_ref_franes_in_pic_order_cnt_cycle;
+    reader.get_uvlc(&num_ref_franes_in_pic_order_cnt_cycle);
+    for (int i = 0; i < num_ref_franes_in_pic_order_cnt_cycle; i++) {
+      reader.get_uvlc(&value);
+    }
+  }
+
+  reader.get_uvlc(&value); // num_ref_frames
+  reader.skip_bits(1);
+
+  int pic_width_in_mbs_minus1;
+  int pic_height_in_mbs_minus1;
+  reader.get_uvlc(&pic_width_in_mbs_minus1);
+  reader.get_uvlc(&pic_height_in_mbs_minus1);
+
+  *width = (pic_width_in_mbs_minus1 + 1) * 16;
+  *height = (pic_height_in_mbs_minus1 + 1) * 16;
+
+  uint32_t frame_mbs_only_flag = reader.get_bits(1);
+  if (!frame_mbs_only_flag) {
+    reader.skip_bits(1);
+  }
+  reader.skip_bits(1);
+  uint32_t frame_cropping_flag = reader.get_bits(1);
+  if (frame_cropping_flag) {
+    int left, right, top, bottom;
+    reader.get_uvlc(&left);
+    reader.get_uvlc(&right);
+    reader.get_uvlc(&top);
+    reader.get_uvlc(&bottom);
+
+    *width -= left + right;
+    *height -= top + bottom;
+  }
+
+  return {};
 }

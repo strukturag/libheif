@@ -225,31 +225,37 @@ static TriBool is_png(const uint8_t* data, int len)
 
 const char* heif_get_file_mime_type(const uint8_t* data, int len)
 {
-  heif_brand mainBrand = heif_main_brand(data, len);
+  heif_brand2 mainBrand = heif_read_main_brand(data, len);
 
-  if (mainBrand == heif_heic ||
-      mainBrand == heif_heix ||
-      mainBrand == heif_heim ||
-      mainBrand == heif_heis) {
+  if (mainBrand == heif_brand2_heic ||
+      mainBrand == heif_brand2_heix ||
+      mainBrand == heif_brand2_heim ||
+      mainBrand == heif_brand2_heis) {
     return "image/heic";
   }
-  else if (mainBrand == heif_mif1) {
+  else if (mainBrand == heif_brand2_mif1) {
     return "image/heif";
   }
-  else if (mainBrand == heif_hevc ||
-           mainBrand == heif_hevx ||
-           mainBrand == heif_hevm ||
-           mainBrand == heif_hevs) {
+  else if (mainBrand == heif_brand2_hevc ||
+           mainBrand == heif_brand2_hevx ||
+           mainBrand == heif_brand2_hevm ||
+           mainBrand == heif_brand2_hevs) {
     return "image/heic-sequence";
   }
-  else if (mainBrand == heif_msf1) {
+  else if (mainBrand == heif_brand2_msf1) {
     return "image/heif-sequence";
   }
-  else if (mainBrand == heif_avif) {
+  else if (mainBrand == heif_brand2_avif) {
     return "image/avif";
   }
-  else if (mainBrand == heif_avis) {
+  else if (mainBrand == heif_brand2_avis) {
     return "image/avif-sequence";
+  }
+  else if (mainBrand == heif_brand2_avci) {
+    return "image/avci";
+  }
+  else if (mainBrand == heif_brand2_avcs) {
+    return "image/avcs";
   }
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
   else if (mainBrand == heif_brand2_mif3) {
@@ -267,10 +273,10 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
     return "image/heif";
   }
 #endif
-  else if (mainBrand == heif_j2ki) {
+  else if (mainBrand == heif_brand2_j2ki) {
     return "image/hej2k";
   }
-  else if (mainBrand == heif_j2is) {
+  else if (mainBrand == heif_brand2_j2is) {
     return "image/j2is";
   }
   else if (is_jpeg(data, len) == TriBool::Yes) {

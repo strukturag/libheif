@@ -177,3 +177,35 @@ Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif
                                                           limits);
   return decodeResult;
 }
+
+
+Error
+Decoder_uncompressed::decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
+                                                                 const heif_decoding_options& options,
+                                                                 uintptr_t user_data,
+                                                                 const heif_security_limits* limits)
+{
+  auto decodingResult = decode_single_frame_from_compressed_data(options, limits);
+  if (decodingResult.error()) {
+    return decodingResult.error();
+  }
+
+  m_decoded_image = *decodingResult;
+  m_decoded_image_user_data = user_data;
+
+  return {};
+}
+
+Result<std::shared_ptr<HeifPixelImage> > Decoder_uncompressed::get_decoded_frame(const heif_decoding_options& options,
+                                                                                 uintptr_t* out_user_data,
+                                                                                 const heif_security_limits* limits)
+{
+  auto img = std::move(m_decoded_image);
+  m_decoded_image.reset();
+
+  if (out_user_data) {
+    *out_user_data = m_decoded_image_user_data;
+  }
+
+  return img;
+}

@@ -92,6 +92,7 @@ void SampleAuxInfoHelper::add_nonpresent_sample()
 void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<HeifFile>& file)
 {
   if (m_interleaved && !m_data.empty()) {
+    // TODO: I think this does not work because the image data does not know that there is SAI in-between
     uint64_t pos = file->append_mdat_data(m_data);
     m_saio->add_sample_offset(pos);
 
@@ -187,6 +188,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       "Track has no 'tkhd' box."
     };
   }
+
+  m_tkhd = tkhd;
 
   m_id = tkhd->get_track_id();
 
@@ -457,6 +460,15 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
   m_minf = std::make_shared<Box_minf>();
   mdia->append_child_box(m_minf);
 
+  // add (unused) 'dinf'
+
+  auto dinf = std::make_shared<Box_dinf>();
+  auto dref = std::make_shared<Box_dref>();
+  auto url  = std::make_shared<Box_url>();
+  m_minf->append_child_box(dinf);
+  dinf->append_child_box(dref);
+  dref->append_child_box(url);
+
   // vmhd is added in Track_Visual
 
   m_stbl = std::make_shared<Box_stbl>();
@@ -554,6 +566,7 @@ Result<std::shared_ptr<Track>> Track::alloc_track(HeifContext* ctx, const std::s
       break;
     case fourcc("meta"):
       track = std::make_shared<Track_Metadata>(ctx);
+      break;
     default: {
       std::stringstream sstr;
       sstr << "Track with unsupported handler type '" << fourcc_to_string(hdlr->get_handler_type()) << "'.";
@@ -598,7 +611,21 @@ heif_auxiliary_track_info_type Track::get_auxiliary_info_type() const
   }
 }
 
+const char* get_track_auxiliary_info_type(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_HEVC:
+      return cAuxType_alpha_hevc;
+    case heif_compression_AVC:
+      return cAuxType_alpha_avc;
+    case heif_compression_AV1:
+      return cAuxType_alpha_miaf;
+    default:
+      return cAuxType_alpha_miaf; // TODO: is this correct for all remaining compression types ?
+  }
+}
 
+// TODO: is this correct or should we set the aux_info_type depending on the compression format?
 void Track::set_auxiliary_info_type(heif_auxiliary_track_info_type type)
 {
   switch (type) {
@@ -652,17 +679,43 @@ Result<std::string> Track::get_first_cluster_urim_uri() const
 bool Track::end_of_sequence_reached() const
 {
   //return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());
-  return m_next_sample_to_be_processed >= m_num_output_samples;
+  return m_next_sample_to_be_output >= m_num_output_samples;
 }
 
 
-void Track::finalize_track()
+Error Track::finalize_track()
 {
+  // --- write active chunk data
+
+  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(m_chunk_data);
+  m_chunk_data.clear();
+
+  // first sample in chunk? -> write chunk offset
+
+  if (true) { // m_stsc->last_chunk_empty()) {
+    // TODO: we will have to call this at the end of a chunk to dump the current SAI queue
+
+    // if auxiliary data is interleaved, write it between the chunks
+    if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_interleaved(get_file());
+
+    // TODO
+    assert(data_start < 0xFF000000); // add some headroom for header data
+    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
+  }
+
+
+  // --- write rest of data
+
   if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
   if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
   uint64_t duration = m_stts->get_total_duration(true);
   m_mdhd->set_duration(duration);
+
+  m_stss->set_total_number_of_samples(m_stsz->num_samples());
+
+  return {};
 }
 
 
@@ -678,13 +731,13 @@ uint32_t Track::get_timescale() const
 }
 
 
-void Track::set_track_duration_in_movie_units(uint64_t total_duration)
+void Track::set_track_duration_in_movie_units(uint64_t total_duration, uint64_t segment_duration)
 {
   m_tkhd->set_duration(total_duration);
 
   if (m_elst) {
     Box_elst::Entry entry;
-    entry.segment_duration = total_duration;
+    entry.segment_duration = segment_duration;
 
     m_elst->add_entry(entry);
   }
@@ -733,28 +786,16 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 
 
 Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
-                               const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID)
+                               const heif_tai_timestamp_packet* tai, const std::optional<std::string>& gimi_contentID)
 {
-  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(raw_data);
-
-  // first sample in chunk? -> write chunk offset
-
-  if (m_stsc->last_chunk_empty()) {
-    // if auxiliary data is interleaved, write it between the chunks
-    if (m_aux_helper_tai_timestamps) m_aux_helper_tai_timestamps->write_interleaved(get_file());
-    if (m_aux_helper_content_ids) m_aux_helper_content_ids->write_interleaved(get_file());
-
-    // TODO
-    assert(data_start < 0xFF000000); // add some headroom for header data
-    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
-  }
+  m_chunk_data.insert(m_chunk_data.end(), raw_data.begin(), raw_data.end());
 
   m_stsc->increase_samples_in_chunk(1);
 
   m_stsz->append_sample_size((uint32_t)raw_data.size());
 
   if (is_sync_sample) {
-    m_stss->add_sync_sample(m_next_sample_to_be_processed + 1);
+    m_stss->add_sync_sample(m_next_sample_to_be_output + 1);
   }
 
   if (sample_duration == 0) {
@@ -789,8 +830,8 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   // --- sample content id
 
   if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
-    if (!gimi_contentID.empty()) {
-      auto id = gimi_contentID;
+    if (gimi_contentID) {
+      auto id = *gimi_contentID;
       const char* id_str = id.c_str();
       std::vector<uint8_t> id_vector;
       id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
@@ -807,7 +848,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
     }
   }
 
-  m_next_sample_to_be_processed++;
+  m_next_sample_to_be_output++;
 
   return Error::Ok;
 }
@@ -842,7 +883,8 @@ void Track::init_sample_timing_table()
     timing.sample_duration_media_time = m_stts->get_sample_duration(i);
     current_decoding_time += timing.sample_duration_media_time;
 
-    while (i > m_chunks[current_chunk]->last_sample_number()) {
+    while (current_chunk < m_chunks.size() &&
+           i > m_chunks[current_chunk]->last_sample_number()) {
       current_chunk++;
 
       if (current_chunk > m_chunks.size()) {
@@ -889,13 +931,13 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
     num_output_samples = m_num_samples;
   }
 
-  if (m_next_sample_to_be_processed >= num_output_samples) {
+  if (m_next_sample_to_be_output >= num_output_samples) {
     return Error{heif_error_End_of_sequence,
                  heif_suberror_Unspecified,
                  "End of sequence"};
   }
 
-  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_processed % m_presentation_timeline.size()];
+  const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
   uint32_t sample_idx = sampleTiming.sampleIdx;
   uint32_t chunk_idx = sampleTiming.chunkIdx;
 
@@ -951,7 +993,7 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
     }
   }
 
-  m_next_sample_to_be_processed++;
+  m_next_sample_to_be_output++;
 
   return sample;
 }

@@ -52,6 +52,7 @@
 
 #include "benchmark.h"
 #include "common.h"
+#include "SAI_datafile.h"
 #include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_sequences.h"
@@ -65,7 +66,7 @@ int list_encoders = 0;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
-int metadata_compression = 0;
+heif_metadata_compression metadata_compression_method = heif_metadata_compression_off;
 int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
@@ -93,6 +94,8 @@ uint32_t sequence_timebase = 30;
 uint32_t sequence_durations = 1;
 uint32_t sequence_repetitions = 1;
 std::string vmt_metadata_file;
+bool binary_metadata_track = false;
+std::string metadata_track_uri = "vmt:metadata";
 
 int quality = 50;
 bool lossless = false;
@@ -102,6 +105,8 @@ bool option_show_parameters = false;
 int thumbnail_bbox_size = 0;
 int output_bit_depth = 10;
 bool force_enc_av1f = false;
+bool force_enc_avc = false;
+bool force_enc_hevc = false;
 bool force_enc_vvc = false;
 bool force_enc_uncompressed = false;
 bool force_enc_jpeg = false;
@@ -109,6 +114,18 @@ bool force_enc_jpeg2000 = false;
 bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
+bool use_video_handler = false;
+std::string option_mime_item_type;
+std::string option_mime_item_file;
+std::string option_mime_item_name;
+
+enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
+int sequence_keyframe_distance_min = 0;
+int sequence_keyframe_distance_max = 0;
+int sequence_max_frames = 0; // 0 -> no maximum
+std::string option_gimi_track_id;
+std::string option_sai_data_file;
+
 
 enum heif_output_nclx_color_profile_preset
 {
@@ -161,7 +178,20 @@ const int OPTION_SEQUENCES_REPETITIONS = 1020;
 const int OPTION_COLOR_PROFILE_PRESET = 1021;
 const int OPTION_SET_CLLI = 1022;
 const int OPTION_SET_PASP = 1023;
-
+const int OPTION_SEQUENCES_GOP_STRUCTURE = 1024;
+const int OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE = 1025;
+const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
+const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
+const int OPTION_USE_AVC_COMPRESSION = 1028;
+const int OPTION_BINARY_METADATA_TRACK = 1029;
+const int OPTION_METADATA_TRACK_URI = 1030;
+const int OPTION_ADD_MIME_ITEM = 1031;
+const int OPTION_MIME_ITEM_FILE = 1032;
+const int OPTION_MIME_ITEM_NAME = 1033;
+const int OPTION_METADATA_COMPRESSION = 1034;
+const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
+const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
+const int OPTION_USE_HEVC_COMPRESSION = 1037;
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -179,7 +209,9 @@ static option long_options[] = {
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
+    {(char* const) "hevc",                    no_argument,       0,              OPTION_USE_HEVC_COMPRESSION},
     {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
+    {(char* const) "avc",                     no_argument,       0,              OPTION_USE_AVC_COMPRESSION},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
     {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
@@ -198,7 +230,7 @@ static option long_options[] = {
     {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
     {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
+    {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
@@ -209,13 +241,25 @@ static option long_options[] = {
     {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
     {(char* const) "add-pyramid-group",           no_argument,       &add_pyramid_group, 1},
     {(char* const) "sequence",                    no_argument, 0, 'S'},
+    {(char* const) "video",                       no_argument, 0, 'V'},
     {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
     {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
     {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
     {(char* const) "repetitions",                 required_argument,       nullptr, OPTION_SEQUENCES_REPETITIONS},
+    {(char* const) "max-frames",                  required_argument,       nullptr, OPTION_SEQUENCES_MAX_FRAMES},
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
+    {(char* const) "binary-metadata-track",       no_argument,             nullptr, OPTION_BINARY_METADATA_TRACK},
+    {(char* const) "metadata-track-uri",          required_argument,       nullptr, OPTION_METADATA_TRACK_URI},
+    {(char* const) "add-mime-item",               required_argument,       nullptr, OPTION_ADD_MIME_ITEM},
+    {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
+    {(char* const) "mime-item-name",              required_argument,       nullptr, OPTION_MIME_ITEM_NAME},
 #endif
+    {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
+    {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
+    {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
+    {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
+    {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
     {0, 0,                                                           0,  0}
 };
 
@@ -254,23 +298,37 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #              bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "      --premultiplied-alpha      input image has premultiplied alpha\n"
 #if WITH_HEADER_COMPRESSION
-            << "      --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+            << "      --enable-metadata-compression ALGO  enable metadata item compression (experimental)\n"
+            << "                                          Choose algorithm from {off"; // TODO: add 'auto', but it currently equals 'off'
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_deflate)) {
+    std::cerr << ",deflate,zlib";
+  }
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_brotli)) {
+    std::cerr << ",brotli";
+  }
+  std::cerr << "}.\n"
 #endif
             << "  -C, --chroma-downsampling ALGO force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                measure encoding time, PSNR, and output file size\n"
-            << "      --pitm-description TEXT    (experimental) set user description for primary image\n"
+            << "      --pitm-description TEXT    set user description for primary image (experimental)\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
+            << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
+#endif
             << "\n"
             << "codecs:\n"
             << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --hevc                     encode as HEVC (default)\n"
             << "      --vvc                      encode as VVC (experimental)\n"
+            << "      --avc                      encode as AVC (experimental)\n"
             << "      --jpeg                     encode as JPEG\n"
             << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
             << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
-            #if WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
             << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
-            #endif
+#endif
             << "      --list-encoders            list all available encoders for all compression formats\n"
             << "  -e, --encoder ID               select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR     load all codec plugins in the directory\n"
@@ -306,7 +364,7 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES || WITH_UNCOMPRESSED_CODEC
             << "      --tiling-method METHOD    choose one of these methods: grid"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-               ", tili"
+               ", tili (experimental)"
 #endif
 #if WITH_UNCOMPRESSED_CODEC
                ", unci"
@@ -314,17 +372,26 @@ void show_help(const char* argv0)
                ". The default is 'grid'.\n"
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
+            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group. (experimental)\n"
 #endif
             << "\n"
             << "sequences:\n"
-            << "  -S, --sequence            encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
-            << "      --timebase #          set clock ticks/second for sequence\n"
-            << "      --duration #          set frame duration (default: 1)\n"
-            << "      --fps #               set timebase and duration based on fps\n"
-            << "      --repetitions #       set how often the sequence should be played back (default=1), special value: 'infinite'\n"
+            << "  -S, --sequence                 encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
+            << "  -V, --video                    encode as video instead of image sequence\n"
+            << "      --timebase #               set clock ticks/second for sequence\n"
+            << "      --duration #               set frame duration (default: 1)\n"
+            << "      --fps #                    set timebase and duration based on fps\n"
+            << "      --repetitions #            set how often the sequence should be played back (default=1), special value: 'infinite'\n"
+            << "      --gop-structure GOP        frame types to use in GOP (intra-only, low-delay, unrestricted)\n"
+            << "      --min-keyframe-distance #  minimum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-frames #             limit sequence length to maximum number of frames\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-            << "      --vmt-metadata FILE   encode metadata track from VMT file\n"
+            << "      --vmt-metadata FILE        encode metadata track from VMT file (experimental)\n"
+            << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary (experimental)\n"
+            << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
+            << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
+            << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
 #endif
             ;
 }
@@ -574,6 +641,9 @@ heif_compression_format guess_compression_format_from_filename(const std::string
   else if (ends_with(filename_lowercase, ".vvic")) {
     return heif_compression_VVC;
   }
+  else if (ends_with(filename_lowercase, ".avci")) {
+    return heif_compression_AVC;
+  }
   else if (ends_with(filename_lowercase, ".heic")) {
     return heif_compression_HEVC;
   }
@@ -591,6 +661,7 @@ std::string suffix_for_compression_format(heif_compression_format format)
   switch (format) {
     case heif_compression_AV1: return "avif";
     case heif_compression_VVC: return "vvic";
+    case heif_compression_AVC: return "avci";
     case heif_compression_HEVC: return "heic";
     case heif_compression_JPEG2000: return "hej2";
     default: return "data";
@@ -1106,6 +1177,42 @@ std::vector<T> parse_comma_separated_numeric_arguments(std::string arg,
   return results;
 }
 
+bool prefix_compare(const char* a, const char* b)
+{
+  auto minLen = std::min(strlen(a), strlen(b));
+  return strncmp(a,b,minLen) == 0;
+}
+
+
+bool set_metadata_compression_method(const std::string& arg)
+{
+  if (arg == "auto") {
+    metadata_compression_method = heif_metadata_compression_auto;
+    return true;
+  }
+  else if (arg == "off") {
+    metadata_compression_method = heif_metadata_compression_off;
+    return true;
+  }
+  else if (arg == "brotli") {
+    metadata_compression_method = heif_metadata_compression_brotli;
+    return true;
+  }
+  else if (arg == "deflate") {
+    metadata_compression_method = heif_metadata_compression_deflate;
+    return true;
+  }
+  else if (arg == "zlib") {
+    metadata_compression_method = heif_metadata_compression_zlib;
+    return true;
+  }
+  else {
+    std::cerr << "Unknown metadata compression method '" << arg << "'. Choose between {auto,off,deflate,zlib,brotli}\n";
+    return false;
+  }
+}
+
+
 
 class LibHeifInitializer
 {
@@ -1130,7 +1237,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:TS"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:TSV"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
@@ -1195,8 +1302,14 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_USE_HEVC_COMPRESSION:
+        force_enc_hevc = true;
+        break;
       case OPTION_USE_VVC_COMPRESSION:
         force_enc_vvc = true;
+        break;
+      case OPTION_USE_AVC_COMPRESSION:
+        force_enc_avc = true;
         break;
       case OPTION_USE_JPEG_COMPRESSION:
         force_enc_jpeg = true;
@@ -1211,7 +1324,7 @@ int main(int argc, char** argv)
         int nPlugins;
         heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
         if (error.code) {
-          std::cerr << "Error loading libheif plugins.\n";
+          std::cerr << "Error loading libheif plugins: " << error.message << "\n";
           return 1;
         }
 
@@ -1289,6 +1402,9 @@ int main(int argc, char** argv)
       case 'S':
         encode_sequence = true;
         break;
+      case 'V':
+        use_video_handler = true;
+        break;
       case OPTION_SEQUENCES_TIMEBASE:
         sequence_timebase = atoi(optarg);
         break;
@@ -1318,6 +1434,42 @@ int main(int argc, char** argv)
           }
         }
         break;
+      case OPTION_SEQUENCES_GOP_STRUCTURE:
+        if (prefix_compare(optarg, "intra-only")) {
+          sequence_gop_structure = heif_sequence_gop_structure_intra_only;
+        }
+        else if (prefix_compare(optarg, "low-delay") || prefix_compare(optarg, "p")) {
+          sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
+        }
+        else if (prefix_compare(optarg, "unrestricted") || prefix_compare(optarg, "b")) {
+          sequence_gop_structure = heif_sequence_gop_structure_unrestricted;
+        }
+        else {
+          std::cerr << "Invalid GOP structure argument\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_min = atoi(optarg);
+        if (sequence_keyframe_distance_min < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_max = atoi(optarg);
+        if (sequence_keyframe_distance_max < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MAX_FRAMES:
+        sequence_max_frames = atoi(optarg);
+        if (sequence_max_frames <= 0) {
+          std::cerr << "Maximum number of frames must be >= 1\n";
+          return 5;
+        }
+        break;
       case OPTION_COLOR_PROFILE_PRESET:
         if (strcmp(optarg, "auto")==0) {
           output_color_profile_preset = heif_output_nclx_color_profile_preset_automatic;
@@ -1344,6 +1496,12 @@ int main(int argc, char** argv)
         break;
       case OPTION_VMT_METADATA_FILE:
         vmt_metadata_file = optarg;
+        break;
+      case OPTION_BINARY_METADATA_TRACK:
+        binary_metadata_track = true;
+        break;
+      case OPTION_METADATA_TRACK_URI:
+        metadata_track_uri = optarg;
         break;
       case OPTION_SET_CLLI: {
         auto clli_args = parse_comma_separated_numeric_arguments<uint16_t>(optarg,
@@ -1379,6 +1537,28 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_ADD_MIME_ITEM:
+        option_mime_item_type = optarg;
+        break;
+      case OPTION_MIME_ITEM_FILE:
+        option_mime_item_file = optarg;
+        break;
+      case OPTION_MIME_ITEM_NAME:
+        option_mime_item_name = optarg;
+        break;
+      case OPTION_METADATA_COMPRESSION: {
+        bool success = set_metadata_compression_method(optarg);
+        if (!success) {
+          exit(5);
+        }
+        break;
+      }
+      case OPTION_SEQUENCES_GIMI_TRACK_ID:
+        option_gimi_track_id = optarg;
+        break;
+      case OPTION_SEQUENCES_SAI_DATA_FILE:
+        option_sai_data_file = optarg;
+        break;
     }
   }
 
@@ -1388,7 +1568,7 @@ int main(int argc, char** argv)
   }
 
   if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
-      (force_enc_jpeg2000 ? 1 : 0) > 1) {
+      (force_enc_jpeg2000 ? 1 : 0) + (force_enc_avc ? 1 : 0) + (force_enc_hevc ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
     return 5;
   }
@@ -1405,6 +1585,16 @@ int main(int argc, char** argv)
 
   if (sequence_durations <= 0) {
     std::cerr << "Sequence frame durations cannot be zero.\n";
+    return 5;
+  }
+
+  if (encode_sequence && !option_mime_item_file.empty()) {
+    std::cerr << "MIME item cannot be added to sequence-only files.\n";
+    return 5;
+  }
+
+  if (!option_sai_data_file.empty() && !encode_sequence) {
+    std::cerr << "Image SAI data can only be used with sequences.\n";
     return 5;
   }
 
@@ -1436,6 +1626,9 @@ int main(int argc, char** argv)
   else if (force_enc_vvc) {
     compressionFormat = heif_compression_VVC;
   }
+  else if (force_enc_avc) {
+    compressionFormat = heif_compression_AVC;
+  }
   else if (force_enc_uncompressed) {
     compressionFormat = heif_compression_uncompressed;
   }
@@ -1447,6 +1640,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_htj2k) {
     compressionFormat = heif_compression_HTJ2K;
+  }
+  else if (force_enc_hevc) {
+    compressionFormat = heif_compression_HEVC;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);
@@ -1744,7 +1940,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (!input_image.xmp.empty()) {
       error = heif_context_add_XMP_metadata2(context, handle,
                                              input_image.xmp.data(), (int) input_image.xmp.size(),
-                                             metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
+                                             metadata_compression_method);
       if (error.code != 0) {
         heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
@@ -1822,6 +2018,44 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     }
   }
 #endif
+
+  // --- add extra MIME item with user data
+
+  if (!option_mime_item_file.empty() || !option_mime_item_type.empty()) {
+    if (option_mime_item_file.empty() || option_mime_item_type.empty()) {
+      std::cerr << "Options --add-mime-item and --mime-item-file have to be used together\n";
+      return 5;
+    }
+
+    std::ifstream istr(option_mime_item_file.c_str(), std::ios::binary | std::ios::ate);
+    if (!istr) {
+      std::cerr << "Failed to open file for MIME item: '" << option_mime_item_file << "'\n";
+      return 5;
+    }
+
+    // Get size by seeking to the end (thanks to ios::ate)
+    std::streamsize size = istr.tellg();
+    if (size < 0) {
+      std::cerr << "Querying size of file '" << option_mime_item_file << "' failed.\n";
+      return 5;
+    }
+
+    std::vector<uint8_t> buffer(size);
+
+    // Seek back to beginning and read
+    istr.seekg(0, std::ios::beg);
+    istr.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    heif_item_id itemId;
+    heif_context_add_mime_item(context, option_mime_item_type.c_str(),
+                               metadata_compression_method,
+                               buffer.data(), (int)buffer.size(),
+                               &itemId);
+
+    if (!option_mime_item_name.empty()) {
+      heif_item_set_item_name(context, itemId, option_mime_item_name.c_str());
+    }
+  }
 
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
@@ -1901,7 +2135,49 @@ std::vector<std::string> deflate_input_filenames(const std::string& filename_exa
 }
 
 
-int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
+std::optional<uint8_t> nibble_to_val(char c)
+{
+  if (c>='0' && c<='9') {
+    return c - '0';
+  }
+  if (c>='a' && c<='f') {
+    return c - 'a' + 10;
+  }
+  if (c>='A' && c<='F') {
+    return c - 'A' + 10;
+  }
+
+  return std::nullopt;
+}
+
+// Convert hex data to raw binary. Ignore any non-hex characters.
+static std::vector<uint8_t> hex_to_binary(const std::string& line)
+{
+  std::vector<uint8_t> data;
+  uint8_t current_value = 0;
+
+  bool high_nibble = true;
+  for (auto c : line) {
+    auto v = nibble_to_val(c);
+    if (v) {
+      if (high_nibble) {
+        current_value = static_cast<uint8_t>(*v << 4);
+        high_nibble = false;
+      }
+      else {
+        current_value |= *v;
+        data.push_back(current_value);
+        high_nibble = true;
+      }
+    }
+  }
+
+  return data;
+}
+
+
+int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
+                              const std::string& track_uri, bool binary)
 {
   // --- add metadata track
 
@@ -1910,7 +2186,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
   heif_track_options* track_options = heif_track_options_alloc();
   heif_track_options_set_timescale(track_options, 1000);
 
-  heif_context_add_uri_metadata_sequence_track(context, "vmt:metadata", track_options, &track);
+  heif_context_add_uri_metadata_sequence_track(context, track_uri.c_str(), track_options, &track);
   heif_raw_sequence_sample* sample = heif_raw_sequence_sample_alloc();
 
 
@@ -1918,8 +2194,8 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
 
   std::regex pattern(R"((\d\d):(\d\d):(\d\d).(\d\d\d) -->$)");
 
-  static std::string prev_metadata;
-  static uint32_t prev_ts = 0;
+  static std::vector<uint8_t> prev_metadata;
+  static std::optional<uint32_t> prev_ts;
 
   std::string line;
   while (std::getline(istr, line))
@@ -1940,19 +2216,35 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
                    std::stoi(ss) * 1000 +
                    std::stoi(mil));
 
-    std::string concat;
+    std::vector<uint8_t> concat;
 
-    while (std::getline(istr, line)) {
-      if (line.empty()) {
-        break;
+    if (binary) {
+      while (std::getline(istr, line)) {
+        if (line.empty()) {
+          break;
+        }
+
+        std::vector<uint8_t> binaryData = hex_to_binary(line);
+        concat.insert(concat.end(), binaryData.begin(), binaryData.end());
       }
 
-      concat += line + '\n';
+    }
+    else {
+      while (std::getline(istr, line)) {
+        if (line.empty()) {
+          break;
+        }
+
+        concat.insert(concat.end(), line.data(), line.data() + line.length());
+        concat.push_back('\n');
+      }
+
+      concat.push_back(0);
     }
 
-    if (prev_ts > 0) {
-      heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.c_str(), prev_metadata.length()+1);
-      heif_raw_sequence_sample_set_duration(sample, ts - prev_ts);
+    if (prev_ts) {
+      heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
+      heif_raw_sequence_sample_set_duration(sample, ts - *prev_ts);
       heif_track_add_raw_sequence_sample(track, sample);
     }
 
@@ -1962,7 +2254,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
 
   // --- flush last metadata packet
 
-  heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.c_str(), prev_metadata.length()+1);
+  heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
   heif_raw_sequence_sample_set_duration(sample, 1);
   heif_track_add_raw_sequence_sample(track, sample);
 
@@ -1980,23 +2272,41 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track)
 }
 
 
+
 int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, std::vector<std::string> args)
 {
   if (args.size() == 1) {
     args = deflate_input_filenames(args[0]);
   }
 
-  size_t nImages = args.size();
   size_t currImage = 0;
+
+  size_t nImages = args.size();
+  if (sequence_max_frames && nImages > static_cast<size_t>(sequence_max_frames)) {
+    nImages = sequence_max_frames;
+  }
+
+  // --- optionally load SAI data to be used for the frames
+
+  SAI_datafile sai_data;
+  if (!option_sai_data_file.empty()) {
+    sai_data.load_sai_data_from_file(option_sai_data_file.c_str());
+  }
+
 
   uint16_t image_width=0, image_height=0;
 
   bool first_image = true;
 
   heif_track* track = nullptr;
+  heif_sequence_encoding_options* encoding_options = nullptr;
 
   for (std::string input_filename : args) {
     currImage++;
+    if (currImage > nImages) {
+      break;
+    }
+
     std::cout << "\rencoding sequence image " << currImage << "/" << nImages;
     std::cout.flush();
 
@@ -2014,20 +2324,40 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
 
     if (first_image) {
       heif_track_options* track_options = heif_track_options_alloc();
-
       heif_track_options_set_timescale(track_options, sequence_timebase);
+
+      if (!option_gimi_track_id.empty()) {
+        heif_track_options_set_gimi_track_id(track_options, option_gimi_track_id.c_str());
+      }
+
+      if (sai_data.tai_clock_info) {
+        heif_track_options_enable_sample_tai_timestamps(track_options,
+                                                        sai_data.tai_clock_info,
+                                                        heif_sample_aux_info_presence_optional);
+      }
+
+      if (!sai_data.gimi_content_ids.empty()) {
+        heif_track_options_enable_sample_gimi_content_ids(track_options,
+                                                          heif_sample_aux_info_presence_optional);
+      }
 
       heif_context_set_sequence_timescale(context, sequence_timebase);
       heif_context_set_number_of_sequence_repetitions(context, sequence_repetitions);
+
+      encoding_options = heif_sequence_encoding_options_alloc();
+      encoding_options->gop_structure = sequence_gop_structure;
+      encoding_options->keyframe_distance_min = sequence_keyframe_distance_min;
+      encoding_options->keyframe_distance_max = sequence_keyframe_distance_max;
+      encoding_options->save_alpha_channel = master_alpha;
 
       image_width = static_cast<uint16_t>(w);
       image_height = static_cast<uint16_t>(h);
 
       heif_context_add_visual_sequence_track(context,
                                              image_width, image_height,
-                                             heif_track_type_video,
+                                             use_video_handler ? heif_track_type_video : heif_track_type_image_sequence,
                                              track_options,
-                                             nullptr,
+                                             encoding_options,
                                              &track);
 
       heif_track_options_release(track_options);
@@ -2049,36 +2379,62 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
       return 5;
     }
 
-    auto* seq_options = heif_sequence_encoding_options_alloc();
-
     //seq_options->save_alpha_channel = false; // TODO: sequences with alpha ?
-    seq_options->output_nclx_profile = nclx;
+    encoding_options->output_nclx_profile = nclx;
     //seq_options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
 
     heif_image_set_duration(image.get(), sequence_durations);
 
-    error = heif_track_encode_sequence_image(track, image.get(), encoder, seq_options);
+    // --- set SAI data
+
+    if (currImage-1 < sai_data.gimi_content_ids.size()) {
+      if (!sai_data.gimi_content_ids[currImage-1].empty()) {
+        heif_image_set_gimi_sample_content_id(image.get(), sai_data.gimi_content_ids[currImage-1].c_str());
+      }
+    }
+
+    if (currImage-1 < sai_data.tai_timestamps.size()) {
+      if (sai_data.tai_timestamps[currImage-1]) {
+        heif_image_set_tai_timestamp(image.get(), sai_data.tai_timestamps[currImage-1]);
+      }
+    }
+
+    // --- encode image
+
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, encoding_options);
     if (error.code) {
       heif_nclx_color_profile_free(nclx);
-      heif_sequence_encoding_options_release(seq_options);
       std::cerr << "Cannot encode sequence image: " << error.message << "\n";
       return 5;
     }
 
-    heif_sequence_encoding_options_release(seq_options);
     heif_nclx_color_profile_free(nclx);
   }
 
   std::cout << "\n";
 
+  heif_error error = heif_track_encode_end_of_sequence(track, encoder);
+  if (error.code) {
+    std::cerr << "Cannot end sequence: " << error.message << "\n";
+    return 5;
+  }
+
   if (!vmt_metadata_file.empty()) {
-    int ret = encode_vmt_metadata_track(context, track);
+    int ret = encode_vmt_metadata_track(context, track, metadata_track_uri, binary_metadata_track);
     if (ret) {
       return ret;
     }
   }
 
   heif_track_release(track);
+  heif_sequence_encoding_options_release(encoding_options);
+
+
+  // --- add first image as image item
+
+  if (!use_video_handler) {
+    do_encode_images(context, encoder, options, {args[0]});
+  }
 
   return 0;
 }

@@ -147,11 +147,10 @@ Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
                            ((m_length_size - 1) & 0x03)));
 
   size_t nArrays = m_nal_array.size();
-  if (nArrays > 0xFF) {
-    // TODO: error: too many NAL units
-  }
+  // There cannot be an overflow because the nal-type is less than 8-bit.
+  assert(nArrays <= 0xFF);
 
-  writer.write8((uint8_t) nArrays);
+  writer.write8(static_cast<uint8_t>(nArrays));
 
   for (const HEVCDecoderConfigurationRecord::NalArray& array : m_nal_array) {
 
@@ -160,13 +159,17 @@ Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
 
     size_t nUnits = array.m_nal_units.size();
     if (nUnits > 0xFFFF) {
-      // TODO: error: too many NAL units
+      return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "Too many NAL units in hvcC"};
     }
 
-    writer.write16((uint16_t) nUnits);
+    writer.write16(static_cast<uint16_t>(nUnits));
 
     for (const std::vector<uint8_t>& nal_unit : array.m_nal_units) {
-      writer.write16((uint16_t) nal_unit.size());
+      if (nal_unit.size() > 0xFFFF) {
+        return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "hvcC NAL unit exceeds maximum size (64kB)"};
+      }
+
+      writer.write16(static_cast<uint16_t>(nal_unit.size()));
       writer.write(nal_unit);
     }
   }
@@ -190,8 +193,6 @@ bool HEVCDecoderConfigurationRecord::is_profile_compatibile(Profile profile) con
 
 Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  //parse_full_box_header(range);
-
   return m_configuration.parse(range, limits);
 }
 
@@ -284,21 +285,21 @@ std::string Box_hvcC::dump(Indent& indent) const
 }
 
 
-bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
+bool Box_hvcC::get_header_nals(std::vector<uint8_t>* dest) const
 {
+  // Concatenate all header NALs, each prefixed by a 4-byte size.
+
   for (const auto& array : m_configuration.m_nal_array) {
     for (const auto& unit : array.m_nal_units) {
+
+      // Write 4-byte NALs size
 
       dest->push_back((unit.size() >> 24) & 0xFF);
       dest->push_back((unit.size() >> 16) & 0xFF);
       dest->push_back((unit.size() >> 8) & 0xFF);
       dest->push_back((unit.size() >> 0) & 0xFF);
 
-      /*
-      dest->push_back(0);
-      dest->push_back(0);
-      dest->push_back(1);
-      */
+      // Copy NAL data
 
       dest->insert(dest->end(), unit.begin(), unit.end());
     }
@@ -307,23 +308,17 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
   return true;
 }
 
-
-void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
-{
-  HEVCDecoderConfigurationRecord::NalArray array;
-  array.m_array_completeness = 0;
-  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
-  array.m_nal_units.push_back(nal);
-
-  m_configuration.m_nal_array.push_back(array);
-}
-
 void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
 {
   std::vector<uint8_t> nal;
   nal.resize(size);
   memcpy(nal.data(), data, size);
 
+  append_nal_data(nal);
+}
+
+void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
+{
   for (auto& nal_array : m_configuration.m_nal_array) {
     if (nal_array.m_NAL_unit_type == uint8_t(nal[0] >> 1)) {
 
@@ -345,7 +340,7 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
 
         // Check whether packets have similar content.
 
-        size_t common_length = std::min(nal_unit.size(), nal.size());
+        const size_t common_length = std::min(nal_unit.size(), nal.size());
         bool similar = true;
         for (size_t i = 0; i < common_length; i++) {
           if (nal_unit[i] != nal[i]) {
@@ -372,6 +367,8 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
       return;
     }
   }
+
+  // This is a new NAL type. Add a new NAL array.
 
   HEVCDecoderConfigurationRecord::NalArray array;
   array.m_array_completeness = 1;
@@ -571,7 +568,8 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 }
 
 
-static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
+// Used for AVC, HEVC, and VVC.
+std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
 {
   std::vector<uint8_t> out_data;
 
@@ -706,8 +704,8 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   config->configuration_version = 1;
   config->min_spatial_segmentation_idc = 0; // TODO: get this value from the VUI, 0 should be safe
   config->parallelism_type = 0; // TODO, 0 should be safe
-  config->avg_frame_rate = 0; // makes no sense for HEIF
-  config->constant_frame_rate = 0; // makes no sense for HEIF
+  config->avg_frame_rate = 0; // makes no sense for HEIF (TODO)
+  config->constant_frame_rate = 0; // makes no sense for HEIF (TODO)
   config->num_temporal_layers = 1; // makes no sense for HEIF
 
   return Error::Ok;

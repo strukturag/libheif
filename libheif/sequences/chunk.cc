@@ -20,6 +20,7 @@
 
 #include "chunk.h"
 #include "context.h"
+#include "codecs/avc_enc.h"
 #include "codecs/hevc_enc.h"
 #include "codecs/avif_enc.h"
 #include "codecs/vvc_enc.h"
@@ -45,6 +46,9 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format
       break;
     case heif_compression_VVC:
       m_encoder = std::make_shared<Encoder_VVC>();
+      break;
+    case heif_compression_AVC:
+      m_encoder = std::make_shared<Encoder_AVC>();
       break;
     case heif_compression_JPEG2000:
       m_encoder = std::make_shared<Encoder_JPEG2000>();

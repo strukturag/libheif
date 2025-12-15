@@ -749,6 +749,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x43, 0x63, 0xe9, 0x14, 0x5b, 0x7d, 0x4a, 0xab, 0x97, 0xae, 0xbe, 0xa6, 0x98, 0x03, 0xb4, 0x34}) {
         box = std::make_shared<Box_cmex>();
       }
+      else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x26, 0x1e, 0xf3, 0x74, 0x1d, 0x97, 0x5b, 0xba, 0xac, 0xbd, 0x9d, 0x2c, 0x8e, 0xa7, 0x35, 0x22}) {
+        box = std::make_shared<Box_gimi_content_id>();
+      }
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
       }
@@ -4256,6 +4259,26 @@ Error Box_dref::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
+Error Box_dref::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_children.size() > 0xFFFF) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Too many dref children boxes."
+    };
+  }
+
+  writer.write32(static_cast<uint32_t>(m_children.size()));
+  write_children(writer);
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
 std::string Box_dref::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -4283,6 +4306,23 @@ Error Box_url::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   return range.get_error();
+}
+
+
+Error Box_url::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_location.empty()) {
+    assert(get_flags() == 1);
+  }
+  else {
+    assert(get_flags() == 0);
+    writer.write(m_location);
+  }
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
 }
 
 
@@ -4814,7 +4854,13 @@ Error Box_cmex::write(StreamWriter& writer) const
 std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
 {
   std::ostringstream sstr;
-  sstr << indent << "time_uncertainty: " << info.time_uncertainty << "\n";
+  sstr << indent << "time_uncertainty: ";
+  if (info.time_uncertainty == heif_tai_clock_info_time_uncertainty_unknown) {
+    sstr << "unknown\n";
+  }
+  else {
+    sstr << info.time_uncertainty << "\n";
+  }
   sstr << indent << "clock_resolution: " << info.clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
   if (info.clock_drift_rate == heif_tai_clock_info_clock_drift_rate_unknown) {
@@ -4998,3 +5044,33 @@ Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   return range.get_error();
 }
 
+
+Error Box_gimi_content_id::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  m_content_id = range.read_string_until_eof();
+
+  return range.get_error();
+}
+
+
+Error Box_gimi_content_id::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_content_id, false);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_gimi_content_id::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "content ID: " << m_content_id << "\n";
+
+  return sstr.str();
+}

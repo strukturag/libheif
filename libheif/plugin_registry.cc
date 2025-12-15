@@ -90,6 +90,10 @@
 #include "plugins/encoder_jpeg.h"
 #endif
 
+#if HAVE_X264
+#include "plugins/encoder_x264.h"
+#endif
+
 #if HAVE_OpenH264_DECODER
 #include "plugins/decoder_openh264.h"
 #endif
@@ -219,6 +223,10 @@ void register_default_plugins()
   register_decoder(get_decoder_plugin_openh264());
 #endif
 
+#if HAVE_X264
+  register_encoder(get_encoder_plugin_x264());
+#endif
+
 #if WITH_UNCOMPRESSED_CODEC
   register_encoder(get_encoder_plugin_uncompressed());
   register_decoder(get_decoder_plugin_uncompressed());
@@ -235,6 +243,21 @@ void register_decoder(const heif_decoder_plugin* decoder_plugin)
   }
 
   s_decoder_plugins.insert(decoder_plugin);
+}
+
+
+bool has_decoder(heif_compression_format type, const char* name_id)
+{
+  load_plugins_if_not_initialized_yet();
+
+  for (const auto* plugin : s_decoder_plugins) {
+    int priority = plugin->does_support_format(type);
+    if (priority > 0 && strcmp(name_id, plugin->id_name) == 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 

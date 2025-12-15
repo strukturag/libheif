@@ -995,8 +995,19 @@ std::string Box_stss::dump(Indent& indent) const
 }
 
 
+void Box_stss::set_total_number_of_samples(uint32_t num_samples)
+{
+  m_all_samples_are_sync_samples = (m_sync_samples.size() == num_samples);
+}
+
+
 Error Box_stss::write(StreamWriter& writer) const
 {
+  // If we don't need this box, skip it.
+  if (m_all_samples_are_sync_samples) {
+    return Error::Ok;
+  }
+
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(static_cast<uint32_t>(m_sync_samples.size()));

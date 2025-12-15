@@ -206,7 +206,8 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(const heif_track*);
  * @param out_uri A string with the URI will be returned. Free this string with `heif_string_release()`.
  */
 LIBHEIF_API
-heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track* track, const char** out_uri);
+heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track*,
+                                                                 const char** out_uri);
 
 
 /** Sequence sample object that can hold any raw byte data.
@@ -311,6 +312,8 @@ void heif_track_options_set_timescale(heif_track_options*, uint32_t timescale);
  *
  * If 'false', all aux_info will be written as one block after the compressed image data.
  * This has the advantage that no aux_info offsets have to be written.
+ *
+ * Note: currently ignored. Interleaved writing is disabled.
  */
 LIBHEIF_API
 void heif_track_options_set_interleaved_sample_aux_infos(heif_track_options*, int interleaved_flag);
@@ -335,7 +338,20 @@ void heif_track_options_set_gimi_track_id(heif_track_options*,
 
 // --- writing visual tracks
 
-// This structure is for future use. It is not defined yet.
+enum heif_sequence_gop_structure
+{
+  // Only independently decodable keyframes.
+  heif_sequence_gop_structure_intra_only,
+
+  // No frame reordering, usually an IPPPP structure.
+  heif_sequence_gop_structure_lowdelay,
+
+  // All frame types are allowed, including frame reordering, to achieve
+  // the best compression ratio.
+  heif_sequence_gop_structure_unrestricted
+};
+
+
 typedef struct heif_sequence_encoding_options
 {
   uint8_t version;
@@ -347,6 +363,14 @@ typedef struct heif_sequence_encoding_options
   const heif_color_profile_nclx* output_nclx_profile;
 
   heif_color_conversion_options color_conversion_options;
+
+  // version 2 options
+
+  enum heif_sequence_gop_structure gop_structure;
+  int keyframe_distance_min; // 0 - undefined
+  int keyframe_distance_max; // 0 - undefined
+
+  int save_alpha_channel;
 } heif_sequence_encoding_options;
 
 
@@ -386,6 +410,8 @@ void heif_image_set_duration(heif_image*, uint32_t duration);
  * Encode the image into a visual track.
  * If the passed track is no visual track, an error will be returned.
  *
+ * @param image                     The input image to append to the sequence.
+ * @param encoder                   The encoder used for encoding the image.
  * @param sequence_encoding_options Options for sequence encoding. If NULL, default options will be used.
  */
 LIBHEIF_API
@@ -394,14 +420,31 @@ heif_error heif_track_encode_sequence_image(heif_track*,
                                             heif_encoder* encoder,
                                             const heif_sequence_encoding_options* sequence_encoding_options);
 
+/**
+ * When all sequence frames have been sent, you can to call this function to let the
+ * library know that no more frames will follow. This is strongly recommended, but optional
+ * for backwards compatibility.
+ * If you do not end the sequence explicitly with this function, it will be closed
+ * automatically when the HEIF file is written. Using this function has the advantage
+ * that you can free the {@link heif_encoder} afterwards (with {@link heif_encoder_release}).
+ * If you do not use call function, you have to keep the {@link heif_encoder} alive
+ * until the HEIF file is written.
+ */
+LIBHEIF_API
+heif_error heif_track_encode_end_of_sequence(heif_track*,
+                                             heif_encoder* encoder);
+
 // --- metadata tracks
 
 /**
  * Add a metadata track.
+ * The track is created as a 'urim' "URI Meta Sample Entry".
  * The track content type is specified by the 'uri' parameter.
- * This will be created as a 'urim' "URI Meta Sample Entry".
  *
- * @param options Optional track creation options. If NULL, default options will be used.
+ * @param uri       Track content type.
+ * @param options   Optional track creation options. If NULL, default options will be used.
+ * @param out_track Returns the created track object. If this is not NULL, you have to
+ *                  free the returned track with {@link heif_track_release}.
  */
 LIBHEIF_API
 heif_error heif_context_add_uri_metadata_sequence_track(heif_context*,

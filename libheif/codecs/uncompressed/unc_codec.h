@@ -45,7 +45,8 @@ bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const
 Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
                          std::shared_ptr<Box_uncC>& uncC,
                          const std::shared_ptr<const HeifPixelImage>& image,
-                         const heif_unci_image_parameters* parameters);
+                         const heif_unci_image_parameters* parameters,
+                         bool save_alpha_channel);
 
 bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd> &cmpd,
                                            const std::shared_ptr<const Box_uncC> &uncC,

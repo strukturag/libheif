@@ -183,6 +183,13 @@ if (WITH_VVENC)
     endif()
 endif ()
 
+# x264
+
+plugin_option(X264 "x264 AVC encoder" ON OFF)
+if (WITH_X264)
+    find_package(X264)
+endif()
+
 # openh264 decoder
 
 plugin_option(OpenH264_DECODER "OpenH264 decoder" ON OFF)
@@ -307,6 +314,7 @@ plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
 plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
 plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+plugin_compilation_info(X264 X264 "x264 AVC decoder")
 plugin_compilation_info(OpenH264_DECODER OpenH264_DECODER "OpenH264 decoder")
 # plugin_compilation_info(OpenH264_ENCODER OpenH264_ENCODER "OpenH264 encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
@@ -380,7 +388,7 @@ endif()
 if (OpenH264_DECODER_FOUND)
     set(SUPPORTS_AVC_DECODING TRUE)
 endif()
-if (OpenH264_ENCODER_FOUND)
+if (X264_FOUND)
     set(SUPPORTS_AVC_ENCODING TRUE)
 endif()
 

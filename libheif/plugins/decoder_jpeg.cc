@@ -37,6 +37,8 @@ extern "C" {
 struct jpeg_decoder
 {
   std::vector<uint8_t> data;
+  uintptr_t user_data;
+
   std::string error_message;
 };
 
@@ -85,12 +87,28 @@ static int jpeg_does_support_format(heif_compression_format format)
 }
 
 
-heif_error jpeg_new_decoder(void** dec)
+static int jpeg_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return jpeg_does_support_format(format->format);
+}
+
+heif_error jpeg_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   struct jpeg_decoder* decoder = new jpeg_decoder();
   *dec = decoder;
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+
+heif_error jpeg_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_JPEG;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return jpeg_new_decoder2(dec, &options);
 }
 
 
@@ -112,15 +130,21 @@ void jpeg_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error jpeg_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
 {
   jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
 
   const uint8_t* input_data = (const uint8_t*)frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
+  decoder->user_data = user_data;
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+{
+  return jpeg_push_data2(decoder_raw, frame_data, frame_size, 0);
 }
 
 
@@ -145,10 +169,17 @@ void on_jpeg_error(j_common_ptr cinfo)
 }
 
 
-heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                  const heif_security_limits* limits)
+heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                   uintptr_t* out_user_data,
+                                   const heif_security_limits* limits)
 {
   jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
+
+  // When there is no input data yet, return NULL image.
+  if (decoder->data.empty()) {
+    *out_img = nullptr;
+    return heif_error_ok;
+  }
 
   jpeg_decompress_struct cinfo;
   my_error_manager jerr;
@@ -343,6 +374,10 @@ heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
     *out_img = heif_img;
   }
 
+  if (out_user_data) {
+    *out_user_data = decoder->user_data;
+  }
+
 //  if (embeddedIccFlag && iccLen > 0) {
 //    heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
 //  }
@@ -357,16 +392,27 @@ heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
   return heif_error_ok;
 }
 
+heif_error jpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                  const heif_security_limits* limits)
+{
+  return jpeg_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
+
 heif_error jpeg_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return jpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
+heif_error jpeg_flush_data(void* decoder)
+{
+  return heif_error_ok;
+}
+
 
 static const heif_decoder_plugin decoder_jpeg
     {
-        4,
+        5,
         jpeg_plugin_name,
         jpeg_init_plugin,
         jpeg_deinit_plugin,
@@ -377,7 +423,13 @@ static const heif_decoder_plugin decoder_jpeg
         jpeg_decode_image,
         jpeg_set_strict_decoding,
         "jpeg",
-        jpeg_decode_next_image
+        jpeg_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        jpeg_does_support_format2,
+        jpeg_new_decoder2,
+        jpeg_push_data2,
+        jpeg_flush_data,
+        jpeg_decode_next_image2,
     };
 
 

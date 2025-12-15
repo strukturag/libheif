@@ -85,6 +85,13 @@ static int libde265_does_support_format(heif_compression_format format)
 }
 
 
+static int libde265_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return libde265_does_support_format(format->format);
+}
+
+
+
 static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder,
                                                        const de265_image* de265img,
                                                        heif_image** image,
@@ -162,7 +169,9 @@ static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder
 }
 
 
-static heif_error libde265_new_decoder(void** dec)
+
+// Create a new decoder context for decoding an image
+heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
 {
   libde265_decoder* decoder = new libde265_decoder();
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -173,12 +182,27 @@ static heif_error libde265_new_decoder(void** dec)
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_DEBLOCKING, 1);
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_SAO, 1);
 #else
+  int nThreads = (options->num_threads ? options->num_threads : 1);
+
   // Worker threads are not supported when running on Emscripten.
-  de265_start_worker_threads(decoder->ctx, 1);
+  de265_start_worker_threads(decoder->ctx, nThreads);
 #endif
+
+  decoder->strict_decoding = options->strict_decoding;
 
   *dec = decoder;
   return err;
+}
+
+
+static heif_error libde265_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_HEVC;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return libde265_new_decoder2(dec, &options);
 }
 
 static void libde265_free_decoder(void* decoder_raw)
@@ -274,7 +298,7 @@ static heif_error libde265_v2_decode_image(void* decoder_raw,
 }
 #else
 
-static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+static heif_error libde265_v1_push_data2(void* decoder_raw, const void* data, size_t size, uintptr_t user_data)
 {
   libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
 
@@ -301,7 +325,18 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
       };
     }
 
-    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, nullptr);
+#if 0
+    FILE* fh = fopen("data.h265", "a");
+    fputc(0, fh);
+    fputc(0, fh);
+    fputc(1, fh);
+    fwrite(cdata + ptr, nal_size, 1, fh);
+    fclose(fh);
+
+    printf("put nal with size %d %x\n", nal_size, *(cdata+ptr));
+#endif
+
+    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data);
     ptr += nal_size;
   }
 
@@ -311,15 +346,31 @@ static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, siz
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
+static heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+{
+  return libde265_v1_push_data2(decoder_raw, data, size, 0);
+}
 
-static heif_error libde265_v1_decode_next_image(void* decoder_raw,
-                                                heif_image** out_img,
-                                                const heif_security_limits* limits)
+static heif_error libde265_flush_data(void* decoder_raw)
+{
+  libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
+
+  de265_flush_data(decoder->ctx);
+
+  return heif_error_ok;
+}
+
+
+
+static heif_error libde265_v1_decode_next_image2(void* decoder_raw,
+                                                 heif_image** out_img,
+                                                 uintptr_t* out_user_data,
+                                                 const heif_security_limits* limits)
 {
   libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
-  de265_flush_data(decoder->ctx);
+  // TODO(251119) : de265_flush_data(decoder->ctx);
 
   // TODO(farindk): Set "err" if no image was decoded.
   int more;
@@ -341,6 +392,11 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
       if (*out_img) {
         heif_image_release(*out_img);
       }
+
+      if (out_user_data) {
+        *out_user_data = (uintptr_t)de265_get_image_user_data(image);
+      }
+
       err = convert_libde265_image_to_heif_image(decoder, image, out_img, limits);
       if (err.code != heif_error_Ok) {
         return err;
@@ -372,12 +428,20 @@ static heif_error libde265_v1_decode_next_image(void* decoder_raw,
       heif_nclx_color_profile_free(nclx);
 
       de265_release_next_picture(decoder->ctx);
+      return heif_error_ok;
     }
   } while (more);
 
   return err;
 }
 
+
+static heif_error libde265_v1_decode_next_image(void* decoder_raw,
+                                                heif_image** out_img,
+                                                const heif_security_limits* limits)
+{
+  return libde265_v1_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
 
 static heif_error libde265_v1_decode_image(void* decoder_raw,
                                            heif_image** out_img)
@@ -411,7 +475,7 @@ static const heif_decoder_plugin decoder_libde265
 
 static const heif_decoder_plugin decoder_libde265
     {
-        4,
+        5,
         libde265_plugin_name,
         libde265_init_plugin,
         libde265_deinit_plugin,
@@ -422,7 +486,13 @@ static const heif_decoder_plugin decoder_libde265
         libde265_v1_decode_image,
         libde265_set_strict_decoding,
         "libde265",
-        libde265_v1_decode_next_image
+        libde265_v1_decode_next_image,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        libde265_does_support_format2,
+        libde265_new_decoder2,
+        libde265_v1_push_data2,
+        libde265_flush_data,
+        libde265_v1_decode_next_image2
     };
 
 #endif

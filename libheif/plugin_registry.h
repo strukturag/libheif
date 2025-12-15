@@ -72,6 +72,8 @@ void heif_unregister_encoder_plugins();
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 #endif
 
+bool has_decoder(heif_compression_format type, const char* name_id);
+
 const heif_decoder_plugin* get_decoder(heif_compression_format type, const char* name_id);
 
 const heif_encoder_plugin* get_encoder(heif_compression_format type);

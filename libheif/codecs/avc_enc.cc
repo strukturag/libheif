@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2025 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hevc_enc.h"
-#include "hevc_boxes.h"
+#include "avc_enc.h"
+#include "avc_boxes.h"
 #include "error.h"
 #include "context.h"
 #include "api_structs.h"
@@ -30,14 +30,14 @@
 
 
 // TODO: can we use the new sequences interface for this to avoid duplicate code.
-Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                     heif_encoder* encoder,
-                                                     const heif_encoding_options& options,
-                                                     heif_image_input_class input_class)
+Result<Encoder::CodedImageData> Encoder_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                    heif_encoder* encoder,
+                                                    const heif_encoding_options& options,
+                                                    heif_image_input_class input_class)
 {
   CodedImageData codedImage;
 
-  auto hvcC = std::make_shared<Box_hvcC>();
+  auto avcC = std::make_shared<Box_avcC>();
 
   heif_image c_api_image;
   c_api_image.image = image;
@@ -62,19 +62,24 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
       break;
     }
 
+    uint8_t nal_type = data[0] & 0x1f;
 
-    if ((data[0] >> 1) == HEVC_NAL_UNIT_SPS_NUT) {
-      parse_sps_for_hvcC_configuration(data, size, &hvcC->get_configuration(), &encoded_width, &encoded_height);
+    if (nal_type == AVC_NAL_UNIT_SPS_NUT) {
+      parse_sps_for_avcC_configuration(data, size, &avcC->get_configuration(), &encoded_width, &encoded_height);
 
       codedImage.encoded_image_width = encoded_width;
       codedImage.encoded_image_height = encoded_height;
     }
 
-    switch (data[0] >> 1) {
-      case HEVC_NAL_UNIT_VPS_NUT:
-      case HEVC_NAL_UNIT_SPS_NUT:
-      case HEVC_NAL_UNIT_PPS_NUT:
-        hvcC->append_nal_data(data, size);
+    switch (nal_type) {
+      case AVC_NAL_UNIT_SPS_NUT:
+        avcC->append_sps_nal(data, size);
+        break;
+      case AVC_NAL_UNIT_SPS_EXT_NUT:
+        avcC->append_sps_ext_nal(data, size);
+        break;
+      case AVC_NAL_UNIT_PPS_NUT:
+        avcC->append_pps_nal(data, size);
         break;
 
       default:
@@ -87,7 +92,7 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
                  heif_suberror_Invalid_image_size);
   }
 
-  codedImage.properties.push_back(hvcC);
+  codedImage.properties.push_back(avcC);
 
 
   // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
@@ -112,11 +117,11 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 }
 
 
-Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
-                                          heif_encoder* encoder,
-                                          const heif_sequence_encoding_options& options,
-                                          heif_image_input_class input_class,
-                                          uintptr_t frame_number)
+Error Encoder_AVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                         heif_encoder* encoder,
+                                         const heif_sequence_encoding_options& options,
+                                         heif_image_input_class input_class,
+                                         uintptr_t frame_number)
 {
   heif_image c_api_image;
   c_api_image.image = image;
@@ -132,7 +137,7 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
       };
     }
 
-    m_hvcC = std::make_shared<Box_hvcC>();
+    m_avcC = std::make_shared<Box_avcC>();
     m_encoder_active = true;
   }
 
@@ -154,7 +159,7 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
 }
 
 
-Error Encoder_HEVC::encode_sequence_flush(heif_encoder* encoder)
+Error Encoder_AVC::encode_sequence_flush(heif_encoder* encoder)
 {
   encoder->plugin->end_sequence_encoding(encoder->encoder);
   m_encoder_active = false;
@@ -164,16 +169,20 @@ Error Encoder_HEVC::encode_sequence_flush(heif_encoder* encoder)
 }
 
 
-std::optional<Encoder::CodedImageData> Encoder_HEVC::encode_sequence_get_data()
+std::optional<Encoder::CodedImageData> Encoder_AVC::encode_sequence_get_data()
 {
-  return std::move(m_current_output_data);
+  if (m_output_image_complete) {
+    m_output_image_complete = false;
+    return std::move(m_current_output_data);
+  }
+  else {
+    return std::nullopt;
+  }
 }
 
-Error Encoder_HEVC::get_data(heif_encoder* encoder)
+Error Encoder_AVC::get_data(heif_encoder* encoder)
 {
   //CodedImageData codedImage;
-
-  bool got_some_data = false;
 
   for (;;) {
     uint8_t* data;
@@ -187,34 +196,38 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
       break;
     }
 
-    got_some_data = true;
+    const uint8_t nal_type = (data[0] & 0x1f);
+    const bool is_sync = (nal_type == 5);
+    const bool is_image_data = (nal_type > 0 && nal_type <= AVC_NAL_UNIT_MAX_VCL);
 
-    const uint8_t nal_type = (data[0] >> 1);
-    const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
-    const bool is_image_data = (nal_type >= 0 && nal_type <= HEVC_NAL_UNIT_MAX_VCL);
+    m_output_image_complete |= is_image_data;
 
     // std::cout << "received frameNr=" << frameNr << " nal_type:" << ((int)nal_type) << " size: " << size << "\n";
 
-    if (nal_type == HEVC_NAL_UNIT_SPS_NUT && m_hvcC) {
-      parse_sps_for_hvcC_configuration(data, size,
-                                       &m_hvcC->get_configuration(),
+    if (nal_type == AVC_NAL_UNIT_SPS_NUT && m_avcC) {
+      parse_sps_for_avcC_configuration(data, size,
+                                       &m_avcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
     }
 
+    if (is_image_data) {
+      // more_frame_packets = 0;
+    }
+
     switch (nal_type) {
-      case HEVC_NAL_UNIT_VPS_NUT:
-        if (m_hvcC && !m_hvcC_has_VPS) m_hvcC->append_nal_data(data, size);
-        m_hvcC_has_VPS = true;
+      case AVC_NAL_UNIT_SPS_NUT:
+        if (m_avcC && !m_avcC_has_SPS) m_avcC->append_sps_nal(data, size);
+        m_avcC_has_SPS = true;
         break;
 
-      case HEVC_NAL_UNIT_SPS_NUT:
-        if (m_hvcC && !m_hvcC_has_SPS) m_hvcC->append_nal_data(data, size);
-        m_hvcC_has_SPS = true;
+      case AVC_NAL_UNIT_SPS_EXT_NUT:
+        if (m_avcC /*&& !m_avcC_has_SPS*/) m_avcC->append_sps_ext_nal(data, size);
+        //m_avcC_has_SPS = true;
         break;
 
-      case HEVC_NAL_UNIT_PPS_NUT:
-        if (m_hvcC && !m_hvcC_has_PPS) m_hvcC->append_nal_data(data, size);
-        m_hvcC_has_PPS = true;
+      case AVC_NAL_UNIT_PPS_NUT:
+        if (m_avcC && !m_avcC_has_PPS) m_avcC->append_pps_nal(data, size);
+        m_avcC_has_PPS = true;
         break;
 
       default:
@@ -234,7 +247,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     }
   }
 
-  if (!got_some_data) {
+  if (!m_output_image_complete) {
     return {};
   }
 
@@ -244,37 +257,18 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   }
 
 
-  // --- return hvcC when all headers are included and it was not returned yet
+  // --- return avcC when all headers are included and it was not returned yet
   //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
   //           and also complete codingConstraints.
 
-  if (!m_current_output_data->bitstream.empty() &&
-      m_hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_sent) {
-  //if (/*m_end_of_sequence_reached &&*/ m_hvcC && !m_hvcC_sent) {
-    m_current_output_data->properties.push_back(m_hvcC);
-    m_hvcC = nullptr;
-    m_hvcC_sent = true;
+  if (m_end_of_sequence_reached && m_avcC && !m_avcC_sent) {
+    m_current_output_data->properties.push_back(m_avcC);
+    m_avcC = nullptr;
+    m_avcC_sent = true;
   }
 
   m_current_output_data->encoded_image_width = m_encoded_image_width;
   m_current_output_data->encoded_image_height = m_encoded_image_height;
-
-
-  // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
-#if 0
-  if (encoder->plugin->plugin_api_version >= 3 &&
-      encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t check_encoded_width = image->get_width(), check_encoded_height = image->get_height();
-
-    encoder->plugin->query_encoded_size(encoder->encoder,
-                                        image->get_width(), image->get_height(),
-                                        &check_encoded_width,
-                                        &check_encoded_height);
-
-    assert((int)check_encoded_width == encoded_width);
-    assert((int)check_encoded_height == encoded_height);
-      }
-#endif
 
   m_current_output_data->codingConstraints.intra_pred_used = true;
   m_current_output_data->codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
@@ -283,15 +277,15 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
 }
 
 
-std::shared_ptr<Box_VisualSampleEntry> Encoder_HEVC::get_sample_description_box(const CodedImageData& data) const
+std::shared_ptr<Box_VisualSampleEntry> Encoder_AVC::get_sample_description_box(const CodedImageData& data) const
 {
-  auto hvc1 = std::make_shared<Box_hvc1>();
-  hvc1->get_VisualSampleEntry().compressorname = "HEVC";
+  auto avc1 = std::make_shared<Box_avc1>();
+  avc1->get_VisualSampleEntry().compressorname = "AVC";
 
   for (auto prop : data.properties) {
-    if (prop->get_short_type() == fourcc("hvcC")) {
-      hvc1->append_child_box(prop);
-      return hvc1;
+    if (prop->get_short_type() == fourcc("avcC")) {
+      avc1->append_child_box(prop);
+      return avc1;
     }
   }
 

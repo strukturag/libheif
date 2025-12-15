@@ -39,6 +39,9 @@
 
 #endif
 
+#define STRINGIFY2(x) #x
+#define STRINGIFY(x) STRINGIFY2(x)
+
 void heif_unload_all_plugins();
 
 #if ENABLE_PLUGIN_LOADING
@@ -246,6 +249,22 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
   switch (loadedPlugin.info->type) {
     case heif_plugin_type_encoder: {
       auto* encoder_plugin = static_cast<const heif_encoder_plugin*>(plugin_info->plugin);
+      if (encoder_plugin->plugin_api_version < heif_encoder_plugin_minimum_version) {
+        return {heif_error_Plugin_loading_error,
+                heif_suberror_Unsupported_plugin_version,
+                "Encoder plugin needs to be at least version " STRINGIFY(heif_encoder_plugin_latest_version)
+        };
+      }
+
+      if (encoder_plugin->plugin_api_version >= 4 &&
+          encoder_plugin->minimum_required_libheif_version > heif_get_version_number()) {
+        return {
+          heif_error_Plugin_loading_error,
+          heif_suberror_Unsupported_plugin_version,
+          "Encoder plugin requires at least libheif version " LIBHEIF_VERSION
+        };
+      }
+
       struct heif_error err = heif_register_encoder_plugin(encoder_plugin);
       if (err.code) {
         return err;
@@ -255,6 +274,22 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
 
     case heif_plugin_type_decoder: {
       auto* decoder_plugin = static_cast<const heif_decoder_plugin*>(plugin_info->plugin);
+      if (decoder_plugin->plugin_api_version < heif_decoder_plugin_minimum_version) {
+        return {heif_error_Plugin_loading_error,
+                heif_suberror_Unsupported_plugin_version,
+                "Decoder plugin needs to be at least version " STRINGIFY(heif_decoder_plugin_latest_version)
+        };
+      }
+
+      if (decoder_plugin->plugin_api_version >= 4 &&
+          decoder_plugin->minimum_required_libheif_version > heif_get_version_number()) {
+        return {
+          heif_error_Plugin_loading_error,
+          heif_suberror_Unsupported_plugin_version,
+          "Decoder plugin requires at least libheif version " LIBHEIF_VERSION
+        };
+      }
+
       struct heif_error err = heif_register_decoder_plugin(decoder_plugin);
       if (err.code) {
         return err;
@@ -320,6 +355,10 @@ struct heif_error heif_load_plugins(const char* directory,
 
   int nPlugins = 0;
 
+  // Loading the plugins may return several errors, but we can only return one of them,
+  // which is remembered here.
+  heif_error err_result = heif_error_ok;
+
   for (const auto& filename : libraryFiles) {
     const struct heif_plugin_info* info = nullptr;
     auto err = heif_load_plugin(filename.c_str(), &info);
@@ -334,6 +373,10 @@ struct heif_error heif_load_plugins(const char* directory,
 
       nPlugins++;
     }
+    else {
+      // remember error
+      err_result = err;
+    }
   }
 
   if (nPlugins < output_array_size && out_plugins) {
@@ -344,7 +387,7 @@ struct heif_error heif_load_plugins(const char* directory,
     *out_nPluginsLoaded = nPlugins;
   }
 
-  return heif_error_ok;
+  return err_result;
 }
 
 #else

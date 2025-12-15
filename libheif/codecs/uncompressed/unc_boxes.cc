@@ -185,6 +185,13 @@ std::string Box_cmpd::Component::get_component_type_name(uint16_t component_type
 }
 
 
+bool Box_cmpd::has_component(heif_uncompressed_component_type type) const
+{
+  return std::any_of(m_components.begin(), m_components.end(),
+                     [type](const auto& cmp) { return cmp.component_type == type; });
+}
+
+
 std::string Box_cmpd::dump(Indent& indent) const
 {
   std::ostringstream sstr;

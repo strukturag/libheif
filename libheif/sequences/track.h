@@ -119,6 +119,9 @@ struct TrackOptions
 };
 
 
+const char* get_track_auxiliary_info_type(heif_compression_format format);
+
+
 class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
@@ -166,7 +169,7 @@ public:
   uint32_t get_timescale() const;
 
   // The context will compute the duration in global movie units and set this.
-  void set_track_duration_in_movie_units(uint64_t total_duration);
+  void set_track_duration_in_movie_units(uint64_t total_duration, uint64_t segment_duration);
 
   void enable_edit_list_repeat_mode(bool enable);
 
@@ -175,7 +178,7 @@ public:
   bool end_of_sequence_reached() const;
 
   // Compute some parameters after all frames have been encoded (for example: track duration).
-  void finalize_track();
+  virtual Error finalize_track();
 
   const TrackOptions& get_track_info() const { return m_track_info; }
 
@@ -208,12 +211,19 @@ protected:
   std::vector<SampleTiming> m_presentation_timeline;
   uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
 
-  // Index into SampleTiming table
-  uint32_t m_next_sample_to_be_processed = 0;
+  // Continuous counting through all repetitions. You have to take the modulo operation to get the
+  // index into m_presentation_timeline SampleTiming table.
+  // (At 30 fps, this 32 bit integer will overflow in >4 years. I think this is acceptable.)
+  uint32_t m_next_sample_to_be_decoded = 0;
+
+  // Total sequence output index.
+  uint32_t m_next_sample_to_be_output = 0;
+  bool     m_decoder_is_flushed = false;
 
   void init_sample_timing_table();
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
+  std::vector<uint8_t> m_chunk_data;
 
   std::shared_ptr<Box_moov> m_moov;
   std::shared_ptr<Box_trak> m_trak;
@@ -259,7 +269,8 @@ protected:
   // Write the actual sample data. `tai` may be null and `gimi_contentID` may be empty.
   // In these cases, no timestamp or no contentID will be written, respectively.
   Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
-                          const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID);
+                          const heif_tai_timestamp_packet* tai,
+                          const std::optional<std::string>& gimi_contentID);
 };
 
 

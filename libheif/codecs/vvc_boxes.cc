@@ -19,6 +19,7 @@
  */
 
 #include "vvc_boxes.h"
+#include "hevc_boxes.h"
 #include "file.h"
 #include <cstring>
 #include <string>
@@ -263,7 +264,7 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
     byte = 0;
     if (c.num_sublayers > 1) {
-      uint8_t mask=0x80;
+      uint8_t mask = 0x80;
 
       for (int i = c.num_sublayers - 2; i >= 0; i--) {
         if (ptl.ptl_sublayer_level_present_flag[i]) {
@@ -271,8 +272,9 @@ Error Box_vvcC::write(StreamWriter& writer) const
         }
         mask >>= 1;
       }
+
+      writer.write8(byte);
     }
-    writer.write8(byte);
 
     for (int i=c.num_sublayers-2; i >= 0; i--) {
       if (ptl.ptl_sublayer_level_present_flag[i]) {
@@ -390,28 +392,6 @@ std::string Box_vvcC::dump(Indent& indent) const
 
   return sstr.str();
 }
-
-static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
-{
-  std::vector<uint8_t> out_data;
-
-  for (size_t i = 0; i < size; i++) {
-    if (i + 2 < size &&
-        sps[i] == 0 &&
-        sps[i + 1] == 0 &&
-        sps[i + 2] == 3) {
-      out_data.push_back(0);
-      out_data.push_back(0);
-      i += 2;
-    }
-    else {
-      out_data.push_back(sps[i]);
-    }
-  }
-
-  return out_data;
-}
-
 
 
 Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
