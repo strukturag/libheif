@@ -29,6 +29,7 @@
 #include <string>
 
 #include <vvdec/vvdec.h>
+#include <utility>
 
 #if 0
 #include <iostream>

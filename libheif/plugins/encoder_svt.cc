@@ -31,6 +31,7 @@
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
+#include <utility>
 
 // TODO: for some reason, the SVT encoder outputs only keyframes for me.
 //       It appears to work in libavif, but I didn't find the difference yet.

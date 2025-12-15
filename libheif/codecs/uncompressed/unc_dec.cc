@@ -25,6 +25,7 @@
 
 #include <string>
 #include <algorithm>
+#include <utility>
 
 
 Result<std::vector<uint8_t>> Decoder_uncompressed::read_bitstream_configuration_data() const

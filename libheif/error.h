@@ -35,6 +35,7 @@
 #include "libheif/heif.h"
 #include <cassert>
 #include <variant>
+#include <utility>
 
 
 extern const heif_error heif_error_null_pointer_argument;

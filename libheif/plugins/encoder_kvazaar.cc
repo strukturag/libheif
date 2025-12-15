@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <deque>
 #include <iostream>
+#include <utility>
 
 extern "C" {
 #include <kvazaar.h>

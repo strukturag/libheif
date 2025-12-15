@@ -27,6 +27,8 @@
 #include "context.h"
 #include "avc_dec.h"
 #include "hevc_boxes.h"
+#include <utility>
+#include <set>
 
 
 Error Box_avcC::parse(BitstreamRange& range, const heif_security_limits* limits)

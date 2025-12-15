@@ -32,6 +32,7 @@
 
 #include "logging.h"
 #include "nalu_utils.h"
+#include <utility>
 
 extern "C" {
 #include <uvg266.h>

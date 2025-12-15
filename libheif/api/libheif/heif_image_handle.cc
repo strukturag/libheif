@@ -20,6 +20,7 @@
 
 #include "heif_image_handle.h"
 #include "api_structs.h"
+#include <string>
 
 
 void heif_image_handle_release(const heif_image_handle* handle)

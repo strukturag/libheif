@@ -30,12 +30,11 @@
 #include <vector>
 
 #include "logging.h"
+#include <utility>
 
 extern "C" {
 #include <x264.h>
 }
-
-#include <iostream>
 
 #if 0
 static const char* naltype_table[] = {

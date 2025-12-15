@@ -25,6 +25,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <map>
 
 
 class Track_Visual : public Track {

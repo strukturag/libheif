@@ -29,12 +29,12 @@
 #include <cassert>
 #include <deque>
 #include <vector>
+#include <utility>
 
 extern "C" {
 #include <x265.h>
 }
 
-#include <iostream>
 
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
 static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";

@@ -28,6 +28,7 @@
 #include <vector>
 #include <algorithm>
 #include <deque>
+#include <utility>
 
 extern "C" {
 #include <vvenc/vvenc.h>
