@@ -29,6 +29,7 @@
 
 #include <wels/codec_api.h>
 #include <string>
+#include <utility>
 
 // TODO: the openh264 decoder seems to fail with some images.
 //       I have not figured out yet which images are affected.
