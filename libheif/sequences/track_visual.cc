@@ -142,7 +142,7 @@ bool Track_Visual::has_alpha_channel() const
   }
 
   // --- special case: 'uncv' with alpha component
-
+#if WITH_UNCOMPRESSED_CODEC
   if (m_stsd) {
     auto sampleEntry = m_stsd->get_sample_entry(0);
     if (sampleEntry) {
@@ -155,6 +155,7 @@ bool Track_Visual::has_alpha_channel() const
       }
     }
   }
+#endif
 
   return false;
 }
