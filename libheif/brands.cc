@@ -139,7 +139,6 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
     }
   }
 
-
   // --- --- sequences
 
   if (ctx->has_sequence()) {
@@ -156,9 +155,8 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
     if (track_brand != 0) {
       compatible_brands.push_back(track_brand);
 
-      if (*out_main_brand == 0) {
-        *out_main_brand = track_brand;
-      }
+      // overwrite any image brand
+      *out_main_brand = track_brand;
     }
 
     // if we don't have a track brand, use at least the sequence structural brand
