@@ -114,7 +114,7 @@ struct unciHeaders
 
 static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                             const heif_unci_image_parameters* parameters,
-                                            const heif_encoding_options* options)
+                                            const heif_encoding_options& options)
 {
   unciHeaders headers;
 
@@ -122,7 +122,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
                      parameters->tile_height != parameters->image_height);
 
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options && options->prefer_uncC_short_form && !uses_tiles) {
+  if (options.prefer_uncC_short_form && !uses_tiles) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
 
@@ -131,7 +131,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
   } else {
     std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters, options->save_alpha_channel);
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters, options.save_alpha_channel);
     if (error) {
       return error;
     }
@@ -340,7 +340,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
 
   // --- generate configuration property boxes
 
-  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), &options);
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), options);
   if (!genHeadersResult) {
     return genHeadersResult.error();
   }
@@ -397,7 +397,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // Generate headers
 
-  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, encoding_options);
+  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, *encoding_options);
   if (!genHeadersResult) {
     return genHeadersResult.error();
   }
