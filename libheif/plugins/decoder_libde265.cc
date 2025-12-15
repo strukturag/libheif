@@ -85,6 +85,7 @@ static int libde265_does_support_format(heif_compression_format format)
 }
 
 
+[[maybe_unused]]
 static int libde265_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
 {
   return libde265_does_support_format(format->format);
