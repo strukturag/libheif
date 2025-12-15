@@ -460,7 +460,7 @@ std::string BitstreamRange::read_string_until_eof()
 {
   size_t n = get_remaining_bytes();
 
-  bool success = prepare_read(n);
+  [[maybe_unused]] bool success = prepare_read(n);
   assert(success); // we are reading exactly the rest of the box
 
   std::string str;
