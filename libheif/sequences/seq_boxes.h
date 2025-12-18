@@ -563,7 +563,7 @@ private:
 struct VisualSampleEntry {
   // from SampleEntry
   //const unsigned int(8)[6] reserved = 0;
-  uint16_t data_reference_index;
+  uint16_t data_reference_index = 1;
 
   // VisualSampleEntry
 
