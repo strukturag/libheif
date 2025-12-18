@@ -23,6 +23,7 @@
 #include <set>
 #include <limits>
 #include <utility>
+#include <algorithm>
 
 
 Error Box_container::parse(BitstreamRange& range, const heif_security_limits* limits)
