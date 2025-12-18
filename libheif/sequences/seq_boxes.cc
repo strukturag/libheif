@@ -709,6 +709,11 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
     entry.sample_count = range.read32();
     if (version == 0) {
       uint32_t offset = range.read32();
+#if 0
+      // TODO: I disabled this because I found several files that seem to
+      //       have wrong data. Since we are not using the 'ctts' data anyway,
+      //       let's not care about it now.
+
       if (offset > INT32_MAX) {
         return {
           heif_error_Unsupported_feature,
@@ -716,6 +721,7 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
           "We don't support offsets > 0x7fff in 'ctts' box."
         };
       }
+#endif
 
       entry.sample_offset = static_cast<int32_t>(offset);
     }
