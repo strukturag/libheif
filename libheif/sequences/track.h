@@ -132,7 +132,8 @@ public:
 
   virtual ~Track() = default;
 
-  // Allocate a Track of the correct sub-class (visual or metadata)
+  // Allocate a Track of the correct sub-class (visual or metadata).
+  // For tracks with an unsupported handler type, heif_error_Unsupported_feature/heif_suberror_Unsupported_track_type is returned.
   static Result<std::shared_ptr<Track>> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
 
   // load track from file

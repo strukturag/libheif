@@ -1862,15 +1862,27 @@ Error HeifContext::interpret_heif_file_sequences()
   auto tracks = moov->get_child_boxes<Box_trak>();
   for (const auto& track_box : tracks) {
     auto trackResult = Track::alloc_track(this, track_box);
-    if (!trackResult) {
-      return trackResult.error();
+    bool skip_track = false;
+
+    if (auto err = trackResult.error()) {
+      if (err.error_code == heif_error_Unsupported_feature &&
+          err.sub_error_code == heif_suberror_Unsupported_track_type) {
+        // ignore error, skip track
+        skip_track = true;
+      }
+      else {
+        return trackResult.error();
+      }
     }
 
-    auto track = *trackResult;
-    m_tracks.insert({track->get_id(), track});
+    if (!skip_track) {
+      assert(*trackResult);
+      auto track = *trackResult;
+      m_tracks.insert({track->get_id(), track});
 
-    if (track->is_visual_track() && m_visual_track_id == 0) {
-      m_visual_track_id = track->get_id();
+      if (track->is_visual_track() && m_visual_track_id == 0) {
+        m_visual_track_id = track->get_id();
+      }
     }
   }
 

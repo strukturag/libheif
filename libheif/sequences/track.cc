@@ -571,8 +571,8 @@ Result<std::shared_ptr<Track>> Track::alloc_track(HeifContext* ctx, const std::s
       std::stringstream sstr;
       sstr << "Track with unsupported handler type '" << fourcc_to_string(hdlr->get_handler_type()) << "'.";
       return Error{
-        heif_error_Unsupported_filetype,
-        heif_suberror_Unspecified,
+        heif_error_Unsupported_feature,
+        heif_suberror_Unsupported_track_type,
         sstr.str()
       };
     }
