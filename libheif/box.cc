@@ -803,6 +803,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_stts>();
       break;
 
+    case fourcc("ctts"):
+      box = std::make_shared<Box_ctts>();
+      break;
+
     case fourcc("stsc"):
       box = std::make_shared<Box_stsc>();
       break;

@@ -177,6 +177,7 @@ Error Track_Metadata::write_raw_metadata(const heif_raw_sequence_sample* raw_sam
 
   Error err = write_sample_data(raw_sample->data,
                                 raw_sample->duration,
+                                0,
                                 true,
                                 raw_sample->timestamp,
                                 raw_sample->gimi_sample_content_id);

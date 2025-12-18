@@ -628,8 +628,12 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 
     auto& user_data = m_frame_user_data[frame_number];
 
+    int32_t decoding_time = static_cast<int32_t>(m_stsc->get_number_of_samples()) * m_sample_duration;
+    int32_t composition_time = static_cast<int32_t>(frame_number) * m_sample_duration;
+
     Error err = write_sample_data(data.bitstream,
                                   user_data.sample_duration,
+                                  composition_time - decoding_time,
                                   data.is_sync_frame,
                                   user_data.tai_timestamp,
                                   user_data.gimi_content_id);

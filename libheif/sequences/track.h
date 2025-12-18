@@ -237,6 +237,7 @@ protected:
   std::shared_ptr<Box_stsc> m_stsc;
   std::shared_ptr<Box_stco> m_stco;
   std::shared_ptr<Box_stts> m_stts;
+  std::shared_ptr<Box_ctts> m_ctts; // optional box, TODO: add only if needed
   std::shared_ptr<Box_stss> m_stss;
   std::shared_ptr<Box_stsz> m_stsz;
   std::shared_ptr<Box_elst> m_elst;
@@ -269,7 +270,10 @@ protected:
 
   // Write the actual sample data. `tai` may be null and `gimi_contentID` may be empty.
   // In these cases, no timestamp or no contentID will be written, respectively.
-  Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
+  Error write_sample_data(const std::vector<uint8_t>& raw_data,
+                          uint32_t sample_duration,
+                          int32_t composition_time_offset,
+                          bool is_sync_sample,
                           const heif_tai_timestamp_packet* tai,
                           const std::optional<std::string>& gimi_contentID);
 };

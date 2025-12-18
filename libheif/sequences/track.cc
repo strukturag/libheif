@@ -480,6 +480,10 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
   m_stts = std::make_shared<Box_stts>();
   m_stbl->append_child_box(m_stts);
 
+  m_ctts = std::make_shared<Box_ctts>();
+  m_stbl->append_child_box(m_ctts);
+  // TODO: will only be added when needed
+
   m_stsc = std::make_shared<Box_stsc>();
   m_stbl->append_child_box(m_stsc);
 
@@ -785,7 +789,9 @@ void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_b
 }
 
 
-Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
+Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration,
+                               int32_t composition_time_offset,
+                               bool is_sync_sample,
                                const heif_tai_timestamp_packet* tai, const std::optional<std::string>& gimi_contentID)
 {
   m_chunk_data.insert(m_chunk_data.end(), raw_data.begin(), raw_data.end());
@@ -805,6 +811,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   }
 
   m_stts->append_sample_duration(sample_duration);
+  m_ctts->append_sample_offset(composition_time_offset);
 
 
   // --- sample timestamp

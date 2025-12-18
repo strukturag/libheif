@@ -360,6 +360,44 @@ private:
 };
 
 
+// Composition Time to Sample Box
+class Box_ctts : public FullBox {
+public:
+  Box_ctts()
+  {
+    set_short_type(fourcc("ctts"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Composition Time to Sample"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  struct OffsetToSample {
+    uint32_t sample_count;
+    int32_t sample_offset;   // either uint32_t or int32_t, we assume that all uint32_t values will also fit into int32_t
+  };
+
+  int32_t get_sample_offset(uint32_t sample_idx);
+
+  void append_sample_offset(int32_t offset);
+
+  bool is_constant_offset() const;
+
+  void derive_box_version() override;
+
+  int32_t compute_min_offset() const;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<OffsetToSample> m_entries;
+  MemoryHandle m_memory_handle;
+};
+
+
 // Sample to Chunk Box
 class Box_stsc : public FullBox {
 public:
@@ -394,6 +432,8 @@ public:
 
     return m_entries.back().samples_per_chunk == 0;
   }
+
+  size_t get_number_of_samples() const;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
