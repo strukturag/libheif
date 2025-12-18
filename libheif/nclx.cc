@@ -234,6 +234,26 @@ Error color_profile_nclx::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+Error color_profile_nclx::parse_nclc(BitstreamRange& range)
+{
+  StreamReader::grow_status status;
+  status = range.wait_for_available_bytes(6);
+  if (status != StreamReader::grow_status::size_reached) {
+    // TODO: return recoverable error at timeout
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
+
+  m_profile.m_colour_primaries = range.read16();
+  m_profile.m_transfer_characteristics = range.read16();
+  m_profile.m_matrix_coefficients = range.read16();
+
+  // use full range for RGB, limited range otherwise
+  m_profile.m_full_range_flag = (m_profile.m_matrix_coefficients == 0);
+
+  return Error::Ok;
+}
+
 Error nclx_profile::get_nclx_color_profile(heif_color_profile_nclx** out_data) const
 {
   *out_data = nullptr;
@@ -367,6 +387,14 @@ Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
     auto color_profile = std::make_shared<color_profile_nclx>();
     m_color_profile = color_profile;
     Error err = color_profile->parse(range);
+    if (err) {
+      return err;
+    }
+  }
+  else if (colour_type == fourcc("nclc")) {
+    auto color_profile = std::make_shared<color_profile_nclx>();
+    m_color_profile = color_profile;
+    Error err = color_profile->parse_nclc(range);
     if (err) {
       return err;
     }

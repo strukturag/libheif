@@ -185,6 +185,8 @@ public:
 
   Error parse(BitstreamRange& range);
 
+  Error parse_nclc(BitstreamRange& range);
+
   Error write(StreamWriter& writer) const override;
 
   nclx_profile get_nclx_color_profile() const { return m_profile; }
