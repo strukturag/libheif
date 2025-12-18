@@ -430,7 +430,12 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
 
   flush_decoder();
 
-  for (;;) {
+  // We might have to try several times to get an image out of the decoder.
+  // However, we stop after a maximum number of tries because the decoder might not
+  // give any image when the input data is incomplete.
+  const int max_decoding_tries = 50; // hardcoded value, should be large enough
+
+  for (int i = 0; i < max_decoding_tries; i++) {
     Result<std::shared_ptr<HeifPixelImage>> imgResult;
     imgResult = get_decoded_frame(options, nullptr, limits);
     if (imgResult.error()) {
@@ -441,4 +446,12 @@ Decoder::decode_single_frame_from_compressed_data(const heif_decoding_options& o
       return imgResult;
     }
   }
+
+  // We did not receive and image from the decoder. We give up.
+
+  return Error{
+    heif_error_Decoder_plugin_error,
+    heif_suberror_Unspecified,
+    "Decoding the input data did not give a decompressed image."
+  };
 }
