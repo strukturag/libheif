@@ -280,6 +280,16 @@ You can also add plugin directories programmatically.
 
 * The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
 
+## Usage
+
+### Security limits
+
+Libheif defines some security limits that prevent that very large images exceed the available memory or malicious input files can be used for a denial-of-service attach.
+When you are programming against the libheif API, and you need to process very large images, you can set the `heif_security_limits` individually.
+When using `heif-dec`, there is the option to switch off security limits with `--disable-limits`.
+In case a third-party software is using libheif, but does not give you a way to switch off the limits, you can set an environment variable `LIBHEIF_SECURITY_LIMITS=off` to switch it off globally.
+Clearly, only do this if you know what you are doing as you are sure not to process malicious files.
+
 ## Encoder benchmark
 
 A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the Wiki page
