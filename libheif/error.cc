@@ -280,6 +280,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported generic compression method";
     case heif_suberror_Unsupported_essential_property:
       return "Unsupported essential item property";
+    case heif_suberror_Unsupported_track_type:
+      return "Unsupported track type";
 
       // --- Encoder_plugin_error --
 
