@@ -331,7 +331,9 @@ Error HeifFile::parse_heif_file()
   m_top_level_boxes.push_back(m_ftyp_box);
 
   bool is_sequence_brand = (m_ftyp_box->has_compatible_brand(heif_brand2_msf1) ||
-                            m_ftyp_box->has_compatible_brand(heif_brand2_isom));
+                            m_ftyp_box->has_compatible_brand(heif_brand2_isom) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_mp41) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_mp42));
 
   // --- check whether this is a HEIF file and its structural format
 
@@ -345,6 +347,8 @@ Error HeifFile::parse_heif_file()
 #endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_isom) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_mp42) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_mp41) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_msf1)) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";

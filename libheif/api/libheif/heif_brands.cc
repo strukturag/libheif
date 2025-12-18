@@ -362,7 +362,9 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
       , heif_brand2_mif3
 #endif
       ,heif_brand2_msf1,
-    heif_brand2_isom
+    heif_brand2_isom,
+    heif_brand2_mp41,
+    heif_brand2_mp42
   };
 
   auto it = supported_brands.find(main_brand);
