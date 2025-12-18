@@ -344,6 +344,18 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
     return dataResult.error();
   }
 
+  // Check that we are pushing at least some data into the decoder.
+  // Some decoders (e.g. aom) do not complain when the input data is empty and we might
+  // get stuck in an endless decoding loop, waiting for the decompressed image.
+
+  if (dataResult->size() == 0) {
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Input with empty data extent."
+    };
+  }
+
   //std::cout << "Decoder::decode_sequence_frame_from_compressed_data push " << dataResult->size() << "\n";
   if (m_decoder_plugin->plugin_api_version >= 5 && m_decoder_plugin->push_data2) {
     err = m_decoder_plugin->push_data2(m_decoder, dataResult->data(), dataResult->size(), user_data);

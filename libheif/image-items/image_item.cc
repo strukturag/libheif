@@ -937,18 +937,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
 
   decoder->set_data_extent(std::move(extent));
 
-  // Check that we are pushing at least some data into the decoder.
-  // Some decoders (e.g. aom) do not complain when the input data is empty and we might
-  // get stuck in an endless decoding loop, waiting for the decompressed image.
-
-  if (extent.m_size == 0) {
-    return Error{
-      heif_error_Invalid_input,
-      heif_suberror_Unspecified,
-      "Input with empty data extent."
-    };
-  }
-
   return decoder->decode_single_frame_from_compressed_data(options,
                                                            get_context()->get_security_limits());
 }
