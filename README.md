@@ -284,8 +284,8 @@ You can also add plugin directories programmatically.
 
 ### Security limits
 
-Libheif defines some security limits that prevent that very large images exceed the available memory or malicious input files can be used for a denial-of-service attach.
-When you are programming against the libheif API, and you need to process very large images, you can set the `heif_security_limits` individually.
+Libheif defines some security limits that prevent that very large images exceed the available memory or malicious input files can be used for a denial-of-service attack.
+When you are programming against the libheif API and you need to process very large images, you can set the `heif_security_limits` individually.
 When using `heif-dec`, there is the option to switch off security limits with `--disable-limits`.
 In case a third-party software is using libheif, but does not give you a way to switch off the limits, you can set an environment variable `LIBHEIF_SECURITY_LIMITS=off` to switch it off globally.
 Clearly, only do this if you know what you are doing as you are sure not to process malicious files.
