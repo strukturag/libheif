@@ -251,6 +251,7 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_avcs   heif_fourcc('a','v','c','s')
 
 #define heif_brand2_iso8   heif_fourcc('i','s','o','8')
+#define heif_brand2_isom   heif_fourcc('i','s','o','m')
 
 // input data should be at least 12 bytes
 LIBHEIF_API

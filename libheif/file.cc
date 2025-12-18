@@ -330,7 +330,8 @@ Error HeifFile::parse_heif_file()
 
   m_top_level_boxes.push_back(m_ftyp_box);
 
-  bool is_brand_msf1 = m_ftyp_box->has_compatible_brand(heif_brand2_msf1);
+  bool is_sequence_brand = (m_ftyp_box->has_compatible_brand(heif_brand2_msf1) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_isom));
 
   // --- check whether this is a HEIF file and its structural format
 
@@ -343,7 +344,8 @@ Error HeifFile::parse_heif_file()
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
 #endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg) &&
-      !is_brand_msf1) {
+      !m_ftyp_box->has_compatible_brand(heif_brand2_isom) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_msf1)) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
 
@@ -379,12 +381,12 @@ Error HeifFile::parse_heif_file()
 
   // if we didn't find the mini box, meta is required
 
-  if (!m_meta_box && !is_brand_msf1) {
+  if (!m_meta_box && !is_sequence_brand) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_meta_box);
   }
 
-  if (!m_moov_box && is_brand_msf1) {
+  if (!m_moov_box && is_sequence_brand) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_moov_box);
   }
