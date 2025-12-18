@@ -410,7 +410,7 @@ std::string BitstreamRange::read_string()
       return std::string();
     }
 
-    if (c == 0) {
+    if (c == 0 || m_remaining==0) {
       break;
     }
     else {
