@@ -858,10 +858,14 @@ static heif_error kvazaar_get_compressed_data_intern(void* encoder_raw, uint8_t*
     *frame_nr = encoder->output_data.front().frameNr;
   }
 
-  if (more_frame_packets &&
-      encoder->output_data.size() > 1 &&
-      encoder->output_data[0].frameNr == encoder->output_data[1].frameNr) {
-    *more_frame_packets = 1;
+  if (more_frame_packets) {
+    if (encoder->output_data.size() > 1 &&
+        encoder->output_data[0].frameNr == encoder->output_data[1].frameNr) {
+      *more_frame_packets = 1;
+    }
+    else {
+      *more_frame_packets = 0;
+    }
   }
 
   encoder->active_data = std::move(pktdata);
