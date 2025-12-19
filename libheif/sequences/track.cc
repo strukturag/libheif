@@ -481,8 +481,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
   m_stbl->append_child_box(m_stts);
 
   m_ctts = std::make_shared<Box_ctts>();
-  m_stbl->append_child_box(m_ctts);
-  // TODO: will only be added when needed
+  // The ctts box will be added in finalize_track(), but only there is frame-reordering.
 
   m_stsc = std::make_shared<Box_stsc>();
   m_stbl->append_child_box(m_stsc);
@@ -718,6 +717,11 @@ Error Track::finalize_track()
   m_mdhd->set_duration(duration);
 
   m_stss->set_total_number_of_samples(m_stsz->num_samples());
+
+  // only add ctts box if we use frame-reordering
+  if (!m_ctts->is_constant_offset()) {
+    m_stbl->append_child_box(m_ctts);
+  }
 
   return {};
 }
