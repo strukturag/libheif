@@ -116,13 +116,16 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
                                           heif_encoder* encoder,
                                           const heif_sequence_encoding_options& options,
                                           heif_image_input_class input_class,
+                                          uint32_t framerate_num, uint32_t framerate_denom,
                                           uintptr_t frame_number)
 {
   heif_image c_api_image;
   c_api_image.image = image;
 
   if (!m_encoder_active) {
-    heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder, &c_api_image, input_class,
+    heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder, &c_api_image,
+                                                              input_class,
+                                                              framerate_num, framerate_denom,
                                                               &options);
     if (err.code) {
       return {

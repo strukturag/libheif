@@ -598,6 +598,7 @@ void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 
 heif_error opj_start_sequence_encoding(void* encoder, const heif_image* image,
                                        enum heif_image_input_class image_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options)
 {
   return heif_error_ok;

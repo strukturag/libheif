@@ -459,6 +459,7 @@ static void copy_plane(uvg_pixel* out_p, size_t out_stride, const uint8_t* in_p,
 
 static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                                         heif_image_input_class input_class,
+                                                        uint32_t framerate_num, uint32_t framerate_denom,
                                                         const heif_sequence_encoding_options* options,
                                                         bool image_sequence)
 {
@@ -591,6 +592,9 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
         break;
     }
   }
+
+  config->framerate_num = framerate_num;
+  config->framerate_denom = framerate_denom;
 
   uint32_t encoded_width, encoded_height;
   uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
@@ -789,9 +793,11 @@ static heif_error uvg266_get_compressed_data_intern(void* encoder_raw, uint8_t**
 
 static heif_error uvg266_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                                  heif_image_input_class input_class,
+                                                 uint32_t framerate_num, uint32_t framerate_denom,
                                                  const heif_sequence_encoding_options* options)
 {
-  return uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                               framerate_num, framerate_denom, options, true);
 }
 
 static heif_error uvg266_end_sequence_encoding(void* encoder_raw)
@@ -851,7 +857,7 @@ static heif_error uvg266_encode_image(void* encoder_raw, const heif_image* image
                                       heif_image_input_class input_class)
 {
   heif_error err;
-  err = uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = uvg266_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

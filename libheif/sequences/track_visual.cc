@@ -512,6 +512,7 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   Error encodeError = encoder->encode_sequence_frame(colorConvertedImage, h_encoder,
                                                      in_options ? *in_options : *local_dummy_options,
                                                      input_class,
+                                                     colorConvertedImage->get_sample_duration(), get_timescale(),
                                                      m_current_frame_nr);
   if (local_dummy_options) {
     heif_sequence_encoding_options_release(local_dummy_options);

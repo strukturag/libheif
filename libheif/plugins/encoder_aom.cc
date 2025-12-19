@@ -859,6 +859,7 @@ chroma_info get_chroma_info(heif_chroma chroma,
 
 static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                                      enum heif_image_input_class input_class,
+                                                     uint32_t framerate_num, uint32_t framerate_denom,
                                                      const heif_sequence_encoding_options* options,
                                                      bool image_sequence)
 {
@@ -1014,6 +1015,9 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
     cfg.monochrome = 1;
   }
 
+  cfg.g_timebase.num = static_cast<int>(framerate_num);
+  cfg.g_timebase.den = static_cast<int>(framerate_denom);
+
   // --- initialize codec
 
   aom_codec_flags_t encoder_flags = 0;
@@ -1115,9 +1119,10 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 
 static heif_error aom_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options)
 {
-  return aom_start_sequence_encoding_intern(encoder_raw, image, input_class, options,
+  return aom_start_sequence_encoding_intern(encoder_raw, image, input_class, framerate_num, framerate_denom, options,
     true);
 }
 
@@ -1309,7 +1314,7 @@ static heif_error aom_encode_image(void* encoder_raw, const heif_image* image,
                                    heif_image_input_class input_class)
 {
   heif_error err;
-  err = aom_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = aom_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

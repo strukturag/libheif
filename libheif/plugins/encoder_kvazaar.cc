@@ -453,6 +453,7 @@ std::unique_ptr<T, D> make_guard(T* ptr, D&& deleter) {
 
 static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                                          enum heif_image_input_class input_class,
+                                                         uint32_t framerate_num, uint32_t framerate_denom,
                                                          const heif_sequence_encoding_options* options,
                                                          bool image_sequence)
 {
@@ -502,6 +503,9 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 
   uint32_t encoded_width, encoded_height;
   kvazaar_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
+
+  config->framerate_num = framerate_num;
+  config->framerate_denom = framerate_denom;
 
   if (isGreyscale) {
     config->input_format = KVZ_FORMAT_P400;
@@ -558,8 +562,6 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
     // TODO
     /*
     config->target_bitrate = options->sequence_bitrate;
-    config->framerate_num = options->framerate_num;
-    config->framerate_den = options->framerate_den;
     */
 
     if (options->keyframe_distance_max) {
@@ -893,9 +895,10 @@ static heif_error kvazaar_get_compressed_data2(void* encoder_raw, uint8_t** data
 
 static heif_error kvazaar_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                                   enum heif_image_input_class input_class,
+                                                  uint32_t framerate_num, uint32_t framerate_denom,
                                                   const heif_sequence_encoding_options* options)
 {
-  return kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, framerate_num, framerate_denom, options, true);
 }
 
 
@@ -903,7 +906,7 @@ static heif_error kvazaar_encode_image(void* encoder_raw, const heif_image* imag
                                        heif_image_input_class input_class)
 {
   heif_error err;
-  err = kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

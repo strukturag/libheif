@@ -710,6 +710,7 @@ static int rounded_size(int s)
 
 static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options,
                                        bool image_sequence)
 {
@@ -742,9 +743,8 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   }
 
 
-  param.i_fps_num = 1; // TODO: set to sequence parameters
-  param.i_fps_den = 1;
-
+  param.i_fps_num = framerate_num;
+  param.i_fps_den = framerate_denom;
 
   if (options) {
     if (options->keyframe_distance_min) {
@@ -943,9 +943,11 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
 
 static heif_error x264_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options)
 {
-  return x264_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return x264_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                             framerate_num, framerate_denom, options, true);
 }
 
 
@@ -1060,7 +1062,7 @@ static heif_error x264_encode_image(void* encoder_raw, const heif_image* image,
                                     heif_image_input_class input_class)
 {
   heif_error err;
-  err = x264_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = x264_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

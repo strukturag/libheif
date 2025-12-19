@@ -747,6 +747,7 @@ void encoder_struct_x265::append_nal_packets(x265_nal* nals, uint32_t num_nals, 
 
 static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options,
                                        bool image_sequence)
 {
@@ -798,10 +799,6 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
     api->param_free(param);
     return heif_error_unsupported_parameter;
   }
-
-
-  param->fpsNum = 1; // TODO: set to sequence parameters
-  param->fpsDenom = 1;
 
 
   // x265 cannot encode images smaller than one CTU size
@@ -1024,6 +1021,8 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
+  param->fpsNum = framerate_num;
+  param->fpsDenom = framerate_denom;
 
   encoder->bit_depth = bit_depth;
 
@@ -1050,9 +1049,11 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
 
 static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options)
 {
-  return x265_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return x265_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                             framerate_num, framerate_denom, options, true);
 }
 
 
@@ -1188,7 +1189,7 @@ static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
                                     heif_image_input_class input_class)
 {
   heif_error err;
-  err = x265_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = x265_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

@@ -690,6 +690,7 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
 
 static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                                      enum heif_image_input_class input_class,
+                                                     uint32_t framerate_num, uint32_t framerate_denom,
                                                      const heif_sequence_encoding_options* options,
                                                      bool image_sequence)
 {
@@ -868,6 +869,9 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
   else if (color_format == EB_YUV444) {
     svt_config.profile = HIGH_PROFILE;
   }
+
+  svt_config.frame_rate_numerator = framerate_num;
+  svt_config.frame_rate_denominator = framerate_denom;
 
   res = svt_av1_enc_set_parameter(svt_encoder, &svt_config);
   if (res == EB_ErrorBadParameter) {
@@ -1165,9 +1169,11 @@ heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
 
 static heif_error svt_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                               enum heif_image_input_class input_class,
+                                              uint32_t framerate_num, uint32_t framerate_denom,
                                               const heif_sequence_encoding_options* options)
 {
-  return svt_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return svt_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                            framerate_num, framerate_denom, options, true);
 }
 
 
@@ -1175,7 +1181,7 @@ heif_error svt_encode_image(void* encoder_raw, const heif_image* image,
                             heif_image_input_class input_class)
 {
   heif_error err;
-  err = svt_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = svt_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }

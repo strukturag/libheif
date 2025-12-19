@@ -48,6 +48,7 @@ public:
                                       heif_encoder* encoder,
                                       const heif_sequence_encoding_options& options,
                                       heif_image_input_class input_class,
+                                      uint32_t framerate_num, uint32_t framerate_denom,
                                       uintptr_t frame_number) override;
 
   Error encode_sequence_flush(heif_encoder* encoder) override;

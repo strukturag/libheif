@@ -428,6 +428,7 @@ static void copy_plane(int16_t* dst_p, size_t dst_stride, const uint8_t* in_p, s
 
 static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                                        enum heif_image_input_class input_class,
+                                                       uint32_t framerate_num, uint32_t framerate_denom,
                                                        const heif_sequence_encoding_options* options,
                                                        bool image_sequence)
 {
@@ -455,8 +456,9 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
   int encoder_quality = 63 - encoder->quality*63/100;
 
   int ret = vvenc_init_default(&params,
-                               encoder->encoded_width, encoder->encoded_height,
-                               25,  // TODO: framerate
+                               static_cast<int>(encoder->encoded_width),
+                               static_cast<int>(encoder->encoded_height),
+                               static_cast<int>((framerate_denom + framerate_num / 2) / framerate_num),
                                0,
                                encoder_quality,
                                VVENC_MEDIUM);
@@ -481,6 +483,9 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
   if (isGreyscale) {
     params.m_internChromaFormat = VVENC_CHROMA_400;
   }
+
+  params.m_FrameRate = framerate_num;
+  params.m_FrameScale = framerate_denom;
 
   if (image_sequence) {
     if (options->keyframe_distance_max) {
@@ -750,7 +755,7 @@ static heif_error vvenc_encode_image(void* encoder_raw, const heif_image* image,
                                      heif_image_input_class input_class)
 {
   heif_error err;
-  err = vvenc_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = vvenc_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }
@@ -767,9 +772,10 @@ static heif_error vvenc_encode_image(void* encoder_raw, const heif_image* image,
 
 static heif_error vvenc_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                                 enum heif_image_input_class input_class,
+                                                uint32_t framerate_num, uint32_t framerate_denom,
                                                 const heif_sequence_encoding_options* options)
 {
-  return vvenc_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return vvenc_start_sequence_encoding_intern(encoder_raw, image, input_class, framerate_num, framerate_denom, options, true);
 }
 
 

@@ -286,6 +286,7 @@ typedef struct heif_encoder_plugin
 
   heif_error (* start_sequence_encoding)(void* encoder, const heif_image* image,
                                          enum heif_image_input_class image_class,
+                                         uint32_t framerate_num, uint32_t framerate_denom,
                                          const heif_sequence_encoding_options* options);
   // TODO: is heif_sequence_encoding_options a good choice here?
 

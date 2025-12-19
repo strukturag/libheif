@@ -292,6 +292,7 @@ heif_error uncompressed_get_compressed_data(void* encoder_raw, uint8_t** data, i
 
 heif_error uncompressed_start_sequence_encoding(void* encoder, const heif_image* image,
                                                 enum heif_image_input_class image_class,
+                                                uint32_t framerate_num, uint32_t framerate_denom,
                                                 const heif_sequence_encoding_options* options)
 {
   return heif_error_ok;

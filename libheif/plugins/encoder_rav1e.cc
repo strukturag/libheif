@@ -503,6 +503,7 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 
 heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options,
                                        bool image_sequence)
 {
@@ -561,6 +562,8 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
   if (rav1e_config_set_pixel_format(rav1eConfig.get(), (uint8_t) bitDepth, chromaSampling, chromaPosition, rav1eRange) < 0) {
     return heif_error_codec_library_error;
   }
+
+  rav1e_config_set_time_base(rav1eConfig.get(), RaRational{framerate_num, framerate_denom});
 
   if (!image_sequence) {
     if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
@@ -654,9 +657,11 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
 
 heif_error rav1e_start_sequence_encoding(void* encoder_raw, const heif_image* image,
                                        enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
                                        const heif_sequence_encoding_options* options)
 {
-  return rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, options, true);
+  return rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                              framerate_num, framerate_denom, options, true);
 }
 
 
@@ -807,7 +812,7 @@ heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
                               heif_image_input_class input_class)
 {
   heif_error err;
-  err = rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, nullptr, false);
+  err = rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
   if (err.code) {
     return err;
   }
