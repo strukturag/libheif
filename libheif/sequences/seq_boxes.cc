@@ -826,7 +826,7 @@ bool Box_ctts::is_constant_offset() const
 
 void Box_ctts::derive_box_version()
 {
-  set_version(0);
+  set_version(1);
 }
 
 
