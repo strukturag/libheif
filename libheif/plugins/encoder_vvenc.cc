@@ -484,8 +484,8 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
     params.m_internChromaFormat = VVENC_CHROMA_400;
   }
 
-  params.m_FrameRate = framerate_num;
-  params.m_FrameScale = framerate_denom;
+  params.m_FrameRate = framerate_denom;
+  params.m_FrameScale = framerate_num;
 
   if (image_sequence) {
     if (options->keyframe_distance_max) {
