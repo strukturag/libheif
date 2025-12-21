@@ -414,6 +414,20 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     }
   }
 
+
+  // --- security checks
+
+  if (m_stsz->num_samples() > m_heif_context->get_security_limits()->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
+
+  // --- initialize track tables
+
   init_sample_timing_table();
 
   return {};
