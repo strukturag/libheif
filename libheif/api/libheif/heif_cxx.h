@@ -283,7 +283,7 @@ namespace heif {
   public:
     ColorProfile_nclx();
 
-    ~ColorProfile_nclx();
+    ~ColorProfile_nclx() = default;
 
     heif_color_primaries get_color_primaries() const;
 
@@ -305,10 +305,9 @@ namespace heif {
     void set_full_range_flag(bool is_full_range);
 
   private:
-    ColorProfile_nclx(heif_color_profile_nclx* nclx)
-    { mProfile = nclx; }
+    ColorProfile_nclx(heif_color_profile_nclx* nclx);
 
-    heif_color_profile_nclx* mProfile;
+    std::shared_ptr<heif_color_profile_nclx> mProfile;
 
     friend class Image;
   };
@@ -813,12 +812,15 @@ namespace heif {
 
   inline ColorProfile_nclx::ColorProfile_nclx()
   {
-    mProfile = heif_nclx_color_profile_alloc();
+    auto profile = heif_nclx_color_profile_alloc();
+    mProfile = std::shared_ptr<heif_color_profile_nclx>(profile,
+                                                        [](heif_color_profile_nclx* p) { heif_nclx_color_profile_free(p); });
   }
 
-  inline ColorProfile_nclx::~ColorProfile_nclx()
+  inline ColorProfile_nclx::ColorProfile_nclx(heif_color_profile_nclx* nclx)
   {
-    heif_nclx_color_profile_free(mProfile);
+    mProfile = std::shared_ptr<heif_color_profile_nclx>(nclx,
+                                                        [](heif_color_profile_nclx* p) { heif_nclx_color_profile_free(p); });
   }
 
   inline heif_color_primaries ColorProfile_nclx::get_color_primaries() const
@@ -938,7 +940,7 @@ namespace heif {
 
   inline void Image::set_nclx_color_profile(const ColorProfile_nclx& nclx)
   {
-    Error err = Error(heif_image_set_nclx_color_profile(m_image.get(), nclx.mProfile));
+    Error err = Error(heif_image_set_nclx_color_profile(m_image.get(), nclx.mProfile.get()));
     if (err) {
       throw err;
     }
