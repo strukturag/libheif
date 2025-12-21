@@ -646,6 +646,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_mjpg>();
       break;
 
+    case fourcc("elng"):
+      box = std::make_shared<Box_elng>();
+      break;
+
+
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>();
@@ -5048,6 +5053,34 @@ Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   return range.get_error();
 }
 
+Error Box_elng::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("elng");
+  }
+
+  m_lang = range.read_string();
+  return range.get_error();
+}
+
+std::string Box_elng::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "extended_language: " << m_lang << "\n";
+  return sstr.str();
+}
+
+Error Box_elng::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write(m_lang);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
 
 Error Box_gimi_content_id::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
@@ -5078,3 +5111,4 @@ std::string Box_gimi_content_id::dump(Indent& indent) const
 
   return sstr.str();
 }
+

@@ -85,7 +85,7 @@ heif_error heif_context_get_text_item(const heif_context* context,
 /**
  * Get the item identifier for a text item.
  *
- * @param region_item the text item to query
+ * @param text_item the text item to query
  * @return the text item identifier (or 0 if the text_item is null)
  */
 LIBHEIF_API
@@ -102,6 +102,19 @@ heif_item_id heif_text_item_get_id(heif_text_item* text_item);
  */
 LIBHEIF_API
 const char* heif_text_item_get_content(heif_text_item* text_item);
+
+/**
+ * Get the extended language associated with the text item.
+ *
+ * @param context the context to get the text item from, usually from a file operation
+ * @param itemId the identifier for the text item
+ * @param out_language pointer to pointer to the resulting language
+ * @return heif_error_ok on success, or an error value indicating the problem
+ */
+LIBHEIF_API
+heif_error heif_item_get_property_extended_language(const heif_context* context,
+                                                    heif_item_id itemId,
+                                                    char** out_language);
 
 // --- adding text items
 
@@ -123,6 +136,22 @@ heif_error heif_image_handle_add_text_item(heif_image_handle *image_handle,
  */
 LIBHEIF_API
 void heif_text_item_release(heif_text_item* text_item);
+
+/**
+ * Set the extended language property to the text item.
+ *
+ * This adds an RFC 5346 (IETF BCP 47) extended language tag, such as "en-AU".
+ *
+ * @param text_item the text item to query
+ * @param language the language to set
+ * @param out_optional_propertyId Output parameter for the property ID of the language property.
+ *                                This parameter may be NULL if the info is not required.
+ * @return heif_error_ok on success, or an error value indicating the problem
+ */
+LIBHEIF_API
+heif_error heif_text_item_set_extended_language(heif_text_item* text_item,
+                                                const char *language,
+                                                heif_property_id* out_optional_propertyId);
 
 #ifdef __cplusplus
 }

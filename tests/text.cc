@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <cstring>
 #include <libheif/heif_items.h>
+#include <libheif/heif_library.h>
 
 
 TEST_CASE("no text") {
@@ -83,11 +84,17 @@ TEST_CASE("create text item") {
   std::string text_body1("first string");
   err = heif_image_handle_add_text_item(handle, "text/plain", text_body1.c_str(), &text_item1);
   REQUIRE(err.code == heif_error_Ok);
+  err = heif_text_item_set_extended_language(text_item1, "en-AU", NULL);
+  REQUIRE(err.code == heif_error_Ok);
 
   struct heif_text_item* text_item2;
   std::string text_body2("a second string");
   err = heif_image_handle_add_text_item(handle, "text/plain", text_body2.c_str(), &text_item2);
   REQUIRE(err.code == heif_error_Ok);
+  heif_property_id elng_prop_id;
+  err = heif_text_item_set_extended_language(text_item2, "en-UK", &elng_prop_id);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(elng_prop_id != 0);
 
   err = heif_context_write_to_file(ctx, "text.heif");
   REQUIRE(err.code == heif_error_Ok);
@@ -128,6 +135,12 @@ TEST_CASE("create text item") {
   REQUIRE(std::string(content_type0) == "text/plain");
   const char* body0 = heif_text_item_get_content(text0);
   REQUIRE(std::string(body0) == text_body1);
+  heif_string_release(body0);
+  char * elng0;
+  err = heif_item_get_property_extended_language(readbackCtx, id0, &elng0);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(strcmp(elng0, "en-AU") == 0);
+  heif_string_release(elng0);
 
   heif_text_item* text1;
   err = heif_context_get_text_item(readbackCtx, text_item_ids[1], &text1);
@@ -139,6 +152,12 @@ TEST_CASE("create text item") {
   REQUIRE(std::string(content_type1) == "text/plain");
   const char* body1 = heif_text_item_get_content(text1);
   REQUIRE(std::string(body1) == text_body2);
+  heif_string_release(body1);
+  char * elng1;
+  err = heif_item_get_property_extended_language(readbackCtx, id1, &elng1);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(strcmp(elng1, "en-UK") == 0);
+  heif_string_release(elng1);
 
   heif_text_item_release(text0);
   heif_text_item_release(text1);

@@ -40,7 +40,8 @@ enum heif_item_property_type
   heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
   heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd'),
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
-  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i')
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
+  heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g')
 };
 
 // Get the heif_property_id for a heif_item_id.
