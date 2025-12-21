@@ -104,17 +104,16 @@ LIBHEIF_API
 const char* heif_text_item_get_content(heif_text_item* text_item);
 
 /**
- * Get the extended language associated with the text item.
+ * This function is similar to heif_item_get_property_extended_language(), but
+ * takes a `heif_text_item` as parameter.
  *
- * @param context the context to get the text item from, usually from a file operation
- * @param itemId the identifier for the text item
- * @param out_language pointer to pointer to the resulting language
- * @return heif_error_ok on success, or an error value indicating the problem
+ * @param text_item The text item for which we are requesting the language.
+ * @param out_language Output parameter for the text language. Free with heif_string_release().
+ * @return
  */
 LIBHEIF_API
-heif_error heif_item_get_property_extended_language(const heif_context* context,
-                                                    heif_item_id itemId,
-                                                    char** out_language);
+heif_error heif_text_item_get_property_extended_language(const heif_text_item* text_item,
+                                                         char** out_language);
 
 // --- adding text items
 

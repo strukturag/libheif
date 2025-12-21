@@ -1844,6 +1844,24 @@ Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_
 }
 
 
+Result<heif_property_id> HeifContext::add_text_property(heif_item_id itemId, const std::string& language)
+{
+  if (find_property<Box_elng>(itemId)) {
+    return Error{
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Item already has an 'elng' language property."
+    };
+  }
+
+  auto elng = std::make_shared<Box_elng>();
+  elng->set_lang(std::string(language));
+
+  heif_property_id id = add_property(itemId, elng, false);
+  return id;
+}
+
+
 Error HeifContext::interpret_heif_file_sequences()
 {
   m_tracks.clear();

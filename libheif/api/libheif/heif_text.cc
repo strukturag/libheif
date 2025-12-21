@@ -117,17 +117,16 @@ const char* heif_text_item_get_content(heif_text_item* text_item)
   return text_c;
 }
 
-struct heif_error heif_item_get_property_extended_language(const heif_context* context,
-                                                           heif_item_id itemId,
-                                                           char** out_language)
+
+heif_error heif_text_item_get_property_extended_language(const heif_text_item* text_item, char** out_language)
 {
-  if (!out_language || !context) {
+  if (!out_language || !text_item) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
   }
 
-  auto elng = context->context->find_property<Box_elng>(itemId);
+  auto elng = text_item->context->find_property<Box_elng>(text_item->text_item->get_item_id());
   if (!elng) {
-    return elng.error_struct(context->context.get());
+    return elng.error_struct(text_item->context.get());
   }
 
   std::string lang = (*elng)->get_extended_language();
@@ -137,27 +136,22 @@ struct heif_error heif_item_get_property_extended_language(const heif_context* c
   return heif_error_success;
 }
 
-struct heif_error heif_text_item_set_extended_language(heif_text_item* text_item, const char *language, heif_property_id* out_optional_propertyId)
+
+heif_error heif_text_item_set_extended_language(heif_text_item* text_item, const char *language, heif_property_id* out_optional_propertyId)
 {
   if (!text_item || !language) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
   }
 
-  if (auto img = text_item->context->get_image(text_item->text_item->get_item_id(), false)) {
-    auto existing_elng = img->get_property<Box_elng>();
-    if (existing_elng) {
-      existing_elng->set_lang(std::string(language));
-      return heif_error_success;
-    }
+  Result<heif_property_id> property_id_result = text_item->context->add_text_property(text_item->text_item->get_item_id(),
+                                                                                      language);
+
+  if (auto err = property_id_result.error()) {
+    return err.error_struct(text_item->context.get());
   }
 
-  auto elng = std::make_shared<Box_elng>();
-  elng->set_lang(std::string(language));
-
-  heif_property_id id = text_item->context->add_property(text_item->text_item->get_item_id(), elng, false);
-
   if (out_optional_propertyId) {
-    *out_optional_propertyId = id;
+    *out_optional_propertyId = *property_id_result;
   }
 
   return heif_error_success;

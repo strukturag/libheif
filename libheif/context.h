@@ -165,6 +165,9 @@ public:
 
   Result<heif_item_id> add_pyramid_group(const std::vector<heif_item_id>& layers);
 
+  Result<heif_property_id> add_text_property(heif_item_id, const std::string& language);
+
+
   // --- region items
 
   void add_region_item(std::shared_ptr<RegionItem> region_item)
@@ -269,6 +272,14 @@ public:
                    "property not found on item");
     }
     return result;
+  }
+
+  template<typename T>
+  bool has_property(heif_item_id itemId) const
+  {
+    auto file = this->get_heif_file();
+    auto result = file->get_property_for_item<T>(itemId);
+    return result != nullptr;
   }
 
 private:

@@ -182,6 +182,50 @@ void heif_release_item_data(const heif_context* ctx, uint8_t** item_data)
 }
 
 
+heif_error heif_item_get_property_extended_language(const heif_context* context,
+                                                    heif_item_id itemId,
+                                                    char** out_language)
+{
+  if (!out_language || !context) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto elng = context->context->find_property<Box_elng>(itemId);
+  if (!elng) {
+    return elng.error_struct(context->context.get());
+  }
+
+  std::string lang = (*elng)->get_extended_language();
+  *out_language = new char[lang.length() + 1];
+  strcpy(*out_language, lang.c_str());
+
+  return heif_error_success;
+}
+
+
+heif_error heif_item_set_extended_language(heif_context* context,
+                                           heif_item_id item_id,
+                                           const char* language, heif_property_id* out_optional_propertyId)
+{
+  if (!context || !language) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  Result<heif_property_id> property_id_result = context->context->add_text_property(item_id,
+                                                                                    language);
+
+  if (auto err = property_id_result.error()) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (out_optional_propertyId) {
+    *out_optional_propertyId = *property_id_result;
+  }
+
+  return heif_error_success;
+}
+
+
 size_t heif_context_get_item_references(const heif_context* ctx,
                                         heif_item_id from_item_id,
                                         int index,
