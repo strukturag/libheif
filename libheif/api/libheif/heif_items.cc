@@ -203,7 +203,7 @@ heif_error heif_item_get_property_extended_language(const heif_context* context,
 }
 
 
-heif_error heif_item_set_extended_language(heif_context* context,
+heif_error heif_item_set_property_extended_language(heif_context* context,
                                            heif_item_id item_id,
                                            const char* language, heif_property_id* out_optional_propertyId)
 {
