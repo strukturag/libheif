@@ -284,6 +284,13 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
   }
 
   m_stts = stbl->get_child_box<Box_stts>();
+  if (!m_stts) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Track has no 'stts' box."
+    };
+  }
 
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
