@@ -33,7 +33,7 @@
 
 TEST_CASE("check have uncompressed")
 {
-  struct heif_error err;
+  heif_error err;
   heif_context *ctx = heif_context_alloc();
   heif_encoder *enc;
   err = heif_context_get_encoder_for_format(ctx, heif_compression_uncompressed,
@@ -49,10 +49,10 @@ TEST_CASE("check have uncompressed")
 }
 
 
-struct heif_image *createImage_Mono()
+heif_image *createImage_Mono()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_monochrome,
@@ -101,10 +101,10 @@ struct heif_image *createImage_Mono()
 }
 
 
-struct heif_image *createImage_YCbCr()
+heif_image *createImage_YCbCr()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_YCbCr,
@@ -171,10 +171,10 @@ struct heif_image *createImage_YCbCr()
   return image;
 }
 
-struct heif_image* createImage_Mono_plus_alpha()
+heif_image* createImage_Mono_plus_alpha()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_monochrome,
@@ -230,10 +230,10 @@ struct heif_image* createImage_Mono_plus_alpha()
   return image;
 }
 
-struct heif_image *createImage_RGB_interleaved()
+heif_image *createImage_RGB_interleaved()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_RGB,
@@ -339,10 +339,10 @@ void set_pixel_on_48bpp(uint8_t* p, int y, int stride, int x, int red, int green
   }
 }
 
-struct heif_image *createImage_RRGGBB_interleaved(heif_chroma chroma, int bit_depth, bool little_endian, bool with_alpha)
+heif_image *createImage_RRGGBB_interleaved(heif_chroma chroma, int bit_depth, bool little_endian, bool with_alpha)
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_RGB, chroma, &image);
@@ -417,10 +417,10 @@ struct heif_image *createImage_RRGGBB_interleaved(heif_chroma chroma, int bit_de
   return image;
 }
 
-struct heif_image *createImage_RGBA_interleaved()
+heif_image *createImage_RGBA_interleaved()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_RGB,
@@ -486,10 +486,10 @@ struct heif_image *createImage_RGBA_interleaved()
   return image;
 }
 
-struct heif_image *createImage_RGBA_planar()
+heif_image *createImage_RGBA_planar()
 {
-  struct heif_image *image;
-  struct heif_error err;
+  heif_image *image;
+  heif_error err;
   int w = 1024;
   int h = 768;
   err = heif_image_create(w, h, heif_colorspace_RGB,
@@ -571,11 +571,11 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
 
   heif_context *ctx = heif_context_alloc();
   heif_encoder *encoder;
-  struct heif_error err;
+  heif_error err;
   err = heif_context_get_encoder_for_format(ctx, heif_compression_uncompressed, &encoder);
   REQUIRE(err.code == heif_error_Ok);
 
-  struct heif_encoding_options *options;
+  heif_encoding_options *options;
   options = heif_encoding_options_alloc();
   options->macOS_compatibility_workaround = false;
   options->macOS_compatibility_workaround_no_nclx_profile = true;
@@ -591,7 +591,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
   if (check_decode)
   {
     // read file back in
-    struct heif_context* decode_context;
+    heif_context* decode_context;
     decode_context = heif_context_alloc();
     err = heif_context_read_from_file(decode_context, filename, NULL);
     REQUIRE(err.code == heif_error_Ok);

@@ -41,7 +41,9 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.h
         benchmark.cc
         common.cc
-        common.h)
+        common.h
+        SAI_datafile.cc
+        SAI_datafile.h)
 target_link_libraries(heif-enc PRIVATE heif heifio)
 target_include_directories(heif-enc PRIVATE ${libheif_SOURCE_DIR})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -52,7 +54,7 @@ if (WITH_HEADER_COMPRESSION)
 endif ()
 
 
-if (PNG_FOUND)
+if (WITH_EXAMPLE_HEIF_THUMB AND PNG_FOUND)
     add_executable(heif-thumbnailer ${getopt_sources}
             heif_thumbnailer.cc
             common.cc
@@ -76,8 +78,7 @@ if (WITH_EXAMPLE_HEIF_VIEW)
                 sdl.hh
                 common.cc
                 common.h)
-        target_link_libraries(heif-view PRIVATE heif ${SDL2_LIBRARIES})
-        target_include_directories(heif-view PRIVATE ${libheif_SOURCE_DIR} ${SDL2_INCLUDE_DIRS})
+        target_link_libraries(heif-view PRIVATE heif SDL2::SDL2main SDL2::SDL2)
         install(TARGETS heif-view RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif ()
 endif ()

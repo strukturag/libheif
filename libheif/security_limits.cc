@@ -24,8 +24,8 @@
 #include <mutex>
 
 
-struct heif_security_limits global_security_limits{
-    .version = 2,
+heif_security_limits global_security_limits{
+    .version = 3,
 
     // --- version 1
 
@@ -49,12 +49,17 @@ struct heif_security_limits global_security_limits{
 
     .max_total_memory = UINT64_C(4) * 1024 * 1024 * 1024,  // 4 GB
     .max_sample_description_box_entries = 1024,
-    .max_sample_group_description_box_entries = 1024
+    .max_sample_group_description_box_entries = 1024,
+
+    // --- version 3
+
+    .max_sequence_frames = 18'000'000,  // 100 hours at 50 fps
+    .max_number_of_file_brands = 1000
 };
 
 
-struct heif_security_limits disabled_security_limits{
-    .version = 2
+heif_security_limits disabled_security_limits{
+    .version = 3
 };
 
 

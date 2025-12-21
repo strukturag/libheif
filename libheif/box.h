@@ -263,6 +263,8 @@ public:
 
   virtual parse_error_fatality get_parse_error_fatality() const { return parse_error_fatality::fatal; }
 
+  // Note: this function may never be called for `ispe` items since it depends
+  //       on the image item type whether the `ispe` is essential.
   virtual bool is_essential() const { return m_is_essential; } // only used for properties
 
   void set_is_essential(bool flag) { m_is_essential = flag; }
@@ -793,7 +795,8 @@ public:
 
   bool operator==(const Box& other) const override;
 
-  bool is_essential() const override { return false; }
+  // Note: this depends on the image item type. Never call this for an `ispe` property.
+  bool is_essential() const override { assert(false); return false; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1185,6 +1188,11 @@ protected:
 class Box_dinf : public Box
 {
 public:
+  Box_dinf()
+  {
+    set_short_type(fourcc("dinf"));
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Information"; }
@@ -1197,9 +1205,16 @@ protected:
 class Box_dref : public FullBox
 {
 public:
+  Box_dref()
+  {
+    set_short_type(fourcc("dref"));
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Reference"; }
+
+  Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1209,11 +1224,23 @@ protected:
 class Box_url : public FullBox
 {
 public:
+  Box_url()
+  {
+    set_short_type(fourcc("url "));
+    set_flags(1);
+  }
+
   std::string dump(Indent&) const override;
 
   const char* debug_box_name() const override { return "Data Entry URL"; }
 
   bool is_same_file() const { return m_location.empty(); }
+
+  void set_location(const std::string& loc) { m_location = loc; set_flags(m_location.empty() ? 1 : 0); }
+
+  void set_location_same_file() { m_location.clear(); set_flags(1); }
+
+  Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1814,6 +1841,38 @@ protected:
 private:
   heif_tai_timestamp_packet m_timestamp;
 };
+
+class Box_gimi_content_id : public Box
+{
+public:
+  Box_gimi_content_id()
+  {
+    set_uuid_type(std::vector<uint8_t>{0x26, 0x1e, 0xf3, 0x74, 0x1d, 0x97, 0x5b, 0xba, 0xac, 0xbd, 0x9d, 0x2c, 0x8e, 0xa7, 0x35, 0x22});
+  }
+
+  bool is_essential() const override { return false; }
+
+  bool is_transformative_property() const override { return false; }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "GIMI Content ID"; }
+
+  std::string get_content_id() const { return m_content_id; }
+
+  void set_content_id(const std::string& id) { m_content_id = id; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  std::string m_content_id;
+};
+
 
 bool operator==(const heif_tai_timestamp_packet& a,
                 const heif_tai_timestamp_packet& b);

@@ -27,14 +27,23 @@
 #include <cassert>
 #include <string>
 #include <algorithm>
+#include <deque>
 
 #include <iostream>  // TODO: remove me
 
 #include "rav1e.h"
+#include <utility>
 
 
 struct encoder_struct_rav1e
 {
+  ~encoder_struct_rav1e()
+  {
+    if (rav1eContextRaw) {
+      rav1e_context_unref(rav1eContextRaw);
+    }
+  }
+
   int speed; // 0-10
 
   int quality; // TODO: not sure yet how to map quality to min/max q
@@ -46,13 +55,28 @@ struct encoder_struct_rav1e
 
   heif_chroma chroma;
 
+  // --- encoder
+
+  RaContext* rav1eContextRaw = nullptr;
+  uint8_t yShift = 0;
+
   // --- output
 
-  std::vector<uint8_t> compressed_data;
-  bool data_read = false;
+  struct Packet
+  {
+    std::vector<uint8_t> compressedData;
+    uintptr_t frameNr = 0;
+    bool is_keyframe = false;
+  };
+
+  std::deque<Packet> output_packets;
+  std::vector<uint8_t> active_output_data;
 };
 
 //static const char* kError_out_of_memory = "Out of memory";
+
+static heif_error get_encoder_packets(void* encoder_raw);
+
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_threads = "threads";
@@ -65,9 +89,11 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
-static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
-                                                           heif_suberror_Unspecified,
-                                                           "rav1e error"};
+static heif_error heif_error_codec_library_error = {
+  heif_error_Encoder_plugin_error,
+  heif_suberror_Unspecified,
+  "rav1e error"
+};
 
 static const int RAV1E_PLUGIN_PRIORITY = 20;
 
@@ -89,13 +115,13 @@ static const char* rav1e_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter rav1e_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* rav1e_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter rav1e_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* rav1e_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void rav1e_init_parameters()
 {
-  struct heif_encoder_parameter* p = rav1e_encoder_params;
-  const struct heif_encoder_parameter** d = rav1e_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = rav1e_encoder_params;
+  const heif_encoder_parameter** d = rav1e_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -198,7 +224,7 @@ static void rav1e_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** rav1e_list_parameters(void* encoder)
+const heif_encoder_parameter** rav1e_list_parameters(void* encoder)
 {
   return rav1e_encoder_parameter_ptrs;
 }
@@ -213,10 +239,10 @@ static void rav1e_cleanup_plugin()
 {
 }
 
-struct heif_error rav1e_new_encoder(void** enc)
+heif_error rav1e_new_encoder(void** enc)
 {
   auto* encoder = new encoder_struct_rav1e();
-  struct heif_error err = heif_error_ok;
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -229,15 +255,15 @@ struct heif_error rav1e_new_encoder(void** enc)
 
 void rav1e_free_encoder(void* encoder_raw)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   delete encoder;
 }
 
 
-struct heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
+heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -248,18 +274,18 @@ struct heif_error rav1e_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error rav1e_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-struct heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (enable) {
     encoder->min_q = 0;
@@ -268,16 +294,16 @@ struct heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error rav1e_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   *enable = (encoder->min_q == 0);
 
   return heif_error_ok;
 }
 
-struct heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int logging)
+heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -292,7 +318,7 @@ struct heif_error rav1e_set_parameter_logging_level(void* encoder_raw, int loggi
   return heif_error_ok;
 }
 
-struct heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -309,9 +335,9 @@ struct heif_error rav1e_get_parameter_logging_level(void* encoder_raw, int* logl
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return rav1e_set_parameter_quality(encoder, value);
@@ -329,9 +355,9 @@ struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* nam
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return rav1e_get_parameter_quality(encoder, value);
@@ -350,9 +376,9 @@ struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* nam
 }
 
 
-struct heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return rav1e_set_parameter_lossless(encoder, value);
@@ -363,9 +389,9 @@ struct heif_error rav1e_set_parameter_boolean(void* encoder_raw, const char* nam
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return rav1e_get_parameter_lossless(encoder, value);
@@ -377,9 +403,9 @@ struct heif_error rav1e_get_parameter_boolean(void* encoder_raw, const char* nam
 }
 
 
-struct heif_error rav1e_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error rav1e_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     if (strcmp(value, "420") == 0) {
@@ -410,10 +436,10 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
 }
 
 
-struct heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name,
-                                             char* value, int value_size)
+heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name,
+                                      char* value, int value_size)
 {
-  struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  encoder_struct_rav1e* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
     switch (encoder->chroma) {
@@ -439,8 +465,8 @@ struct heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name
 
 static void rav1e_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = rav1e_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = rav1e_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -475,14 +501,16 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 }
 
 
-struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image* image,
-                                     heif_image_input_class input_class)
+heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
+                                       const heif_sequence_encoding_options* options,
+                                       bool image_sequence)
 {
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
-  uint8_t yShift = 0;
   RaChromaSampling chromaSampling;
   RaChromaSamplePosition chromaPosition;
   RaPixelRange rav1eRange;
@@ -490,7 +518,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   if (input_class == heif_image_input_class_alpha) {
     chromaSampling = RA_CHROMA_SAMPLING_CS420; // I can't seem to get RA_CHROMA_SAMPLING_CS400 to work right now, unfortunately
     chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
-    yShift = 1;
+    encoder->yShift = 1;
   }
   else {
     switch (chroma) {
@@ -505,14 +533,14 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
       case heif_chroma_420:
         chromaSampling = RA_CHROMA_SAMPLING_CS420;
         chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
-        yShift = 1;
+        encoder->yShift = 1;
         break;
       default:
         return heif_error_codec_library_error;
     }
   }
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     nclx = nullptr;
@@ -535,9 +563,35 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     return heif_error_codec_library_error;
   }
 
-  if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
-    return heif_error_codec_library_error;
+  rav1e_config_set_time_base(rav1eConfig.get(), RaRational{framerate_num, framerate_denom});
+
+  if (!image_sequence) {
+    if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
+      return heif_error_codec_library_error;
+    }
   }
+
+  if (image_sequence) {
+    if (options->gop_structure == heif_sequence_gop_structure_intra_only) {
+      if (rav1e_config_parse(rav1eConfig.get(), "key_frame_interval", "1") == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+    else if (options->keyframe_distance_max) {
+      if (rav1e_config_parse(rav1eConfig.get(), "key_frame_interval",
+                             std::to_string(options->keyframe_distance_max).c_str()) == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+
+    if (options->keyframe_distance_min) {
+      if (rav1e_config_parse(rav1eConfig.get(), "min_key_frame_interval",
+                             std::to_string(options->keyframe_distance_min).c_str()) == -1) {
+        return heif_error_codec_library_error;
+      }
+    }
+  }
+
   if (rav1e_config_parse_int(rav1eConfig.get(), "width", heif_image_get_width(image, heif_channel_Y)) == -1) {
     return heif_error_codec_library_error;
   }
@@ -592,16 +646,38 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
                                        (RaTransferCharacteristics) nclx->transfer_characteristics);
   }
 
-  RaContext* rav1eContextRaw = rav1e_context_new(rav1eConfig.get());
-  if (!rav1eContextRaw) {
+  encoder->rav1eContextRaw = rav1e_context_new(rav1eConfig.get());
+  if (!encoder->rav1eContextRaw) {
     return heif_error_codec_library_error;
   }
-  auto rav1eContext = std::shared_ptr<RaContext>(rav1eContextRaw, [](RaContext* ctx) { rav1e_context_unref(ctx); });
+
+  return {};
+}
+
+
+heif_error rav1e_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
+                                       const heif_sequence_encoding_options* options)
+{
+  return rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                              framerate_num, framerate_denom, options, true);
+}
+
+
+heif_error rav1e_encode_sequence_frame(void* encoder_raw, const heif_image* image, uintptr_t frame_nr)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
+
+  int bitDepth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+
+  int yShift = encoder->yShift;
 
 
   // --- copy libheif image to rav1e image
 
-  auto rav1eFrameRaw = rav1e_frame_new(rav1eContext.get());
+  auto rav1eFrameRaw = rav1e_frame_new(rav1eContext);
   auto rav1eFrame = std::shared_ptr<RaFrame>(rav1eFrameRaw, [](RaFrame* frm) { rav1e_frame_unref(frm); });
 
   int byteWidth = (bitDepth > 8) ? 2 : 1;
@@ -624,58 +700,138 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     rav1e_frame_fill_plane(rav1eFrame.get(), 2, Cr, strideCr * uvHeight, strideCr, byteWidth);
   }
 
-  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext.get(), rav1eFrame.get());
+  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext, rav1eFrame.get());
   if (encoderStatus != 0) {
     return heif_error_codec_library_error;
   }
+
+  return get_encoder_packets(encoder_raw);
+}
+
+
+heif_error rav1e_end_sequence_encoding(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
 
   // flush encoder
-  encoderStatus = rav1e_send_frame(rav1eContext.get(), nullptr);
+  RaEncoderStatus encoderStatus = rav1e_send_frame(rav1eContext, nullptr);
   if (encoderStatus != 0) {
     return heif_error_codec_library_error;
   }
 
-  RaPacket* pkt = nullptr;
-  encoderStatus = rav1e_receive_packet(rav1eContext.get(), &pkt);
-  if (encoderStatus != 0) {
-    return heif_error_codec_library_error;
-  }
-
-  if (pkt && pkt->data && (pkt->len > 0)) {
-    encoder->compressed_data.resize(pkt->len);
-    memcpy(encoder->compressed_data.data(), pkt->data, pkt->len);
-    encoder->data_read = false;
-  }
-
-  if (pkt) {
-    rav1e_packet_unref(pkt);
-  }
-
-  return heif_error_ok;
+  return get_encoder_packets(encoder_raw);
 }
 
-struct heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                            enum heif_encoded_data_type* type)
-{
-  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
 
-  if (encoder->data_read) {
-    *data = nullptr;
+static heif_error get_encoder_packets(void* encoder_raw)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+  auto& rav1eContext = encoder->rav1eContextRaw;
+
+  for (;;) {
+    RaPacket* pkt = nullptr;
+    RaEncoderStatus encoderStatus = rav1e_receive_packet(rav1eContext, &pkt);
+
+    if (encoderStatus == RA_ENCODER_STATUS_NEED_MORE_DATA) {
+      return {};
+    }
+
+    if (encoderStatus == RA_ENCODER_STATUS_ENCODED) {
+      continue;
+    }
+
+    if (encoderStatus != 0) {
+      return heif_error_codec_library_error;
+    }
+
+    if (pkt && pkt->data && (pkt->len > 0)) {
+      encoder_struct_rav1e::Packet output_packet;
+      output_packet.frameNr = pkt->input_frameno;
+      output_packet.is_keyframe = (pkt->frame_type == RaFrameType::RA_FRAME_TYPE_KEY);
+
+      encoder->output_packets.emplace_back(output_packet);
+      encoder->output_packets.back().compressedData.resize(pkt->len);
+
+      memcpy(encoder->output_packets.back().compressedData.data(),
+             pkt->data,
+             pkt->len);
+    }
+
+    if (pkt) {
+      rav1e_packet_unref(pkt);
+    }
+    else {
+      break;
+    }
+  }
+
+  return {};
+}
+
+
+heif_error rav1e_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                    uintptr_t* out_framenr, int* out_is_keyframe,
+                                    int* more_frame_packets)
+{
+  auto* encoder = (encoder_struct_rav1e*) encoder_raw;
+
+  encoder->active_output_data.clear();
+
+  if (encoder->output_packets.empty()) {
     *size = 0;
+    *data = nullptr;
   }
   else {
-    *data = encoder->compressed_data.data();
-    *size = (int) encoder->compressed_data.size();
-    encoder->data_read = true;
+    encoder->active_output_data = std::move(encoder->output_packets.front().compressedData);
+    if (out_framenr) {
+      *out_framenr = encoder->output_packets.front().frameNr;
+    }
+
+    if (out_is_keyframe) {
+      *out_is_keyframe = encoder->output_packets.front().is_keyframe;
+    }
+
+    encoder->output_packets.pop_front();
+
+    *size = (int) encoder->active_output_data.size();
+    *data = encoder->active_output_data.data();
   }
 
   return heif_error_ok;
 }
 
+heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                     heif_encoded_data_type* type)
+{
+  return rav1e_get_compressed_data2(encoder_raw, data, size, nullptr, nullptr, nullptr);
+}
 
-static const struct heif_encoder_plugin encoder_plugin_rav1e
+
+heif_error rav1e_encode_image(void* encoder_raw, const heif_image* image,
+                              heif_image_input_class input_class)
+{
+  heif_error err;
+  err = rav1e_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = rav1e_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  rav1e_end_sequence_encoding(encoder_raw);
+
+  return heif_error_ok;
+}
+
+
+
+static const heif_encoder_plugin encoder_plugin_rav1e
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_AV1,
         /* id_name */ "rav1e",
         /* priority */ RAV1E_PLUGIN_PRIORITY,
@@ -703,10 +859,16 @@ static const struct heif_encoder_plugin encoder_plugin_rav1e
         /* encode_image */ rav1e_encode_image,
         /* get_compressed_data */ rav1e_get_compressed_data,
         /* query_input_colorspace (v2) */ rav1e_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        /* start_sequence_encoding (v4) */ rav1e_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ rav1e_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ rav1e_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ rav1e_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_rav1e()
+const heif_encoder_plugin* get_encoder_plugin_rav1e()
 {
   return &encoder_plugin_rav1e;
 }

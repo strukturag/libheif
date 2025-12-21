@@ -75,7 +75,7 @@ ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx)
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   std::shared_ptr<HeifPixelImage> img;
@@ -114,7 +114,7 @@ struct unciHeaders
 
 static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                             const heif_unci_image_parameters* parameters,
-                                            const struct heif_encoding_options* options)
+                                            const heif_encoding_options& options)
 {
   unciHeaders headers;
 
@@ -122,7 +122,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
                      parameters->tile_height != parameters->image_height);
 
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options && options->prefer_uncC_short_form && !uses_tiles) {
+  if (options.prefer_uncC_short_form && !uses_tiles) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
 
@@ -131,7 +131,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
   } else {
     std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters);
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters, options.save_alpha_channel);
     if (error) {
       return error;
     }
@@ -144,7 +144,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
 }
 
 
-Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifPixelImage>& src_image)
+Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifPixelImage>& src_image, bool save_alpha)
 {
   std::vector<uint8_t> data;
 
@@ -193,12 +193,16 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
 
       return data;
     }
-    else if ((src_image->get_chroma_format() == heif_chroma_interleaved_RGB) ||
-             (src_image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
-             (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE) ||
-             (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ||
-             (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
-             (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
+    else if ((save_alpha && (src_image->get_chroma_format() == heif_chroma_interleaved_RGB ||
+                             src_image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
+                             src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE ||
+                             src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
+                             src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+                             src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
+             ||
+             (!save_alpha && (src_image->get_chroma_format() == heif_chroma_interleaved_RGB ||
+                              src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE ||
+                              src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE)))
     {
       int bytes_per_pixel = 0;
       switch (src_image->get_chroma_format()) {
@@ -231,7 +235,49 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
       return data;
     }
     else
-    {
+    if (!save_alpha && (src_image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
+                        src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+                        src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE)) {
+      int bytes_per_pixel = 0;
+      switch (src_image->get_chroma_format()) {
+        case heif_chroma_interleaved_RGBA:
+          bytes_per_pixel = 3;
+          break;
+        case heif_chroma_interleaved_RRGGBBAA_BE:
+        case heif_chroma_interleaved_RRGGBBAA_LE:
+          bytes_per_pixel = 6;
+          break;
+        default:
+          assert(false);
+      }
+
+      size_t src_stride;
+      const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
+      uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * bytes_per_pixel;
+      data.resize(out_size);
+
+      if (src_image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
+        for (uint32_t y = 0; y < src_image->get_height(); y++) {
+          for (uint32_t x = 0; x < src_image->get_width(); x++) {
+            data[y * src_image->get_width() * bytes_per_pixel + 3 * x + 0] = src_data[src_stride * y + 4 * x + 0];
+            data[y * src_image->get_width() * bytes_per_pixel + 3 * x + 1] = src_data[src_stride * y + 4 * x + 1];
+            data[y * src_image->get_width() * bytes_per_pixel + 3 * x + 2] = src_data[src_stride * y + 4 * x + 2];
+          }
+        }
+      }
+      else {
+        for (uint32_t y = 0; y < src_image->get_height(); y++) {
+          for (uint32_t x = 0; x < src_image->get_width(); x++) {
+            for (int i = 0; i < 6; i++) {
+              data[y * src_image->get_width() * bytes_per_pixel + 6 * x + i] = src_data[src_stride * y + 8 * x + i];
+            }
+          }
+        }
+      }
+
+      return data;
+    }
+    else {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
                    "Unsupported RGB chroma");
@@ -267,21 +313,20 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
                  heif_suberror_Unsupported_data_version,
                  "Unsupported colourspace");
   }
-
 }
 
 
 Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                                 struct heif_encoder* encoder,
-                                                                 const struct heif_encoding_options& options,
-                                                                 enum heif_image_input_class input_class)
+                                                                 heif_encoder* encoder,
+                                                                 const heif_encoding_options& options,
+                                                                 heif_image_input_class input_class)
 {
   return encode_static(src_image, options);
 }
 
 
 Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                               const struct heif_encoding_options& options)
+                                                               const heif_encoding_options& options)
 {
   auto parameters = std::unique_ptr<heif_unci_image_parameters,
                                     void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
@@ -295,7 +340,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
 
   // --- generate configuration property boxes
 
-  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), &options);
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, parameters.get(), options);
   if (!genHeadersResult) {
     return genHeadersResult.error();
   }
@@ -313,7 +358,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
 
   // --- encode image
 
-  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(src_image);
+  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(src_image, options.save_alpha_channel);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }
@@ -326,9 +371,11 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std:
 
 Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci_item(HeifContext* ctx,
                                                                                       const heif_unci_image_parameters* parameters,
-                                                                                      const struct heif_encoding_options* encoding_options,
+                                                                                      const heif_encoding_options* encoding_options,
                                                                                       const std::shared_ptr<const HeifPixelImage>& prototype)
 {
+  assert(encoding_options != nullptr);
+
   // Check input parameters
 
   if (parameters->image_width % parameters->tile_width != 0 ||
@@ -350,7 +397,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // Generate headers
 
-  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, encoding_options);
+  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, *encoding_options);
   if (!genHeadersResult) {
     return genHeadersResult.error();
   }
@@ -426,7 +473,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 }
 
 
-Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image)
+Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image, bool save_alpha)
 {
   std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
   assert(uncC);
@@ -436,7 +483,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
   uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
 
-  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image);
+  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image, save_alpha);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }

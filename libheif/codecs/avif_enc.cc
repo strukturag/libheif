@@ -26,13 +26,18 @@
 
 #include <string>
 
+enum heif_av1_obu_type : uint8_t
+{
+  heif_av1_obu_type_frame = 2
+};
+
 
 Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                     struct heif_encoder* encoder,
-                                                     const struct heif_encoding_options& options,
-                                                     enum heif_image_input_class input_class)
+                                                     heif_encoder* encoder,
+                                                     const heif_encoding_options& options,
+                                                     heif_image_input_class input_class)
 {
-  Encoder::CodedImageData codedImage;
+  CodedImageData codedImage;
 
   Box_av1C::configuration config;
 
@@ -43,7 +48,7 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
   heif_image c_api_image;
   c_api_image.image = image;
 
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
   if (err.code) {
     return Error(err.code,
                  err.subcode,
@@ -77,7 +82,124 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
 }
 
 
-std::shared_ptr<class Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(const CodedImageData& data) const
+Error Encoder_AVIF::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                    heif_encoder* encoder,
+                                    const heif_sequence_encoding_options& options,
+                                    heif_image_input_class input_class,
+                                    uint32_t framerate_num, uint32_t framerate_denom,
+                                    uintptr_t frame_number)
+{
+  // Box_av1C::configuration config;
+
+  // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+  // TODO: maybe we can remove this later.
+  fill_av1C_configuration(&m_config, image);
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  if (!m_encoder_active) {
+    heif_error err = encoder->plugin->start_sequence_encoding(encoder->encoder,
+                                                              &c_api_image,
+                                                              input_class,
+                                                              framerate_num, framerate_denom,
+                                                              &options);
+    if (err.code) {
+      return {
+        err.code,
+        err.subcode,
+        err.message
+      };
+    }
+
+    //m_hvcC = std::make_shared<Box_hvcC>();
+    m_encoder_active = true;
+  }
+
+
+  heif_error err = encoder->plugin->encode_sequence_frame(encoder->encoder, &c_api_image, frame_number);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
+
+  m_all_refs_intra = (options.gop_structure == heif_sequence_gop_structure_intra_only);
+
+  return get_data(encoder);
+}
+
+
+Error Encoder_AVIF::get_data(heif_encoder* encoder)
+{
+  CodedImageData codedImage;
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    uintptr_t out_frame_number;
+    int is_keyframe = 0;
+    encoder->plugin->get_compressed_data2(encoder->encoder, &data, &size, &out_frame_number, &is_keyframe, nullptr);
+
+    if (data == nullptr) {
+      break;
+    }
+
+    uint8_t obu_type = (data[0]>>3) & 0x0F;
+
+    // printf("got OBU type=%d size=%d framenr=%d\n", obu_type, size, out_frame_number);
+
+    bool found_config = fill_av1C_configuration_from_stream(&m_config, data, size);
+    (void) found_config;
+
+    codedImage.append(data, size);
+    codedImage.frame_nr = out_frame_number;
+
+    if (encoder->plugin->plugin_api_version >= 4 &&
+        encoder->plugin->does_indicate_keyframes) {
+      codedImage.is_sync_frame = is_keyframe;
+    }
+
+    // If we got an image, stop collecting data packets.
+    if (obu_type == heif_av1_obu_type_frame) {
+      break;
+    }
+  }
+
+  if (m_end_of_sequence_reached && !m_av1C_sent) {
+    auto av1C = std::make_shared<Box_av1C>();
+    av1C->set_configuration(m_config);
+    codedImage.properties.push_back(av1C);
+    m_av1C_sent = true;
+  }
+
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = m_all_refs_intra;
+
+  m_current_output_data = std::move(codedImage);
+
+  return {};
+}
+
+
+Error Encoder_AVIF::encode_sequence_flush(heif_encoder* encoder)
+{
+  encoder->plugin->end_sequence_encoding(encoder->encoder);
+  m_encoder_active = false;
+  m_end_of_sequence_reached = true;
+
+  return get_data(encoder);
+}
+
+
+std::optional<Encoder::CodedImageData> Encoder_AVIF::encode_sequence_get_data()
+{
+  return std::move(m_current_output_data);
+}
+
+
+std::shared_ptr<Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(const CodedImageData& data) const
 {
   auto av01 = std::make_shared<Box_av01>();
   av01->get_VisualSampleEntry().compressorname = "AVIF";
@@ -89,6 +211,6 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_AVIF::get_sample_descriptio
     }
   }
 
-  assert(false); // no av1C generated
+  // box not available yet
   return nullptr;
 }

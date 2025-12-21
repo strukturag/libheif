@@ -113,6 +113,10 @@ set(VVENC_sources encoder_vvenc.cc encoder_vvenc.h)
 set(VVENC_extra_plugin_sources)
 plugin_compilation(vvenc vvenc vvenc_FOUND VVENC VVENC)
 
+set(X264_sources encoder_x264.h encoder_x264.cc)
+set(X264_extra_plugin_sources)
+plugin_compilation(x264 X264 X264_FOUND X264 X264)
+
 set(OpenH264_DECODER_sources decoder_openh264.cc decoder_openh264.h)
 set(OpenH264_DECODER_extra_plugin_sources)
 plugin_compilation(openh264dec OpenH264 OpenH264_DECODER_FOUND OpenH264_DECODER OpenH264_DECODER)
@@ -130,3 +134,12 @@ if (WITH_UNCOMPRESSED_CODEC)
             decoder_uncompressed.h
             decoder_uncompressed.cc)
 endif ()
+
+if (WITH_WEBCODECS)
+   target_sources(heif PRIVATE
+   		  decoder_webcodecs.h
+		  decoder_webcodecs.cc)
+   target_compile_definitions(heif PRIVATE HAVE_WEBCODECS=1)
+endif()
+
+

@@ -38,11 +38,11 @@ extern heif_error error_cannot_read_plugin_directory;
 class PluginLibrary
 {
 public:
-  virtual struct heif_error load_from_file(const char*) = 0;
+  virtual heif_error load_from_file(const char*) = 0;
 
   virtual void release() = 0;
 
-  virtual struct heif_plugin_info* get_plugin_info() = 0;
+  virtual heif_plugin_info* get_plugin_info() = 0;
 };
 
 

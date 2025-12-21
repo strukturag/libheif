@@ -33,7 +33,7 @@
 
 #include "uncompressed_decode.h"
 
-void check_image_handle_size(struct heif_context *&context) {
+void check_image_handle_size(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   int ispe_width = heif_image_handle_get_ispe_width(handle);
   REQUIRE(ispe_width == 30);
@@ -55,7 +55,7 @@ TEST_CASE("check image handle size") {
   heif_context_free(context);
 }
 
-void check_image_handle_size_subsampled(struct heif_context *&context) {
+void check_image_handle_size_subsampled(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   int ispe_width = heif_image_handle_get_ispe_width(handle);
   REQUIRE(ispe_width == 32);
@@ -91,7 +91,7 @@ TEST_CASE("check image handle alpha channel") {
   heif_context_free(context);
 }
 
-void check_image_handle_no_depth_images(struct heif_context *&context) {
+void check_image_handle_no_depth_images(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
   int has_depth = heif_image_handle_has_depth_image(handle);
@@ -111,7 +111,7 @@ TEST_CASE("check image handle no depth images") {
   heif_context_free(context);
 }
 
-void check_image_handle_no_thumbnails(struct heif_context *&context) {
+void check_image_handle_no_thumbnails(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
   int numthumbs = heif_image_handle_get_number_of_thumbnails(handle);
@@ -128,7 +128,7 @@ TEST_CASE("check image handle no thumbnails") {
   heif_context_free(context);
 }
 
-void check_image_handle_no_aux_images(struct heif_context *&context) {
+void check_image_handle_no_aux_images(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
   int num_aux = heif_image_handle_get_number_of_auxiliary_images(handle, 0);
@@ -145,7 +145,7 @@ TEST_CASE("check image handle no auxiliary images") {
   heif_context_free(context);
 }
 
-void check_image_handle_no_metadata(struct heif_context *&context) {
+void check_image_handle_no_metadata(heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
   int num_metadata_blocks =

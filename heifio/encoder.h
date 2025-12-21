@@ -45,21 +45,21 @@ public:
 
   virtual bool supports_alpha() const = 0;
 
-  virtual void UpdateDecodingOptions(const struct heif_image_handle* handle,
-                                     struct heif_decoding_options* options) const
+  virtual void UpdateDecodingOptions(const heif_image_handle* handle,
+                                     heif_decoding_options* options) const
   {
     // Override if necessary.
   }
 
-  virtual bool Encode(const struct heif_image_handle* handle,
-                      const struct heif_image* image, const std::string& filename) = 0;
+  virtual bool Encode(const heif_image_handle* handle,
+                      const heif_image* image, const std::string& filename) = 0;
 
 protected:
-  static bool HasExifMetaData(const struct heif_image_handle* handle);
+  static bool HasExifMetaData(const heif_image_handle* handle);
 
-  static uint8_t* GetExifMetaData(const struct heif_image_handle* handle, size_t* size);
+  static uint8_t* GetExifMetaData(const heif_image_handle* handle, size_t* size);
 
-  static std::vector<uint8_t> get_xmp_metadata(const struct heif_image_handle* handle);
+  static std::vector<uint8_t> get_xmp_metadata(const heif_image_handle* handle);
 };
 
 #endif  // EXAMPLE_ENCODER_H

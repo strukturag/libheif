@@ -27,7 +27,9 @@
 #include <cstring>
 #include <cstdio>
 #include <cassert>
+#include <deque>
 #include <vector>
+#include <utility>
 
 extern "C" {
 #include <x265.h>
@@ -57,14 +59,26 @@ struct parameter
 struct encoder_struct_x265
 {
   x265_encoder* encoder = nullptr;
+  const x265_api* api = nullptr;
+  x265_param* param = nullptr;
 
-  x265_nal* nals = nullptr;
-  uint32_t num_nals = 0;
-  uint32_t nal_output_counter = 0;
   int bit_depth = 0;
 
   heif_chroma chroma;
 
+
+  // --- output
+
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t frameNr = 0;
+  };
+
+  std::deque<Packet> output_data;
+  std::vector<uint8_t> active_output_nal;
+
+  void append_nal_packets(x265_nal* nals, uint32_t num_nals, uintptr_t frameNr);
 
   // --- parameters
 
@@ -199,13 +213,13 @@ static const char* x265_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter x265_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* x265_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter x265_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* x265_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void x265_init_parameters()
 {
-  struct heif_encoder_parameter* p = x265_encoder_params;
-  const struct heif_encoder_parameter** d = x265_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = x265_encoder_params;
+  const heif_encoder_parameter** d = x265_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -286,7 +300,7 @@ static void x265_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** x265_list_parameters(void* encoder)
+const heif_encoder_parameter** x265_list_parameters(void* encoder)
 {
   return x265_encoder_parameter_ptrs;
 }
@@ -304,18 +318,15 @@ static void x265_cleanup_plugin()
 }
 
 
-static struct heif_error x265_new_encoder(void** enc)
+static heif_error x265_new_encoder(void** enc)
 {
-  struct encoder_struct_x265* encoder = new encoder_struct_x265();
-  struct heif_error err = heif_error_ok;
+  encoder_struct_x265* encoder = new encoder_struct_x265();
+  heif_error err = heif_error_ok;
 
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
 
-  encoder->nals = nullptr;
-  encoder->num_nals = 0;
-  encoder->nal_output_counter = 0;
   encoder->bit_depth = 8;
 
   *enc = encoder;
@@ -330,7 +341,7 @@ static struct heif_error x265_new_encoder(void** enc)
 
 static void x265_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (encoder->encoder) {
     const x265_api* api = x265_api_get(encoder->bit_depth);
@@ -340,9 +351,9 @@ static void x265_free_encoder(void* encoder_raw)
   delete encoder;
 }
 
-static struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
+static heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -353,9 +364,9 @@ static struct heif_error x265_set_parameter_quality(void* encoder_raw, int quali
   return heif_error_ok;
 }
 
-static struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
+static heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   parameter p = encoder->get_param(heif_encoder_parameter_name_quality);
   *quality = p.value_int;
@@ -363,18 +374,18 @@ static struct heif_error x265_get_parameter_quality(void* encoder_raw, int* qual
   return heif_error_ok;
 }
 
-static struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
+static heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   encoder->add_param(heif_encoder_parameter_name_lossless, (bool) enable);
 
   return heif_error_ok;
 }
 
-static struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
+static heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   parameter p = encoder->get_param(heif_encoder_parameter_name_lossless);
   *enable = p.value_int;
@@ -382,9 +393,9 @@ static struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* ena
   return heif_error_ok;
 }
 
-static struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
+static heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (logging < 0 || logging > 4) {
     return heif_error_invalid_parameter_value;
@@ -395,9 +406,9 @@ static struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int
   return heif_error_ok;
 }
 
-static struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+static heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   *loglevel = encoder->logLevel;
 
@@ -405,9 +416,9 @@ static struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int
 }
 
 
-static struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
+static heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return x265_set_parameter_quality(encoder, value);
@@ -435,9 +446,9 @@ static struct heif_error x265_set_parameter_integer(void* encoder_raw, const cha
   return heif_error_unsupported_parameter;
 }
 
-static struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+static heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return x265_get_parameter_quality(encoder, value);
@@ -458,7 +469,7 @@ static struct heif_error x265_get_parameter_integer(void* encoder_raw, const cha
 }
 
 
-static struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
+static heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return x265_set_parameter_lossless(encoder, value);
@@ -492,9 +503,9 @@ static bool string_list_contains(const char* const* values_list, const char* val
 }
 
 
-static struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+static heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (strcmp(name, kParam_preset) == 0) {
     if (!string_list_contains(kParam_preset_valid_values, value)) {
@@ -534,7 +545,6 @@ static struct heif_error x265_set_parameter_string(void* encoder_raw, const char
     }
   }
 
-
   return heif_error_unsupported_parameter;
 }
 
@@ -544,10 +554,10 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
   dst[dst_size - 1] = 0;
 }
 
-static struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
-                                                   char* value, int value_size)
+static heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
+                                            char* value, int value_size)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (strcmp(name, kParam_preset) == 0) {
     save_strcpy(value, value_size, encoder->preset.c_str());
@@ -581,8 +591,8 @@ static struct heif_error x265_get_parameter_string(void* encoder_raw, const char
 
 static void x265_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = x265_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = x265_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -616,7 +626,7 @@ static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma
 
 static void x265_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  auto* encoder = (struct encoder_struct_x265*) encoder_raw;
+  auto* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (*colorspace == heif_colorspace_monochrome) {
     *colorspace = heif_colorspace_monochrome;
@@ -640,13 +650,111 @@ static int rounded_size(int s)
   return s;
 }
 
+#if 0
+static const char* naltype_table[] = {
+  /*  0 */ "TRAIL_N",
+  /*  1 */ "TRAIL_R",
+  /*  2 */ "TSA_N",
+  /*  3 */ "TSA_R",
+  /*  4 */ "STSA_N",
+  /*  5 */ "STSA_R",
+  /*  6 */ "RADL_N",
+  /*  7 */ "RADL_R",
+  /*  8 */ "RASL_N",
+  /*  9 */ "RASL_R",
+  /* 10 */ "RSV_VCL_N10",
+  /* 11 */ "RSV_VCL_R11",
+  /* 12 */ "RSV_VCL_N12",
+  /* 13 */ "RSV_VCL_R13",
+  /* 14 */ "RSV_VCL_N14",
+  /* 15 */ "RSV_VCL_R15",
+  /* 16 */ "BLA_W_LP",
+  /* 17 */ "BLA_W_RADL",
+  /* 18 */ "BLA_N_LP",
+  /* 19 */ "IDR_W_RADL",
+  /* 20 */ "IDR_N_LP",
+  /* 21 */ "CRA_NUT",
+  /* 22 */ "RSV_IRAP_VCL22",
+  /* 23 */ "RSV_IRAP_VCL23",
+  /* 24 */ "RSV_VCL24",
+  /* 25 */ "RSV_VCL25",
+  /* 26 */ "RSV_VCL26",
+  /* 27 */ "RSV_VCL27",
+  /* 28 */ "RSV_VCL28",
+  /* 29 */ "RSV_VCL29",
+  /* 30 */ "RSV_VCL30",
+  /* 31 */ "RSV_VCL31",
+  /* 32 */ "VPS_NUT",
+  /* 33 */ "SPS_NUT",
+  /* 34 */ "PPS_NUT",
+  /* 35 */ "AUD_NUT",
+  /* 36 */ "EOS_NUT",
+  /* 37 */ "EOB_NUT",
+  /* 38 */ "FD_NUT",
+  /* 39 */ "PREFIX_SEI_NUT",
+  /* 40 */ "SUFFIX_SEI_NUT"
+};
 
-static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image,
-                                           heif_image_input_class input_class)
+
+static const char* naltype(uint8_t type)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  if (type <= 40) {
+    return naltype_table[type];
+  }
+  else {
+    return "reserved";
+  }
+}
+#endif
 
-  // close previous encoder if there is still one hanging around
+void encoder_struct_x265::append_nal_packets(x265_nal* nals, uint32_t num_nals, uintptr_t frameNr)
+{
+  for (uint32_t nal_idx=0 ; nal_idx < num_nals; nal_idx++) {
+    uint8_t* data = nals[nal_idx].payload;
+    uint32_t size = nals[nal_idx].sizeBytes;
+
+    // --- skip start code ---
+
+    // skip '0' bytes
+    while (*data == 0 && size > 0) {
+      data++;
+      size--;
+    }
+
+    // skip '1' byte
+    data++;
+    size--;
+
+
+    // --- skip NALs with irrelevant data ---
+
+    if (size >= 3 && data[0] == 0x4e && data[2] == 5) {
+      // skip "unregistered user data SEI"
+    }
+    else {
+      // output NAL
+
+      Packet pkt;
+      pkt.data.resize(size);
+      memcpy(pkt.data.data(), data, size);
+      pkt.frameNr = frameNr;
+
+      output_data.push_back(pkt);
+    }
+  }
+}
+
+
+static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
+                                       const heif_sequence_encoding_options* options,
+                                       bool image_sequence)
+{
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+
+    // close previous encoder if there is still one hanging around
   if (encoder->encoder) {
     const x265_api* api = x265_api_get(encoder->bit_depth);
     api->encoder_close(encoder->encoder);
@@ -659,6 +767,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   heif_chroma chroma = heif_image_get_chroma_format(image);
 
   const x265_api* api = x265_api_get(bit_depth);
+  encoder->api = api;
   if (api == nullptr) {
     struct heif_error err = {
         heif_error_Encoder_plugin_error,
@@ -669,19 +778,27 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   }
 
   x265_param* param = api->param_alloc();
+  if (encoder->param) {
+    api->param_free(encoder->param);
+  }
+  encoder->param = param;
+
   api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
 
-  if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
+  if (bit_depth == 8) {
+    if (image_sequence) {
+      api->param_apply_profile(param, "main");
+    }
+    else {
+      api->param_apply_profile(param, "mainstillpicture");
+    }
+  }
   else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
   else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
   else {
     api->param_free(param);
     return heif_error_unsupported_parameter;
   }
-
-
-  param->fpsNum = 1;
-  param->fpsDenom = 1;
 
 
   // x265 cannot encode images smaller than one CTU size
@@ -699,12 +816,11 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
   if (ctuSize < 16) {
     api->param_free(param);
-    struct heif_error err = {
+    return {
         heif_error_Encoder_plugin_error,
         heif_suberror_Invalid_parameter_value,
         kError_unsupported_image_size
     };
-    return err;
   }
 #else
   // TODO: There seems to be a bug in x265 where increasing the CTU size between
@@ -736,18 +852,41 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
       ctu = "16";
       break;
     default:
-      struct heif_error err = {
+      return {
           heif_error_Encoder_plugin_error,
           heif_suberror_Invalid_parameter_value,
           kError_unsupported_ctu_size
       };
-      return err;
+  }
+
+  if (options) {
+    if (options->keyframe_distance_min) {
+      param->keyframeMin = options->keyframe_distance_min;
+    }
+
+    if (options->keyframe_distance_max) {
+      param->keyframeMax = options->keyframe_distance_max;
+    }
+
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        param->bframes = 0;
+        param->keyframeMin=1;
+        param->keyframeMax=1;
+        break;
+      case heif_sequence_gop_structure_lowdelay:
+        param->bframes = 0;
+        break;
+      case heif_sequence_gop_structure_unrestricted:
+        param->bframes = 1;
+        break;
+    }
   }
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
-  param->totalFrames = 1;
+  param->totalFrames = image_sequence ? 0 : 1; // TODO
 
   if (isGreyscale) {
     param->internalCsp = X265_CSP_I400;
@@ -788,7 +927,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   api->param_parse(param, "psy-rd", "1.0");
   api->param_parse(param, "psy-rdoq", "1.0");
 
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     assert(nclx == nullptr);
@@ -882,17 +1021,74 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
+  param->fpsNum = framerate_num;
+  param->fpsDenom = framerate_denom;
+
+  encoder->bit_depth = bit_depth;
+
+  encoder->encoder = api->encoder_open(param);
+
+  if (image_sequence) {
+    x265_nal* nals = nullptr;
+    uint32_t num_nals = 0;
+
+    api->encoder_headers(encoder->encoder,
+                         &nals,
+                         &num_nals);
+
+    encoder->append_nal_packets(nals, num_nals, 0);
+
+    for (uint32_t i = 0; i < num_nals; i++) {
+      //std::cout << "dequeue header NAL : " << naltype(encoder->nals[i].type) << "\n";
+    }
+  }
+
+  return heif_error_ok;
+}
+
+
+static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                       enum heif_image_input_class input_class,
+                                       uint32_t framerate_num, uint32_t framerate_denom,
+                                       const heif_sequence_encoding_options* options)
+{
+  return x265_start_sequence_encoding_intern(encoder_raw, image, input_class,
+                                             framerate_num, framerate_denom, options, true);
+}
+
+
+static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image,
+                                             uintptr_t frame_nr)
+{
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+  if (!encoder->api) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "called plugin encode_sequence_frame() without start_sequence_encoding()"
+    };
+  }
+
+  const x265_api* api = encoder->api;
+
+  heif_error err;
+
   // Note: it is ok to cast away the const, as the image content is not changed.
   // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
-  err = heif_image_extend_padding_to_size(const_cast<struct heif_image*>(image),
-                                          param->sourceWidth,
-                                          param->sourceHeight);
+  err = heif_image_extend_padding_to_size(const_cast<heif_image*>(image),
+                                          encoder->param->sourceWidth,
+                                          encoder->param->sourceHeight);
   if (err.code) {
     return err;
   }
 
   x265_picture* pic = api->picture_alloc();
-  api->picture_init(param, pic);
+  api->picture_init(encoder->param, pic);
+
+  // TODO: check that all input images use the same color format
+
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   if (isGreyscale) {
     pic->planes[0] = (void*) heif_image_get_plane_readonly(image, heif_channel_Y, &pic->stride[0]);
@@ -903,117 +1099,156 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     pic->planes[2] = (void*) heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
   }
 
-  pic->bitDepth = bit_depth;
+  pic->bitDepth = encoder->bit_depth;
+  pic->userData = reinterpret_cast<void*>(frame_nr);
 
-
-  encoder->bit_depth = bit_depth;
-
-  encoder->encoder = api->encoder_open(param);
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
 
 #if X265_BUILD == 212
   // In x265 build version 212, the signature of the encoder_encode() function was changed. But it was changed back in version 213.
   // https://bitbucket.org/multicoreware/x265_git/issues/952/crash-in-libheif-tests
   x265_picture* out_pic = NULL;
   api->encoder_encode(encoder->encoder,
-                      &encoder->nals,
-                      &encoder->num_nals,
+                      &nals,
+                      &num_nals,
                       pic,
                       &out_pic);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
 #else
+  x265_picture out_pic;
   api->encoder_encode(encoder->encoder,
-                      &encoder->nals,
-                      &encoder->num_nals,
+                      &nals,
+                      &num_nals,
                       pic,
-                      NULL);
+                      &out_pic);
+
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
+  for (uint32_t i = 0; i < num_nals; i++) {
+    //std::cout << " dequeue frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
+  }
+
+  encoder->append_nal_packets(nals, num_nals, frameNr);
+
 #endif
 
   api->picture_free(pic);
-  api->param_free(param);
-
-  encoder->nal_output_counter = 0;
 
   return heif_error_ok;
 }
 
 
-static struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                                  enum heif_encoded_data_type* type)
+static heif_error x265_end_sequence_encoding(void* encoder_raw)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*) encoder_raw;
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+  const x265_api* api = encoder->api;
+
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
+
+#if X265_BUILD == 212
+  x265_picture* out_pic = NULL;
+  int result = api->encoder_encode(encoder->encoder,
+                                   &nals,
+                                   &num_nals,
+                                   NULL,
+                                   &out_pic);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic->userData);
+#else
+  x265_picture out_pic;
+  int result = api->encoder_encode(encoder->encoder,
+                                   &nals,
+                                   &num_nals,
+                                   NULL,
+                                   &out_pic);
+  uintptr_t frameNr = reinterpret_cast<uintptr_t>(out_pic.userData);
+
+  for (uint32_t i = 0; i < num_nals; i++) {
+    //std::cout << "EOS flush, frame " << encoder->out_frameNr << ": " << naltype(encoder->nals[i].type) << "\n";
+  }
+#endif
+  if (result <= 0) {
+    // TODO: do we need this ?
+    //*data = nullptr;
+    //*size = 0;
+
+    return heif_error_ok; // ?
+  }
+
+  encoder->append_nal_packets(nals, num_nals, frameNr);
+
+  encoder->api->param_free(encoder->param);
+  encoder->param = nullptr;
+
+  return heif_error_ok;
+}
 
 
-  if (encoder->encoder == nullptr) {
+static heif_error x265_encode_image(void* encoder_raw, const heif_image* image,
+                                    heif_image_input_class input_class)
+{
+  heif_error err;
+  err = x265_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = x265_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  x265_end_sequence_encoding(encoder_raw);
+
+  return heif_error_ok;
+}
+
+
+static heif_error x265_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
+                                                  uintptr_t* out_frame_nr)
+{
+  encoder_struct_x265* encoder = ( encoder_struct_x265*) encoder_raw;
+
+  if (encoder->output_data.empty()) {
     *data = nullptr;
     *size = 0;
 
     return heif_error_ok;
   }
 
-  const x265_api* api = x265_api_get(encoder->bit_depth);
+  encoder->active_output_nal = std::move(encoder->output_data.front().data);
 
-  for (;;) {
-    while (encoder->nal_output_counter < encoder->num_nals) {
-      *data = encoder->nals[encoder->nal_output_counter].payload;
-      *size = encoder->nals[encoder->nal_output_counter].sizeBytes;
-      encoder->nal_output_counter++;
-
-      // --- skip start code ---
-
-      // skip '0' bytes
-      while (**data == 0 && *size > 0) {
-        (*data)++;
-        (*size)--;
-      }
-
-      // skip '1' byte
-      (*data)++;
-      (*size)--;
-
-
-      // --- skip NALs with irrelevant data ---
-
-      if (*size >= 3 && (*data)[0] == 0x4e && (*data)[2] == 5) {
-        // skip "unregistered user data SEI"
-
-      }
-      else {
-        // output NAL
-
-        return heif_error_ok;
-      }
-    }
-
-
-    encoder->nal_output_counter = 0;
-
-
-#if X265_BUILD == 212
-    x265_picture* out_pic = NULL;
-    int result = api->encoder_encode(encoder->encoder,
-                                     &encoder->nals,
-                                     &encoder->num_nals,
-                                     NULL,
-                                     &out_pic);
-#else
-    int result = api->encoder_encode(encoder->encoder,
-                                     &encoder->nals,
-                                     &encoder->num_nals,
-                                     NULL,
-                                     NULL);
-#endif
-    if (result <= 0) {
-      *data = nullptr;
-      *size = 0;
-
-      return heif_error_ok;
-    }
+  if (out_frame_nr) {
+    *out_frame_nr = encoder->output_data.front().frameNr;
   }
+
+  encoder->output_data.pop_front();
+
+  *data = encoder->active_output_nal.data();
+  *size = static_cast<int>(encoder->active_output_nal.size());
+
+  return heif_error_ok;
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_x265
+static heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                           heif_encoded_data_type* type)
+{
+  return x265_get_compressed_data_intern(encoder_raw, data, size, nullptr);
+}
+
+static heif_error x265_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                            uintptr_t* frame_nr, int* is_keyframe,
+                                            int* more_frame_packets)
+{
+  return x265_get_compressed_data_intern(encoder_raw, data, size, frame_nr);
+}
+
+
+static const heif_encoder_plugin encoder_plugin_x265
     {
-        /* plugin_api_version */ 2,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_HEVC,
         /* id_name */ "x265",
         /* priority */ X265_PLUGIN_PRIORITY,
@@ -1040,10 +1275,17 @@ static const struct heif_encoder_plugin encoder_plugin_x265
         /* query_input_colorspace */ x265_query_input_colorspace,
         /* encode_image */ x265_encode_image,
         /* get_compressed_data */ x265_get_compressed_data,
-        /* query_input_colorspace (v2) */ x265_query_input_colorspace2
+        /* query_input_colorspace (v2) */ x265_query_input_colorspace2,
+        /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        /* start_sequence_encoding (v4) */ x265_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ x265_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ x265_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ x265_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 0
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_x265()
+const heif_encoder_plugin* get_encoder_plugin_x265()
 {
   return &encoder_plugin_x265;
 }

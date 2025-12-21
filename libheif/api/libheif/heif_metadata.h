@@ -38,6 +38,9 @@ enum heif_metadata_compression
   heif_metadata_compression_brotli = 5
 };
 
+LIBHEIF_API
+int heif_metadata_compression_method_supported(enum heif_metadata_compression method);
+
 // ------------------------- metadata (Exif / XMP) -------------------------
 
 // How many metadata blocks are attached to an image. If you only want to get EXIF data,

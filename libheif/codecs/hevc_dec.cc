@@ -29,7 +29,7 @@
 Result<std::vector<uint8_t>> Decoder_HEVC::read_bitstream_configuration_data() const
 {
   std::vector<uint8_t> data;
-  if (!m_hvcC->get_headers(&data)) {
+  if (!m_hvcC->get_header_nals(&data)) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_item_data};
   }

@@ -36,7 +36,7 @@ class Chunk
 public:
   Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format);
 
-  Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box> sample_description_box,
+  Chunk(HeifContext* ctx, uint32_t track_id,
         uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& sample_sizes);
 
   virtual ~Chunk() = default;
@@ -52,6 +52,8 @@ public:
   uint32_t last_sample_number() const { return m_last_sample; }
 
   DataExtent get_data_extent_for_sample(uint32_t n) const;
+
+  void set_decoder(std::shared_ptr<class Decoder> dec) { m_decoder = dec; }
 
 private:
   HeifContext* m_ctx = nullptr;

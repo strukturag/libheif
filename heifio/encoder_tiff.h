@@ -59,8 +59,8 @@ public:
 
   bool supports_alpha() const override { return true; }
 
-  bool Encode(const struct heif_image_handle* handle,
-              const struct heif_image* image, const std::string& filename) override;
+  bool Encode(const heif_image_handle* handle,
+              const heif_image* image, const std::string& filename) override;
 };
 
 #endif  // EXAMPLE_ENCODER_TIFF_H

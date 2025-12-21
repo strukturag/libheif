@@ -297,6 +297,9 @@ int heif_image_handle_get_content_light_level(const heif_image_handle*, heif_con
 LIBHEIF_API
 void heif_image_set_content_light_level(const heif_image*, const heif_content_light_level* in);
 
+LIBHEIF_API
+void heif_image_handle_set_content_light_level(const heif_image_handle*, const heif_content_light_level* in);
+
 
 // --- mastering display colour volume ---
 
@@ -341,6 +344,9 @@ int heif_image_handle_get_mastering_display_colour_volume(const heif_image_handl
 
 LIBHEIF_API
 void heif_image_set_mastering_display_colour_volume(const heif_image*, const heif_mastering_display_colour_volume* in);
+
+LIBHEIF_API
+void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle*, const heif_mastering_display_colour_volume* in);
 
 
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the

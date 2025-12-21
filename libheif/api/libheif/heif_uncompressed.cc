@@ -28,7 +28,7 @@
 #include <algorithm>
 
 
-struct heif_unci_image_parameters* heif_unci_image_parameters_alloc()
+heif_unci_image_parameters* heif_unci_image_parameters_alloc()
 {
   auto* params = new heif_unci_image_parameters();
 
@@ -49,8 +49,8 @@ struct heif_unci_image_parameters* heif_unci_image_parameters_alloc()
 }
 
 
-void heif_unci_image_parameters_copy(struct heif_unci_image_parameters* dst,
-                                     const struct heif_unci_image_parameters* src)
+void heif_unci_image_parameters_copy(heif_unci_image_parameters* dst,
+                                     const heif_unci_image_parameters* src)
 {
   if (src == nullptr || dst == nullptr) {
     return;
@@ -70,33 +70,35 @@ void heif_unci_image_parameters_copy(struct heif_unci_image_parameters* dst,
 }
 
 
-void heif_unci_image_parameters_release(struct heif_unci_image_parameters* params)
+void heif_unci_image_parameters_release(heif_unci_image_parameters* params)
 {
   delete params;
 }
 
 
-struct heif_error heif_context_add_empty_unci_image(struct heif_context* ctx,
-                                                    const struct heif_unci_image_parameters* parameters,
-                                                    const struct heif_encoding_options* encoding_options,
+heif_error heif_context_add_empty_unci_image(heif_context* ctx,
+                                                    const heif_unci_image_parameters* parameters,
+                                                    const heif_encoding_options* encoding_options,
                                                     const heif_image* prototype,
-                                                    struct heif_image_handle** out_unci_image_handle)
+                                                    heif_image_handle** out_unci_image_handle)
 {
 #if WITH_UNCOMPRESSED_CODEC
-  if (prototype == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "prototype image is NULL"};
+  if (prototype == nullptr || out_unci_image_handle == nullptr) {
+    return heif_error_null_pointer_argument;
   }
 
-  if (out_unci_image_handle == nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument,
-            "out_unci_image_handle image is NULL"};
+  heif_encoding_options* default_options = nullptr;
+  if (encoding_options == nullptr) {
+    default_options = heif_encoding_options_alloc();
+    encoding_options = default_options;
   }
 
   Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
   unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
+
+  if (encoding_options) {
+    heif_encoding_options_free(default_options);
+  }
 
   if (!unciImageResult) {
     return unciImageResult.error_struct(ctx->context.get());

@@ -20,6 +20,7 @@
 
 #ifndef LIBHEIF_HEIF_PLUGIN_H
 #define LIBHEIF_HEIF_PLUGIN_H
+#include "heif_sequences.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,15 +44,36 @@ extern "C" {
 //  1.13         2         3          2
 //  1.15         3         3          2
 //  1.20         4         3          2
+//  1.21         5         4          2
 
-#define heif_decoder_plugin_latest_version 4
-#define heif_encoder_plugin_latest_version 3
+#define heif_decoder_plugin_latest_version 5
+#define heif_encoder_plugin_latest_version 4
+
+// The minimum plugin versions that can be used with this libheif version.
+#define heif_decoder_plugin_minimum_version 5
+#define heif_encoder_plugin_minimum_version 4
 
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
+
+typedef struct heif_decoder_plugin_compressed_format_description
+{
+  enum heif_compression_format format;
+
+} heif_decoder_plugin_compressed_format_description;
+
+
+typedef struct heif_decoder_plugin_options
+{
+  enum heif_compression_format format;
+  int strict_decoding; // bool
+  int num_threads; // 0 - undefined, use decoder default
+
+} heif_decoder_plugin_options;
+
 
 typedef struct heif_decoder_plugin
 {
@@ -117,6 +139,24 @@ typedef struct heif_decoder_plugin
                                    const heif_security_limits* limits);
 
   // --- version 5 functions will follow below ... ---
+
+  uint32_t minimum_required_libheif_version;
+
+  // Query whether the plugin supports decoding of the given format
+  // Result is a priority value. The plugin with the largest value wins.
+  // Default priority is 100. Returning 0 indicates that the plugin cannot decode this format.
+  int (* does_support_format2)(const heif_decoder_plugin_compressed_format_description* format);
+
+  // Create a new decoder context for decoding an image
+  heif_error (* new_decoder2)(void** decoder, const heif_decoder_plugin_options*);
+
+  heif_error (* push_data2)(void* decoder, const void* data, size_t size, uintptr_t user_data);
+
+  heif_error (* flush_data)(void* decoder);
+
+  heif_error (* decode_next_image2)(void* decoder, heif_image** out_img,
+                                    uintptr_t* out_user_data,
+                                    const heif_security_limits* limits);
 
   // --- Note: when adding new versions, also update `heif_decoder_plugin_latest_version`.
 } heif_decoder_plugin;
@@ -240,7 +280,27 @@ typedef struct heif_encoder_plugin
   void (* query_encoded_size)(void* encoder, uint32_t input_width, uint32_t input_height,
                               uint32_t* encoded_width, uint32_t* encoded_height);
 
-  // --- version 4 functions will follow below ... ---
+  // --- version 4 ---
+
+  uint32_t minimum_required_libheif_version;
+
+  heif_error (* start_sequence_encoding)(void* encoder, const heif_image* image,
+                                         enum heif_image_input_class image_class,
+                                         uint32_t framerate_num, uint32_t framerate_denom,
+                                         const heif_sequence_encoding_options* options);
+  // TODO: is heif_sequence_encoding_options a good choice here?
+
+  heif_error (* encode_sequence_frame)(void* encoder, const heif_image* image, uintptr_t frame_nr);
+
+  heif_error (* end_sequence_encoding)(void* encoder);
+
+  heif_error (* get_compressed_data2)(void* encoder, uint8_t** data, int* size,
+                                      uintptr_t* frame_nr,
+                                      int* is_keyframe, int* more_frame_packets);
+
+  int does_indicate_keyframes;
+
+  // --- version 5 functions will follow below ... ---
 
   // --- Note: when adding new versions, also update `heif_encoder_plugin_latest_version`.
 } heif_encoder_plugin;

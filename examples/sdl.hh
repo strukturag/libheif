@@ -24,7 +24,7 @@
   SOFTWARE.
  */
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 
 class SDL_YUV_Display

@@ -30,17 +30,45 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "avif_boxes.h"
 #include "codecs/encoder.h"
 
 
 class Encoder_AVIF : public Encoder {
 public:
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+                                heif_encoder* encoder,
+                                const heif_encoding_options& options,
+                                heif_image_input_class input_class) override;
 
-  std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+  bool encode_sequence_started() const override { return m_encoder_active; }
+
+  Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                      heif_encoder* encoder,
+                                      const heif_sequence_encoding_options& options,
+                                      heif_image_input_class input_class,
+                                      uint32_t framerate_num, uint32_t framerate_denom,
+                                      uintptr_t frame_number) override;
+
+  Error encode_sequence_flush(heif_encoder* encoder) override;
+
+  std::optional<CodedImageData> encode_sequence_get_data() override;
+
+
+  std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
+private:
+  bool m_encoder_active = false;
+  bool m_end_of_sequence_reached = false;
+
+  Box_av1C::configuration m_config;
+  bool m_av1C_sent = false;
+
+  std::optional<CodedImageData> m_current_output_data;
+
+  bool m_all_refs_intra = false;
+  Error get_data(heif_encoder* encoder);
 };
 
 

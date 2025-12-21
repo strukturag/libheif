@@ -61,6 +61,17 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 }
 
 
+bool ImageItem::is_property_essential(const std::shared_ptr<Box>& property) const
+{
+  if (property->get_short_type() == fourcc("ispe")) {
+    return is_ispe_essential();
+  }
+  else {
+    return property->is_essential();
+  }
+}
+
+
 std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();
@@ -69,6 +80,10 @@ std::shared_ptr<HeifFile> ImageItem::get_file() const
 
 heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool essential)
 {
+  if (!property) {
+    return 0;
+  }
+
   // TODO: is this correct? What happens when add_property does deduplicate the property?
   m_properties.push_back(property);
   return get_file()->add_property(get_id(), property, essential);
@@ -77,6 +92,10 @@ heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool ess
 
 heif_property_id ImageItem::add_property_without_deduplication(std::shared_ptr<Box> property, bool essential)
 {
+  if (!property) {
+    return 0;
+  }
+
   m_properties.push_back(property);
   return get_file()->add_property_without_deduplication(get_id(), property, essential);
 }
@@ -204,6 +223,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
       return std::make_shared<ImageItem_AVIF>(ctx);
     case heif_compression_VVC:
       return std::make_shared<ImageItem_VVC>(ctx);
+    case heif_compression_AVC:
+      return std::make_shared<ImageItem_AVC>(ctx);
 #if WITH_UNCOMPRESSED_CODEC
     case heif_compression_uncompressed:
       return std::make_shared<ImageItem_uncompressed>(ctx);
@@ -221,9 +242,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
 
 
 Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                                           struct heif_encoder* encoder,
-                                                                           const struct heif_encoding_options& options,
-                                                                           enum heif_image_input_class input_class)
+                                                                           heif_encoder* encoder,
+                                                                           const heif_encoding_options& options,
+                                                                           heif_image_input_class input_class)
 {
   // === generate compressed image bitstream
 
@@ -238,7 +259,10 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
 
   // --- choose which color profile to put into 'colr' box
 
-  add_color_profile(image, options, input_class, options.output_nclx_profile, codedImage);
+  auto colr_boxes = add_color_profile(image, options, input_class, options.output_nclx_profile);
+  codedImage.properties.insert(codedImage.properties.end(),
+                               colr_boxes.begin(),
+                               colr_boxes.end());
 
 
   // --- ispe
@@ -325,45 +349,15 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
   }
   codedImage.properties.push_back(pixi);
 
+  // --- generate properties for image extra data
 
-  // --- write PASP property
+  // copy over ImageExtraData into image item
+  *static_cast<ImageExtraData*>(this) = static_cast<ImageExtraData>(*image);
 
-  if (image->has_nonsquare_pixel_ratio()) {
-    auto pasp = std::make_shared<Box_pasp>();
-    image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
-
-    codedImage.properties.push_back(pasp);
-  }
-
-
-  // --- write CLLI property
-
-  if (image->has_clli()) {
-    auto clli = std::make_shared<Box_clli>();
-    clli->clli = image->get_clli();
-
-    codedImage.properties.push_back(clli);
-  }
-
-
-  // --- write MDCV property
-
-  if (image->has_mdcv()) {
-    auto mdcv = std::make_shared<Box_mdcv>();
-    mdcv->mdcv = image->get_mdcv();
-
-    codedImage.properties.push_back(mdcv);
-  }
-
-
-  // --- write TAI property
-
-  if (auto* tai = image->get_tai_timestamp()) {
-    auto itai = std::make_shared<Box_itai>();
-    itai->set_from_tai_timestamp_packet(tai);
-
-    codedImage.properties.push_back(itai);
-  }
+  auto extra_data_properties = image->generate_property_boxes();
+  codedImage.properties.insert(codedImage.properties.end(),
+                               extra_data_properties.begin(),
+                               extra_data_properties.end());
 
   return encodeResult;
 }
@@ -371,9 +365,9 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
 
 Error ImageItem::encode_to_item(HeifContext* ctx,
                                 const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class)
+                                heif_encoder* encoder,
+                                const heif_encoding_options& options,
+                                heif_image_input_class input_class)
 {
   uint32_t input_width = image->get_width();
   uint32_t input_height = image->get_height();
@@ -400,8 +394,11 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // set item properties
 
   for (auto& propertyBox : codingResult->properties) {
+    bool essential = is_property_essential(propertyBox);
+
+    // TODO: can we simply use add_property() ?
     int index = ctx->get_heif_file()->get_ipco_box()->find_or_append_child_box(propertyBox);
-    ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{propertyBox->is_essential(),
+    ctx->get_heif_file()->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{essential,
                                                                                                            uint16_t(index + 1)});
   }
 
@@ -475,7 +472,7 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 
   if (*inout_colorspace == heif_colorspace_YCbCr) {
     auto nclx = get_color_profile_nclx();
-    if (nclx && nclx->get_matrix_coefficients() == 0) {
+    if (nclx.get_matrix_coefficients() == 0) {
       *inout_colorspace = heif_colorspace_RGB;
       *inout_chroma = heif_chroma_444; // TODO: this or keep the original chroma?
     }
@@ -532,27 +529,29 @@ int ImageItem::get_chroma_bits_per_pixel() const
 
 
 Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                  struct heif_encoder* h_encoder,
-                                                  const struct heif_encoding_options& options,
-                                                  enum heif_image_input_class input_class)
+                                                  heif_encoder* h_encoder,
+                                                  const heif_encoding_options& options,
+                                                  heif_image_input_class input_class)
 {
   auto encoder = get_encoder();
   return encoder->encode(image, h_encoder, options, input_class);
 }
 
 
-void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
-                                  const struct heif_encoding_options& options,
-                                  enum heif_image_input_class input_class,
-                                  const heif_color_profile_nclx* target_heif_nclx,
-                                  Encoder::CodedImageData& inout_codedImage)
+std::vector<std::shared_ptr<Box_colr> >
+ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
+                             const heif_encoding_options& options,
+                             heif_image_input_class input_class,
+                             const heif_color_profile_nclx* target_heif_nclx)
 {
+  std::vector<std::shared_ptr<Box_colr> > colr_boxes;
+
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
       auto colr = std::make_shared<Box_colr>();
       colr->set_color_profile(icc_profile);
-      inout_codedImage.properties.push_back(colr);
+      colr_boxes.push_back(colr);
     }
 
 
@@ -577,9 +576,11 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
 
       auto colr = std::make_shared<Box_colr>();
       colr->set_color_profile(target_nclx_profile);
-      inout_codedImage.properties.push_back(colr);
+      colr_boxes.push_back(colr);
     }
   }
+
+  return colr_boxes;
 }
 
 
@@ -642,7 +643,42 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct heif_decoding_options& options,
+void ImageItem::set_clli(const heif_content_light_level& clli)
+{
+  ImageExtraData::set_clli(clli);
+  add_property(get_clli_box(), false);
+}
+
+
+void ImageItem::set_mdcv(const heif_mastering_display_colour_volume& mdcv)
+{
+  ImageExtraData::set_mdcv(mdcv);
+  add_property(get_mdcv_box(), false);
+}
+
+
+void ImageItem::set_pixel_ratio(uint32_t h, uint32_t v)
+{
+  ImageExtraData::set_pixel_ratio(h, v);
+  add_property(get_pasp_box(), false);
+}
+
+
+void ImageItem::set_color_profile_nclx(const nclx_profile& profile)
+{
+  ImageExtraData::set_color_profile_nclx(profile);
+  add_property(get_colr_box_nclx(), false);
+}
+
+
+void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile)
+{
+  ImageExtraData::set_color_profile_icc(profile);
+  add_property(get_colr_box_icc(), false);
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   // --- check whether image size (according to 'ispe') exceeds maximum
@@ -674,6 +710,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   }
 
   auto img = *decodingResult;
+  if (!img) {
+    // Can happen if missing tiled image is decoded in non-strict mode.
+    return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
+  }
 
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
 
@@ -816,7 +856,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // Otherwise, use the profile that is stored in the image stream itself and then set the
   // (non-NCLX) profile later.
   auto nclx = get_color_profile_nclx();
-  if (nclx) {
+  if (!nclx.is_undefined()) {
     img->set_color_profile_nclx(nclx);
   }
 
@@ -859,6 +899,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     if (itai) {
       img->set_tai_timestamp(itai->get_tai_timestamp_packet());
     }
+
+    // GIMI content ID
+
+    auto gimi_content_id = get_property<Box_gimi_content_id>();
+    if (gimi_content_id) {
+      img->set_gimi_sample_content_id(gimi_content_id->get_content_id());
+    }
   }
 
   return img;
@@ -879,7 +926,7 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 }
 #endif
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const heif_decoding_options& options,
                                                                            bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   DataExtent extent;
@@ -948,7 +995,7 @@ bool ImageItem::has_essential_property_other_than(const std::set<uint32_t>& prop
   }
 
   for (const auto& property : *propertiesResult) {
-    if (property->is_essential() &&
+    if (is_property_essential(property) &&
         props.find(property->get_short_type()) == props.end()) {
       return true;
     }

@@ -254,6 +254,8 @@ enum heif_suberror_code
 
   heif_suberror_Unsupported_essential_property = 3007,
 
+  heif_suberror_Unsupported_track_type = 3008,
+
   // --- Encoder_plugin_error ---
 
   heif_suberror_Unsupported_bit_depth = 4000,

@@ -35,7 +35,7 @@ ImageItem_iden::ImageItem_iden(HeifContext* ctx, heif_item_id id)
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   std::shared_ptr<HeifPixelImage> img;

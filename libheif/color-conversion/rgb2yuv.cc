@@ -50,8 +50,8 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = target_state.nclx_profile.get_matrix_coefficients();
-  if (matrix == 8 || matrix == 11 || matrix == 14) {
+  int matrix = target_state.nclx.get_matrix_coefficients();
+  if (matrix == 11 || matrix == 14) {
     return {};
   }
 
@@ -71,7 +71,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.chroma = target_state.chroma;
     output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
     output_state.bits_per_pixel = input_state.bits_per_pixel;
-    output_state.nclx_profile = target_state.nclx_profile;
+    output_state.nclx = target_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -82,7 +82,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_444;
     output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
     output_state.bits_per_pixel = input_state.bits_per_pixel;
-    output_state.nclx_profile = target_state.nclx_profile;
+    output_state.nclx = target_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -179,10 +179,10 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int matrix_coeffs = 2;
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
   bool full_range_flag = true;
-  full_range_flag = target_state.nclx_profile.get_full_range_flag();
-  matrix_coeffs = target_state.nclx_profile.get_matrix_coefficients();
-  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile.get_matrix_coefficients(),
-                                         target_state.nclx_profile.get_colour_primaries());
+  full_range_flag = target_state.nclx.get_full_range_flag();
+  matrix_coeffs = target_state.nclx.get_matrix_coefficients();
+  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx.get_matrix_coefficients(),
+                                         target_state.nclx.get_colour_primaries());
 
   uint32_t x, y;
 
@@ -196,6 +196,11 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           float v = (((in_g[y * in_g_stride + x] * 219.0f) / 256) + limited_range_offset);
           out_y[y * out_y_stride + x] = (Pixel) clip_f_u16(v, fullRange);
         }
+      }
+      else if (matrix_coeffs == 8) {
+        // Note: this is the YCgCo transform for equal Y/C bit depths, H.273(2024) Eq.51-57.
+        // To avoid a loss in accuracy, input bit-depth must be extended by two bits.
+        out_y[y * out_y_stride + x] = static_cast<Pixel>(in_g[y * in_g_stride + x] / 2 + (in_r[y * in_r_stride + x] + in_b[y * in_b_stride + x]) / 4);
       }
       else {
         float r = in_r[y * in_r_stride + x];
@@ -227,6 +232,15 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           out_cr[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
               ((in_r[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
         }
+      }
+      else if (matrix_coeffs == 8) {
+        // Note: this is the YCgCo transform for equal Y/C bit depths, H.273(2024) Eq.51-57.
+        // To avoid a loss in accuracy, input bit-depth must be extended by two bits.
+        out_cb[(y / subV) * out_cb_stride + (x / subH)] = static_cast<Pixel>(clip_int_u16(in_g[y * in_g_stride + x] / 2
+                                                                                          - (in_r[y * in_r_stride + x] + in_b[y * in_b_stride + x]) / 4
+                                                                                          + halfRange, (uint16_t) fullRange));
+        out_cr[(y / subV) * out_cr_stride + (x / subH)] = static_cast<Pixel>(clip_int_u16((in_r[y * in_r_stride + x] - in_b[y * in_b_stride + x]) / 2
+                                                                                          + halfRange, (uint16_t) fullRange));
       }
       else {
         float r = in_r[y * in_r_stride + x];
@@ -311,11 +325,11 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  int matrix = target_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
-  if (!target_state.nclx_profile.get_full_range_flag()) {
+  if (!target_state.nclx.get_full_range_flag()) {
     return {};
   }
 
@@ -334,7 +348,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
   output_state.chroma = heif_chroma_420;
   output_state.has_alpha = input_state.has_alpha;  // we generate an alpha plane if the source contains data
   output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.nclx_profile = target_state.nclx_profile;
+  output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -409,10 +423,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   int le = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
             input->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ? 1 : 0;
 
-  bool full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  bool full_range_flag = target_state.nclx.get_full_range_flag();
   RGB_to_YCbCr_coefficients coeffs = get_RGB_to_YCbCr_coefficients(
-      target_state.nclx_profile.get_matrix_coefficients(),
-      target_state.nclx_profile.get_colour_primaries());
+      target_state.nclx.get_matrix_coefficients(),
+      target_state.nclx.get_colour_primaries());
 
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
@@ -511,7 +525,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  int matrix = target_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
@@ -524,7 +538,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
   output_state.chroma = target_state.chroma;
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = 8;
-  output_state.nclx_profile = target_state.nclx_profile;
+  output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -610,9 +624,9 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
   bool full_range_flag = true;
-  full_range_flag = target_state.nclx_profile.get_full_range_flag();
-  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile.get_matrix_coefficients(),
-                                         target_state.nclx_profile.get_colour_primaries());
+  full_range_flag = target_state.nclx.get_full_range_flag();
+  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx.get_matrix_coefficients(),
+                                         target_state.nclx.get_colour_primaries());
 
 
   int bytes_per_pixel = (has_alpha ? 4 : 3);
@@ -802,11 +816,11 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  if (target_state.nclx_profile.get_matrix_coefficients() != 0) {
+  if (target_state.nclx.get_matrix_coefficients() != 0) {
     return {};
   }
 
-  if (!target_state.nclx_profile.get_full_range_flag()) {
+  if (!target_state.nclx.get_full_range_flag()) {
     return {};
   }
 
@@ -818,7 +832,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
   output_state.chroma = heif_chroma_444;
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = 8;
-  output_state.nclx_profile = target_state.nclx_profile;
+  output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -873,7 +887,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
   }
 
 
-  assert(target_state.nclx_profile.get_matrix_coefficients() == 0);
+  assert(target_state.nclx.get_matrix_coefficients() == 0);
   int bytes_per_pixel = (has_alpha ? 4 : 3);
 
   for (uint32_t y = 0; y < height; y++) {

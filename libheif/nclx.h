@@ -118,24 +118,26 @@ private:
 };
 
 
-class color_profile_nclx : public color_profile
+struct nclx_profile
 {
-public:
-  color_profile_nclx() { set_sRGB_defaults(); }
+  uint16_t m_colour_primaries = heif_color_primaries_unspecified;
+  uint16_t m_transfer_characteristics = heif_transfer_characteristic_unspecified;
+  uint16_t m_matrix_coefficients = heif_matrix_coefficients_unspecified;
+  bool m_full_range_flag = true;
 
-  uint32_t get_type() const override { return fourcc("nclx"); }
+  bool operator==(const nclx_profile& b) const = default;
 
-  std::string dump(Indent&) const override;
+  bool operator!=(const nclx_profile& b) const = default;
 
-  Error parse(BitstreamRange& range);
+  static nclx_profile undefined() { return {}; }
 
-  Error write(StreamWriter& writer) const override;
+  static nclx_profile defaults() { nclx_profile profile; profile.set_sRGB_defaults(); return profile; }
 
-  uint16_t get_colour_primaries() const { return m_colour_primaries; }
+  heif_color_primaries get_colour_primaries() const { return static_cast<heif_color_primaries>(m_colour_primaries); }
 
-  uint16_t get_transfer_characteristics() const { return m_transfer_characteristics; }
+  heif_transfer_characteristics get_transfer_characteristics() const { return static_cast<heif_transfer_characteristics>(m_transfer_characteristics); }
 
-  uint16_t get_matrix_coefficients() const { return m_matrix_coefficients; }
+  heif_matrix_coefficients get_matrix_coefficients() const { return static_cast<heif_matrix_coefficients>(m_matrix_coefficients); }
 
   bool get_full_range_flag() const { return m_full_range_flag; }
 
@@ -151,21 +153,46 @@ public:
 
   void set_undefined();
 
-  Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
-
-  static struct heif_color_profile_nclx* alloc_nclx_color_profile();
-
-  static void free_nclx_color_profile(struct heif_color_profile_nclx* profile);
-
-  void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
+  bool is_undefined() const;
 
   void replace_undefined_values_with_sRGB_defaults();
 
+  bool equal_except_transfer_curve(const nclx_profile& b) const;
+
+  Error get_nclx_color_profile(heif_color_profile_nclx** out_data) const;
+
+  void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx);
+
+  void copy_to_heif_color_profile_nclx(heif_color_profile_nclx* nclx);
+};
+
+
+class color_profile_nclx : public color_profile
+{
+public:
+  color_profile_nclx() { m_profile.set_sRGB_defaults(); }
+
+  color_profile_nclx(const nclx_profile& profile) : m_profile(profile) { }
+
+  void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx)
+  {
+    m_profile.set_from_heif_color_profile_nclx(nclx);
+  }
+
+  uint32_t get_type() const override { return fourcc("nclx"); }
+
+  std::string dump(Indent&) const override;
+
+  Error parse(BitstreamRange& range);
+
+  Error parse_nclc(BitstreamRange& range);
+
+  Error write(StreamWriter& writer) const override;
+
+  nclx_profile get_nclx_color_profile() const { return m_profile; }
+
 private:
-  uint16_t m_colour_primaries = heif_color_primaries_unspecified;
-  uint16_t m_transfer_characteristics = heif_transfer_characteristic_unspecified;
-  uint16_t m_matrix_coefficients = heif_matrix_coefficients_unspecified;
-  bool m_full_range_flag = true;
+  nclx_profile m_profile;
 };
 
 

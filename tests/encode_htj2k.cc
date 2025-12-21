@@ -48,14 +48,14 @@ static void do_encode(heif_image* input_image, const char* filename, bool lossle
 
   heif_context *ctx = heif_context_alloc();
   heif_encoder *encoder;
-  struct heif_error err;
+  heif_error err;
   err = heif_context_get_encoder_for_format(ctx, heif_compression_HTJ2K, &encoder);
   REQUIRE(err.code == heif_error_Ok);
 
   err = heif_encoder_set_lossless(encoder, lossless);
   REQUIRE(err.code == heif_error_Ok);
 
-  struct heif_encoding_options *options = get_encoding_options();
+  heif_encoding_options *options = get_encoding_options();
 
   heif_image_handle *output_image_handle;
 

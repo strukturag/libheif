@@ -330,7 +330,10 @@ Error HeifFile::parse_heif_file()
 
   m_top_level_boxes.push_back(m_ftyp_box);
 
-  bool is_brand_msf1 = m_ftyp_box->has_compatible_brand(heif_brand2_msf1);
+  bool is_sequence_brand = (m_ftyp_box->has_compatible_brand(heif_brand2_msf1) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_isom) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_mp41) ||
+                            m_ftyp_box->has_compatible_brand(heif_brand2_mp42));
 
   // --- check whether this is a HEIF file and its structural format
 
@@ -343,7 +346,10 @@ Error HeifFile::parse_heif_file()
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
 #endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg) &&
-      !is_brand_msf1) {
+      !m_ftyp_box->has_compatible_brand(heif_brand2_isom) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_mp42) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_mp41) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_msf1)) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
 
@@ -379,12 +385,12 @@ Error HeifFile::parse_heif_file()
 
   // if we didn't find the mini box, meta is required
 
-  if (!m_meta_box && !is_brand_msf1) {
+  if (!m_meta_box && !is_sequence_brand) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_meta_box);
   }
 
-  if (!m_moov_box && is_brand_msf1) {
+  if (!m_moov_box && is_sequence_brand) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_moov_box);
   }
@@ -1069,13 +1075,21 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
   else if (compression == heif_metadata_compression_deflate) {
 #if HAVE_ZLIB
     data_array = compress_deflate((const uint8_t*) data, size);
-    item->set_content_encoding("compress_zlib");
+    item->set_content_encoding("deflate");
 #else
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_header_compression_method);
 #endif
   }
-  // TODO: brotli
+  else if (compression == heif_metadata_compression_brotli) {
+#if HAVE_BROTLI
+    data_array = compress_brotli((const uint8_t*)data, size);
+    item->set_content_encoding("br");
+#else
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method);
+#endif
+  }
   else {
     // uncompressed data, plain copy
 

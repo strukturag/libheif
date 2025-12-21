@@ -369,6 +369,8 @@ const (
 
 	SuberrorUnsupportedHeaderCompressionMethod = C.heif_suberror_Unsupported_header_compression_method
 
+	SubErrorUnsupportedTrackType = C.heif_suberror_Unsupported_track_type
+
 	// --- Encoder_plugin_error ---
 
 	SuberrorUnsupportedBitDepth = C.heif_suberror_Unsupported_bit_depth

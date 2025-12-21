@@ -32,7 +32,7 @@ Supported codecs:
 | HEIC         | libde265, ffmpeg    | x265, kvazaar                |
 | AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1          |
 | VVC          | vvdec               | vvenc, uvg266                |
-| AVC          | openh264            | -                            |
+| AVC          | openh264, ffmpeg    | x264                         |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
 | HTJ2K        | OpenJPEG            | OpenJPH                      |
@@ -164,7 +164,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `OpenH264`, `X264`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`, `WEBCODECS`.
 
 Further options are:
 
@@ -256,16 +256,16 @@ If you want to compile SVT-AV1 yourself,
 * Run the `svt.cmd` script in the `third-party` directory to download SVT-AV1
   and compile it.
 
-When running `cmake` or `configure`, make sure that the environment variable
+You have to enable SVT-AV1 with CMake.
+
+When running `cmake`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
-
-You have to enable SVT-AV1 with CMake.
 
 ## Codec plugins
 
 Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin.
-You can choose this individually for each codec backend in the CMake settings.
+You can choose this individually for each codec backend in the CMake settings using `WITH_{codec}_PLUGIN` options.
 Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
 The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.
 
@@ -275,8 +275,20 @@ You can also add plugin directories programmatically.
 
 ### Codec specific notes
 
-* the FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
+* The FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
   correctly with all streams. Thus, libheif still prefers the libde265 decoder if it is available.
+
+* The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
+
+## Usage
+
+### Security limits
+
+Libheif defines some security limits that prevent that very large images exceed the available memory or malicious input files can be used for a denial-of-service attack.
+When you are programming against the libheif API and you need to process very large images, you can set the `heif_security_limits` individually.
+When using `heif-dec`, there is the option to switch off security limits with `--disable-limits`.
+In case a third-party software is using libheif, but does not give you a way to switch off the limits, you can set an environment variable `LIBHEIF_SECURITY_LIMITS=off` to switch it off globally.
+Clearly, only do this if you know what you are doing and you are sure not to process malicious files.
 
 ## Encoder benchmark
 

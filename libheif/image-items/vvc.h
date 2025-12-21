@@ -45,7 +45,7 @@ public:
 
   void set_decoder_input_data() override;
 
-  std::shared_ptr<class Encoder> get_encoder() const override;
+  std::shared_ptr<Encoder> get_encoder() const override;
 
   heif_brand2 get_compatible_brand() const override;
 

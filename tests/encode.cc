@@ -33,9 +33,9 @@
 #include <string.h>
 
 
-struct heif_image* createImage_RRGGBB_BE() {
-  struct heif_image* image;
-  struct heif_error err;
+heif_image* createImage_RRGGBB_BE() {
+  heif_image* image;
+  heif_error err;
   err = heif_image_create(256,256,
                           heif_colorspace_RGB,
                           heif_chroma_interleaved_RRGGBB_BE,
@@ -56,15 +56,15 @@ struct heif_image* createImage_RRGGBB_BE() {
 }
 
 
-struct heif_error encode_image(struct heif_image* img) {
-  struct heif_context* ctx = heif_context_alloc();
+heif_error encode_image(heif_image* img) {
+  heif_context* ctx = heif_context_alloc();
 
-  struct heif_encoder* enc = nullptr;
-  struct heif_error err { heif_error_Ok };
+  heif_encoder* enc = nullptr;
+  heif_error err { heif_error_Ok };
 
   enc = get_encoder_or_skip_test(heif_compression_HEVC);
 
-  struct heif_image_handle* hdl;
+  heif_image_handle* hdl;
   err = heif_context_encode_image(ctx,
                                   img,
                                   enc,
@@ -117,7 +117,7 @@ static void test_ispe_size(heif_compression_format compression,
   heif_context* ctx = heif_context_alloc();
   heif_encoder* enc = get_encoder_or_skip_test(compression);
 
-  struct heif_encoding_options* options;
+  heif_encoding_options* options;
   options = heif_encoding_options_alloc();
   options->macOS_compatibility_workaround = false;
   options->macOS_compatibility_workaround_no_nclx_profile = false;

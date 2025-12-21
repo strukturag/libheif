@@ -25,19 +25,19 @@
 
 
 
-const struct heif_security_limits* heif_get_global_security_limits()
+const heif_security_limits* heif_get_global_security_limits()
 {
   return &global_security_limits;
 }
 
 
-const struct heif_security_limits* heif_get_disabled_security_limits()
+const heif_security_limits* heif_get_disabled_security_limits()
 {
   return &disabled_security_limits;
 }
 
 
-struct heif_security_limits* heif_context_get_security_limits(const struct heif_context* ctx)
+heif_security_limits* heif_context_get_security_limits(const heif_context* ctx)
 {
   if (!ctx) {
     return nullptr;
@@ -47,11 +47,10 @@ struct heif_security_limits* heif_context_get_security_limits(const struct heif_
 }
 
 
-struct heif_error heif_context_set_security_limits(struct heif_context* ctx, const struct heif_security_limits* limits)
+heif_error heif_context_set_security_limits(heif_context* ctx, const heif_security_limits* limits)
 {
   if (ctx==nullptr || limits==nullptr) {
-    return {heif_error_Usage_error,
-            heif_suberror_Null_pointer_argument};
+    return heif_error_null_pointer_argument;
   }
 
   ctx->context->set_security_limits(limits);
@@ -62,7 +61,7 @@ struct heif_error heif_context_set_security_limits(struct heif_context* ctx, con
 
 // DEPRECATED
 
-void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width)
+void heif_context_set_maximum_image_size_limit(heif_context* ctx, int maximum_width)
 {
   ctx->context->get_security_limits()->max_image_size_pixels = static_cast<uint64_t>(maximum_width) * maximum_width;
 }

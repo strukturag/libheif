@@ -51,6 +51,13 @@ class ImageItem;
 
 class Track;
 
+struct TrackOptions;
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
+                                            const heif_security_limits* limits);
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -107,13 +114,13 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_item_id ID,
                                                        heif_colorspace out_colorspace,
                                                        heif_chroma out_chroma,
-                                                       const struct heif_decoding_options& options,
+                                                       const heif_decoding_options& options,
                                                        bool decode_only_tile, uint32_t tx, uint32_t ty) const;
 
   Result<std::shared_ptr<HeifPixelImage>> convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                        heif_colorspace out_colorspace,
                                                                        heif_chroma out_chroma,
-                                                                       const struct heif_decoding_options& options) const;
+                                                                       const heif_decoding_options& options) const;
 
   Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
@@ -130,9 +137,9 @@ public:
   void reset_to_empty_heif();
 
   Result<std::shared_ptr<ImageItem>> encode_image(const std::shared_ptr<HeifPixelImage>& image,
-                                                  struct heif_encoder* encoder,
-                                                  const struct heif_encoding_options& options,
-                                                  enum heif_image_input_class input_class);
+                                                  heif_encoder* encoder,
+                                                  const heif_encoding_options& options,
+                                                  heif_image_input_class input_class);
 
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
@@ -142,8 +149,8 @@ public:
                          const std::shared_ptr<ImageItem>& thumbnail_image);
 
   Result<std::shared_ptr<ImageItem>> encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                                                      struct heif_encoder* encoder,
-                                                      const struct heif_encoding_options& options,
+                                                      heif_encoder* encoder,
+                                                      const heif_encoding_options& options,
                                                       int bbox_size);
 
   Error add_exif_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size);
@@ -201,10 +208,10 @@ public:
 
   void set_number_of_sequence_repetitions(uint32_t repetitions);
 
-  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const struct TrackOptions*, uint32_t handler_type,
+  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const TrackOptions*, uint32_t handler_type,
                                                                         uint16_t width, uint16_t height);
 
-  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const struct TrackOptions*, std::string uri);
+  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const TrackOptions*, std::string uri);
 
   void add_text_item(std::shared_ptr<TextItem> text_item)
   {

@@ -35,27 +35,27 @@
 
 struct heif_encoder_descriptor
 {
-  const struct heif_encoder_plugin* plugin;
+  const heif_encoder_plugin* plugin;
 
   const char* get_name() const { return plugin->get_plugin_name(); }
 
-  enum heif_compression_format get_compression_format() const { return plugin->compression_format; }
+  heif_compression_format get_compression_format() const { return plugin->compression_format; }
 };
 
 
 struct encoder_descriptor_priority_order
 {
-  bool operator()(const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                  const std::unique_ptr<struct heif_encoder_descriptor>& b) const
+  bool operator()(const std::unique_ptr<heif_encoder_descriptor>& a,
+                  const std::unique_ptr<heif_encoder_descriptor>& b) const
   {
     return a->plugin->priority > b->plugin->priority;  // highest priority first
   }
 };
 
 
-extern std::set<const struct heif_decoder_plugin*>& get_decoder_plugins();
+extern std::set<const heif_decoder_plugin*>& get_decoder_plugins();
 
-extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
+extern std::multiset<std::unique_ptr<heif_encoder_descriptor>,
                      encoder_descriptor_priority_order>& get_encoder_descriptors();
 
 void register_default_plugins();
@@ -72,12 +72,14 @@ void heif_unregister_encoder_plugins();
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 #endif
 
-const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id);
+bool has_decoder(heif_compression_format type, const char* name_id);
 
-const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type);
+const heif_decoder_plugin* get_decoder(heif_compression_format type, const char* name_id);
 
-std::vector<const struct heif_encoder_descriptor*>
-get_filtered_encoder_descriptors(enum heif_compression_format,
+const heif_encoder_plugin* get_encoder(heif_compression_format type);
+
+std::vector<const heif_encoder_descriptor*>
+get_filtered_encoder_descriptors(heif_compression_format,
                                  const char* name);
 
 #endif

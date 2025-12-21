@@ -83,19 +83,25 @@ inline uint8_t clip_int_u8(int x)
   return static_cast<uint8_t>(x);
 }
 
+inline uint16_t clip_int_u16(int32_t x, uint16_t maxi)
+{
+  if (x < 0) return 0;
+  if (x > maxi) return maxi;
+  return static_cast<uint16_t>(x);
+}
+
 
 inline uint16_t clip_f_u16(float fx, int32_t maxi)
 {
-  long x = (long int) (fx + 0.5f);
+  int32_t x = (int32_t) (fx + 0.5f);
   if (x < 0) return 0;
   if (x > maxi) return (uint16_t) maxi;
   return static_cast<uint16_t>(x);
 }
 
-
 inline uint8_t clip_f_u8(float fx)
 {
-  long x = (long int) (fx + 0.5f);
+  int32_t x = (int32_t) (fx + 0.5f);
   if (x < 0) return 0;
   if (x > 255) return 255;
   return static_cast<uint8_t>(x);

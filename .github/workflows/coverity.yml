@@ -16,10 +16,10 @@ jobs:
       WITH_RAV1E: 0
       WITH_X265: 1
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Cache Coverity build tool
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           coverity_tool.tar.gz

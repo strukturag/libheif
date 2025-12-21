@@ -35,6 +35,10 @@
 #include "libheif/heif.h"
 #include <cassert>
 #include <variant>
+#include <utility>
+
+
+extern const heif_error heif_error_null_pointer_argument;
 
 
 class ErrorBuffer
@@ -68,8 +72,8 @@ private:
 class Error
 {
 public:
-  enum heif_error_code error_code = heif_error_Ok;
-  enum heif_suberror_code sub_error_code = heif_suberror_Unspecified;
+  heif_error_code error_code = heif_error_Ok;
+  heif_suberror_code sub_error_code = heif_suberror_Unspecified;
   std::string message;
 
   Error();
@@ -121,7 +125,7 @@ template <typename T> class Result
 public:
   Result() = default;
 
-  Result(const T& v) : m_data(v) {}
+  Result(T v) : m_data(std::move(v)) {}
 
   Result(const Error& e) : m_data(e) {}
 

@@ -90,13 +90,156 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
   }
 }
 
+
+ImageExtraData::~ImageExtraData()
+{
+  heif_tai_timestamp_packet_release(m_tai_timestamp);
+}
+
+
+bool ImageExtraData::has_nclx_color_profile() const
+{
+  return m_color_profile_nclx != nclx_profile::defaults();
+}
+
+
+nclx_profile ImageExtraData::get_color_profile_nclx_with_fallback() const
+{
+  if (has_nclx_color_profile()) {
+    return get_color_profile_nclx();
+  }
+  else {
+    return nclx_profile::defaults();
+  }
+}
+
+
+std::shared_ptr<Box_clli> ImageExtraData::get_clli_box() const
+{
+  if (!has_clli()) {
+    return {};
+  }
+
+  auto clli = std::make_shared<Box_clli>();
+  clli->clli = get_clli();
+
+  return clli;
+}
+
+
+std::shared_ptr<Box_mdcv> ImageExtraData::get_mdcv_box() const
+{
+  if (!has_mdcv()) {
+    return {};
+  }
+
+  auto mdcv = std::make_shared<Box_mdcv>();
+  mdcv->mdcv = get_mdcv();
+
+  return mdcv;
+}
+
+
+std::shared_ptr<Box_pasp> ImageExtraData::get_pasp_box() const
+{
+  if (!has_nonsquare_pixel_ratio()) {
+    return {};
+  }
+
+  auto pasp = std::make_shared<Box_pasp>();
+  pasp->hSpacing = m_PixelAspectRatio_h;
+  pasp->vSpacing = m_PixelAspectRatio_v;
+
+  return pasp;
+}
+
+
+std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_nclx() const
+{
+  if (!has_nclx_color_profile()) {
+    return {};
+  }
+
+  auto colr = std::make_shared<Box_colr>();
+  colr->set_color_profile(std::make_shared<color_profile_nclx>(get_color_profile_nclx()));
+  return colr;
+}
+
+
+std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_icc() const
+{
+  if (!has_icc_color_profile()) {
+    return {};
+  }
+
+  auto colr = std::make_shared<Box_colr>();
+  colr->set_color_profile(get_color_profile_icc());
+  return colr;
+}
+
+
+std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
+{
+  std::vector<std::shared_ptr<Box>> properties;
+
+  // --- write PASP property
+
+  if (has_nonsquare_pixel_ratio()) {
+    auto pasp = std::make_shared<Box_pasp>();
+    get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
+
+    properties.push_back(pasp);
+  }
+
+
+  // --- write CLLI property
+
+  if (has_clli()) {
+    properties.push_back(get_clli_box());
+  }
+
+
+  // --- write MDCV property
+
+  if (has_mdcv()) {
+    auto mdcv = std::make_shared<Box_mdcv>();
+    mdcv->mdcv = get_mdcv();
+
+    properties.push_back(mdcv);
+  }
+
+
+  // --- write TAI property
+
+  if (auto* tai = get_tai_timestamp()) {
+    auto itai = std::make_shared<Box_itai>();
+    itai->set_from_tai_timestamp_packet(tai);
+
+    properties.push_back(itai);
+  }
+
+  // --- colr (nclx)
+
+  if (has_nclx_color_profile()) {
+    properties.push_back(get_colr_box_nclx());
+  }
+
+  // --- colr (icc)
+
+  if (has_icc_color_profile()) {
+    properties.push_back(get_colr_box_icc());
+  }
+
+  return properties;
+}
+
+
+
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
   }
-
-  heif_tai_timestamp_packet_release(m_tai_timestamp);
 }
 
 
@@ -569,9 +712,15 @@ uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
                                get_bits_per_pixel(heif_channel_Cr)));
       break;
     case heif_colorspace_RGB:
-      return std::max(get_bits_per_pixel(heif_channel_R),
-                      std::max(get_bits_per_pixel(heif_channel_G),
-                               get_bits_per_pixel(heif_channel_B)));
+      if (m_chroma == heif_chroma_444) {
+        return std::max(get_bits_per_pixel(heif_channel_R),
+             std::max(get_bits_per_pixel(heif_channel_G),
+                        get_bits_per_pixel(heif_channel_B)));
+      }
+      else {
+        assert(has_channel(heif_channel_interleaved));
+        return get_bits_per_pixel(heif_channel_interleaved);
+      }
       break;
     case heif_colorspace_nonvisual:
       return 0;
@@ -846,7 +995,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -923,6 +1074,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
 
+  out_img->add_warnings(get_warnings());
+
   return out_img;
 }
 
@@ -933,10 +1086,10 @@ void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
   uint32_t w = m_width;
   uint32_t h = m_height;
 
-  uint32_t in_stride = stride / uint32_t(sizeof(T));
+  size_t in_stride = stride / sizeof(T);
   const T* in_data = static_cast<const T*>(mem);
 
-  uint32_t out_stride = out_plane.stride / uint32_t(sizeof(T));
+  size_t out_stride = out_plane.stride / sizeof(T);
   T* out_data = static_cast<T*>(out_plane.mem);
 
   if (angle_degrees == 270) {
@@ -1002,7 +1155,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -1082,7 +1237,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
+                                                     nclx_profile(), // default, undefined
+                                                     get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
+
     if (!converted_image_result) {
       return converted_image_result.error();
     }
@@ -1130,6 +1288,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
 
+  out_img->add_warnings(get_warnings());
+
   return out_img;
 }
 
@@ -1137,10 +1297,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 void HeifPixelImage::ImagePlane::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
                                       int bytes_per_pixel, ImagePlane& out_plane) const
 {
-  uint32_t in_stride = stride;
+  size_t in_stride = stride;
   auto* in_data = static_cast<const uint8_t*>(mem);
 
-  uint32_t out_stride = out_plane.stride;
+  size_t out_stride = out_plane.stride;
   auto* out_data = static_cast<uint8_t*>(out_plane.mem);
 
   for (uint32_t y = top; y <= bottom; y++) {
@@ -1348,7 +1508,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
       if (!has_alpha) {
         memcpy(out_p + out_x0 + (out_y0 + y - in_y0) * out_stride,
                in_p + in_x0 + y * in_stride,
-               in_w - in_x0);
+               in_w);
       }
       else {
         for (uint32_t x = in_x0; x < in_w; x++) {
@@ -1625,14 +1785,21 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
       }
       break;
     case heif_colorspace_RGB:
-      if (auto err = add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R), limits)) {
-        return err;
+      if (chroma == heif_chroma_444) {
+        if (auto err = add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R), limits)) {
+          return err;
+        }
+        if (auto err = add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G), limits)) {
+          return err;
+        }
+        if (auto err = add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B), limits)) {
+          return err;
+        }
       }
-      if (auto err = add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G), limits)) {
-        return err;
-      }
-      if (auto err = add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B), limits)) {
-        return err;
+      else {
+        if (auto err = add_plane(heif_channel_interleaved, w, h, source->get_bits_per_pixel(heif_channel_interleaved), limits)) {
+          return err;
+        }
       }
       break;
     default:
@@ -1640,7 +1807,7 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
       break;
   }
 
-  if (source->has_alpha()) {
+  if (source->has_channel(heif_channel_Alpha)) {
       if (auto err = add_plane(heif_channel_Alpha, w, h, source->get_bits_per_pixel(heif_channel_Alpha), limits)) {
         return err;
       }

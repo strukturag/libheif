@@ -36,6 +36,8 @@ static const int OPENJPEG_PLUGIN_PRIORITY_HTJ2K = 90;
 struct openjpeg_decoder
 {
   std::vector<uint8_t> encoded_data;
+  uintptr_t user_data;
+
   size_t read_position = 0;
   std::string error_message;
 };
@@ -63,7 +65,7 @@ static void openjpeg_deinit_plugin()
 }
 
 
-static int openjpeg_does_support_format(enum heif_compression_format format)
+static int openjpeg_does_support_format(heif_compression_format format)
 {
   if (format == heif_compression_JPEG2000) {
     return OPENJPEG_PLUGIN_PRIORITY;
@@ -76,20 +78,33 @@ static int openjpeg_does_support_format(enum heif_compression_format format)
   }
 }
 
-
-struct heif_error openjpeg_new_decoder(void** dec)
+static int openjpeg_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
 {
-  struct openjpeg_decoder* decoder = new openjpeg_decoder();
+  return openjpeg_does_support_format(format->format);
+}
+
+heif_error openjpeg_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
+{
+  openjpeg_decoder* decoder = new openjpeg_decoder();
 
   *dec = decoder;
 
   return heif_error_ok;
 }
 
+heif_error openjpeg_new_decoder(void** dec)
+{
+  heif_decoder_plugin_options options;
+  options.format = heif_compression_JPEG2000;
+  options.num_threads = 0;
+  options.strict_decoding = false;
+
+  return openjpeg_new_decoder2(dec, &options);
+}
 
 void openjpeg_free_decoder(void* decoder_raw)
 {
-  struct openjpeg_decoder* decoder = (openjpeg_decoder*) decoder_raw;
+  openjpeg_decoder* decoder = (openjpeg_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -105,16 +120,22 @@ void openjpeg_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-struct heif_error openjpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error openjpeg_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size,
+                               uintptr_t user_data)
 {
-  struct openjpeg_decoder* decoder = (struct openjpeg_decoder*) decoder_raw;
+  openjpeg_decoder* decoder = (openjpeg_decoder*) decoder_raw;
   const uint8_t* frame_data_src = (const uint8_t*) frame_data;
 
   decoder->encoded_data.insert(decoder->encoded_data.end(), frame_data_src, frame_data_src + frame_size);
+  decoder->user_data = user_data;
 
   return heif_error_ok;
 }
 
+heif_error openjpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+{
+  return openjpeg_push_data2(decoder_raw, frame_data, frame_size, 0);
+}
 
 //**************************************************************************
 
@@ -255,10 +276,17 @@ opj_stream_t* opj_stream_create_default_memory_stream(openjpeg_decoder* p_decode
 //**************************************************************************
 
 
-struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_image** out_img,
-                                             const heif_security_limits* limits)
+heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                       uintptr_t* out_user_data,
+                                       const heif_security_limits* limits)
 {
   auto* decoder = (struct openjpeg_decoder*) decoder_raw;
+
+  if (decoder->encoded_data.empty()) {
+    *out_img = nullptr;
+    return heif_error_ok;
+  }
+
 
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
@@ -269,8 +297,7 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
   opj_set_default_decoder_parameters(&decompression_parameters);
   success = opj_setup_decoder(l_codec.get(), &decompression_parameters);
   if (!success) {
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_setup_decoder()"};
-    return err;
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_setup_decoder()"};
   }
 
 
@@ -285,21 +312,18 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
   opj_image_t* image_ptr = nullptr;
   success = opj_read_header(stream.get(), l_codec.get(), &image_ptr);
   if (!success) {
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_read_header()"};
-    return err;
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_read_header()"};
   }
 
   std::unique_ptr<opj_image_t, void (OPJ_CALLCONV *)(opj_image_t*)> image(image_ptr, opj_image_destroy);
 
   if (image->numcomps != 3 && image->numcomps != 1) {
     //TODO - Handle other numbers of components
-    struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3 or 1"};
-    return err;
+    return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3 or 1"};
   }
   else if ((image->color_space != OPJ_CLRSPC_UNSPECIFIED) && (image->color_space != OPJ_CLRSPC_SRGB)) {
     //TODO - Handle other colorspaces
-    struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace must be SRGB"};
-    return err;
+    return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace must be SRGB"};
   }
 
   const int width = (image->x1 - image->x0);
@@ -309,15 +333,13 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
   /* Get the decoded image */
   success = opj_decode(l_codec.get(), stream.get(), image.get());
   if (!success) {
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_decode()"};
-    return err;
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_decode()"};
   }
 
 
   success = opj_end_decompress(l_codec.get(), stream.get());
   if (!success) {
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_end_decompress()"};
-    return err;
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_end_decompress()"};
   }
 
 
@@ -353,12 +375,11 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
     channels = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
   }
   else {
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "unsupported image format"};
-    return err;
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "unsupported image format"};
   }
 
 
-  struct heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
+  heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
   if (error.code) {
     return error;
   }
@@ -405,21 +426,36 @@ struct heif_error openjpeg_decode_next_image(void* decoder_raw, struct heif_imag
     }
   }
 
+  if (out_user_data) {
+    *out_user_data = decoder->user_data;
+  }
+
   decoder->encoded_data.clear();
   decoder->read_position = 0;
 
   return heif_error_ok;
 }
 
-struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+heif_error openjpeg_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                      const heif_security_limits* limits)
+{
+  return openjpeg_decode_next_image2(decoder_raw, out_img, nullptr, limits);
+}
+
+heif_error openjpeg_decode_image(void* decoder_raw, heif_image** out_img)
 {
   auto* limits = heif_get_global_security_limits();
   return openjpeg_decode_next_image(decoder_raw, out_img, limits);
 }
 
+heif_error openjpeg_flush_data(void* decoder)
+{
+  return heif_error_ok;
+}
 
-static const struct heif_decoder_plugin decoder_openjpeg{
-    4,
+
+static const heif_decoder_plugin decoder_openjpeg{
+    5,
     openjpeg_plugin_name,
     openjpeg_init_plugin,
     openjpeg_deinit_plugin,
@@ -430,10 +466,16 @@ static const struct heif_decoder_plugin decoder_openjpeg{
     openjpeg_decode_image,
     openjpeg_set_strict_decoding,
     "openjpeg",
-    openjpeg_decode_next_image
+    openjpeg_decode_next_image,
+    /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+    openjpeg_does_support_format2,
+    openjpeg_new_decoder2,
+    openjpeg_push_data2,
+    openjpeg_flush_data,
+    openjpeg_decode_next_image2
 };
 
-const struct heif_decoder_plugin* get_decoder_plugin_openjpeg()
+const heif_decoder_plugin* get_decoder_plugin_openjpeg()
 {
   return &decoder_openjpeg;
 }

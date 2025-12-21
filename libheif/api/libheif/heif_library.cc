@@ -35,45 +35,42 @@
 #include <cassert>
 
 
-static struct heif_error error_null_parameter = {heif_error_Usage_error,
-                                                 heif_suberror_Null_pointer_argument,
-                                                 "NULL passed"};
-static struct heif_error error_unsupported_plugin_version = {heif_error_Usage_error,
+static heif_error error_unsupported_plugin_version = {heif_error_Usage_error,
                                                              heif_suberror_Unsupported_plugin_version,
                                                              "Unsupported plugin version"};
 
 
-const char* heif_get_version(void)
+const char* heif_get_version()
 {
   return (LIBHEIF_VERSION);
 }
 
-uint32_t heif_get_version_number(void)
+uint32_t heif_get_version_number()
 {
   return (LIBHEIF_NUMERIC_VERSION);
 }
 
-int heif_get_version_number_major(void)
+int heif_get_version_number_major()
 {
   return ((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF;
 }
 
-int heif_get_version_number_minor(void)
+int heif_get_version_number_minor()
 {
   return ((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF;
 }
 
-int heif_get_version_number_maintenance(void)
+int heif_get_version_number_maintenance()
 {
   return ((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF;
 }
 
 
 
-struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
+heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
 {
   if (!decoder_plugin) {
-    return error_null_parameter;
+    return heif_error_null_pointer_argument;
   }
   else if (decoder_plugin->plugin_api_version > heif_decoder_plugin_latest_version) {
     return error_unsupported_plugin_version;
@@ -83,10 +80,10 @@ struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decode
   return heif_error_success;
 }
 
-struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encoder_plugin)
+heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encoder_plugin)
 {
   if (!encoder_plugin) {
-    return error_null_parameter;
+    return heif_error_null_pointer_argument;
   }
   else if (encoder_plugin->plugin_api_version > heif_encoder_plugin_latest_version) {
     return error_unsupported_plugin_version;
@@ -104,7 +101,7 @@ void heif_string_release(const char* str)
 
 
 // DEPRECATED
-struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
+heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
   return heif_register_decoder_plugin(decoder_plugin);
 }

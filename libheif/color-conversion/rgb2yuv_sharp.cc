@@ -100,7 +100,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     return {};
   }
 
-  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  int matrix = target_state.nclx.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
@@ -113,7 +113,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
   output_state.chroma = heif_chroma_420;
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = target_state.bits_per_pixel;
-  output_state.nclx_profile = target_state.nclx_profile;
+  output_state.nclx = target_state.nclx;
   states.emplace_back(output_state, SpeedCosts_Slow);
 
   return states;
@@ -221,10 +221,10 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
 
   bool full_range_flag = true;
   Kr_Kb kr_kb = Kr_Kb::defaults();
-  full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  full_range_flag = target_state.nclx.get_full_range_flag();
   kr_kb =
-      get_Kr_Kb(target_state.nclx_profile.get_matrix_coefficients(),
-                target_state.nclx_profile.get_colour_primaries());
+      get_Kr_Kb(target_state.nclx.get_matrix_coefficients(),
+                target_state.nclx.get_colour_primaries());
 
   SharpYuvColorSpace color_space = {
       kr_kb.Kr, kr_kb.Kb, output_bits,

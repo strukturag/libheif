@@ -23,6 +23,7 @@
 #include <set>
 #include <limits>
 #include <utility>
+#include <algorithm>
 
 
 Error Box_container::parse(BitstreamRange& range, const heif_security_limits* limits)
@@ -552,6 +553,14 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
+  if (entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   if (auto err = m_memory_handle.alloc(entry_count * sizeof(TimeToSample),
                                        limits, "the 'stts' table")) {
     return err;
@@ -560,6 +569,18 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_entries.resize(entry_count);
 
   for (uint32_t i = 0; i < entry_count; i++) {
+    if (range.eof()) {
+      std::stringstream sstr;
+      sstr << "stts box should contain " << entry_count << " entries, but box only contained "
+          << i << " entries";
+
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_End_of_data,
+        sstr.str()
+      };
+    }
+
     TimeToSample entry{};
     entry.sample_count = range.read32();
     entry.sample_delta = range.read32();
@@ -638,6 +659,182 @@ uint64_t Box_stts::get_total_duration(bool include_last_frame_duration)
 
   if (!include_last_frame_duration && !m_entries.empty()) {
     total -= m_entries.back().sample_delta;
+  }
+
+  return total;
+}
+
+
+Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  uint8_t version = get_version();
+
+  if (version > 1) {
+    return unsupported_version_error("ctts");
+  }
+
+  uint32_t entry_count = range.read32();
+
+  if (entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
+  if (auto err = m_memory_handle.alloc(entry_count * sizeof(OffsetToSample),
+                                       limits, "the 'ctts' table")) {
+    return err;
+  }
+
+  m_entries.resize(entry_count);
+
+  for (uint32_t i = 0; i < entry_count; i++) {
+    if (range.eof()) {
+      std::stringstream sstr;
+      sstr << "ctts box should contain " << entry_count << " entries, but box only contained "
+          << i << " entries";
+
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_End_of_data,
+        sstr.str()
+      };
+    }
+
+    OffsetToSample entry{};
+    entry.sample_count = range.read32();
+    if (version == 0) {
+      uint32_t offset = range.read32();
+#if 0
+      // TODO: I disabled this because I found several files that seem to
+      //       have wrong data. Since we are not using the 'ctts' data anyway,
+      //       let's not care about it now.
+
+      if (offset > INT32_MAX) {
+        return {
+          heif_error_Unsupported_feature,
+          heif_suberror_Unsupported_parameter,
+          "We don't support offsets > 0x7fff in 'ctts' box."
+        };
+      }
+#endif
+
+      entry.sample_offset = static_cast<int32_t>(offset);
+    }
+    else if (version == 1) {
+      entry.sample_offset = range.read32s();
+    }
+    else {
+      assert(false);
+    }
+
+    m_entries[i] = entry;
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_ctts::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << FullBox::dump(indent);
+  for (size_t i = 0; i < m_entries.size(); i++) {
+    sstr << indent << "[" << i << "] : cnt=" << m_entries[i].sample_count << ", offset=" << m_entries[i].sample_offset << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+int32_t Box_ctts::compute_min_offset() const
+{
+  int32_t min_offset = INT32_MAX;
+  for (const auto& entry : m_entries) {
+    min_offset = std::min(min_offset, entry.sample_offset);
+  }
+
+  return min_offset;
+}
+
+
+Error Box_ctts::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  int32_t min_offset;
+
+  if (get_version() == 0) {
+    // shift such that all offsets are >= 0
+    min_offset = compute_min_offset();
+  }
+  else {
+    // do not modify offsets
+    min_offset = 0;
+  }
+
+  writer.write32(static_cast<uint32_t>(m_entries.size()));
+  for (const auto& sample : m_entries) {
+    writer.write32(sample.sample_count);
+    writer.write32s(sample.sample_offset - min_offset);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+int32_t Box_ctts::get_sample_offset(uint32_t sample_idx)
+{
+  size_t i = 0;
+  while (i < m_entries.size()) {
+    if (sample_idx < m_entries[i].sample_count) {
+      return m_entries[i].sample_offset;
+    }
+    else {
+      sample_idx -= m_entries[i].sample_count;
+    }
+  }
+
+  return 0;
+}
+
+
+void Box_ctts::append_sample_offset(int32_t offset)
+{
+  if (m_entries.empty() || m_entries.back().sample_offset != offset) {
+    OffsetToSample entry{};
+    entry.sample_offset = offset;
+    entry.sample_count = 1;
+    m_entries.push_back(entry);
+    return;
+  }
+
+  m_entries.back().sample_count++;
+}
+
+
+bool Box_ctts::is_constant_offset() const
+{
+  return m_entries.empty() || m_entries.size() == 1;
+}
+
+void Box_ctts::derive_box_version()
+{
+  set_version(1);
+}
+
+
+size_t Box_stsc::get_number_of_samples() const
+{
+  size_t total = 0;
+  for (const auto& entry : m_entries) {
+    total += entry.samples_per_chunk;
   }
 
   return total;
@@ -830,12 +1027,32 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   if (m_fixed_sample_size == 0) {
     // check required memory
 
+    if (m_sample_count > limits->max_sequence_frames) {
+      return {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Security_limit_exceeded,
+        "Security limit for maximum number of sequence frames exceeded"
+      };
+    }
+
     uint64_t mem_size = m_sample_count * sizeof(uint32_t);
     if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
       return err;
     }
 
     for (uint32_t i = 0; i < m_sample_count; i++) {
+      if (range.eof()) {
+        std::stringstream sstr;
+        sstr << "stsz box should contain " << m_sample_count << " entries, but box only contained "
+            << i << " entries";
+
+        return {
+          heif_error_Invalid_input,
+          heif_suberror_End_of_data,
+          sstr.str()
+        };
+      }
+
       m_sample_sizes.push_back(range.read32());
 
       if (range.error()) {
@@ -955,8 +1172,19 @@ std::string Box_stss::dump(Indent& indent) const
 }
 
 
+void Box_stss::set_total_number_of_samples(uint32_t num_samples)
+{
+  m_all_samples_are_sync_samples = (m_sync_samples.size() == num_samples);
+}
+
+
 Error Box_stss::write(StreamWriter& writer) const
 {
+  // If we don't need this box, skip it.
+  if (m_all_samples_are_sync_samples) {
+    return Error::Ok;
+  }
+
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(static_cast<uint32_t>(m_sync_samples.size()));

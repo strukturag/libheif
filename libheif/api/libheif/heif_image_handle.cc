@@ -20,27 +20,28 @@
 
 #include "heif_image_handle.h"
 #include "api_structs.h"
+#include <string>
 
 
-void heif_image_handle_release(const struct heif_image_handle* handle)
+void heif_image_handle_release(const heif_image_handle* handle)
 {
   delete handle;
 }
 
 
-int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
+int heif_image_handle_is_primary_image(const heif_image_handle* handle)
 {
   return handle->image->is_primary();
 }
 
 
-heif_item_id heif_image_handle_get_item_id(const struct heif_image_handle* handle)
+heif_item_id heif_image_handle_get_item_id(const heif_image_handle* handle)
 {
   return handle->image->get_id();
 }
 
 
-int heif_image_handle_get_width(const struct heif_image_handle* handle)
+int heif_image_handle_get_width(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
     return handle->image->get_width();
@@ -51,7 +52,7 @@ int heif_image_handle_get_width(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_get_height(const struct heif_image_handle* handle)
+int heif_image_handle_get_height(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
     return handle->image->get_height();
@@ -62,38 +63,38 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
+int heif_image_handle_has_alpha_channel(const heif_image_handle* handle)
 {
   // TODO: for now, also scan the grid tiles for alpha information (issue #708), but depending about
   // how the discussion about this structure goes forward, we might remove this again.
 
-  return handle->context->has_alpha(handle->image->get_id());   // handle case in issue #708
+  return handle->context->has_alpha(handle->image->get_id()); // handle case in issue #708
   //return handle->image->get_alpha_channel() != nullptr;       // old alpha check that fails on alpha in grid tiles
 }
 
 
-int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle* handle)
+int heif_image_handle_is_premultiplied_alpha(const heif_image_handle* handle)
 {
   // TODO: what about images that have the alpha in the grid tiles (issue #708) ?
   return handle->image->is_premultiplied_alpha();
 }
 
 
-int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle* handle)
+int heif_image_handle_get_luma_bits_per_pixel(const heif_image_handle* handle)
 {
   return handle->image->get_luma_bits_per_pixel();
 }
 
 
-int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle* handle)
+int heif_image_handle_get_chroma_bits_per_pixel(const heif_image_handle* handle)
 {
   return handle->image->get_chroma_bits_per_pixel();
 }
 
 
-struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
-                                                                      enum heif_colorspace* out_colorspace,
-                                                                      enum heif_chroma* out_chroma)
+heif_error heif_image_handle_get_preferred_decoding_colorspace(const heif_image_handle* image_handle,
+                                                               heif_colorspace* out_colorspace,
+                                                               heif_chroma* out_chroma)
 {
   Error err = image_handle->image->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
@@ -104,7 +105,7 @@ struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const stru
 }
 
 
-int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
+int heif_image_handle_get_ispe_width(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
     return handle->image->get_ispe_width();
@@ -115,7 +116,7 @@ int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
+int heif_image_handle_get_ispe_height(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
     return handle->image->get_ispe_height();
@@ -126,7 +127,7 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* handle, uint32_t* aspect_h, uint32_t* aspect_v)
+int heif_image_handle_get_pixel_aspect_ratio(const heif_image_handle* handle, uint32_t* aspect_h, uint32_t* aspect_v)
 {
   auto pasp = handle->image->get_property<Box_pasp>();
   if (pasp) {
@@ -142,9 +143,22 @@ int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* han
 }
 
 
-struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle)
+heif_context* heif_image_handle_get_context(const heif_image_handle* handle)
 {
   auto ctx = new heif_context();
   ctx->context = handle->context;
   return ctx;
+}
+
+
+const char* heif_image_handle_get_gimi_content_id(const heif_image_handle* handle)
+{
+  if (!handle->image->has_gimi_sample_content_id()) {
+    return nullptr;
+  }
+
+  std::string id = handle->image->get_gimi_sample_content_id();
+  char* idstring = new char[id.size() + 1];
+  strcpy(idstring, id.c_str());
+  return idstring;
 }

@@ -66,7 +66,7 @@
 #include "text.h"
 
 
-heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
+heif_encoder::heif_encoder(const heif_encoder_plugin* _plugin)
     : plugin(_plugin)
 {
 
@@ -86,16 +86,15 @@ void heif_encoder::release()
 }
 
 
-struct heif_error heif_encoder::alloc()
+heif_error heif_encoder::alloc()
 {
   if (encoder == nullptr) {
-    struct heif_error error = plugin->new_encoder(&encoder);
+    heif_error error = plugin->new_encoder(&encoder);
     // TODO: error handling
     return error;
   }
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
 
@@ -264,7 +263,7 @@ std::shared_ptr<const ImageItem> HeifContext::get_primary_image(bool return_erro
 
 bool HeifContext::is_image(heif_item_id ID) const
 {
-  return m_all_images.find(ID) != m_all_images.end();
+  return m_all_images.contains(ID);
 }
 
 
@@ -318,6 +317,7 @@ void HeifContext::write(StreamWriter& writer)
       }
 
       uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+      uint64_t unrepeated_movie_duration = movie_duration;
 
       // sequence repetitions
 
@@ -337,7 +337,7 @@ void HeifContext::write(StreamWriter& writer)
         track.second->enable_edit_list_repeat_mode(true);
       }
 
-      track.second->set_track_duration_in_movie_units(movie_duration);
+      track.second->set_track_duration_in_movie_units(movie_duration, unrepeated_movie_duration);
 
       max_sequence_duration = std::max(max_sequence_duration, movie_duration);
     }
@@ -504,6 +504,20 @@ Error HeifContext::interpret_heif_file_images()
       continue;
     }
 
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_heif_file->get_properties(id, properties);
+    if (err) {
+      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+    }
+
+    imageItem->set_properties(properties);
+
+    err = imageItem->initialize_decoder();
+    if (err) {
+      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem->set_properties(properties);
+    }
+
     m_all_images.insert(std::make_pair(id, imageItem));
 
     if (!infe_box->is_hidden_item()) {
@@ -513,19 +527,6 @@ Error HeifContext::interpret_heif_file_images()
       }
 
       m_top_level_images.push_back(imageItem);
-    }
-
-    std::vector<std::shared_ptr<Box>> properties;
-    Error err = m_heif_file->get_properties(id, properties);
-    if (err) {
-      return err;
-    }
-
-    imageItem->set_properties(properties);
-
-    err = imageItem->initialize_decoder();
-    if (err) {
-      return err;
     }
 
     imageItem->set_decoder_input_data();
@@ -675,6 +676,13 @@ Error HeifContext::interpret_heif_file_images()
 
         // TODO: apply irot to camera extrinsic matrix
       }
+    }
+
+
+    // --- assign GIMI content-ID to image
+
+    if (auto box_gimi_content_id = image->get_property<Box_gimi_content_id>()) {
+      image->set_gimi_sample_content_id(box_gimi_content_id->get_content_id());
     }
   }
 
@@ -883,6 +891,7 @@ Error HeifContext::interpret_heif_file_images()
                      "No vvcC property in vvc1 type image");
       }
     }
+    // TODO: check for AV1, AVC, JPEG, J2K
   }
 
 
@@ -924,8 +933,8 @@ Error HeifContext::interpret_heif_file_images()
         image->set_color_profile(tile_img->get_color_profile_icc());
       }
 
-      if (image->get_color_profile_nclx() == nullptr && tile_img->get_color_profile_nclx()) {
-        image->set_color_profile(tile_img->get_color_profile_nclx());
+      if (!image->has_nclx_color_profile() && tile_img->has_nclx_color_profile()) {
+        image->set_color_profile_nclx(tile_img->get_color_profile_nclx());
       }
     }
   }
@@ -1252,7 +1261,7 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
     }
   }
   else {
-    if (m_all_images.find(id) == m_all_images.end()) {
+    if (!m_all_images.contains(id)) {
       std::stringstream sstr;
       sstr << "Image item " << id << " referenced, but it does not exist\n";
 
@@ -1273,11 +1282,11 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id ID,
                                                                   heif_colorspace out_colorspace,
                                                                   heif_chroma out_chroma,
-                                                                  const struct heif_decoding_options& options,
+                                                                  const heif_decoding_options& options,
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
   std::shared_ptr<ImageItem> imgitem;
-  if (m_all_images.find(ID) != m_all_images.end()) {
+  if (m_all_images.contains(ID)) {
     imgitem = m_all_images.find(ID)->second;
   }
 
@@ -1311,11 +1320,47 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 }
 
 
+bool nclx_color_profile_equal(std::optional<nclx_profile> a,
+                              const heif_color_profile_nclx* b)
+{
+  if (!a && b==nullptr) {
+    return true;
+  }
+
+  heif_color_profile_nclx* default_nclx = nullptr;
+
+  if (!a || b==nullptr) {
+    default_nclx = heif_nclx_color_profile_alloc();
+
+    if (!a) {
+      a = nclx_profile::defaults();
+    }
+
+    if (b==nullptr) {
+      b = default_nclx;
+    }
+  }
+
+  bool equal = true;
+  if (a->m_matrix_coefficients != b->matrix_coefficients ||
+      a->m_colour_primaries != b->color_primaries ||
+      a->m_transfer_characteristics != b->transfer_characteristics ||
+      a->m_full_range_flag != b->full_range_flag) {
+    equal = false;
+  }
+
+  if (default_nclx) {
+    heif_nclx_color_profile_free(default_nclx);
+  }
+
+  return equal;
+}
+
 
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                                   heif_colorspace out_colorspace,
                                                                                   heif_chroma out_chroma,
-                                                                                  const struct heif_decoding_options& options) const
+                                                                                  const heif_decoding_options& options) const
 {
   heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                        img->get_colorspace() :
@@ -1330,12 +1375,26 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   uint8_t img_bpp = img->get_visual_image_bits_per_pixel();
   uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
 
+  nclx_profile img_nclx = img->get_color_profile_nclx_with_fallback();
+  bool different_nclx = !nclx_color_profile_equal(img_nclx, options.output_image_nclx_profile);
+
   if (different_chroma ||
       different_colorspace ||
       converted_output_bpp ||
+      different_nclx ||
       (img->has_alpha() && options.color_conversion_options_ext && options.color_conversion_options_ext->alpha_composition_mode != heif_alpha_composition_mode_none)) {
 
-    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, converted_output_bpp,
+    nclx_profile output_profile;
+    if (options.output_image_nclx_profile) {
+      output_profile.set_matrix_coefficients(options.output_image_nclx_profile->matrix_coefficients);
+      output_profile.set_colour_primaries(options.output_image_nclx_profile->color_primaries);
+      output_profile.set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
+    }
+    else {
+      output_profile.set_sRGB_defaults();
+    }
+
+    return convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
                                          options.color_conversion_options, options.color_conversion_options_ext,
                                          get_security_limits());
   }
@@ -1345,7 +1404,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
 }
 
 
-static Result<std::shared_ptr<HeifPixelImage>>
+Result<std::shared_ptr<HeifPixelImage>>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
                                             const heif_security_limits* limits)
 {
@@ -1367,9 +1426,8 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
   // --- set nclx profile with full-range flag
 
-  auto nclx = std::make_shared<color_profile_nclx>();
-  nclx->set_undefined();
-  nclx->set_full_range_flag(true); // this is the default, but just to be sure in case the defaults change
+  nclx_profile nclx = nclx_profile::undefined();
+  nclx.set_full_range_flag(true); // this is the default, but just to be sure in case the defaults change
   alpha_image->set_color_profile_nclx(nclx);
 
   return alpha_image;
@@ -1377,9 +1435,9 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 
 Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& in_options,
-                                enum heif_image_input_class input_class)
+                                heif_encoder* encoder,
+                                const heif_encoding_options& in_options,
+                                heif_image_input_class input_class)
 {
   std::shared_ptr<ImageItem> output_image_item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
@@ -1420,7 +1478,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
     srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
                                                                                        encoder,
-                                                                                       options,
+                                                                                       options.output_nclx_profile,
+                                                                                       &options.color_conversion_options,
                                                                                        get_security_limits());
     if (!srcImageResult) {
       return srcImageResult.error();
@@ -1521,8 +1580,8 @@ Error HeifContext::assign_thumbnail(const std::shared_ptr<ImageItem>& master_ima
 
 
 Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                                                                 struct heif_encoder* encoder,
-                                                                 const struct heif_encoding_options& options,
+                                                                 heif_encoder* encoder,
+                                                                 const heif_encoding_options& options,
                                                                  int bbox_size)
 {
   int orig_width = image->get_width();
@@ -1802,16 +1861,28 @@ Error HeifContext::interpret_heif_file_sequences()
 
   auto tracks = moov->get_child_boxes<Box_trak>();
   for (const auto& track_box : tracks) {
-    auto track = Track::alloc_track(this, track_box);
-    if (!track) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Unknown track handler or track error"};
-    }
-    m_tracks.insert({track->get_id(), track});
+    auto trackResult = Track::alloc_track(this, track_box);
+    bool skip_track = false;
 
-    if (track->is_visual_track()) {
-      m_visual_track_id = track->get_id();
+    if (auto err = trackResult.error()) {
+      if (err.error_code == heif_error_Unsupported_feature &&
+          err.sub_error_code == heif_suberror_Unsupported_track_type) {
+        // ignore error, skip track
+        skip_track = true;
+      }
+      else {
+        return trackResult.error();
+      }
+    }
+
+    if (!skip_track) {
+      assert(*trackResult);
+      auto track = *trackResult;
+      m_tracks.insert({track->get_id(), track});
+
+      if (track->is_visual_track() && m_visual_track_id == 0) {
+        m_visual_track_id = track->get_id();
+      }
     }
   }
 

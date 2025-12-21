@@ -37,7 +37,9 @@ extern "C" {
 
 // ----- encoder -----
 
-// The encoder used for actually encoding an image.
+/**
+ * Opaque object that represents the encoder used to code the images.
+ */
 typedef struct heif_encoder heif_encoder;
 
 // A description of the encoder's capabilities and name.
@@ -100,7 +102,9 @@ heif_error heif_context_get_encoder_for_format(heif_context* context,
                                                enum heif_compression_format format,
                                                heif_encoder**);
 
-// You have to release the encoder after use.
+/**
+ * Release the encoder object after use.
+ */
 LIBHEIF_API
 void heif_encoder_release(heif_encoder*);
 

@@ -30,7 +30,35 @@
 #include <array>
 
 
-int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
+int heif_metadata_compression_method_supported(enum heif_metadata_compression method)
+{
+  switch (method) {
+    case heif_metadata_compression_off:
+    case heif_metadata_compression_auto:
+      return true;
+
+    case heif_metadata_compression_deflate:
+    case heif_metadata_compression_zlib:
+#if HAVE_ZLIB
+      return true;
+#else
+      return false;
+#endif
+
+    case heif_metadata_compression_brotli:
+#if HAVE_BROTLI
+      return true;
+#else
+      return false;
+#endif
+
+    default:
+      return false;
+  }
+}
+
+
+int heif_image_handle_get_number_of_metadata_blocks(const heif_image_handle* handle,
                                                     const char* type_filter)
 {
   int cnt = 0;
@@ -45,7 +73,7 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 }
 
 
-int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
+int heif_image_handle_get_list_of_metadata_block_IDs(const heif_image_handle* handle,
                                                      const char* type_filter,
                                                      heif_item_id* ids, int count)
 {
@@ -67,7 +95,7 @@ int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_han
 }
 
 
-const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
+const char* heif_image_handle_get_metadata_type(const heif_image_handle* handle,
                                                 heif_item_id metadata_id)
 {
   for (auto& metadata : handle->image->get_metadata()) {
@@ -80,7 +108,7 @@ const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* 
 }
 
 
-const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
+const char* heif_image_handle_get_metadata_content_type(const heif_image_handle* handle,
                                                         heif_item_id metadata_id)
 {
   for (auto& metadata : handle->image->get_metadata()) {
@@ -93,7 +121,7 @@ const char* heif_image_handle_get_metadata_content_type(const struct heif_image_
 }
 
 
-size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
+size_t heif_image_handle_get_metadata_size(const heif_image_handle* handle,
                                            heif_item_id metadata_id)
 {
   for (auto& metadata : handle->image->get_metadata()) {
@@ -106,18 +134,15 @@ size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handl
 }
 
 
-struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
-                                                 heif_item_id metadata_id,
-                                                 void* out_data)
+heif_error heif_image_handle_get_metadata(const heif_image_handle* handle,
+                                          heif_item_id metadata_id,
+                                          void* out_data)
 {
   for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
-
       if (!metadata->m_data.empty()) {
         if (out_data == nullptr) {
-          Error err(heif_error_Usage_error,
-                    heif_suberror_Null_pointer_argument);
-          return err.error_struct(handle->image.get());
+          return heif_error_null_pointer_argument;
         }
 
         memcpy(out_data,
@@ -135,7 +160,7 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 }
 
 
-const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
+const char* heif_image_handle_get_metadata_item_uri_type(const heif_image_handle* handle,
                                                          heif_item_id metadata_id)
 {
   for (auto& metadata : handle->image->get_metadata()) {
@@ -148,9 +173,9 @@ const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image
 }
 
 
-struct heif_error heif_context_add_exif_metadata(struct heif_context* ctx,
-                                                 const struct heif_image_handle* image_handle,
-                                                 const void* data, int size)
+heif_error heif_context_add_exif_metadata(heif_context* ctx,
+                                          const heif_image_handle* image_handle,
+                                          const void* data, int size)
 {
   Error error = ctx->context->add_exif_metadata(image_handle->image, data, size);
   if (error != Error::Ok) {
@@ -162,19 +187,19 @@ struct heif_error heif_context_add_exif_metadata(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
-                                                const struct heif_image_handle* image_handle,
-                                                const void* data, int size)
+heif_error heif_context_add_XMP_metadata(heif_context* ctx,
+                                         const heif_image_handle* image_handle,
+                                         const void* data, int size)
 {
   return heif_context_add_XMP_metadata2(ctx, image_handle, data, size,
                                         heif_metadata_compression_off);
 }
 
 
-struct heif_error heif_context_add_XMP_metadata2(struct heif_context* ctx,
-                                                 const struct heif_image_handle* image_handle,
-                                                 const void* data, int size,
-                                                 heif_metadata_compression compression)
+heif_error heif_context_add_XMP_metadata2(heif_context* ctx,
+                                          const heif_image_handle* image_handle,
+                                          const void* data, int size,
+                                          heif_metadata_compression compression)
 {
   Error error = ctx->context->add_XMP_metadata(image_handle->image, data, size, compression);
   if (error != Error::Ok) {
@@ -186,15 +211,17 @@ struct heif_error heif_context_add_XMP_metadata2(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
-                                                    const struct heif_image_handle* image_handle,
-                                                    const void* data, int size,
-                                                    const char* item_type, const char* content_type)
+heif_error heif_context_add_generic_metadata(heif_context* ctx,
+                                             const heif_image_handle* image_handle,
+                                             const void* data, int size,
+                                             const char* item_type, const char* content_type)
 {
   if (item_type == nullptr || strlen(item_type) != 4) {
-    return {heif_error_Usage_error,
-            heif_suberror_Invalid_parameter_value,
-            "called heif_context_add_generic_metadata() with invalid 'item_type'."};
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Invalid_parameter_value,
+      "called heif_context_add_generic_metadata() with invalid 'item_type'."
+    };
   }
 
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
@@ -208,11 +235,11 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
-                                                        const struct heif_image_handle* image_handle,
-                                                        const void* data, int size,
-                                                        const char* item_uri_type,
-                                                        heif_item_id* out_item_id)
+heif_error heif_context_add_generic_uri_metadata(heif_context* ctx,
+                                                 const heif_image_handle* image_handle,
+                                                 const void* data, int size,
+                                                 const char* item_uri_type,
+                                                 heif_item_id* out_item_id)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
                                                    fourcc("uri "), nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
@@ -223,4 +250,3 @@ struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx
     return heif_error_success;
   }
 }
-

@@ -54,6 +54,7 @@
 #include <cstdio>
 #include <filesystem>
 #include "common.h"
+#include "libheif/heif_items.h"
 
 
 /*
@@ -73,7 +74,7 @@ info -d // dump
 
 int option_disable_limits = 0;
 
-static struct option long_options[] = {
+static option long_options[] = {
     //{"write-raw", required_argument, 0, 'w' },
     //{"output",    required_argument, 0, 'o' },
     {(char* const) "dump-boxes", no_argument, 0, 'd'},
@@ -193,7 +194,7 @@ int main(int argc, char** argv)
 
       heif_brand2* brands = nullptr;
       int nBrands = 0;
-      struct heif_error err = heif_list_compatible_brands(buf, n, &brands, &nBrands);
+      heif_error err = heif_list_compatible_brands(buf, n, &brands, &nBrands);
       if (err.code) {
         std::cerr << "error reading brands: " << err.message << "\n";
       }
@@ -233,11 +234,17 @@ int main(int argc, char** argv)
     heif_context_set_security_limits(ctx.get(), heif_get_disabled_security_limits());
   }
 
-  struct heif_error err;
+  heif_error err;
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
   if (dump_boxes) {
     heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+
+    if (err.code != 0) {
+      std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
+      return 1;
+    }
+
     return 0;
   }
 
@@ -257,8 +264,8 @@ int main(int argc, char** argv)
   for (int i = 0; i < numImages; i++) {
     std::cout << "\n";
 
-    struct heif_image_handle* handle;
-    struct heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
+    heif_image_handle* handle;
+    heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
     if (err.code) {
       std::cerr << err.message << "\n";
       return 10;
@@ -392,7 +399,7 @@ int main(int argc, char** argv)
     (void) nDepthImages;
 
     if (has_depth) {
-      struct heif_image_handle* depth_handle;
+      heif_image_handle* depth_handle;
       err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
       if (err.code) {
         fprintf(stderr, "cannot get depth image: %s\n", err.message);
@@ -407,7 +414,7 @@ int main(int argc, char** argv)
       printf("    bits per pixel: %d\n", depth_luma_bpp);
 
 
-      const struct heif_depth_representation_info* depth_info;
+      const heif_depth_representation_info* depth_info;
       if (heif_image_handle_get_depth_image_representation_info(handle, depth_id, &depth_info)) {
 
         printf("    z-near: ");
@@ -530,7 +537,7 @@ int main(int argc, char** argv)
       std::vector<heif_item_id> region_items(numRegionItems);
       heif_image_handle_get_list_of_region_item_ids(handle, region_items.data(), numRegionItems);
       for (heif_item_id region_item_id : region_items) {
-        struct heif_region_item* region_item;
+        heif_region_item* region_item;
         err = heif_context_get_region_item(ctx.get(), region_item_id, &region_item);
 
         uint32_t reference_width, reference_height;
@@ -675,6 +682,8 @@ int main(int argc, char** argv)
 
     // user descriptions
 
+    bool properties_shown = false;
+
     heif_property_id propertyIds[MAX_PROPERTIES];
     int count;
     count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_user_description,
@@ -682,7 +691,7 @@ int main(int argc, char** argv)
 
     if (count > 0) {
       for (int p = 0; p < count; p++) {
-        struct heif_property_user_description* udes;
+        heif_property_user_description* udes;
         err = heif_item_get_property_user_description(ctx.get(), IDs[i], propertyIds[p], &udes);
         if (err.code) {
           std::cerr << "Error reading udes " << IDs[i] << "/" << propertyIds[p] << "\n";
@@ -693,6 +702,7 @@ int main(int argc, char** argv)
           printf("    name: %s\n", udes->name);
           printf("    description: %s\n", udes->description);
           printf("    tags: %s\n", udes->tags);
+          properties_shown = true;
 
           heif_property_user_description_release(udes);
         }
@@ -708,6 +718,7 @@ int main(int argc, char** argv)
       printf("    focal length: %f; %f\n", matrix.focal_length_x, matrix.focal_length_y);
       printf("    principal point: %f; %f\n", matrix.principal_point_x, matrix.principal_point_y);
       printf("    skew: %f\n", matrix.skew);
+      properties_shown = true;
     }
 
     if (heif_image_handle_has_camera_extrinsic_matrix(handle)) {
@@ -721,37 +732,54 @@ int main(int argc, char** argv)
       printf("      %6.3f %6.3f %6.3f\n", rot[3], rot[4], rot[5]);
       printf("      %6.3f %6.3f %6.3f\n", rot[6], rot[7], rot[8]);
       heif_camera_extrinsic_matrix_release(matrix);
+      properties_shown = true;
     }
 
 
     uint32_t aspect_h, aspect_v;
     int has_pasp = heif_image_handle_get_pixel_aspect_ratio(handle, &aspect_h, &aspect_v);
     if (has_pasp) {
-      std::cout << "pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
+      std::cout << "  pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
+      properties_shown = true;
     }
 
-    struct heif_content_light_level clli{};
+    heif_content_light_level clli{};
     if (heif_image_handle_get_content_light_level(handle, &clli)) {
-      std::cout << "content light level (clli):\n"
-                << "  max content light level: " << clli.max_content_light_level << "\n"
-                << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
+      std::cout << "  content light level (clli):\n"
+                << "    max content light level: " << clli.max_content_light_level << "\n"
+                << "    max pic average light level: " << clli.max_pic_average_light_level << "\n";
+      properties_shown = true;
     }
 
-    struct heif_mastering_display_colour_volume mdcv;
+    heif_mastering_display_colour_volume mdcv;
     if (heif_image_handle_get_mastering_display_colour_volume(handle, &mdcv)) {
 
-      struct heif_decoded_mastering_display_colour_volume decoded_mdcv;
+      heif_decoded_mastering_display_colour_volume decoded_mdcv;
       err = heif_mastering_display_colour_volume_decode(&mdcv, &decoded_mdcv);
 
-      std::cout << "mastering display color volume:\n"
-                << "  display_primaries (x,y): "
+      std::cout << "  mastering display color volume:\n"
+                << "    display_primaries (x,y): "
                 << "(" << decoded_mdcv.display_primaries_x[0] << ";" << decoded_mdcv.display_primaries_y[0] << "), "
                 << "(" << decoded_mdcv.display_primaries_x[1] << ";" << decoded_mdcv.display_primaries_y[1] << "), "
                 << "(" << decoded_mdcv.display_primaries_x[2] << ";" << decoded_mdcv.display_primaries_y[2] << ")\n";
 
-      std::cout << "  white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
-      std::cout << "  max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
-      std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
+      std::cout << "    white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
+      std::cout << "    max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
+      std::cout << "    min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
+      properties_shown = true;
+    }
+
+    // --- GIMI
+
+    const char* id = heif_image_handle_get_gimi_content_id(handle);
+    if (id) {
+      std::cout << "  GIMI content ID: " << id << "\n";
+      heif_string_release(id);
+      properties_shown = true;
+    }
+
+    if (!properties_shown) {
+      std::cout << "none\n";
     }
 
     heif_image_handle_release(handle);
@@ -760,14 +788,14 @@ int main(int argc, char** argv)
 #if 0
   std::cout << "num images: " << heif_context_get_number_of_top_level_images(ctx.get()) << "\n";
 
-  struct heif_image_handle* handle;
+  heif_image_handle* handle;
   err = heif_context_get_primary_image_handle(ctx.get(), &handle);
   if (err.code != 0) {
     std::cerr << "Could not get primage image handle: " << err.message << "\n";
     return 1;
   }
 
-  struct heif_image* image;
+  heif_image* image;
   err = heif_decode_image(handle, &image, heif_colorspace_undefined, heif_chroma_undefined, NULL);
   if (err.code != 0) {
     heif_image_handle_release(handle);
@@ -897,7 +925,32 @@ int main(int argc, char** argv)
         }
       }
 
+      const char* gimi_track_id = heif_track_get_gimi_track_content_id(track);
+      if (gimi_track_id) {
+        std::cout << "  GIMI track id: " << gimi_track_id << "\n";
+        heif_string_release(gimi_track_id);
+      }
+
       heif_track_release(track);
+    }
+  }
+
+  // ==============================================================================
+
+  {
+    int nItems = heif_context_get_number_of_items(context);
+    if (nItems > 0) {
+      std::cout << "MIME items:\n";
+      std::vector<heif_item_id> item_ids(nItems);
+      heif_context_get_list_of_item_IDs(context, item_ids.data(), nItems);
+
+      for (auto id : item_ids) {
+        uint32_t type = heif_item_get_item_type(context, id);
+        if (type == heif_item_type_mime) {
+          const char* mimeType = heif_item_get_mime_item_content_type(context, id);
+          std::cout << "  " << id << " : " << mimeType << "\n";
+        }
+      }
     }
   }
 

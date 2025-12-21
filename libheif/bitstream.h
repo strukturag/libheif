@@ -307,6 +307,8 @@ public:
   // are filled with a padding 0.
   std::string read_fixed_string(int len);
 
+  std::string read_string_until_eof();
+
   bool read(uint8_t* data, size_t n);
 
   bool prepare_read(size_t nBytes);
@@ -408,6 +410,8 @@ class BitReader
 public:
   BitReader(const uint8_t* buffer, int len);
 
+  void reset();
+
   uint32_t get_bits(int n);
 
   uint8_t get_bits8(int n);
@@ -454,8 +458,9 @@ public:
   }
 
 private:
+  const uint8_t* const data_start;
   const uint8_t* data;
-  int data_length;
+  const int data_length;
   int bytes_remaining;
 
   uint64_t nextbits; // left-aligned bits
@@ -488,7 +493,7 @@ public:
 
   void write(int size, uint64_t value);
 
-  void write(const std::string&);
+  void write(const std::string&, bool end_with_null = true);
 
   void write_fixed_string(std::string s, size_t len);
 

@@ -98,21 +98,45 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
 }
 
 
-struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
+heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
 {
   if (data == nullptr || out_brands == nullptr || out_size == nullptr) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+    return heif_error_null_pointer_argument;
   }
 
   if (len <= 0) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "data length must be positive"};
   }
 
+  const heif_security_limits* security_limits = heif_get_global_security_limits();
+
+
+  // --- check that file begins with ftyp box
+
+  {
+    auto stream = std::make_shared<StreamReader_memory>(data, len, false);
+    BitstreamRange range(stream, len);
+
+    BoxHeader hdr;
+    Error err = hdr.parse_header(range);
+    if (err) {
+      return {err.error_code, err.sub_error_code, "error reading ftype box header"};
+    }
+
+    if (hdr.get_short_type() != fourcc("ftyp")) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "File does not begin with 'ftyp' box."
+      };
+    }
+  }
+
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
   BitstreamRange range(stream, len);
 
   std::shared_ptr<Box> box;
-  Error err = Box::read(range, &box, heif_get_global_security_limits());
+  Error err = Box::read(range, &box, security_limits);
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
       return {err.error_code, err.sub_error_code, "insufficient input data"};
@@ -128,6 +152,15 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
 
   auto brands = ftyp->list_brands();
   size_t nBrands = brands.size();
+
+  if (nBrands > security_limits->max_number_of_file_brands) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "File contains more brands than allowed by security limits."
+    };
+  }
+
   *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * nBrands);
   *out_size = (int)nBrands;
 
@@ -192,31 +225,37 @@ static TriBool is_png(const uint8_t* data, int len)
 
 const char* heif_get_file_mime_type(const uint8_t* data, int len)
 {
-  heif_brand mainBrand = heif_main_brand(data, len);
+  heif_brand2 mainBrand = heif_read_main_brand(data, len);
 
-  if (mainBrand == heif_heic ||
-      mainBrand == heif_heix ||
-      mainBrand == heif_heim ||
-      mainBrand == heif_heis) {
+  if (mainBrand == heif_brand2_heic ||
+      mainBrand == heif_brand2_heix ||
+      mainBrand == heif_brand2_heim ||
+      mainBrand == heif_brand2_heis) {
     return "image/heic";
   }
-  else if (mainBrand == heif_mif1) {
+  else if (mainBrand == heif_brand2_mif1) {
     return "image/heif";
   }
-  else if (mainBrand == heif_hevc ||
-           mainBrand == heif_hevx ||
-           mainBrand == heif_hevm ||
-           mainBrand == heif_hevs) {
+  else if (mainBrand == heif_brand2_hevc ||
+           mainBrand == heif_brand2_hevx ||
+           mainBrand == heif_brand2_hevm ||
+           mainBrand == heif_brand2_hevs) {
     return "image/heic-sequence";
   }
-  else if (mainBrand == heif_msf1) {
+  else if (mainBrand == heif_brand2_msf1) {
     return "image/heif-sequence";
   }
-  else if (mainBrand == heif_avif) {
+  else if (mainBrand == heif_brand2_avif) {
     return "image/avif";
   }
-  else if (mainBrand == heif_avis) {
+  else if (mainBrand == heif_brand2_avis) {
     return "image/avif-sequence";
+  }
+  else if (mainBrand == heif_brand2_avci) {
+    return "image/avci";
+  }
+  else if (mainBrand == heif_brand2_avcs) {
+    return "image/avcs";
   }
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
   else if (mainBrand == heif_brand2_mif3) {
@@ -234,10 +273,10 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
     return "image/heif";
   }
 #endif
-  else if (mainBrand == heif_j2ki) {
+  else if (mainBrand == heif_brand2_j2ki) {
     return "image/hej2k";
   }
-  else if (mainBrand == heif_j2is) {
+  else if (mainBrand == heif_brand2_j2is) {
     return "image/j2is";
   }
   else if (is_jpeg(data, len) == TriBool::Yes) {
@@ -322,7 +361,10 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
       , heif_brand2_mif3
 #endif
-      ,heif_brand2_msf1
+      ,heif_brand2_msf1,
+    heif_brand2_isom,
+    heif_brand2_mp41,
+    heif_brand2_mp42
   };
 
   auto it = supported_brands.find(main_brand);

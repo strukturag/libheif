@@ -27,6 +27,9 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <deque>
+#include <iostream>
+#include <utility>
 
 extern "C" {
 #include <kvazaar.h>
@@ -41,11 +44,50 @@ static const char* kError_unsupported_chroma = "Unsupported chroma type";
 
 struct encoder_struct_kvazaar
 {
+  // --- parameters
+
   int quality = 75;
   bool lossless = false;
 
-  std::vector<uint8_t> output_data;
-  size_t output_idx = 0;
+  // --- input config
+
+  //heif_color_profile_nclx* nclx = nullptr;
+
+  // --- encoder
+
+  const kvz_api* api = nullptr;
+  kvz_config* config = nullptr;
+  kvz_encoder* kvzencoder = nullptr;
+
+  // --- output
+
+  struct Packet
+  {
+    std::vector<uint8_t> data;
+    uintptr_t frameNr = 0;
+  };
+
+  std::deque<Packet> output_data;
+
+  std::vector<uint8_t> active_data; // holds the data that we just returned
+
+
+  ~encoder_struct_kvazaar()
+  {
+    /*
+    if (nclx) {
+      heif_nclx_color_profile_free(nclx);
+    }
+    */
+
+    if (kvzencoder) {
+      api->encoder_close(kvzencoder);
+    }
+
+    if (config) {
+      api->config_destroy(config);
+    }
+  }
 };
 
 static const int kvazaar_PLUGIN_PRIORITY = 100;
@@ -67,13 +109,13 @@ static const char* kvazaar_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter kvazaar_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* kvazaar_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter kvazaar_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* kvazaar_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void kvazaar_init_parameters()
 {
-  struct heif_encoder_parameter* p = kvazaar_encoder_params;
-  const struct heif_encoder_parameter** d = kvazaar_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = kvazaar_encoder_params;
+  const heif_encoder_parameter** d = kvazaar_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -101,7 +143,7 @@ static void kvazaar_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** kvazaar_list_parameters(void* encoder)
+const heif_encoder_parameter** kvazaar_list_parameters(void* encoder)
 {
   return kvazaar_encoder_parameter_ptrs;
 }
@@ -118,10 +160,10 @@ static void kvazaar_cleanup_plugin()
 }
 
 
-static struct heif_error kvazaar_new_encoder(void** enc)
+static heif_error kvazaar_new_encoder(void** enc)
 {
-  struct encoder_struct_kvazaar* encoder = new encoder_struct_kvazaar();
-  struct heif_error err = heif_error_ok;
+  encoder_struct_kvazaar* encoder = new encoder_struct_kvazaar();
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -134,14 +176,14 @@ static struct heif_error kvazaar_new_encoder(void** enc)
 
 static void kvazaar_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   delete encoder;
 }
 
-static struct heif_error kvazaar_set_parameter_quality(void* encoder_raw, int quality)
+static heif_error kvazaar_set_parameter_quality(void* encoder_raw, int quality)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   if (quality < 0 || quality > 100) {
     return heif_error_invalid_parameter_value;
@@ -152,34 +194,34 @@ static struct heif_error kvazaar_set_parameter_quality(void* encoder_raw, int qu
   return heif_error_ok;
 }
 
-static struct heif_error kvazaar_get_parameter_quality(void* encoder_raw, int* quality)
+static heif_error kvazaar_get_parameter_quality(void* encoder_raw, int* quality)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
-static struct heif_error kvazaar_set_parameter_lossless(void* encoder_raw, int enable)
+static heif_error kvazaar_set_parameter_lossless(void* encoder_raw, int enable)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   encoder->lossless = enable ? 1 : 0;
 
   return heif_error_ok;
 }
 
-static struct heif_error kvazaar_get_parameter_lossless(void* encoder_raw, int* enable)
+static heif_error kvazaar_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   *enable = encoder->lossless;
 
   return heif_error_ok;
 }
 
-static struct heif_error kvazaar_set_parameter_logging_level(void* encoder_raw, int logging)
+static heif_error kvazaar_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 //  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
 
@@ -188,7 +230,7 @@ static struct heif_error kvazaar_set_parameter_logging_level(void* encoder_raw, 
   return heif_error_ok;
 }
 
-static struct heif_error kvazaar_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+static heif_error kvazaar_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 //  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
 
@@ -198,9 +240,9 @@ static struct heif_error kvazaar_get_parameter_logging_level(void* encoder_raw, 
 }
 
 
-static struct heif_error kvazaar_set_parameter_integer(void* encoder_raw, const char* name, int value)
+static heif_error kvazaar_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return kvazaar_set_parameter_quality(encoder, value);
@@ -212,9 +254,9 @@ static struct heif_error kvazaar_set_parameter_integer(void* encoder_raw, const 
   return heif_error_unsupported_parameter;
 }
 
-static struct heif_error kvazaar_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+static heif_error kvazaar_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
     return kvazaar_get_parameter_quality(encoder, value);
@@ -227,7 +269,7 @@ static struct heif_error kvazaar_get_parameter_integer(void* encoder_raw, const 
 }
 
 
-static struct heif_error kvazaar_set_parameter_boolean(void* encoder, const char* name, int value)
+static heif_error kvazaar_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return kvazaar_set_parameter_lossless(encoder, value);
@@ -249,13 +291,13 @@ static struct heif_error kvazaar_get_parameter_boolean(void* encoder, const char
 */
 
 
-static struct heif_error kvazaar_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+static heif_error kvazaar_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   return heif_error_unsupported_parameter;
 }
 
-static struct heif_error kvazaar_get_parameter_string(void* encoder_raw, const char* name,
-                                                      char* value, int value_size)
+static heif_error kvazaar_get_parameter_string(void* encoder_raw, const char* name,
+                                               char* value, int value_size)
 {
   return heif_error_unsupported_parameter;
 }
@@ -263,8 +305,8 @@ static struct heif_error kvazaar_get_parameter_string(void* encoder_raw, const c
 
 static void kvazaar_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = kvazaar_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = kvazaar_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -332,28 +374,68 @@ static int rounded_size(int s)
 }
 #endif
 
-static void append_chunk_data(kvz_data_chunk* data, std::vector<uint8_t>& out)
+static void append_chunk_data(kvz_data_chunk* data, encoder_struct_kvazaar* encoder, uintptr_t pts)
 {
   if (!data || data->len == 0) {
     return;
   }
 
-  size_t old_size = out.size();
-  out.resize(old_size + data->len);
-  memcpy(out.data() + old_size, data->data, data->len);
+  std::vector<uint8_t> input_data;
+  while (data) {
+    input_data.insert(input_data.end(), data->data, data->data + data->len);
+    data = data->next;
+  }
 
-  if (data->next) {
-    append_chunk_data(data->next, out);
+  //std::vector<uint8_t>& pktdata = encoder->output_data.front().data;
+  size_t start_idx = 0;
+
+  for (;;)
+  {
+    while (start_idx < input_data.size() - 3 &&
+           (input_data[start_idx] != 0 ||
+            input_data[start_idx + 1] != 0 ||
+            input_data[start_idx + 2] != 1)) {
+      start_idx++;
+    }
+
+    size_t end_idx = start_idx + 1;
+
+    while (end_idx < input_data.size() - 3 &&
+           (input_data[end_idx] != 0 ||
+            input_data[end_idx + 1] != 0 ||
+            input_data[end_idx + 2] != 1)) {
+      end_idx++;
+    }
+
+    if (end_idx == input_data.size() - 3) {
+      end_idx = input_data.size();
+    }
+
+    encoder_struct_kvazaar::Packet pkt;
+    pkt.data.resize(end_idx - start_idx - 3);
+    memcpy(pkt.data.data(), input_data.data() + start_idx + 3, pkt.data.size());
+    pkt.frameNr = pts;
+
+    // std::cout << "append frameNr=" << pts << " NAL:" << ((int)pkt.data[0]>>1) << " size:" << pkt.data.size() << "\n";
+
+    encoder->output_data.emplace_back(std::move(pkt));
+
+    if (end_idx == input_data.size()) {
+      break;
+    }
+
+    start_idx = end_idx;
   }
 }
 
 
-static void copy_plane(kvz_pixel* out_p, size_t out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height,
+static void copy_plane(kvz_pixel* out_p, size_t out_stride, const uint8_t* in_p, size_t in_stride,
+                       uint32_t w, uint32_t h, uint32_t padded_width, uint32_t padded_height,
                        int bit_depth)
 {
   int bpp = (bit_depth > 8) ? 2 : 1;
 
-  for (int y = 0; y < padded_height; y++) {
+  for (uint32_t y = 0; y < padded_height; y++) {
     int sy = std::min(y, h - 1); // source y
     memcpy(out_p + y * out_stride, in_p + sy * in_stride, w * bpp);
 
@@ -369,53 +451,38 @@ std::unique_ptr<T, D> make_guard(T* ptr, D&& deleter) {
     return std::unique_ptr<T, D>(ptr, deleter);
 }
 
-static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct heif_image* image,
-                                              heif_image_input_class input_class)
+static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, const heif_image* image,
+                                                         enum heif_image_input_class input_class,
+                                                         uint32_t framerate_num, uint32_t framerate_denom,
+                                                         const heif_sequence_encoding_options* options,
+                                                         bool image_sequence)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
-  int bit_depth_chroma = 0;
-  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
-  heif_chroma chroma = heif_image_get_chroma_format(image);
-
-  if (!isGreyscale) {
-    bit_depth_chroma = heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
-    if (bit_depth != bit_depth_chroma) {
-      struct heif_error err = {
-          heif_error_Encoder_plugin_error,
-          heif_suberror_Unsupported_bit_depth,
-          "Luma bit depth must equal the chroma bit depth"
-      };
-      return err;
-    }
-  }
 
   // Kvazaar uses a hard-coded bit depth (https://github.com/ultravideo/kvazaar/issues/399).
   // Check whether this matches to the image bit depth.
   // TODO: we should check the bit depth supported by the encoder (like query_input_colorspace2()) and output a warning
   //       if we have to encode at a different bit depth than requested.
   if (bit_depth != KVZ_BIT_DEPTH) {
-    struct heif_error err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Unsupported_bit_depth,
-        kError_unsupported_bit_depth
-    };
-    return err;
+    return {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
+  };
   }
 
-  const kvz_api* api = kvz_api_get(bit_depth);
+  const kvz_api* api = encoder->api = kvz_api_get(bit_depth);
   if (api == nullptr) {
-    struct heif_error err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Unspecified,
-        "Could not initialize Kvazaar API"
-    };
-    return err;
+    return {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unspecified,
+      "Could not initialize Kvazaar API"
+  };
   }
 
-  auto uconfig = make_guard(api->config_alloc(), [api](kvz_config* cfg) { api->config_destroy(cfg); });
-  kvz_config* config = uconfig.get();
+  kvz_config* config = encoder->config = api->config_alloc();
   api->config_init(config); // param, encoder->preset.c_str(), encoder->tune.c_str());
 
 #if HAVE_KVAZAAR_ENABLE_LOGGING
@@ -428,104 +495,29 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   config->threads = 0;
 #endif
 
-#if 1
-#if 0
-  while (ctuSize > 16 &&
-         (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
-          heif_image_get_height(image, heif_channel_Y) < ctuSize)) {
-    ctuSize /= 2;
-  }
-
-  if (ctuSize < 16) {
-    api->config_destroy(config);
-    struct heif_error err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Invalid_parameter_value,
-        kError_unsupported_image_size
-    };
-    return err;
-  }
-#endif
-#else
-  // TODO: There seems to be a bug in kvazaar where increasing the CTU size between
-  // multiple encoding jobs causes a segmentation fault. E.g. encoding multiple
-  // times with a CTU of 16 works, the next encoding with a CTU of 32 crashes.
-  // Use hardcoded value of 64 and reject images that are too small.
-
-  if (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
-      heif_image_get_height(image, heif_channel_Y) < ctuSize) {
-    api->param_free(param);
-    struct heif_error err = {
-      heif_error_Encoder_plugin_error,
-      heif_suberror_Invalid_parameter_value,
-      kError_unsupported_image_size
-    };
-    return err;
-  }
-#endif
-
-#if 0
-  // ctuSize should be a power of 2 in [16;64]
-  switch (ctuSize) {
-    case 64:
-      ctu = "64";
-      break;
-    case 32:
-      ctu = "32";
-      break;
-    case 16:
-      ctu = "16";
-      break;
-    default:
-      struct heif_error err = {
-          heif_error_Encoder_plugin_error,
-          heif_suberror_Invalid_parameter_value,
-          kError_unsupported_image_size
-      };
-      return err;
-  }
-  (void) ctu;
-#endif
+  heif_chroma chroma = heif_image_get_chroma_format(image);
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
-  int input_chroma_width = 0;
-  int input_chroma_height = 0;
 
   uint32_t encoded_width, encoded_height;
   kvazaar_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
 
-  kvz_chroma_format kvzChroma;
-  int chroma_stride_shift = 0;
-  int chroma_height_shift = 0;
+  config->framerate_num = framerate_num;
+  config->framerate_denom = framerate_denom;
 
   if (isGreyscale) {
     config->input_format = KVZ_FORMAT_P400;
-    kvzChroma = KVZ_CSP_400;
   }
   else if (chroma == heif_chroma_420) {
     config->input_format = KVZ_FORMAT_P420;
-    kvzChroma = KVZ_CSP_420;
-    chroma_stride_shift = 1;
-    chroma_height_shift = 1;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = (input_height + 1) / 2;
   }
   else if (chroma == heif_chroma_422) {
     config->input_format = KVZ_FORMAT_P422;
-    kvzChroma = KVZ_CSP_422;
-    chroma_stride_shift = 1;
-    chroma_height_shift = 0;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = input_height;
   }
   else if (chroma == heif_chroma_444) {
     config->input_format = KVZ_FORMAT_P444;
-    kvzChroma = KVZ_CSP_444;
-    chroma_stride_shift = 0;
-    chroma_height_shift = 0;
-    input_chroma_width = input_width;
-    input_chroma_height = input_height;
   }
   else {
     return heif_error{
@@ -535,21 +527,8 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
     };
   }
 
-  if (chroma != heif_chroma_monochrome) {
-    int w = heif_image_get_width(image, heif_channel_Y);
-    int h = heif_image_get_height(image, heif_channel_Y);
-    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
-    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
 
-    assert(heif_image_get_width(image, heif_channel_Cb) == w);
-    assert(heif_image_get_width(image, heif_channel_Cr) == w);
-    assert(heif_image_get_height(image, heif_channel_Cb) == h);
-    assert(heif_image_get_height(image, heif_channel_Cr) == h);
-    (void) w;
-    (void) h;
-  }
-
-  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
     nclx = nullptr;
@@ -579,6 +558,73 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   config->width = encoded_width;
   config->height = encoded_height;
 
+  if (image_sequence) {
+    // TODO
+    /*
+    config->target_bitrate = options->sequence_bitrate;
+    */
+
+    if (options->keyframe_distance_max) {
+      config->intra_period = options->keyframe_distance_max;
+    }
+
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        config->intra_period = 1;
+        break;
+      case heif_sequence_gop_structure_lowdelay:
+        config->gop_lowdelay = 1;
+        break;
+      case heif_sequence_gop_structure_unrestricted:
+        break;
+    }
+  }
+
+  kvz_encoder* kvzencoder = encoder->kvzencoder = api->encoder_open(config);
+  if (!kvzencoder) {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Encoder_encoding,
+      kError_unspecified_error
+  };
+  }
+
+
+  // --- encode headers
+
+  // Not needed. Headers are also output by kvazaar together with the images.
+#if 0
+  kvz_data_chunk* data = nullptr;
+  uint32_t data_len;
+  int success;
+  success = api->encoder_headers(encoder->kvzencoder, &data, &data_len);
+  if (!success) {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Encoder_encoding,
+      kError_unspecified_error
+  };
+  }
+
+  append_chunk_data(data, encoder, 0);
+
+  if (data) {
+    api->chunk_free(data);
+    data = nullptr;
+  }
+#endif
+
+  return heif_error_ok;
+}
+
+
+
+
+static heif_error kvazaar_encode_sequence_frame(void* encoder_raw, const heif_image* image,
+                                             uintptr_t frame_nr)
+{
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
+
   // Note: it is ok to cast away the const, as the image content is not changed.
   // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
   /*
@@ -590,6 +636,71 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 */
 
+  const kvz_api* api = encoder->api;
+
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
+  heif_chroma chroma = heif_image_get_chroma_format(image);
+
+  int input_width = heif_image_get_width(image, heif_channel_Y);
+  int input_height = heif_image_get_height(image, heif_channel_Y);
+
+  uint32_t encoded_width, encoded_height;
+  kvazaar_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
+
+  kvz_chroma_format kvzChroma;
+  int chroma_stride_shift = 0;
+  int chroma_height_shift = 0;
+  int input_chroma_width = 0;
+  int input_chroma_height = 0;
+
+  if (isGreyscale) {
+    kvzChroma = KVZ_CSP_400;
+  }
+  else if (chroma == heif_chroma_420) {
+    kvzChroma = KVZ_CSP_420;
+    chroma_stride_shift = 1;
+    chroma_height_shift = 1;
+    input_chroma_width = (input_width + 1) / 2;
+    input_chroma_height = (input_height + 1) / 2;
+  }
+  else if (chroma == heif_chroma_422) {
+    kvzChroma = KVZ_CSP_422;
+    chroma_stride_shift = 1;
+    chroma_height_shift = 0;
+    input_chroma_width = (input_width + 1) / 2;
+    input_chroma_height = input_height;
+  }
+  else if (chroma == heif_chroma_444) {
+    kvzChroma = KVZ_CSP_444;
+    chroma_stride_shift = 0;
+    chroma_height_shift = 0;
+    input_chroma_width = input_width;
+    input_chroma_height = input_height;
+  }
+  else {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_image_type,
+      kError_unsupported_chroma
+    };
+  }
+
+
+  if (chroma != heif_chroma_monochrome) {
+    int w = heif_image_get_width(image, heif_channel_Y);
+    int h = heif_image_get_height(image, heif_channel_Y);
+    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
+    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+
+    assert(heif_image_get_width(image, heif_channel_Cb) == w);
+    assert(heif_image_get_width(image, heif_channel_Cr) == w);
+    assert(heif_image_get_height(image, heif_channel_Cb) == h);
+    assert(heif_image_get_height(image, heif_channel_Cr) == h);
+    (void) w;
+    (void) h;
+  }
+
+
   auto upic = make_guard(api->picture_alloc_csp(kvzChroma, encoded_width, encoded_height), [api](kvz_picture* pic) { api->picture_free(pic); });
   kvz_picture* pic = upic.get();
   if (!pic) {
@@ -598,6 +709,20 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
         heif_suberror_Encoder_encoding,
         kError_unspecified_error
     };
+  }
+
+  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+  int bit_depth_chroma = 0;
+
+  if (!isGreyscale) {
+    bit_depth_chroma = heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
+    if (bit_depth != bit_depth_chroma) {
+      return {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unsupported_bit_depth,
+        "Luma bit depth must equal the chroma bit depth"
+      };
+    }
   }
 
   if (isGreyscale) {
@@ -622,43 +747,18 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift, bit_depth_chroma);
   }
 
-  auto uencoder = make_guard(api->encoder_open(config), [api](kvz_encoder* e) { api->encoder_close(e); });
-  kvz_encoder* kvzencoder = uencoder.get();
-  if (!kvzencoder) {
-    return heif_error{
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Encoder_encoding,
-        kError_unspecified_error
-    };
-  }
+  pic->pts = frame_nr;
 
   kvz_data_chunk* data = nullptr;
-  auto free_data = [api](kvz_data_chunk** data){
-    if(*data) {
-        api->chunk_free(*data);
-        *data = nullptr;
-    }
-  };
-  auto data_deleter = std::unique_ptr<kvz_data_chunk*, decltype(free_data)>(&data, free_data);
-
   uint32_t data_len;
+
+  kvz_picture* picture_out = nullptr;
+
   int success;
-  success = api->encoder_headers(kvzencoder, &data, &data_len);
-  if (!success) {
-    return heif_error{
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Encoder_encoding,
-        kError_unspecified_error
-    };
-  }
-
-  append_chunk_data(data, encoder->output_data);
-  free_data(&data);
-
-  success = api->encoder_encode(kvzencoder,
+  success = api->encoder_encode(encoder->kvzencoder,
                                 pic,
                                 &data, &data_len,
-                                nullptr, nullptr, nullptr);
+                                &picture_out, nullptr, nullptr);
   if (!success) {
     return heif_error{
         heif_error_Encoder_plugin_error,
@@ -667,81 +767,162 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
     };
   }
 
-  append_chunk_data(data, encoder->output_data);
-  free_data(&data);
+  append_chunk_data(data, encoder, picture_out ? picture_out->pts : 0);
 
-  for (;;) {
-    success = api->encoder_encode(kvzencoder,
-                                  nullptr,
-                                  &data, &data_len,
-                                  nullptr, nullptr, nullptr);
-    if (!success) {
-      return heif_error{
-          heif_error_Encoder_plugin_error,
-          heif_suberror_Encoder_encoding,
-          kError_unspecified_error
-      };
-    }
-
-    if (data == nullptr || data->len == 0) {
-      break;
-    }
-
-    append_chunk_data(data, encoder->output_data);
-    free_data(&data);
+  if (data) {
+    api->chunk_free(data);
+    data = nullptr;
   }
+
+  api->picture_free(picture_out);
 
   (void) success;
   return heif_error_ok;
 }
 
 
-static struct heif_error kvazaar_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                                     enum heif_encoded_data_type* type)
+static heif_error kvazaar_end_sequence_encoding(void* encoder_raw)
 {
-  struct encoder_struct_kvazaar* encoder = (struct encoder_struct_kvazaar*) encoder_raw;
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
+  const kvz_api* api = encoder->api;
 
-  if (encoder->output_idx == encoder->output_data.size()) {
+
+  for (;;) {
+    kvz_data_chunk* data = nullptr;
+    uint32_t data_len;
+
+    kvz_picture* picture_out;
+
+    int success = api->encoder_encode(encoder->kvzencoder,
+                                  nullptr,
+                                  &data, &data_len,
+                                  &picture_out, nullptr, nullptr);
+    if (!success) {
+      return heif_error{
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Encoder_encoding,
+        kError_unspecified_error
+    };
+    }
+
+    if (data == nullptr || data->len == 0) {
+      break;
+    }
+
+    append_chunk_data(data, encoder, picture_out->pts);
+
+    api->picture_free(picture_out);
+    api->chunk_free(data);
+  }
+
+  return heif_error_ok;
+}
+
+
+static heif_error kvazaar_get_compressed_data_intern(void* encoder_raw, uint8_t** data, int* size,
+                                              uintptr_t* frame_nr, int* more_frame_packets)
+{
+  encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
+
+  if (encoder->output_data.empty()) {
     *data = nullptr;
     *size = 0;
 
     return heif_error_ok;
   }
 
-  size_t start_idx = encoder->output_idx;
+  std::vector<uint8_t>& pktdata = encoder->output_data.front().data;
+#if 0
+  size_t start_idx = 0;
 
-  while (start_idx < encoder->output_data.size() - 3 &&
-         (encoder->output_data[start_idx] != 0 ||
-          encoder->output_data[start_idx + 1] != 0 ||
-          encoder->output_data[start_idx + 2] != 1)) {
+  while (start_idx < pktdata.size() - 3 &&
+         (pktdata[start_idx] != 0 ||
+          pktdata[start_idx + 1] != 0 ||
+          pktdata[start_idx + 2] != 1)) {
     start_idx++;
   }
 
   size_t end_idx = start_idx + 1;
 
-  while (end_idx < encoder->output_data.size() - 3 &&
-         (encoder->output_data[end_idx] != 0 ||
-          encoder->output_data[end_idx + 1] != 0 ||
-          encoder->output_data[end_idx + 2] != 1)) {
+  while (end_idx < pktdata.size() - 3 &&
+         (pktdata[end_idx] != 0 ||
+          pktdata[end_idx + 1] != 0 ||
+          pktdata[end_idx + 2] != 1)) {
     end_idx++;
   }
 
   if (end_idx == encoder->output_data.size() - 3) {
     end_idx = encoder->output_data.size();
   }
+#endif
 
-  *data = encoder->output_data.data() + start_idx + 3;
-  *size = (int) (end_idx - start_idx - 3);
+  if (frame_nr) {
+    *frame_nr = encoder->output_data.front().frameNr;
+  }
 
-  encoder->output_idx = end_idx;
+  if (more_frame_packets) {
+    if (encoder->output_data.size() > 1 &&
+        encoder->output_data[0].frameNr == encoder->output_data[1].frameNr) {
+      *more_frame_packets = 1;
+    }
+    else {
+      *more_frame_packets = 0;
+    }
+  }
+
+  encoder->active_data = std::move(pktdata);
+  encoder->output_data.pop_front();
+
+  *data = encoder->active_data.data();
+  *size = static_cast<int>(encoder->active_data.size());
 
   return heif_error_ok;
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_kvazaar
+static heif_error kvazaar_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                           heif_encoded_data_type* type)
+{
+  return kvazaar_get_compressed_data_intern(encoder_raw, data, size, nullptr, nullptr);
+}
+
+static heif_error kvazaar_get_compressed_data2(void* encoder_raw, uint8_t** data, int* size,
+                                            uintptr_t* frame_nr, int* is_keyframe, int* more_frame_packets)
+{
+  return kvazaar_get_compressed_data_intern(encoder_raw, data, size, frame_nr, more_frame_packets);
+}
+
+
+static heif_error kvazaar_start_sequence_encoding(void* encoder_raw, const heif_image* image,
+                                                  enum heif_image_input_class input_class,
+                                                  uint32_t framerate_num, uint32_t framerate_denom,
+                                                  const heif_sequence_encoding_options* options)
+{
+  return kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, framerate_num, framerate_denom, options, true);
+}
+
+
+static heif_error kvazaar_encode_image(void* encoder_raw, const heif_image* image,
+                                       heif_image_input_class input_class)
+{
+  heif_error err;
+  err = kvazaar_start_sequence_encoding_intern(encoder_raw, image, input_class, 1,25, nullptr, false);
+  if (err.code) {
+    return err;
+  }
+
+  err = kvazaar_encode_sequence_frame(encoder_raw, image, 0);
+  if (err.code) {
+    return err;
+  }
+
+  return kvazaar_end_sequence_encoding(encoder_raw);
+}
+
+
+static const heif_encoder_plugin encoder_plugin_kvazaar
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_HEVC,
         /* id_name */ "kvazaar",
         /* priority */ kvazaar_PLUGIN_PRIORITY,
@@ -769,10 +950,16 @@ static const struct heif_encoder_plugin encoder_plugin_kvazaar
         /* encode_image */ kvazaar_encode_image,
         /* get_compressed_data */ kvazaar_get_compressed_data,
         /* query_input_colorspace (v2) */ kvazaar_query_input_colorspace2,
-        /* query_encoded_size (v3) */ kvazaar_query_encoded_size
+        /* query_encoded_size (v3) */ kvazaar_query_encoded_size,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        /* start_sequence_encoding (v4) */ kvazaar_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ kvazaar_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ kvazaar_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ kvazaar_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 0
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_kvazaar()
+const heif_encoder_plugin* get_encoder_plugin_kvazaar()
 {
   return &encoder_plugin_kvazaar;
 }

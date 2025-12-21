@@ -42,7 +42,7 @@ public:
     uint8_t AVCProfileIndication = 0; // profile_idc
     uint8_t profile_compatibility = 0; // constraint set flags
     uint8_t AVCLevelIndication = 0; // level_idc
-    uint8_t lengthSize = 0;
+    uint8_t lengthSize = 0; // length of NAL size field. Must be one of: 1,2,4
     heif_chroma chroma_format = heif_chroma_420; // Note: avcC integer value can be cast to heif_chroma enum
     uint8_t bit_depth_luma = 8;
     uint8_t bit_depth_chroma = 8;
@@ -54,6 +54,11 @@ public:
   }
 
   const configuration& get_configuration() const
+  {
+    return m_configuration;
+  }
+
+  configuration& get_configuration()
   {
     return m_configuration;
   }
@@ -74,6 +79,12 @@ public:
   }
 
   void get_header_nals(std::vector<uint8_t>& data) const;
+
+  void append_sps_nal(const uint8_t* data, size_t size);
+
+  void append_sps_ext_nal(const uint8_t* data, size_t size);
+
+  void append_pps_nal(const uint8_t* data, size_t size);
 
   std::string dump(Indent &) const override;
 
@@ -101,4 +112,9 @@ public:
     set_short_type(fourcc("avc1"));
   }
 };
+
+Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_avcC::configuration* inout_config,
+                                       int* width, int* height);
+
 #endif

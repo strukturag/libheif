@@ -163,9 +163,7 @@ std::string fourcc_to_string(uint32_t code)
 Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
 {
   if (vec.empty()) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "Null length string"};
+    return std::string{}; // return empty string
   }
 
   if (vec.back() != 0) {

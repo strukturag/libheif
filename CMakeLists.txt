@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.20.1)
+project(libheif LANGUAGES C CXX VERSION 1.21.0)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -15,12 +15,15 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# Check for unistd.h
+# Check for header files.
+include (${CMAKE_ROOT}/Modules/CheckIncludeFileCXX.cmake)
 
-include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+CHECK_INCLUDE_FILE_CXX(bit HAVE_BIT)
+if (HAVE_BIT)
+  add_definitions(-DHAVE_BIT)
+endif()
 
-CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
-
+CHECK_INCLUDE_FILE_CXX(unistd.h HAVE_UNISTD_H)
 if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
@@ -112,7 +115,7 @@ macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     endif ()
 
     string(LENGTH "${displayName}" len)
-    math(EXPR fill "32 - ${len}")
+    math(EXPR fill "38 - ${len}")
     string(SUBSTRING "                                                   " 0 ${fill} filler)
     message("${displayName}${filler}: ${msg}")
     unset(msg)
@@ -146,7 +149,7 @@ endif ()
 
 # uvg266
 
-plugin_option(UVG266 "uvg266 VVC encoder (experimental)" OFF OFF)
+plugin_option(UVG266 "uvg266 VVC encoder" OFF OFF)
 if (WITH_UVG266)
     find_package(UVG266)
     if ("${HAVE_UVG266_ENABLE_LOGGING}")
@@ -158,7 +161,7 @@ endif ()
 
 # vvdec
 
-plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
+plugin_option(VVDEC "vvdec VVC decoder" OFF OFF)
 if (WITH_VVDEC)
     # TODO: how to do configure vvdec cleanly?
     find_package(Threads REQUIRED)
@@ -170,7 +173,7 @@ endif ()
 
 # vvenc
 
-plugin_option(VVENC "vvenc VVC encoder (experimental)" OFF OFF)
+plugin_option(VVENC "vvenc VVC encoder" OFF OFF)
 if (WITH_VVENC)
     # TODO: how to do configure vvenc cleanly?
     find_package(Threads REQUIRED)
@@ -179,6 +182,13 @@ if (WITH_VVENC)
         set(vvenc_LIBRARIES vvenc::vvenc)
     endif()
 endif ()
+
+# x264
+
+plugin_option(X264 "x264 AVC encoder" ON OFF)
+if (WITH_X264)
+    find_package(X264)
+endif()
 
 # openh264 decoder
 
@@ -281,12 +291,20 @@ endif()
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
+# Web codecs
+
+option(WITH_WEBCODECS "Support HEVC decoding through browser web codecs API (experimental)" OFF)
+
+if (WITH_WEBCODECS)
+   set(WEBCODECS_FOUND TRUE) # There is no library for web-codecs. Always mark as found.
+endif()
 
 # --- show codec compilation summary
 
 message("\n=== Summary of compiled codecs ===")
 plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
 plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
+plugin_compilation_info(WEBCODECS WEBCODECS "WebCodecs HEVC decoder (experimental)")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
 plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
 plugin_compilation_info(AOM_DECODER AOM_DECODER "AOM AV1 decoder")
@@ -296,15 +314,16 @@ plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
 plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
 plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+plugin_compilation_info(X264 X264 "x264 AVC decoder")
 plugin_compilation_info(OpenH264_DECODER OpenH264_DECODER "OpenH264 decoder")
 # plugin_compilation_info(OpenH264_ENCODER OpenH264_ENCODER "OpenH264 encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
-plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
-plugin_compilation_info(VVENC vvenc "vvenc VVC enc. (experimental)")
-plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC encoder")
+plugin_compilation_info(VVENC vvenc "vvenc VVC encoder")
+plugin_compilation_info(VVDEC vvdec "vvdec VVC decoder")
 
 # --- show summary which formats are supported
 
@@ -329,7 +348,7 @@ macro(format_compilation_info formatName decoding_supported encoding_supported)
 endmacro()
 
 
-if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND)
+if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND OR WITH_WEBCODECS)
     set(SUPPORTS_HEIC_DECODING TRUE)
 endif()
 if (X265_FOUND OR KVAZAAR_FOUND)
@@ -369,7 +388,7 @@ endif()
 if (OpenH264_DECODER_FOUND)
     set(SUPPORTS_AVC_DECODING TRUE)
 endif()
-if (OpenH264_ENCODER_FOUND)
+if (X264_FOUND)
     set(SUPPORTS_AVC_ENCODING TRUE)
 endif()
 
@@ -394,8 +413,15 @@ message("")
 # --- Libsharpyuv color space transforms
 
 option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
+option(WITH_LIBSHARPYUV_INTERNAL "Use the libsharpyuv build in the 'third-party' directory" OFF)
 if (WITH_LIBSHARPYUV)
-    find_package(libsharpyuv)
+   if (WITH_LIBSHARPYUV_INTERNAL)
+       set(LIBSHARPYUV_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third-party/libwebp)
+       set(LIBSHARPYUV_LIBRARIES ${PROJECT_SOURCE_DIR}/third-party/libwebp/build/libsharpyuv.a)
+       set(LIBSHARPYUV_FOUND YES)
+   else()
+       find_package(libsharpyuv)
+   endif()
 endif ()
 if (LIBSHARPYUV_FOUND)
     message("libsharpyuv: found")
@@ -495,6 +521,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
+option(WITH_EXAMPLE_HEIF_THUMB "Build heif-thumbnailer tool" ON)
 option(WITH_EXAMPLE_HEIF_VIEW "Build heif-view tool" ON)
 option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
@@ -521,8 +548,10 @@ endif()
 # --- API documentation
 
 # check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
+option(BUILD_DOCUMENTATION "Build doxygen documentation" ON)
+if (BUILD_DOCUMENTATION)
+  find_package(Doxygen)
+  if (DOXYGEN_FOUND)
     # set input and output files
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/libheif/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
@@ -537,9 +566,10 @@ if (DOXYGEN_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM )
-else (DOXYGEN_FOUND)
-  message("Doxygen tool needs to be installed to generate the API documentation")
-endif (DOXYGEN_FOUND)
+  else (DOXYGEN_FOUND)
+    message("Doxygen tool needs to be installed to generate the API documentation")
+  endif (DOXYGEN_FOUND)
+endif(BUILD_DOCUMENTATION)
 
 # --- Testing
 

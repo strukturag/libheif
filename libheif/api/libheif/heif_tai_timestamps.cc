@@ -61,7 +61,6 @@ heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
 }
 
 
-
 void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src)
 {
   if (dst->version >= 1 && src->version >= 1) {
@@ -89,13 +88,13 @@ void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_inf
 }
 
 
-struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx,
-                                                        heif_item_id itemId,
-                                                        const heif_tai_clock_info* clock,
-                                                        heif_property_id* out_propertyId)
+heif_error heif_item_set_property_tai_clock_info(heif_context* ctx,
+                                                 heif_item_id itemId,
+                                                 const heif_tai_clock_info* clock,
+                                                 heif_property_id* out_propertyId)
 {
   if (!ctx || !clock) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+    return heif_error_null_pointer_argument;
   }
 
   // Check if itemId exists
@@ -106,7 +105,7 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
 
   // make sure that we do not add two taic boxes to one image
 
-  if (auto img= ctx->context->get_image(itemId, false)) {
+  if (auto img = ctx->context->get_image(itemId, false)) {
     auto existing_taic = img->get_property<Box_taic>();
     if (existing_taic) {
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item already has an taic property"};
@@ -128,15 +127,12 @@ struct heif_error heif_item_set_property_tai_clock_info(struct heif_context* ctx
 }
 
 
-struct heif_error heif_item_get_property_tai_clock_info(const struct heif_context* ctx,
-                                                        heif_item_id itemId,
-                                                        heif_tai_clock_info** out_clock)
+heif_error heif_item_get_property_tai_clock_info(const heif_context* ctx,
+                                                 heif_item_id itemId,
+                                                 heif_tai_clock_info** out_clock)
 {
-  if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL heif_context passed in"};
-  }
-  else if (!out_clock) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_clock_info passed in"};
+  if (!ctx || !out_clock) {
+    return heif_error_null_pointer_argument;
   }
 
   *out_clock = nullptr;
@@ -161,25 +157,25 @@ struct heif_error heif_item_get_property_tai_clock_info(const struct heif_contex
 }
 
 
-void heif_tai_clock_info_release(struct heif_tai_clock_info* clock_info)
+void heif_tai_clock_info_release(heif_tai_clock_info* clock_info)
 {
   delete clock_info;
 }
 
 
-void heif_tai_timestamp_packet_release(struct heif_tai_timestamp_packet* tai)
+void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet* tai)
 {
   delete tai;
 }
 
 
-struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
-                                                       heif_item_id itemId,
-                                                       const heif_tai_timestamp_packet* timestamp,
-                                                       heif_property_id* out_propertyId)
+heif_error heif_item_set_property_tai_timestamp(heif_context* ctx,
+                                                heif_item_id itemId,
+                                                const heif_tai_timestamp_packet* timestamp,
+                                                heif_property_id* out_propertyId)
 {
   if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+    return heif_error_null_pointer_argument;
   }
 
   // Check if itemId exists
@@ -190,7 +186,7 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
 
   // make sure that we do not add two TAI timestamps to one image
 
-  if (auto img= ctx->context->get_image(itemId, false)) {
+  if (auto img = ctx->context->get_image(itemId, false)) {
     auto existing_itai = img->get_property<Box_itai>();
     if (existing_itai) {
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item already has an itai property"};
@@ -212,15 +208,12 @@ struct heif_error heif_item_set_property_tai_timestamp(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context* ctx,
-                                                       heif_item_id itemId,
-                                                       struct heif_tai_timestamp_packet** out_timestamp)
+heif_error heif_item_get_property_tai_timestamp(const heif_context* ctx,
+                                                heif_item_id itemId,
+                                                heif_tai_timestamp_packet** out_timestamp)
 {
-  if (!ctx) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
-  }
-  else if (!out_timestamp) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_timestamp_packet passed in"};
+  if (!ctx || !out_timestamp) {
+    return heif_error_null_pointer_argument;
   }
 
   *out_timestamp = nullptr;
@@ -245,8 +238,8 @@ struct heif_error heif_item_get_property_tai_timestamp(const struct heif_context
 }
 
 
-struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
-                                               const struct heif_tai_timestamp_packet* timestamp)
+heif_error heif_image_set_tai_timestamp(heif_image* img,
+                                        const heif_tai_timestamp_packet* timestamp)
 {
   Error err = img->image->set_tai_timestamp(timestamp);
   if (err) {
@@ -258,11 +251,11 @@ struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
 }
 
 
-struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
-                                               struct heif_tai_timestamp_packet** out_timestamp)
+heif_error heif_image_get_tai_timestamp(const heif_image* img,
+                                        heif_tai_timestamp_packet** out_timestamp)
 {
   if (!out_timestamp) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "NULL heif_tai_timestamp_packet passed in"};
+    return heif_error_null_pointer_argument;
   }
 
   *out_timestamp = nullptr;
@@ -278,4 +271,3 @@ struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
 
   return heif_error_success;
 }
-

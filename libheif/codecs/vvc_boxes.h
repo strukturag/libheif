@@ -80,6 +80,8 @@ public:
 
   const configuration& get_configuration() const { return m_configuration; }
 
+  configuration& get_configuration() { return m_configuration; }
+
   void append_nal_data(const std::vector<uint8_t>& nal);
   void append_nal_data(const uint8_t* data, size_t size);
 

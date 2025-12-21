@@ -23,6 +23,14 @@
 #include <cassert>
 #include <cstring>
 
+
+const heif_error heif_error_null_pointer_argument {
+  heif_error_Usage_error,
+  heif_suberror_Null_pointer_argument,
+  "NULL argument passed"
+};
+
+
 // static
 const char Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";
@@ -272,6 +280,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported generic compression method";
     case heif_suberror_Unsupported_essential_property:
       return "Unsupported essential item property";
+    case heif_suberror_Unsupported_track_type:
+      return "Unsupported track type";
 
       // --- Encoder_plugin_error --
 

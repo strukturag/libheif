@@ -2,6 +2,7 @@
 #define LIBHEIF_BOX_EMSCRIPTEN_H
 
 #include <emscripten/bind.h>
+#include <emscripten/version.h>
 
 #include <memory>
 #include <string>
@@ -12,13 +13,14 @@
 #include <cassert>
 
 #include "heif.h"
+#include "heif_items.h"
 
-static std::string _heif_get_version()
+static std::string heif_js_get_version()
 {
   return heif_get_version();
 }
 
-static struct heif_error _heif_context_read_from_memory(
+static struct heif_error heif_js_context_read_from_memory(
     struct heif_context* context, const std::string& data)
 {
   return heif_context_read_from_memory(context, data.data(), data.size(), nullptr);
@@ -43,7 +45,13 @@ static emscripten::val heif_js_context_get_image_handle(
     return emscripten::val(err);
   }
 
+#if __EMSCRIPTEN_major__ > 4 ||   \
+    (__EMSCRIPTEN_major__ == 4 && \
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
+#else
   return emscripten::val(handle);
+#endif
 }
 
 static emscripten::val heif_js_context_get_primary_image_handle(
@@ -61,7 +69,13 @@ static emscripten::val heif_js_context_get_primary_image_handle(
     return emscripten::val(err);
   }
 
+#if __EMSCRIPTEN_major__ > 4 ||   \
+    (__EMSCRIPTEN_major__ == 4 && \
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
+  return emscripten::val(handle, emscripten::allow_raw_pointers());
+#else
   return emscripten::val(handle);
+#endif
 }
 
 
@@ -78,7 +92,7 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
+  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
   if (!ids) {
     struct heif_error err;
     err.code = heif_error_Memory_allocation_error;
@@ -95,9 +109,97 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   for (int i = 0; i < received; i++) {
     result.set(i, ids[i]);
   }
-  free(ids);
   return result;
 }
+
+
+static emscripten::val heif_js_context_get_list_of_item_IDs(
+    struct heif_context* context)
+{
+  emscripten::val result = emscripten::val::array();
+  if (!context) {
+    return result;
+  }
+
+  int count = heif_context_get_number_of_items(context);
+  if (count <= 0) {
+    return result;
+  }
+
+  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
+  if (!ids) {
+    struct heif_error err;
+    err.code = heif_error_Memory_allocation_error;
+    err.subcode = heif_suberror_Security_limit_exceeded;
+    return emscripten::val(err);
+  }
+
+  int num_ids_received = heif_context_get_list_of_item_IDs(context, ids, count);
+
+  for (int i = 0; i < num_ids_received; i++) {
+    result.set(i, ids[i]);
+  }
+
+  return result;
+}
+
+
+static emscripten::val heif_js_item_get_item_type(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  uint32_t type = heif_item_get_item_type(ctx, id);
+  std::string type_string = fourcc_to_string(type);
+  return emscripten::val(type_string);
+}
+
+
+static emscripten::val heif_js_item_get_mime_item_content_type(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string content_type = "";
+  const char* cstring = heif_item_get_mime_item_content_type(ctx, id);
+  if (cstring) {
+    content_type = cstring;
+  }
+  return emscripten::val(content_type);
+}
+
+
+static emscripten::val heif_js_item_get_mime_item_content_encoding(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string content_encoding = "";
+  const char* cstring = heif_item_get_mime_item_content_encoding(ctx, id);
+  if (cstring) {
+    content_encoding = cstring;
+  }
+  return emscripten::val(content_encoding);
+}
+
+
+static emscripten::val heif_js_item_get_uri_item_uri_type(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string uri_type = "";
+  const char* cstring = heif_item_get_uri_item_uri_type(ctx, id);
+  if (cstring) {
+    uri_type = cstring;
+  }
+  return emscripten::val(uri_type);
+}
+
+
+static emscripten::val heif_js_item_get_item_name(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string item_name = "";
+  const char* cstring = heif_item_get_item_name(ctx, id);
+  if (cstring) {
+    item_name = cstring;
+  }
+  return emscripten::val(item_name);
+}
+
 
 #if 0
 static void strided_copy(void* dest, const void* src, int width, int height,
@@ -234,7 +336,13 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
     return emscripten::val(err);
   }
 
+#if __EMSCRIPTEN_major__ > 4 ||   \
+    (__EMSCRIPTEN_major__ == 4 && \
+     (__EMSCRIPTEN_minor__ > 0 || __EMSCRIPTEN_tiny__ >= 9))
+  result.set("image", image, emscripten::allow_raw_pointers());
+#else
   result.set("image", image);
+#endif
 
   int width = heif_image_handle_get_width(handle);
   result.set("width", width);
@@ -289,27 +397,19 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
 
 EMSCRIPTEN_BINDINGS(libheif) {
-    emscripten::function("heif_get_version", &_heif_get_version,
-                         emscripten::allow_raw_pointers());
+  
+    // heif.h
+    emscripten::function("heif_get_version", &heif_js_get_version, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_read_from_memory", &heif_js_context_read_from_memory, emscripten::allow_raw_pointers());
+    emscripten::function("heif_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_decode_image2", &heif_js_decode_image2, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_get_version_number);
-
     EXPORT_HEIF_FUNCTION(heif_context_alloc);
     EXPORT_HEIF_FUNCTION(heif_context_free);
-    emscripten::function("heif_context_read_from_memory",
-    &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_check_filetype",
-    &heif_js_check_filetype, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_top_level_images);
-    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs",
-    &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_image_handle",
-    &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_primary_image_handle",
-    &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
-    //emscripten::function("heif_js_decode_image",
-    //&heif_js_decode_image, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_decode_image2",
-    &heif_js_decode_image2, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_image_handle_release);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_width);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
@@ -317,6 +417,22 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_image_release);
     EXPORT_HEIF_FUNCTION(heif_image_handle_has_alpha_channel);
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_premultiplied_alpha);
+
+    // heif_items.h
+    emscripten::function("heif_context_get_list_of_item_IDs", &heif_js_context_get_list_of_item_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_item_type", heif_js_item_get_item_type, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_mime_item_content_type", heif_js_item_get_mime_item_content_type, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_mime_item_content_encoding", heif_js_item_get_mime_item_content_encoding, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_uri_item_uri_type", heif_js_item_get_uri_item_uri_type, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_item_name", heif_js_item_get_item_name, emscripten::allow_raw_pointers());
+    EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
+    EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
+
+    // DEPRECATED, use functions without the 'js' prefix.
+    emscripten::function("heif_js_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
@@ -402,6 +518,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_item_construction_method", heif_suberror_Unsupported_item_construction_method)
     .value("heif_suberror_Unsupported_header_compression_method", heif_suberror_Unsupported_header_compression_method)
     .value("heif_suberror_Unsupported_bit_depth", heif_suberror_Unsupported_bit_depth)
+    .value("heif_suberror_Unsupported_track_type", heif_suberror_Unsupported_track_type)
     .value("heif_suberror_Wrong_tile_image_pixel_depth", heif_suberror_Wrong_tile_image_pixel_depth)
     .value("heif_suberror_Unknown_NCLX_color_primaries", heif_suberror_Unknown_NCLX_color_primaries)
     .value("heif_suberror_Unknown_NCLX_transfer_characteristics", heif_suberror_Unknown_NCLX_transfer_characteristics)

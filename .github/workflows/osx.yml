@@ -10,16 +10,15 @@ jobs:
   build:
     strategy:
       matrix:
-        runner: [ macos-13, macos-15 ]
+        runner: [ macos-15, macos-15-intel ]
         env:
           - { NAME: "nothing" }
           - { NAME: "cmake", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
           - { NAME: "libde265 (1) / x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_LIBDE265: 1 }
-          - { NAME: "libde265 (2) / x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_LIBDE265: 2 }
     env: ${{ matrix.env }}
     runs-on: ${{ matrix.runner }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       run: |

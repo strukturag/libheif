@@ -147,8 +147,6 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
 {
   std::shared_ptr<const HeifPixelImage> input = input_raw;
 
-  std::shared_ptr<color_profile_nclx> nclx = std::make_shared<color_profile_nclx>();
-  *nclx = input_state.nclx_profile;
   heif_color_conversion_options_ext options_ext_skip_alpha = options_ext;
   options_ext_skip_alpha.alpha_composition_mode = heif_alpha_composition_mode_none;
 
@@ -156,7 +154,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
     Result<std::shared_ptr<const HeifPixelImage>> convInput = ::convert_colorspace(input,
                                                                                    heif_colorspace_RGB,
                                                                                    heif_chroma_444,
-                                                                                   nclx,
+                                                                                   input_state.nclx,
                                                                                    input_state.bits_per_pixel,
                                                                                    options, &options_ext_skip_alpha,
                                                                                    limits);
@@ -269,7 +267,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
     Result<std::shared_ptr<HeifPixelImage>> convOutput = ::convert_colorspace(outimg,
                                                                               input_raw->get_colorspace(),
                                                                               input_raw->get_chroma_format(),
-                                                                              nclx,
+                                                                              input_state.nclx,
                                                                               input_state.bits_per_pixel,
                                                                               options, &options_ext_skip_alpha,
                                                                               limits);

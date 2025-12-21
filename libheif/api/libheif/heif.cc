@@ -28,4 +28,4 @@
 
 #include "error.h"
 
-const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
+const heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};

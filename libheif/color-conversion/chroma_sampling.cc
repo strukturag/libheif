@@ -49,7 +49,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+  if (input_state.nclx.get_matrix_coefficients() == 0) {
     return {};
   }
 
@@ -67,7 +67,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
   output_state.chroma = heif_chroma_420;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.nclx_profile = input_state.nclx_profile;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -119,8 +119,6 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
     return Error::InternalError;
   }
 
-
-  auto colorProfile = input->get_color_profile_nclx();
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
@@ -274,7 +272,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+  if (input_state.nclx.get_matrix_coefficients() == 0) {
     return {};
   }
 
@@ -292,7 +290,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
   output_state.chroma = heif_chroma_422;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.nclx_profile = input_state.nclx_profile;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -344,8 +342,6 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
     return Error::InternalError;
   }
 
-
-  auto colorProfile = input->get_color_profile_nclx();
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
@@ -477,7 +473,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+  if (input_state.nclx.get_matrix_coefficients() == 0) {
     return {};
   }
 
@@ -491,7 +487,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
   output_state.chroma = heif_chroma_444;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.nclx_profile = input_state.nclx_profile;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -543,8 +539,6 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     return Error::InternalError;
   }
 
-
-  auto colorProfile = input->get_color_profile_nclx();
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
@@ -759,7 +753,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+  if (input_state.nclx.get_matrix_coefficients() == 0) {
     return {};
   }
 
@@ -773,7 +767,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
   output_state.chroma = heif_chroma_444;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.nclx_profile = input_state.nclx_profile;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -825,8 +819,6 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     return Error::InternalError;
   }
 
-
-  auto colorProfile = input->get_color_profile_nclx();
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();

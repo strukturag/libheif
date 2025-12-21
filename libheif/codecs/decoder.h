@@ -87,21 +87,42 @@ public:
 
   // --- raw data access
 
+  // Returns a stream of packets. Each packet is starts with a 4-byte size (MSB first).
   [[nodiscard]] virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const = 0;
 
-  Result<std::vector<uint8_t>> get_compressed_data() const;
+  Result<std::vector<uint8_t>> get_compressed_data(bool with_configuration_NALs) const;
 
   // --- decoding
 
+  // Decode a stream image that contains exactly one image. Decoder input is flushed and
+  // it always should return an image.
   virtual Result<std::shared_ptr<HeifPixelImage>>
-  decode_single_frame_from_compressed_data(const struct heif_decoding_options& options,
-                                           const struct heif_security_limits* limits);
+  decode_single_frame_from_compressed_data(const heif_decoding_options& options,
+                                           const heif_security_limits* limits);
+
+  // Push data for one frame into decoder.
+  virtual Error
+  decode_sequence_frame_from_compressed_data(bool upload_configuration_NALs,
+                                             const heif_decoding_options& options,
+                                             uintptr_t user_data,
+                                             const heif_security_limits* limits);
+
+  virtual Error flush_decoder();
+
+  // Get a decoded frame from the decoder.
+  // It may return NULL when there is buffering in the codec.
+  virtual Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
+                                                                     uintptr_t* out_user_data,
+                                                                     const heif_security_limits* limits);
 
 private:
   DataExtent m_data_extent;
 
-  const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
+  const heif_decoder_plugin* m_decoder_plugin = nullptr;
   void* m_decoder = nullptr;
+
+  // get the decoder plugin if it is not set already
+  Error require_decoder_plugin(const heif_decoding_options& options);
 };
 
 #endif

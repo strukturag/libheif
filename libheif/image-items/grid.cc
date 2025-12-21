@@ -216,7 +216,7 @@ Error ImageItem_Grid::read_grid_spec()
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
@@ -227,6 +227,18 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(
   }
 }
 
+#if ENABLE_PARALLEL_TILE_DECODING
+static void wait_for_jobs(std::deque<std::future<Error> >* jobs) {
+  if (jobs->empty()) {
+    return;
+  }
+
+  while (!jobs->empty()) {
+    jobs->front().get();
+    jobs->pop_front();
+  }
+}
+#endif
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options) const
 {
@@ -290,6 +302,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
   int progress_counter = 0;
   bool cancelled = false;
+  std::shared_ptr<std::vector<Error> > warnings(new std::vector<Error>());
 
   for (uint32_t y = 0; y < grid.get_rows() && !cancelled; y++) {
     uint32_t x0 = 0;
@@ -300,11 +313,30 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       std::shared_ptr<const ImageItem> tileImg = get_context()->get_image(tileID, true);
       if (!tileImg) {
+        if (!options.strict_decoding && reference_idx != 0) {
+          // Skip missing tiles (unless it's the first one).
+          warnings->push_back(Error{
+            heif_error_Invalid_input,
+            heif_suberror_Missing_grid_images,
+          });
+          reference_idx++;
+          x0 += tile_width;
+          continue;
+        }
+
         return Error{heif_error_Invalid_input,
                      heif_suberror_Missing_grid_images,
                      "Nonexistent grid image referenced"};
       }
       if (auto error = tileImg->get_item_error()) {
+        if (!options.strict_decoding && reference_idx != 0) {
+          // Skip missing tiles (unless it's the first one).
+          warnings->push_back(error);
+          reference_idx++;
+          x0 += tile_width;
+          continue;
+        }
+
         return error;
       }
 
@@ -347,7 +379,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
           }
         }
 
-        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter);
+        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings);
         if (err) {
           return err;
         }
@@ -372,11 +404,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       if (errs.size() >= (size_t) get_context()->get_max_decoding_threads()) {
         Error e = errs.front().get();
+        errs.pop_front();
         if (e) {
+          wait_for_jobs(&errs);
           return e;
         }
-
-        errs.pop_front();
       }
 
 
@@ -395,18 +427,18 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
                                 data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
-                                std::ref(progress_counter)));
+                                std::ref(progress_counter), warnings));
     }
 
     // check for decoding errors in remaining tiles
 
     while (!errs.empty()) {
       Error e = errs.front().get();
+      errs.pop_front();
       if (e) {
+        wait_for_jobs(&errs);
         return e;
       }
-
-      errs.pop_front();
     }
   }
 #endif
@@ -419,17 +451,49 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     return Error{heif_error_Canceled, heif_suberror_Unspecified, "Decoding the image was canceled"};
   }
 
+  if (img) {
+    img->add_warnings(*warnings.get());
+  }
+
   return img;
+}
+
+static Error progress_and_return_ok(const heif_decoding_options& options, int& progress_counter) {
+  if (options.on_progress) {
+#if ENABLE_PARALLEL_TILE_DECODING
+    static std::mutex progressMutex;
+    std::lock_guard<std::mutex> lock(progressMutex);
+#endif
+
+    options.on_progress(heif_progress_step_total, ++progress_counter, options.progress_user_data);
+  }
+  return Error::Ok;
 }
 
 Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                                   std::shared_ptr<HeifPixelImage>& inout_image,
                                                   const heif_decoding_options& options,
-                                                  int& progress_counter) const
+                                                  int& progress_counter,
+                                                  std::shared_ptr<std::vector<Error> > warnings) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
+#if ENABLE_PARALLEL_TILE_DECODING
+  static std::mutex warningsMutex;
+#endif
 
   auto tileItem = get_context()->get_image(tileID, true);
+  if (!tileItem && !options.strict_decoding) {
+    // We ignore missing images.
+#if ENABLE_PARALLEL_TILE_DECODING
+    std::lock_guard<std::mutex> lock(warningsMutex);
+#endif
+    warnings->push_back(Error{
+      heif_error_Invalid_input,
+      heif_suberror_Missing_grid_images,
+    });
+    return progress_and_return_ok(options, progress_counter);
+  }
+
   assert(tileItem);
   if (auto error = tileItem->get_item_error()) {
     return error;
@@ -437,6 +501,15 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   auto decodeResult = tileItem->decode_image(options, false, 0, 0);
   if (!decodeResult) {
+    if (!options.strict_decoding) {
+      // We ignore broken tiles.
+#if ENABLE_PARALLEL_TILE_DECODING
+      std::lock_guard<std::mutex> lock(warningsMutex);
+#endif
+      warnings->push_back(decodeResult.error());
+      return progress_and_return_ok(options, progress_counter);
+    }
+
     return decodeResult.error();
   }
 
@@ -489,16 +562,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   inout_image->copy_image_to(tile_img, x0, y0);
 
-  if (options.on_progress) {
-#if ENABLE_PARALLEL_TILE_DECODING
-    static std::mutex progressMutex;
-    std::lock_guard<std::mutex> lock(progressMutex);
-#endif
-
-    options.on_progress(heif_progress_step_total, ++progress_counter, options.progress_user_data);
-  }
-
-  return Error::Ok;
+  return progress_and_return_ok(options, progress_counter);
 }
 
 
@@ -626,7 +690,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
                                                                           uint32_t output_height,
                                                                           uint16_t tile_rows,
                                                                           uint16_t tile_columns,
-                                                                          const struct heif_encoding_options* encoding_options)
+                                                                          const heif_encoding_options* encoding_options)
 {
   std::shared_ptr<ImageItem_Grid> grid_image;
   if (tile_rows > 0xFFFF / tile_columns) {
@@ -677,7 +741,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
 Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                      const std::shared_ptr<HeifPixelImage>& image,
-                                     struct heif_encoder* encoder)
+                                     heif_encoder* encoder)
 {
   auto encoding_options = get_encoding_options();
 
@@ -704,6 +768,24 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   auto pixi = encoded_image->get_property<Box_pixi>();
   add_property(pixi, true);
 
+  // copy over extra properties to grid item
+
+  if (tile_x == 0 && tile_y == 0) {
+    auto property_boxes = encoded_image->generate_property_boxes();
+    for (auto& property : property_boxes) {
+      add_property(property, is_property_essential(property));
+    }
+
+    // add color profile similar to first tile image
+    // TODO: this shouldn't be necessary. The colr profiles should be in the ImageExtraData above.
+    auto colr_boxes = add_color_profile(image, *encoding_options,
+                                        heif_image_input_class_normal,
+                                        encoding_options->output_nclx_profile);
+    for (auto& property : colr_boxes) {
+      add_property(property, is_property_essential(property));
+    }
+  }
+
   return Error::Ok;
 }
 
@@ -712,8 +794,8 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
                                                                                  const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
                                                                                  uint16_t rows,
                                                                                  uint16_t columns,
-                                                                                 struct heif_encoder* encoder,
-                                                                                 const struct heif_encoding_options& options)
+                                                                                 heif_encoder* encoder,
+                                                                                 const heif_encoding_options& options)
 {
   std::shared_ptr<ImageItem_Grid> griditem;
 
@@ -780,6 +862,13 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   // Add PIXI property (copy from first tile)
 
   griditem->add_property(pixi_property, true);
+
+  // copy over extra properties to grid item
+
+  auto property_boxes = tiles[0]->generate_property_boxes();
+  for (auto& property : property_boxes) {
+    griditem->add_property(property, griditem->is_property_essential(property));
+  }
 
   // Set Brands
 

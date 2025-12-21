@@ -49,13 +49,13 @@ static const char* uncompressed_plugin_name()
 
 #define MAX_NPARAMETERS 14
 
-static struct heif_encoder_parameter uncompressed_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* uncompressed_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+static heif_encoder_parameter uncompressed_encoder_params[MAX_NPARAMETERS];
+static const heif_encoder_parameter* uncompressed_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
 
 static void uncompressed_init_parameters()
 {
-  struct heif_encoder_parameter* p = uncompressed_encoder_params;
-  const struct heif_encoder_parameter** d = uncompressed_encoder_parameter_ptrs;
+  heif_encoder_parameter* p = uncompressed_encoder_params;
+  const heif_encoder_parameter** d = uncompressed_encoder_parameter_ptrs;
   int i = 0;
 
   assert(i < MAX_NPARAMETERS);
@@ -71,7 +71,7 @@ static void uncompressed_init_parameters()
 }
 
 
-const struct heif_encoder_parameter** uncompressed_list_parameters(void* encoder)
+const heif_encoder_parameter** uncompressed_list_parameters(void* encoder)
 {
   return uncompressed_encoder_parameter_ptrs;
 }
@@ -86,10 +86,10 @@ static void uncompressed_cleanup_plugin()
 {
 }
 
-struct heif_error uncompressed_new_encoder(void** enc)
+heif_error uncompressed_new_encoder(void** enc)
 {
-  struct encoder_struct_uncompressed* encoder = new encoder_struct_uncompressed();
-  struct heif_error err = heif_error_ok;
+  encoder_struct_uncompressed* encoder = new encoder_struct_uncompressed();
+  heif_error err = heif_error_ok;
 
   *enc = encoder;
 
@@ -102,32 +102,32 @@ struct heif_error uncompressed_new_encoder(void** enc)
 
 void uncompressed_free_encoder(void* encoder_raw)
 {
-  struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
+  encoder_struct_uncompressed* encoder = (encoder_struct_uncompressed*) encoder_raw;
 
   delete encoder;
 }
 
 
-struct heif_error uncompressed_set_parameter_quality(void* encoder_raw, int quality)
+heif_error uncompressed_set_parameter_quality(void* encoder_raw, int quality)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
   return heif_error_ok;
 }
 
-struct heif_error uncompressed_get_parameter_quality(void* encoder_raw, int* quality)
+heif_error uncompressed_get_parameter_quality(void* encoder_raw, int* quality)
 {
   *quality = 100;
 
   return heif_error_ok;
 }
 
-struct heif_error uncompressed_set_parameter_lossless(void* encoder_raw, int enable)
+heif_error uncompressed_set_parameter_lossless(void* encoder_raw, int enable)
 {
   return heif_error_ok;
 }
 
-struct heif_error uncompressed_get_parameter_lossless(void* encoder_raw, int* enable)
+heif_error uncompressed_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
@@ -136,7 +136,7 @@ struct heif_error uncompressed_get_parameter_lossless(void* encoder_raw, int* en
   return heif_error_ok;
 }
 
-struct heif_error uncompressed_set_parameter_logging_level(void* encoder_raw, int logging)
+heif_error uncompressed_set_parameter_logging_level(void* encoder_raw, int logging)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -151,7 +151,7 @@ struct heif_error uncompressed_set_parameter_logging_level(void* encoder_raw, in
   return heif_error_ok;
 }
 
-struct heif_error uncompressed_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+heif_error uncompressed_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
 #if 0
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
@@ -168,29 +168,14 @@ struct heif_error uncompressed_get_parameter_logging_level(void* encoder_raw, in
 #define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
 
 
-struct heif_error uncompressed_set_parameter_integer(void* encoder_raw, const char* name, int value)
+heif_error uncompressed_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error uncompressed_get_parameter_integer(void* encoder_raw, const char* name, int* value)
-{
-  //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
-
-  return heif_error_unsupported_parameter;
-}
-
-
-struct heif_error uncompressed_set_parameter_boolean(void* encoder_raw, const char* name, int value)
-{
-  //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
-
-  return heif_error_unsupported_parameter;
-}
-
-struct heif_error uncompressed_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
+heif_error uncompressed_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
@@ -198,7 +183,14 @@ struct heif_error uncompressed_get_parameter_boolean(void* encoder_raw, const ch
 }
 
 
-struct heif_error uncompressed_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+heif_error uncompressed_set_parameter_boolean(void* encoder_raw, const char* name, int value)
+{
+  //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
+
+  return heif_error_unsupported_parameter;
+}
+
+heif_error uncompressed_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
@@ -206,8 +198,16 @@ struct heif_error uncompressed_set_parameter_string(void* encoder_raw, const cha
 }
 
 
-struct heif_error uncompressed_get_parameter_string(void* encoder_raw, const char* name,
-                                                    char* value, int value_size)
+heif_error uncompressed_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+{
+  //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
+
+  return heif_error_unsupported_parameter;
+}
+
+
+heif_error uncompressed_get_parameter_string(void* encoder_raw, const char* name,
+                                             char* value, int value_size)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
@@ -217,8 +217,8 @@ struct heif_error uncompressed_get_parameter_string(void* encoder_raw, const cha
 
 static void uncompressed_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = uncompressed_encoder_parameter_ptrs; *p; p++) {
-    const struct heif_encoder_parameter* param = *p;
+  for (const heif_encoder_parameter** p = uncompressed_encoder_parameter_ptrs; *p; p++) {
+    const heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
@@ -258,8 +258,8 @@ void uncompressed_query_input_colorspace2(void* encoder_raw, heif_colorspace* co
 }
 
 
-struct heif_error uncompressed_encode_image(void* encoder_raw, const struct heif_image* image,
-                                            heif_image_input_class input_class)
+heif_error uncompressed_encode_image(void* encoder_raw, const heif_image* image,
+                                     heif_image_input_class input_class)
 {
   //struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
 
@@ -269,8 +269,8 @@ struct heif_error uncompressed_encode_image(void* encoder_raw, const struct heif
 }
 
 
-struct heif_error uncompressed_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                                   enum heif_encoded_data_type* type)
+heif_error uncompressed_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                            heif_encoded_data_type* type)
 {
 #if 0
   struct encoder_struct_uncompressed* encoder = (struct encoder_struct_uncompressed*) encoder_raw;
@@ -290,9 +290,35 @@ struct heif_error uncompressed_get_compressed_data(void* encoder_raw, uint8_t** 
 }
 
 
-static const struct heif_encoder_plugin encoder_plugin_uncompressed
+heif_error uncompressed_start_sequence_encoding(void* encoder, const heif_image* image,
+                                                enum heif_image_input_class image_class,
+                                                uint32_t framerate_num, uint32_t framerate_denom,
+                                                const heif_sequence_encoding_options* options)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_encode_sequence_frame(void* encoder, const heif_image* image, uintptr_t frame_nr)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_end_sequence_encoding(void* encoder)
+{
+  return heif_error_ok;
+}
+
+heif_error uncompressed_get_compressed_data2(void* encoder, uint8_t** data, int* size,
+                                             uintptr_t* frame_nr,
+                                             int* is_keyframe, int* more_frame_packets)
+{
+  return heif_error_ok;
+}
+
+
+static const heif_encoder_plugin encoder_plugin_uncompressed
     {
-        /* plugin_api_version */ 3,
+        /* plugin_api_version */ 4,
         /* compression_format */ heif_compression_uncompressed,
         /* id_name */ "uncompressed",
         /* priority */ PLUGIN_PRIORITY,
@@ -320,10 +346,16 @@ static const struct heif_encoder_plugin encoder_plugin_uncompressed
         /* encode_image */ uncompressed_encode_image,
         /* get_compressed_data */ uncompressed_get_compressed_data,
         /* query_input_colorspace (v2) */ uncompressed_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ nullptr,
+        /* minimum_required_libheif_version */ LIBHEIF_MAKE_VERSION(1,21,0),
+        /* start_sequence_encoding (v4) */ uncompressed_start_sequence_encoding,
+        /* encode_sequence_frame (v4) */ uncompressed_encode_sequence_frame,
+        /* end_sequence_encoding (v4) */ uncompressed_end_sequence_encoding,
+        /* get_compressed_data2 (v4) */ uncompressed_get_compressed_data2,
+        /* does_indicate_keyframes (v4) */ 1
     };
 
-const struct heif_encoder_plugin* get_encoder_plugin_uncompressed()
+const heif_encoder_plugin* get_encoder_plugin_uncompressed()
 {
   return &encoder_plugin_uncompressed;
 }

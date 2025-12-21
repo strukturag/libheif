@@ -38,11 +38,49 @@ public:
   const heif_color_profile_nclx* get_forced_output_nclx() const override;
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
+                                heif_encoder* encoder,
+                                const heif_encoding_options& options,
                                 enum heif_image_input_class input_class) override;
 
-  std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+  std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+
+
+  bool encode_sequence_started() const override { return m_codedImageData.has_value(); }
+
+  Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
+                                      heif_encoder* encoder,
+                                      const heif_sequence_encoding_options& options,
+                                      heif_image_input_class input_class,
+                                      uint32_t framerate_num, uint32_t framerate_denom,
+                                      uintptr_t frame_number) override
+  {
+    heif_encoding_options dummy_options{};
+
+    auto encodeResult = encode(image, encoder, dummy_options, input_class);
+    if (encodeResult.error()) {
+      return encodeResult.error();
+    }
+
+    m_codedImageData = std::move(*encodeResult);
+
+    m_codedImageData->frame_nr = frame_number;
+    m_codedImageData->is_sync_frame = true;
+
+    return {};
+  }
+
+  Error encode_sequence_flush(heif_encoder* encoder) override
+  {
+    return {};
+  }
+
+  std::optional<CodedImageData> encode_sequence_get_data() override
+  {
+    return std::move(m_codedImageData);
+  }
+
+private:
+  std::optional<CodedImageData> m_codedImageData;
 };
 
 

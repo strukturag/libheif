@@ -37,7 +37,7 @@ struct ColorState
 
   // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values
   // if the colorspace is heif_colorspace_YCbCr. Otherwise, the values should preferably be 'unspecified'.
-  color_profile_nclx nclx_profile;
+  nclx_profile nclx;
 
   ColorState() = default;
 
@@ -135,7 +135,7 @@ private:
 Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                            heif_colorspace colorspace,
                                                            heif_chroma chroma,
-                                                           const std::shared_ptr<const color_profile_nclx>& target_profile,
+                                                           const nclx_profile& target_profile,
                                                            int output_bpp,
                                                            const heif_color_conversion_options& options,
                                                            const heif_color_conversion_options_ext* options_ext,
@@ -144,7 +144,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                                  heif_colorspace colorspace,
                                                                  heif_chroma chroma,
-                                                                 const std::shared_ptr<const color_profile_nclx>& target_profile,
+                                                                 const nclx_profile& target_profile,
                                                                  int output_bpp,
                                                                  const heif_color_conversion_options& options,
                                                                  const heif_color_conversion_options_ext* options_ext,

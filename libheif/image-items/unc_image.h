@@ -59,7 +59,7 @@ public:
 
   // Code from encode_uncompressed_image() has been moved to here.
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
   heif_image_tiling get_heif_image_tiling() const override;
@@ -75,19 +75,19 @@ public:
   // --- encoding
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                         struct heif_encoder* encoder,
-                                         const struct heif_encoding_options& options,
-                                         enum heif_image_input_class input_class) override;
+                                         heif_encoder* encoder,
+                                         const heif_encoding_options& options,
+                                         heif_image_input_class input_class) override;
 
   static Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<HeifPixelImage>& image,
-                                                       const struct heif_encoding_options& options);
+                                                       const heif_encoding_options& options);
 
   static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
                                                                 const heif_unci_image_parameters* parameters,
-                                                                const struct heif_encoding_options* encoding_options,
+                                                                const heif_encoding_options* encoding_options,
                                                                 const std::shared_ptr<const HeifPixelImage>& prototype);
 
-  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
+  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image, bool save_alpha);
 
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;

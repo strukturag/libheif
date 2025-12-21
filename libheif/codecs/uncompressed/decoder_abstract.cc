@@ -226,6 +226,14 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
+      if (unit_info.unit_offset + unit_info.unit_size > compressed_bytes.size()) {
+        return Error{
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "incomplete data in unci image"
+        };
+      }
+
       auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
@@ -237,6 +245,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
 
       const std::vector<uint8_t> uncompressed_unit_data = std::move(*dataResult);
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
+    }
+
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
     }
 
     // cut out the range that we actually need
@@ -259,6 +273,12 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     }
 
     *data = std::move(*dataResult);
+
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
+    }
 
     // cut out the range that we actually need
     memcpy(data->data(), data->data() + range_start_offset, range_size);

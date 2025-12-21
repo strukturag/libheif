@@ -283,7 +283,7 @@ namespace heif {
   public:
     ColorProfile_nclx();
 
-    ~ColorProfile_nclx();
+    ~ColorProfile_nclx() = default;
 
     heif_color_primaries get_color_primaries() const;
 
@@ -305,10 +305,9 @@ namespace heif {
     void set_full_range_flag(bool is_full_range);
 
   private:
-    ColorProfile_nclx(heif_color_profile_nclx* nclx)
-    { mProfile = nclx; }
+    ColorProfile_nclx(heif_color_profile_nclx* nclx);
 
-    heif_color_profile_nclx* mProfile;
+    std::shared_ptr<heif_color_profile_nclx> mProfile;
 
     friend class Image;
   };
@@ -345,9 +344,15 @@ namespace heif {
 
     bool has_channel(enum heif_channel channel) const noexcept;
 
-    const uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) const noexcept;
+    // DEPRECATED
+    const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const noexcept;
 
-    uint8_t* get_plane(enum heif_channel channel, size_t* out_stride) noexcept;
+    // DEPRECATED
+    uint8_t* get_plane(enum heif_channel channel, int* out_stride) noexcept;
+
+    const uint8_t* get_plane2(enum heif_channel channel, size_t* out_stride) const noexcept;
+
+    uint8_t* get_plane2(enum heif_channel channel, size_t* out_stride) noexcept;
 
     // throws Error
     void set_nclx_color_profile(const ColorProfile_nclx&);
@@ -807,12 +812,15 @@ namespace heif {
 
   inline ColorProfile_nclx::ColorProfile_nclx()
   {
-    mProfile = heif_nclx_color_profile_alloc();
+    auto profile = heif_nclx_color_profile_alloc();
+    mProfile = std::shared_ptr<heif_color_profile_nclx>(profile,
+                                                        [](heif_color_profile_nclx* p) { heif_nclx_color_profile_free(p); });
   }
 
-  inline ColorProfile_nclx::~ColorProfile_nclx()
+  inline ColorProfile_nclx::ColorProfile_nclx(heif_color_profile_nclx* nclx)
   {
-    heif_nclx_color_profile_free(mProfile);
+    mProfile = std::shared_ptr<heif_color_profile_nclx>(nclx,
+                                                        [](heif_color_profile_nclx* p) { heif_nclx_color_profile_free(p); });
   }
 
   inline heif_color_primaries ColorProfile_nclx::get_color_primaries() const
@@ -910,19 +918,29 @@ namespace heif {
     return heif_image_has_channel(m_image.get(), channel);
   }
 
-  inline const uint8_t* Image::get_plane(enum heif_channel channel, size_t* out_stride) const noexcept
+  inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const noexcept
+  {
+    return heif_image_get_plane_readonly(m_image.get(), channel, out_stride);
+  }
+
+  inline uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) noexcept
+  {
+    return heif_image_get_plane(m_image.get(), channel, out_stride);
+  }
+
+  inline const uint8_t* Image::get_plane2(enum heif_channel channel, size_t* out_stride) const noexcept
   {
     return heif_image_get_plane_readonly2(m_image.get(), channel, out_stride);
   }
 
-  inline uint8_t* Image::get_plane(enum heif_channel channel, size_t* out_stride) noexcept
+  inline uint8_t* Image::get_plane2(enum heif_channel channel, size_t* out_stride) noexcept
   {
     return heif_image_get_plane2(m_image.get(), channel, out_stride);
   }
 
   inline void Image::set_nclx_color_profile(const ColorProfile_nclx& nclx)
   {
-    Error err = Error(heif_image_set_nclx_color_profile(m_image.get(), nclx.mProfile));
+    Error err = Error(heif_image_set_nclx_color_profile(m_image.get(), nclx.mProfile.get()));
     if (err) {
       throw err;
     }
