@@ -22,7 +22,9 @@
 #ifndef LIBHEIF_HEIF_REGIONS_H
 #define LIBHEIF_HEIF_REGIONS_H
 
-#include "heif.h"
+#include "heif_image_handle.h"
+#include "heif_library.h"
+#include "heif_error.h"
 
 #ifdef __cplusplus
 extern "C" {

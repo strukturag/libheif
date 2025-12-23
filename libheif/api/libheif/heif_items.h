@@ -21,7 +21,9 @@
 #ifndef LIBHEIF_HEIF_ITEMS_H
 #define LIBHEIF_HEIF_ITEMS_H
 
-#include "libheif/heif.h"
+#include "heif_library.h"
+#include "heif_error.h"
+#include "heif_metadata.h"
 
 #ifdef __cplusplus
 extern "C" {
