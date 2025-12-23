@@ -176,9 +176,16 @@ enum heif_uncompressed_component_format
   component_format_complex = 2,
 
   /**
+   * Signed integer.
+   *
+   * The component value is a two's complement signed integer.
+   */
+  component_format_signed = 3,
+
+  /**
    * Maximum valid component format identifier.
    */
-  component_format_max_valid = component_format_complex
+  component_format_max_valid = component_format_signed
 };
 
 
