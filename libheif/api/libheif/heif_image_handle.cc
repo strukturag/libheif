@@ -44,7 +44,13 @@ heif_item_id heif_image_handle_get_item_id(const heif_image_handle* handle)
 int heif_image_handle_get_width(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
-    return handle->image->get_width();
+    uint32_t w = handle->image->get_width();
+    if (w > INT_MAX) {
+      return 0;
+    }
+    else {
+      return static_cast<int>(w);
+    }
   }
   else {
     return 0;
@@ -55,7 +61,13 @@ int heif_image_handle_get_width(const heif_image_handle* handle)
 int heif_image_handle_get_height(const heif_image_handle* handle)
 {
   if (handle && handle->image) {
-    return handle->image->get_height();
+    uint32_t h = handle->image->get_height();
+    if (h > INT_MAX) {
+      return 0;
+    }
+    else {
+      return static_cast<int>(h);
+    }
   }
   else {
     return 0;
