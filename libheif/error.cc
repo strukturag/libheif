@@ -61,7 +61,8 @@ static bool starts_with(const std::string& str, const std::string& prefix) {
     if (str.length() < prefix.length()) {
         return false;
     }
-    return str.rfind(prefix, 0) == 0;
+
+  return str.compare(0, prefix.size(), prefix) == 0;
 }
 
 
