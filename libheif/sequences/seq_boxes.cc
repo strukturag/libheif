@@ -1918,6 +1918,14 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_default_sample_info_size = range.read8();
   m_num_samples = range.read32();
 
+  if (limits && m_num_samples > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Number of 'saiz' samples exceeds the maximum number of sequence frames."
+    };
+  }
+
   if (m_default_sample_info_size == 0) {
     // check required memory
 
@@ -2060,6 +2068,14 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t num_samples = range.read32();
+
+  if (limits && num_samples > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Number of 'saio' samples exceeds the maximum number of sequence frames."
+    };
+  }
 
   // check required memory
   uint64_t mem_size = num_samples * sizeof(uint64_t);
