@@ -385,6 +385,14 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
   std::vector<std::shared_ptr<Box_saiz> > saiz_boxes = stbl->get_child_boxes<Box_saiz>();
   std::vector<std::shared_ptr<Box_saio> > saio_boxes = stbl->get_child_boxes<Box_saio>();
 
+  if (saio_boxes.size() != saiz_boxes.size()) {
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Boxes 'saiz' and `saio` must come in pairs."
+    };
+  }
+
   for (const auto& saiz : saiz_boxes) {
     uint32_t aux_info_type = saiz->get_aux_info_type();
     uint32_t aux_info_type_parameter = saiz->get_aux_info_type_parameter();
@@ -401,6 +409,14 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     }
 
     if (saio) {
+      if (saio->get_num_samples() != saiz->get_num_samples()) {
+        return Error{
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "Number of samples in 'saiz' box does not match 'saio' box."
+        };
+      }
+
       if (aux_info_type == fourcc("suid")) {
         m_aux_reader_content_ids = std::make_unique<SampleAuxInfoReader>(saiz, saio);
       }
@@ -408,6 +424,13 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       if (aux_info_type == fourcc("stai")) {
         m_aux_reader_tai_timestamps = std::make_unique<SampleAuxInfoReader>(saiz, saio);
       }
+    }
+    else {
+      return Error{
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "'saiz' box without matching 'saio' box."
+      };
     }
   }
 
