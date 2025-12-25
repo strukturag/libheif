@@ -121,7 +121,7 @@ public:
     set_flags(Track_enabled | Track_in_movie | Track_in_preview);
   }
 
-  enum Flags {
+  enum Flags : uint32_t {
     Track_enabled = 0x01,
     Track_in_movie = 0x02,
     Track_in_preview = 0x04,
