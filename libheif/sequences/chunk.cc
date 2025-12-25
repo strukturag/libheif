@@ -90,6 +90,7 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id,
       range.size = stsz->get_fixed_sample_size();
     }
     else {
+      assert(first_sample + i < stsz->num_samples());
       range.size = stsz->get_sample_sizes()[first_sample + i];
     }
 

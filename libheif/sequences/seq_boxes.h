@@ -351,6 +351,8 @@ public:
 
   uint64_t get_total_duration(bool include_last_frame_duration);
 
+  uint32_t get_number_of_samples() const;
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -388,6 +390,8 @@ public:
   void derive_box_version() override;
 
   int32_t compute_min_offset() const;
+
+  uint32_t get_number_of_samples() const;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;

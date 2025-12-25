@@ -665,6 +665,17 @@ uint64_t Box_stts::get_total_duration(bool include_last_frame_duration)
 }
 
 
+uint32_t Box_stts::get_number_of_samples() const
+{
+  uint32_t total = 0;
+  for (const auto& entry : m_entries) {
+    total += entry.sample_count;
+  }
+
+  return total;
+}
+
+
 Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
@@ -759,6 +770,17 @@ int32_t Box_ctts::compute_min_offset() const
   }
 
   return min_offset;
+}
+
+
+uint32_t Box_ctts::get_number_of_samples() const
+{
+  uint32_t total = 0;
+  for (const auto& entry : m_entries) {
+    total += entry.sample_count;
+  }
+
+  return total;
 }
 
 

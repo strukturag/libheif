@@ -55,7 +55,7 @@ TrackOptions& TrackOptions::operator=(const TrackOptions& src)
 
 
 SampleAuxInfoHelper::SampleAuxInfoHelper(bool interleaved)
-    : m_interleaved(interleaved)
+  : m_interleaved(interleaved)
 {
   m_saiz = std::make_shared<Box_saiz>();
   m_saio = std::make_shared<Box_saio>();
@@ -71,9 +71,11 @@ void SampleAuxInfoHelper::set_aux_info_type(uint32_t aux_info_type, uint32_t aux
 Error SampleAuxInfoHelper::add_sample_info(const std::vector<uint8_t>& data)
 {
   if (data.size() > 0xFF) {
-    return {heif_error_Encoding_error,
-            heif_suberror_Unspecified,
-            "Encoded sample auxiliary information exceeds maximum size"};
+    return {
+      heif_error_Encoding_error,
+      heif_suberror_Unspecified,
+      "Encoded sample auxiliary information exceeds maximum size"
+    };
   }
 
   m_saiz->add_sample_size(static_cast<uint8_t>(data.size()));
@@ -123,7 +125,7 @@ SampleAuxInfoReader::SampleAuxInfoReader(std::shared_ptr<Box_saiz> saiz,
     uint64_t offset = saio->get_sample_offset(0);
     auto nSamples = saiz->get_num_samples();
 
-    for (uint32_t i=0;i<nSamples;i++) {
+    for (uint32_t i = 0; i < nSamples; i++) {
       m_contiguous_offsets.push_back(offset);
       offset += saiz->get_sample_size(i);
     }
@@ -142,7 +144,7 @@ heif_sample_aux_info_type SampleAuxInfoReader::get_type() const
 }
 
 
-Result<std::vector<uint8_t>> SampleAuxInfoReader::get_sample_info(const HeifFile* file, uint32_t idx)
+Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFile* file, uint32_t idx)
 {
   uint64_t offset;
   if (m_contiguous) {
@@ -292,6 +294,32 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
+  // --- check that number of samples in various boxes are consistent
+
+  if (m_stts->get_number_of_samples() != m_stsz->num_samples()) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of samples in 'stts' and 'stsz' is inconsistent."
+    };
+  }
+
+  if (m_ctts && m_ctts->get_number_of_samples() != m_stsz->num_samples()) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of samples in 'ctts' and 'stsz' is inconsistent."
+    };
+  }
+
+  if (m_stsc->get_number_of_samples() != m_stsz->num_samples()) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of samples in 'stsc' and 'stsz' is inconsistent."
+    };
+  }
+
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 
@@ -354,8 +382,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
 
   // --- read sample auxiliary information boxes
 
-  std::vector<std::shared_ptr<Box_saiz>> saiz_boxes = stbl->get_child_boxes<Box_saiz>();
-  std::vector<std::shared_ptr<Box_saio>> saio_boxes = stbl->get_child_boxes<Box_saio>();
+  std::vector<std::shared_ptr<Box_saiz> > saiz_boxes = stbl->get_child_boxes<Box_saiz>();
+  std::vector<std::shared_ptr<Box_saio> > saio_boxes = stbl->get_child_boxes<Box_saio>();
 
   for (const auto& saiz : saiz_boxes) {
     uint32_t aux_info_type = saiz->get_aux_info_type();
@@ -485,7 +513,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
 
   auto dinf = std::make_shared<Box_dinf>();
   auto dref = std::make_shared<Box_dref>();
-  auto url  = std::make_shared<Box_url>();
+  auto url = std::make_shared<Box_url>();
   m_minf->append_child_box(dinf);
   dinf->append_child_box(dref);
   dref->append_child_box(url);
@@ -560,7 +588,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
 }
 
 
-Result<std::shared_ptr<Track>> Track::alloc_track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
+Result<std::shared_ptr<Track> > Track::alloc_track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
 {
   auto mdia = trak->get_child_box<Box_mdia>();
   if (!mdia) {
@@ -676,24 +704,30 @@ uint32_t Track::get_first_cluster_sample_entry_type() const
 Result<std::string> Track::get_first_cluster_urim_uri() const
 {
   if (m_stsd->get_num_sample_entries() == 0) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "This track has no sample entries."};
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "This track has no sample entries."
+    };
   }
 
   std::shared_ptr<const Box> sampleEntry = m_stsd->get_sample_entry(0);
   auto urim = std::dynamic_pointer_cast<const Box_URIMetaSampleEntry>(sampleEntry);
   if (!urim) {
-    return Error{heif_error_Usage_error,
-                 heif_suberror_Unspecified,
-                 "This cluster is no 'urim' sample entry."};
+    return Error{
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "This cluster is no 'urim' sample entry."
+    };
   }
 
   std::shared_ptr<const Box_uri> uri = urim->get_child_box<const Box_uri>();
   if (!uri) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "The 'urim' box has no 'uri' child box."};
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "The 'urim' box has no 'uri' child box."
+    };
   }
 
   return uri->get_uri();
@@ -716,7 +750,8 @@ Error Track::finalize_track()
 
   // first sample in chunk? -> write chunk offset
 
-  if (true) { // m_stsc->last_chunk_empty()) {
+  if (true) {
+    // m_stsc->last_chunk_empty()) {
     // TODO: we will have to call this at the end of a chunk to dump the current SAI queue
 
     // if auxiliary data is interleaved, write it between the chunks
@@ -823,16 +858,18 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
 
   m_stsc->increase_samples_in_chunk(1);
 
-  m_stsz->append_sample_size((uint32_t)raw_data.size());
+  m_stsz->append_sample_size((uint32_t) raw_data.size());
 
   if (is_sync_sample) {
     m_stss->add_sync_sample(m_next_sample_to_be_output + 1);
   }
 
   if (sample_duration == 0) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "Sample duration may not be 0"};
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Sample duration may not be 0"
+    };
   }
 
   m_stts->append_sample_duration(sample_duration);
@@ -853,9 +890,11 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
       m_aux_helper_tai_timestamps->add_nonpresent_sample();
     }
     else {
-      return {heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Mandatory TAI timestamp missing"};
+      return {
+        heif_error_Encoding_error,
+        heif_suberror_Unspecified,
+        "Mandatory TAI timestamp missing"
+      };
     }
   }
 
@@ -871,12 +910,16 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
       if (err) {
         return err;
       }
-    } else if (m_track_info.with_sample_content_ids == heif_sample_aux_info_presence_optional) {
+    }
+    else if (m_track_info.with_sample_content_ids == heif_sample_aux_info_presence_optional) {
       m_aux_helper_content_ids->add_nonpresent_sample();
-    } else {
-      return {heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Mandatory ContentID missing"};
+    }
+    else {
+      return {
+        heif_error_Encoding_error,
+        heif_suberror_Unspecified,
+        "Mandatory ContentID missing"
+      };
     }
   }
 
@@ -908,7 +951,7 @@ void Track::init_sample_timing_table()
   uint64_t current_decoding_time = 0;
   uint32_t current_chunk = 0;
 
-  for (uint32_t i = 0; i<m_num_samples; i++) {
+  for (uint32_t i = 0; i < m_num_samples; i++) {
     SampleTiming timing;
     timing.sampleIdx = i;
     timing.media_decoding_time = current_decoding_time;
@@ -964,9 +1007,11 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
   }
 
   if (m_next_sample_to_be_output >= num_output_samples) {
-    return Error{heif_error_End_of_sequence,
-                 heif_suberror_Unspecified,
-                 "End of sequence"};
+    return Error{
+      heif_error_End_of_sequence,
+      heif_suberror_Unspecified,
+      "End of sequence"
+    };
   }
 
   const auto& sampleTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
