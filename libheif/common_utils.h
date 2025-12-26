@@ -51,7 +51,10 @@ constexpr uint16_t two_bytes_to_uint16(uint8_t msb, uint8_t lsb)
 
 constexpr uint32_t fourcc(const char* id)
 {
-  return four_bytes_to_uint32(id[0], id[1], id[2], id[3]);
+  return four_bytes_to_uint32(static_cast<uint8_t>(id[0]),
+                              static_cast<uint8_t>(id[1]),
+                              static_cast<uint8_t>(id[2]),
+                              static_cast<uint8_t>(id[3]));
 }
 
 std::string fourcc_to_string(uint32_t code);
