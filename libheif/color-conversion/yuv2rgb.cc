@@ -177,6 +177,8 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
 
   uint16_t halfRange = (uint16_t) (1 << (bpp_y - 1));
+  int16_t halfRange_chroma = 1 << (bpp_cb - 1);
+
   int32_t fullRange = (1 << bpp_y) - 1;
   int limited_range_offset_int = 16 << (bpp_y - 8);
   float limited_range_offset = static_cast<float>(limited_range_offset_int);
@@ -238,7 +240,22 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         out_b[y * out_b_stride + x] = (Pixel) (clip_int_u8(yv - cb - cr));
       }
       else if (matrix_coeffs == 16) {
+        int16_t yy = in_y[y * in_y_stride + x];
+        int16_t cb = static_cast<int16_t>(in_cb[cy * in_cb_stride + cx]) - halfRange_chroma;
+        int16_t cr = static_cast<int16_t>(in_cr[cy * in_cr_stride + cx]) - halfRange_chroma;
 
+        int16_t t = yy - (cb >> 1);
+        int16_t g = t + cb;
+        int16_t b = t - (cr>>1);
+        int16_t r = b + cr;
+
+        // TODO: we are extending the output RGB bpp by 2 bits because this function cannot do bit-depth
+        //       conversion yet. This should be ultimately replaced by a new function with implicit bit-depth reduction.
+
+        uint16_t max_rgb = static_cast<uint16_t>((1<<bpp_y)-1);
+        out_r[y * out_r_stride + x] = static_cast<Pixel>(clip_int_u16(r * 4, max_rgb));
+        out_g[y * out_g_stride + x] = static_cast<Pixel>(clip_int_u16(g * 4, max_rgb));
+        out_b[y * out_b_stride + x] = static_cast<Pixel>(clip_int_u16(b * 4, max_rgb));
       }
       else { // TODO: matrix_coefficients = 11,14
         float yv, cb, cr;
