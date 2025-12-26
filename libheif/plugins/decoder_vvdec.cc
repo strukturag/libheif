@@ -180,10 +180,7 @@ heif_error vvdec_push_data2(void* decoder_raw, const void* frame_data, size_t fr
   const auto* data = (const uint8_t*) frame_data;
 
   for (;;) {
-    uint32_t size = ((((uint32_t) data[0]) << 24) |
-                     (((uint32_t) data[1]) << 16) |
-                     (((uint32_t) data[2]) << 8) |
-                     (data[3]));
+    uint32_t size = four_bytes_to_uint32(data[0], data[1], data[2], data[3]);
 
     data += 4;
 

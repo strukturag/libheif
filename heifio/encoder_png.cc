@@ -30,6 +30,8 @@
 #include <vector>
 
 #include "encoder_png.h"
+
+#include "common_utils.h"
 #include "exif.h"
 
 PngEncoder::PngEncoder() = default;
@@ -44,10 +46,10 @@ bool fix_icc_profile(uint8_t* profile_data, uint32_t& profile_size)
 
   // --- check that profile size specified in header matches the real size
 
-  uint32_t size_in_header = ((profile_data[0] << 24) |
-                             (profile_data[1] << 16) |
-                             (profile_data[2] << 8) |
-                             (profile_data[3] << 0));
+  uint32_t size_in_header = four_bytes_to_uint32(profile_data[0],
+                                                 profile_data[1],
+                                                 profile_data[2],
+                                                 profile_data[3]);
 
   if (size_in_header != profile_size) {
 
@@ -157,7 +159,7 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
     uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
     if (exifdata) {
       if (exifsize > 4) {
-        uint32_t skip = (exifdata[0] << 24) | (exifdata[1] << 16) | (exifdata[2] << 8) | exifdata[3];
+        uint32_t skip = four_bytes_to_uint32(exifdata[0], exifdata[1], exifdata[2], exifdata[3]);
         if (skip < (exifsize - 4)) {
           skip += 4;
           uint8_t* ptr = exifdata + skip;

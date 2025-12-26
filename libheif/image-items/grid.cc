@@ -60,22 +60,12 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
               "Grid image data incomplete"};
     }
 
-    m_output_width = ((static_cast<uint32_t>(data[4]) << 24) |
-                      (static_cast<uint32_t>(data[5]) << 16) |
-                      (static_cast<uint32_t>(data[6]) << 8) |
-                      (static_cast<uint32_t>(data[7])));
-
-    m_output_height = ((static_cast<uint32_t>(data[8]) << 24) |
-                       (static_cast<uint32_t>(data[9]) << 16) |
-                       (static_cast<uint32_t>(data[10]) << 8) |
-                       (static_cast<uint32_t>(data[11])));
+    m_output_width = four_bytes_to_uint32(data[4], data[5], data[6], data[7]);
+    m_output_height = four_bytes_to_uint32(data[8], data[9], data[10], data[11]);
   }
   else {
-    m_output_width = ((static_cast<uint32_t>(data[4]) << 8) |
-                      (static_cast<uint32_t>(data[5])));
-
-    m_output_height = ((static_cast<uint32_t>(data[6]) << 8) |
-                       (static_cast<uint32_t>(data[7])));
+    m_output_width = two_bytes_to_uint16(data[4], data[5]);
+    m_output_height = two_bytes_to_uint16(data[6], data[7]);
   }
 
   return Error::Ok;

@@ -35,6 +35,8 @@
 
 #include <jpeglib.h>
 
+#include "common_utils.h"
+
 #define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
 #define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
 
@@ -182,7 +184,7 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       if (exifsize > 4) {
         static const uint8_t kExifMarker = JPEG_APP0 + 1;
 
-        uint32_t skip = (exifdata[0] << 24) | (exifdata[1] << 16) | (exifdata[2] << 8) | exifdata[3];
+        uint32_t skip = four_bytes_to_uint32(exifdata[0], exifdata[1], exifdata[2], exifdata[3]);
         if (skip > (exifsize - 4)) {
           fprintf(stderr, "Invalid EXIF data (offset too large)\n");
           free(exifdata);

@@ -21,6 +21,8 @@
 #include <cassert>
 #include "exif.h"
 
+#include "common_utils.h"
+
 #define EXIF_TYPE_SHORT 3
 #define EXIF_TYPE_LONG 4
 #define DEFAULT_EXIF_ORIENTATION 1
@@ -41,10 +43,10 @@ static uint32_t read32(const uint8_t* data, uint32_t size, uint32_t pos, bool li
   const uint8_t* p = data + pos;
 
   if (littleEndian) {
-    return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
+    return four_bytes_to_uint32(p[3], p[2], p[1], p[0]);
   }
   else {
-    return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+    return four_bytes_to_uint32(p[0], p[1], p[2], p[3]);
   }
 }
 
@@ -56,10 +58,10 @@ static uint16_t read16(const uint8_t* data, uint32_t size, uint32_t pos, bool li
   const uint8_t* p = data + pos;
 
   if (littleEndian) {
-    return static_cast<uint16_t>((p[1] << 8) | p[0]);
+    return two_bytes_to_uint16(p[1], p[0]);
   }
   else {
-    return static_cast<uint16_t>((p[0] << 8) | p[1]);
+    return two_bytes_to_uint16(p[0], p[1]);
   }
 }
 

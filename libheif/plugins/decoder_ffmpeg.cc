@@ -237,10 +237,10 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
       };
     }
 
-    uint32_t nal_size = ((static_cast<uint32_t>(cdata[ptr + 0]) << 24) |
-                         (static_cast<uint32_t>(cdata[ptr + 1]) << 16) |
-                         (static_cast<uint32_t>(cdata[ptr + 2]) << 8) |
-                         (static_cast<uint32_t>(cdata[ptr + 3])));
+    uint32_t nal_size = four_bytes_to_uint32(cdata[ptr + 0],
+                                             cdata[ptr + 1],
+                                             cdata[ptr + 2],
+                                             cdata[ptr + 3]);
     ptr += 4;
 
     if (nal_size > size - ptr) {

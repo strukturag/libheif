@@ -24,6 +24,8 @@
 #include <cstring>
 #include <cassert>
 
+#include "common_utils.h"
+
 #if !defined(HAVE_BIT)
 #include <type_traits>
 #else
@@ -268,10 +270,7 @@ uint32_t BitstreamRange::read32()
     return 0;
   }
 
-  return (uint32_t) ((buf[0] << 24) |
-                     (buf[1] << 16) |
-                     (buf[2] << 8) |
-                     (buf[3]));
+  return four_bytes_to_uint32(buf[0], buf[1], buf[2], buf[3]);
 }
 
 

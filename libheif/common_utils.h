@@ -35,12 +35,23 @@
 #endif
 
 
-constexpr inline uint32_t fourcc(const char* id)
+constexpr uint32_t four_bytes_to_uint32(uint8_t msb, uint8_t b, uint8_t c, uint8_t lsb)
 {
-  return (((((uint32_t) id[0])&0xFF) << 24) |
-          ((((uint32_t) id[1])&0xFF) << 16) |
-          ((((uint32_t) id[2])&0xFF) << 8) |
-          ((((uint32_t) id[3])&0xFF) << 0));
+  return (static_cast<uint32_t>(msb << 24) |
+          static_cast<uint32_t>(b << 16) |
+          static_cast<uint32_t>(c << 8) |
+          static_cast<uint32_t>(lsb));
+}
+
+constexpr uint16_t two_bytes_to_uint16(uint8_t msb, uint8_t lsb)
+{
+  return (static_cast<uint16_t>(msb << 8) |
+          static_cast<uint16_t>(lsb));
+}
+
+constexpr uint32_t fourcc(const char* id)
+{
+  return four_bytes_to_uint32(id[0], id[1], id[2], id[3]);
 }
 
 std::string fourcc_to_string(uint32_t code);

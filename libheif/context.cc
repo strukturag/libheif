@@ -1033,7 +1033,7 @@ Error HeifContext::interpret_heif_file_images()
     if (!regionDataResult) {
       return regionDataResult.error();
     }
-    region_item->parse(*regionDataResult);
+    region_item->parse(*regionDataResult, get_security_limits());
 
     if (iref_box) {
       std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
