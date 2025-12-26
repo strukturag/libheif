@@ -65,6 +65,10 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  if (input_state.bits_per_pixel > 14) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
