@@ -46,7 +46,7 @@
 
 #endif
 
-#define DEBUG_ME 1
+#define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
 
 #define USE_CENTER_CHROMA_422 0
