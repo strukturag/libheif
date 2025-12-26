@@ -49,7 +49,7 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   }
 
   int matrix = input_state.nclx.get_matrix_coefficients();
-  if ( matrix == 11 || matrix == 14) {
+  if (matrix == 11 || matrix == 14) {
     return {};
   }
 
@@ -236,6 +236,9 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         out_r[y * out_r_stride + x] = (Pixel) (clip_int_u8(yv - cb + cr));
         out_g[y * out_g_stride + x] = (Pixel) (clip_int_u8(yv + cb));
         out_b[y * out_b_stride + x] = (Pixel) (clip_int_u8(yv - cb - cr));
+      }
+      else if (matrix_coeffs == 16) {
+
       }
       else { // TODO: matrix_coefficients = 11,14
         float yv, cb, cr;

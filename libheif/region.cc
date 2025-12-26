@@ -450,6 +450,14 @@ Error RegionGeometry_InlineMask::parse(const std::vector<uint8_t>& data,
                  "Deflate compressed inline mask is not yet supported");
   }
 
+  if (width==0 || height==0) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Zero size mask image."
+    };
+  }
+
   if (width / 8 + 1 > UINT32_MAX / height) {
     return {
       heif_error_Memory_allocation_error,
