@@ -221,7 +221,7 @@ protected:
   uint32_t m_next_sample_to_be_output = 0;
   bool     m_decoder_is_flushed = false;
 
-  void init_sample_timing_table();
+  Error init_sample_timing_table();
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
   std::vector<uint8_t> m_chunk_data;

@@ -479,7 +479,10 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
 
   // --- initialize track tables
 
-  init_sample_timing_table();
+  Error err = init_sample_timing_table();
+  if (err) {
+    return err;
+  }
 
   return {};
 }
@@ -963,7 +966,7 @@ void Track::add_reference_to_track(uint32_t referenceType, uint32_t to_track_id)
 }
 
 
-void Track::init_sample_timing_table()
+Error Track::init_sample_timing_table()
 {
   m_num_samples = m_stsz->num_samples();
 
@@ -1008,6 +1011,16 @@ void Track::init_sample_timing_table()
            m_elst->get_entry(0).segment_duration == m_mdhd->get_duration() &&
            m_elst->is_repeat_mode()) {
     m_presentation_timeline = media_timeline;
+
+    uint64_t duration_media_units = get_duration_in_media_units();
+    if (duration_media_units == 0) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Track duration is zero."
+      };
+    }
+
     m_num_output_samples = m_heif_context->get_sequence_duration() / get_duration_in_media_units() * media_timeline.size();
   }
   else {
@@ -1019,6 +1032,8 @@ void Track::init_sample_timing_table()
     m_presentation_timeline = media_timeline;
     m_num_output_samples = media_timeline.size();
   }
+
+  return {};
 }
 
 
