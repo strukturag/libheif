@@ -330,6 +330,14 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
                  "Insufficient data remaining for polygon");
   }
 
+  if (numPoints < 3) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Region polygon with less than 3 points."
+    };
+  }
+
   if (UINT32_MAX / numPoints < sizeof(Point)) {
     return {
       heif_error_Memory_allocation_error,
