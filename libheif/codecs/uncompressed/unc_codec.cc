@@ -667,7 +667,8 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  if (UINT32_MAX / uncC->get_pixel_size() / width < height) {
+  if (uncC->get_pixel_size() > 0 &&
+      UINT32_MAX / uncC->get_pixel_size() / width < height) {
     return {
       heif_error_Invalid_input,
       heif_suberror_Unspecified,
@@ -758,7 +759,8 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
     return error;
   }
 
-  if (UINT32_MAX / uncC->get_pixel_size() / width < height) {
+  if (uncC->get_pixel_size() > 0 &&
+      UINT32_MAX / uncC->get_pixel_size() / width < height) {
     return Error{
       heif_error_Invalid_input,
       heif_suberror_Unspecified,
