@@ -667,6 +667,14 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
+  if (UINT32_MAX / uncC->get_pixel_size() / width < height) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Aligned total image size exceeds maximum integer range"
+    };
+  }
+
   Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, context->get_security_limits());
   if (!createImgResult) {
     return createImgResult.error();
@@ -748,6 +756,14 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
   error = check_for_valid_image_size(securityLimits, width, height);
   if (error) {
     return error;
+  }
+
+  if (UINT32_MAX / uncC->get_pixel_size() / width < height) {
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Aligned total image size exceeds maximum integer range"
+    };
   }
 
   Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, securityLimits);
