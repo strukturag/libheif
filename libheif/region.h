@@ -38,7 +38,7 @@ public:
   RegionItem(heif_item_id itemId, uint32_t ref_width, uint32_t ref_height)
       : item_id(itemId), reference_width(ref_width), reference_height(ref_height) {}
 
-  Error parse(const std::vector<uint8_t>& data);
+  Error parse(const std::vector<uint8_t>& data, const heif_security_limits*);
 
   Error encode(std::vector<uint8_t>& result) const;
 
@@ -67,7 +67,8 @@ public:
 
   virtual heif_region_type getRegionType() = 0;
 
-  virtual Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) = 0;
+  virtual Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+                      const heif_security_limits* limits) = 0;
 
   virtual bool encode_needs_32bit() const { return false; }
 
@@ -82,7 +83,8 @@ protected:
 class RegionGeometry_Point : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   bool encode_needs_32bit() const override;
 
@@ -96,7 +98,8 @@ public:
 class RegionGeometry_Rectangle : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   bool encode_needs_32bit() const override;
 
@@ -111,7 +114,8 @@ public:
 class RegionGeometry_Ellipse : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   bool encode_needs_32bit() const override;
 
@@ -126,7 +130,8 @@ public:
 class RegionGeometry_Polygon : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   bool encode_needs_32bit() const override;
 
@@ -144,12 +149,14 @@ public:
 
   bool closed = true;
   std::vector<Point> points;
+  MemoryHandle m_memory_handle;
 };
 
 class RegionGeometry_ReferencedMask : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   void encode(StreamWriter&, int field_size_bytes) const override;
 
@@ -163,13 +170,15 @@ public:
 class RegionGeometry_InlineMask : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override;
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset,
+              const heif_security_limits* limits) override;
 
   void encode(StreamWriter&, int field_size_bytes) const override;
 
   int32_t x,y;
   uint32_t width, height;
   std::vector<uint8_t> mask_data;
+  MemoryHandle m_memory_handle;
 
   heif_region_type getRegionType() override { return heif_region_type_inline_mask; }
 };

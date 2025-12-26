@@ -27,7 +27,8 @@
 #include <utility>
 
 
-Error RegionItem::parse(const std::vector<uint8_t>& data)
+Error RegionItem::parse(const std::vector<uint8_t>& data,
+                        const heif_security_limits* limits)
 {
   if (data.size() < 8) {
     return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
@@ -46,16 +47,13 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
       return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
                    "Region data incomplete");
     }
-    reference_width =
-        ((data[2] << 24) | (data[3] << 16) | (data[4] << 8) | (data[5]));
-
-    reference_height =
-        ((data[6] << 24) | (data[7] << 16) | (data[8] << 8) | (data[9]));
+    reference_width = four_bytes_to_uint32(data[2], data[3], data[4], data[5]);
+    reference_height = four_bytes_to_uint32(data[6], data[7], data[8], data[9]);
     dataOffset = 10;
   }
   else {
-    reference_width = ((data[2] << 8) | (data[3]));
-    reference_height = ((data[4] << 8) | (data[5]));
+    reference_width = four_bytes_to_uint32(0, 0, data[2], data[3]);
+    reference_height = four_bytes_to_uint32(0, 0, data[4], data[5]);
     dataOffset = 6;
   }
 
@@ -105,7 +103,7 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
       continue;
     }
 
-    Error error = region->parse(data, field_size, &dataOffset);
+    Error error = region->parse(data, field_size, &dataOffset, limits);
     if (error) {
       return error;
     }
@@ -178,14 +176,14 @@ uint32_t RegionGeometry::parse_unsigned(const std::vector<uint8_t>& data,
 {
   uint32_t x;
   if (field_size == 32) {
-    x = ((static_cast<uint32_t>(data[*dataOffset + 0]) << 24) |
-         (static_cast<uint32_t>(data[*dataOffset + 1]) << 16) |
-         (static_cast<uint32_t>(data[*dataOffset + 2]) << 8) |
-         (static_cast<uint32_t>(data[*dataOffset + 3])));
+    x = four_bytes_to_uint32(data[*dataOffset + 0],
+                             data[*dataOffset + 1],
+                             data[*dataOffset + 2],
+                             data[*dataOffset + 3]);
     *dataOffset = *dataOffset + 4;
   }
   else {
-    x = ((data[*dataOffset] << 8) | (data[*dataOffset + 1]));
+    x = four_bytes_to_uint32(0, 0, data[*dataOffset], data[*dataOffset + 1]);
     *dataOffset = *dataOffset + 2;
   }
   return x;
@@ -204,7 +202,8 @@ int32_t RegionGeometry::parse_signed(const std::vector<uint8_t>& data,
 
 Error RegionGeometry_Point::parse(const std::vector<uint8_t>& data,
                                   int field_size,
-                                  unsigned int* dataOffset)
+                                  unsigned int* dataOffset,
+                                  const heif_security_limits* limits)
 {
   unsigned int bytesRequired = (field_size / 8) * 2;
   if (data.size() - *dataOffset < bytesRequired) {
@@ -245,7 +244,8 @@ void RegionGeometry_Point::encode(StreamWriter& writer, int field_size_bytes) co
 
 Error RegionGeometry_Rectangle::parse(const std::vector<uint8_t>& data,
                                       int field_size,
-                                      unsigned int* dataOffset)
+                                      unsigned int* dataOffset,
+                                      const heif_security_limits* limits)
 {
   unsigned int bytesRequired = (field_size / 8) * 4;
   if (data.size() - *dataOffset < bytesRequired) {
@@ -277,7 +277,8 @@ void RegionGeometry_Rectangle::encode(StreamWriter& writer, int field_size_bytes
 
 Error RegionGeometry_Ellipse::parse(const std::vector<uint8_t>& data,
                                     int field_size,
-                                    unsigned int* dataOffset)
+                                    unsigned int* dataOffset,
+                                    const heif_security_limits* limits)
 {
   unsigned int bytesRequired = (field_size / 8) * 4;
   if (data.size() - *dataOffset < bytesRequired) {
@@ -310,7 +311,8 @@ void RegionGeometry_Ellipse::encode(StreamWriter& writer, int field_size_bytes) 
 
 Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
                                     int field_size,
-                                    unsigned int* dataOffset)
+                                    unsigned int* dataOffset,
+                                    const heif_security_limits* limits)
 {
   uint32_t bytesRequired1 = (field_size / 8) * 1;
   if (data.size() - *dataOffset < bytesRequired1) {
@@ -328,6 +330,18 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
                  "Insufficient data remaining for polygon");
   }
 
+  if (UINT32_MAX / numPoints < sizeof(Point)) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Unspecified,
+      "Region polygon size exceeds integer range."
+    };
+  }
+
+  if (auto err = m_memory_handle.alloc(numPoints * sizeof(Point), limits, "region polygon")) {
+    return err;
+  }
+
   for (uint32_t i = 0; i < numPoints; i++) {
     Point p;
     p.x = parse_signed(data, field_size, dataOffset);
@@ -341,7 +355,8 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
 
 Error RegionGeometry_ReferencedMask::parse(const std::vector<uint8_t>& data,
                                           int field_size,
-                                          unsigned int* dataOffset)
+                                          unsigned int* dataOffset,
+                                          const heif_security_limits* limits)
 {
   unsigned int bytesRequired = (field_size / 8) * 4;
   if (data.size() - *dataOffset < bytesRequired) {
@@ -396,7 +411,8 @@ void RegionGeometry_Polygon::encode(StreamWriter& writer, int field_size_bytes) 
 
 Error RegionGeometry_InlineMask::parse(const std::vector<uint8_t>& data,
                                        int field_size,
-                                       unsigned int* dataOffset)
+                                       unsigned int* dataOffset,
+                                       const heif_security_limits* limits)
 {
   unsigned int bytesRequired = (field_size / 8) * 4 + 1;
   if (data.size() - *dataOffset < bytesRequired) {
@@ -409,15 +425,38 @@ Error RegionGeometry_InlineMask::parse(const std::vector<uint8_t>& data,
   height = parse_unsigned(data, field_size, dataOffset);
   uint8_t mask_coding_method = data[*dataOffset];
   *dataOffset = *dataOffset + 1;
+
   if (mask_coding_method != 0) {
     return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
                  "Deflate compressed inline mask is not yet supported");
   }
+
+  if (width / 8 + 1 > UINT32_MAX / height) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Unspecified,
+      "Mask image size exceeds maximum integer range."
+    };
+  }
+
+  if (limits->max_image_size_pixels / width < height) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Inline mask image exceeds maximum image size."
+    };
+  }
+
   unsigned int additionalBytesRequired = width * height / 8;
   if (data.size() - *dataOffset < additionalBytesRequired) {
         return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
                  "Insufficient data remaining for inline mask region data[]");
   }
+
+  if (auto err = m_memory_handle.alloc(additionalBytesRequired, limits, "region mask")) {
+    return err;
+  }
+
   mask_data.resize(additionalBytesRequired);
   std::copy(data.begin() + *dataOffset, data.begin() + *dataOffset + additionalBytesRequired, mask_data.begin());
   return Error::Ok;
