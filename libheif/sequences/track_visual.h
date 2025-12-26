@@ -42,7 +42,7 @@ public:
   // load track from file
   Error load(const std::shared_ptr<Box_trak>&) override;
 
-  void initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track>>& all_tracks) override;
+  [[nodiscard]] Error initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track>>& all_tracks) override;
 
   uint16_t get_width() const { return m_width; }
 

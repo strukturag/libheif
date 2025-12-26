@@ -94,7 +94,7 @@ Error Track_Visual::load(const std::shared_ptr<Box_trak>& trak)
 }
 
 
-void Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track> >& all_tracks)
+Error Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<std::shared_ptr<Track> >& all_tracks)
 {
   // --- check whether there is an auxiliary alpha track assigned to this track
 
@@ -110,6 +110,14 @@ void Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<
             track->get_auxiliary_info_type() == heif_auxiliary_track_info_type_alpha) {
           // Is it assigned to the current track
           auto tref = track->get_tref_box();
+          if (!tref) {
+            return {
+              heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Auxiliary track without 'tref'"
+            };
+          }
+
           auto references = tref->get_references(fourcc("auxl"));
           if (std::any_of(references.begin(), references.end(), [this](uint32_t id) { return id == get_id(); })) {
             // Assign it
@@ -120,6 +128,8 @@ void Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector<
       }
     }
   }
+
+  return {};
 }
 
 

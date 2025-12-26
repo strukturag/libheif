@@ -141,7 +141,7 @@ public:
 
   // This is called after creating all Track objects when reading a HEIF file.
   // We can now do initializations that require access to all tracks.
-  virtual void initialize_after_parsing(HeifContext*, const std::vector<std::shared_ptr<Track>>& all_tracks) { }
+  [[nodiscard]] virtual Error initialize_after_parsing(HeifContext*, const std::vector<std::shared_ptr<Track>>& all_tracks) { return {}; }
 
   heif_item_id get_id() const { return m_id; }
 

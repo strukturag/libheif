@@ -1912,7 +1912,10 @@ Error HeifContext::interpret_heif_file_sequences()
   }
 
   for (auto& track : m_tracks) {
-    track.second->initialize_after_parsing(this, all_tracks);
+    Error err = track.second->initialize_after_parsing(this, all_tracks);
+    if (err) {
+      return err;
+    }
   }
 
   return Error::Ok;
