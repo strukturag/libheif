@@ -676,6 +676,15 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     };
   }
 
+  if (uncC->get_row_align_size() > 0 &&
+      UINT32_MAX / uncC->get_row_align_size() < 8) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Aligned row size larger than supported maximum"
+    };
+  }
+
   Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, context->get_security_limits());
   if (!createImgResult) {
     return createImgResult.error();
