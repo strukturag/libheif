@@ -180,8 +180,8 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   }
 
 
-  uint16_t halfRange = (uint16_t) (1 << (bpp_y - 1));
-  int16_t halfRange_chroma = 1 << (bpp_cb - 1);
+  uint16_t halfRange = static_cast<uint16_t>(1 << (bpp_y - 1));
+  int16_t halfRange_chroma = static_cast<int16_t>(1 << (bpp_cb - 1));
 
   int32_t fullRange = (1 << bpp_y) - 1;
   int limited_range_offset_int = 16 << (bpp_y - 8);
