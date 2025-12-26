@@ -178,8 +178,10 @@ uint32_t RegionGeometry::parse_unsigned(const std::vector<uint8_t>& data,
 {
   uint32_t x;
   if (field_size == 32) {
-    x = ((data[*dataOffset] << 24) | (data[*dataOffset + 1] << 16) |
-         (data[*dataOffset + 2] << 8) | (data[*dataOffset + 3]));
+    x = ((static_cast<uint32_t>(data[*dataOffset + 0]) << 24) |
+         (static_cast<uint32_t>(data[*dataOffset + 1]) << 16) |
+         (static_cast<uint32_t>(data[*dataOffset + 2]) << 8) |
+         (static_cast<uint32_t>(data[*dataOffset + 3])));
     *dataOffset = *dataOffset + 4;
   }
   else {
