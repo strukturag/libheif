@@ -58,8 +58,8 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override;
 
-  void processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column,
-                   uint32_t out_x0, uint32_t out_y0);
+  [[nodiscard]] Error processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column,
+                                  uint32_t out_x0, uint32_t out_y0);
 };
 
 #endif // UNCI_DECODER_PIXEL_INTERLEAVE_H

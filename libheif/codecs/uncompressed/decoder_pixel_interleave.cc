@@ -90,13 +90,16 @@ Error PixelInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
 
   UncompressedBitReader srcBits(src_data);
 
-  processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+  err = processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+  if (err) {
+    return err;
+  }
 
   return Error::Ok;
 }
 
 
-void PixelInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
+Error PixelInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
 {
   for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
     srcBits.markRowStart();
@@ -116,8 +119,14 @@ void PixelInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_
           srcBits.skip_bytes(entry.bytes_per_component_sample);
         }
       }
-      srcBits.handlePixelAlignment(m_uncC->get_pixel_size());
+      auto err = srcBits.handlePixelAlignment(m_uncC->get_pixel_size());
+      if (err) {
+        return err;
+      }
     }
+
     srcBits.handleRowAlignment(m_uncC->get_row_align_size());
   }
+
+  return {};
 }

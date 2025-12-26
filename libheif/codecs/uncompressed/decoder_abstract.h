@@ -61,13 +61,24 @@ public:
     m_tileStartOffset = get_current_byte_index();
   }
 
-  inline void handlePixelAlignment(uint32_t pixel_size)
+  inline Error handlePixelAlignment(uint32_t pixel_size)
   {
     if (pixel_size != 0) {
       uint32_t bytes_in_pixel = get_current_byte_index() - m_pixelStartOffset;
-      uint32_t padding = pixel_size - bytes_in_pixel;
-      skip_bytes(padding);
+      if (pixel_size > bytes_in_pixel) {
+        uint32_t padding = pixel_size - bytes_in_pixel;
+        skip_bytes(padding);
+      }
+      else {
+        return {
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "Uncompressed image: invalid 'pixel_size'"
+        };
+      }
     }
+
+    return {};
   }
 
   void handleRowAlignment(uint32_t alignment)
