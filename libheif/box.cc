@@ -3700,8 +3700,8 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-#if 0
-  // Note: This input sanity check does not work as expected.
+#if 1
+  // Note: This input sanity check first did not work as expected.
   // Its idea was to prevent infinite recursions while decoding when the input file
   // contains cyclic references. However, apparently there are cases where cyclic
   // references are actually allowed, like with images that have premultiplied alpha channels:
@@ -3710,6 +3710,8 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   // | reference with type 'auxl' from ID: 2 to IDs: 1
   // | reference with type 'prem' from ID: 1 to IDs: 2
   //
+  // We now only follow 'dimg' references. This should be free from cyclic references.
+  //
   // TODO: implement the infinite recursion detection in a different way. E.g. by passing down
   //       the already processed item-ids while decoding an image and checking whether the current
   //       item has already been decoded before.
@@ -3717,6 +3719,10 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   // --- check for cyclic references
 
   for (const auto& ref : m_references) {
+    if (ref.header.get_short_type() != fourcc("dimg")) {
+      continue;
+    }
+
     std::set<heif_item_id> reached_ids; // IDs that we have already reached in the DAG
     std::set<heif_item_id> todo;    // IDs that still need to be followed
 
@@ -3731,6 +3737,10 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
       // if this ID refers to another 'iref', follow it
 
       for (const auto& succ_ref : m_references) {
+        if (succ_ref.header.get_short_type() != fourcc("dimg")) {
+          continue;
+        }
+
         if (succ_ref.from_item_ID == id) {
 
           // Check whether any successor IDs has been visited yet, which would be an error.
@@ -3740,7 +3750,7 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
             if (reached_ids.find(succ_ref_id) != reached_ids.end()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Unspecified,
-                           "'iref' has cyclic references");
+                           "'iref' has cyclic 'dimg' references");
             }
 
             todo.insert(succ_ref_id);
