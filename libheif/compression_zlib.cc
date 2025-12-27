@@ -82,6 +82,11 @@ std::vector<uint8_t> compress(const uint8_t* input, size_t size, int windowSize)
 
 Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize)
 {
+  if (compressed_input.empty()) {
+    return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
+                 "Empty zlib compressed data.");
+  }
+
   std::vector<uint8_t> output;
 
   // decompress data with zlib
