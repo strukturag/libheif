@@ -59,7 +59,7 @@ public:
     uint8_t LengthSizeMinusOne = 3;  // 0,1,3   default: 4 bytes for NAL unit lengths
     bool ptl_present_flag = true;
 
-    // only of PTL present
+    // only if PTL present
     uint16_t ols_idx; // 9 bits
     uint8_t num_sublayers; // 3 bits
     uint8_t constant_frame_rate; // 2 bits

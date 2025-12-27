@@ -120,7 +120,13 @@ Error Box_vvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
     c.max_picture_height = range.read16();
     c.avg_frame_rate = range.read16();
   }
-
+  else {
+    return Error{
+      heif_error_Unsupported_feature,
+      heif_suberror_Unspecified,
+      "Reading vvcC configuration with ptl_present_flag=0 is not supported."
+    };
+  }
 
   // read NAL arrays
 
