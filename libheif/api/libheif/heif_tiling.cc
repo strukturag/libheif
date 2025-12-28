@@ -109,7 +109,8 @@ heif_error heif_image_handle_decode_image_tile(const heif_image_handle* in_handl
                                                                                              colorspace,
                                                                                              chroma,
                                                                                              *dec_options,
-                                                                                             true, x0, y0);
+                                                                                             true, x0, y0,
+                                                                                             {});
   heif_decoding_options_free(dec_options);
 
   if (!decodingResult) {

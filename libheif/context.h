@@ -115,7 +115,8 @@ public:
                                                        heif_colorspace out_colorspace,
                                                        heif_chroma out_chroma,
                                                        const heif_decoding_options& options,
-                                                       bool decode_only_tile, uint32_t tx, uint32_t ty) const;
+                                                       bool decode_only_tile, uint32_t tx, uint32_t ty,
+                                                       std::set<heif_item_id> processed_ids) const;
 
   Result<std::shared_ptr<HeifPixelImage>> convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
                                                                        heif_colorspace out_colorspace,

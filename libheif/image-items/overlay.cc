@@ -273,14 +273,25 @@ Error ImageItem_Overlay::read_overlay_spec()
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const heif_decoding_options& options,
-                                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+                                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                                   std::set<heif_item_id> processed_ids) const
 {
-  return decode_overlay_image(options);
+  return decode_overlay_image(options, processed_ids);
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(const heif_decoding_options& options) const
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(const heif_decoding_options& options,
+                                                                                std::set<heif_item_id> processed_ids) const
 {
+  if (processed_ids.contains(get_id())) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iref' has cyclic references"};
+  }
+
+  processed_ids.insert(get_id());
+
+
   std::shared_ptr<HeifPixelImage> img;
 
   uint32_t w = m_overlay_spec.get_canvas_width();
@@ -332,7 +343,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
       return error;
     }
 
-    auto decodeResult = imgItem->decode_image(options, false, 0,0);
+    auto decodeResult = imgItem->decode_image(options, false, 0,0, processed_ids);
     if (!decodeResult) {
       return decodeResult.error();
     }

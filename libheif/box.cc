@@ -3700,7 +3700,7 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-#if 1
+#if 0
   // Note: This input sanity check first did not work as expected.
   // Its idea was to prevent infinite recursions while decoding when the input file
   // contains cyclic references. However, apparently there are cases where cyclic
@@ -3710,11 +3710,10 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   // | reference with type 'auxl' from ID: 2 to IDs: 1
   // | reference with type 'prem' from ID: 1 to IDs: 2
   //
-  // We now only follow 'dimg' references. This should be free from cyclic references.
-  //
-  // TODO: implement the infinite recursion detection in a different way. E.g. by passing down
-  //       the already processed item-ids while decoding an image and checking whether the current
-  //       item has already been decoded before.
+  // We now test for cyclic references during the image decoding.
+  // We pass down the item IDs that have already been seen during the decoding process.
+  // If we try to decode an image IDs that has already been seen previously, we throw an error.
+  // The advantage is that the error only occurs when we are trying to decode the faulty image.
 
   // --- check for cyclic references
 

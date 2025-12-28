@@ -305,11 +305,13 @@ public:
 
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                                bool decode_tile_only, uint32_t tile_x0,
-                                                               uint32_t tile_y0) const;
+                                                               uint32_t tile_y0,
+                                                               std::set<heif_item_id> processed_ids) const;
 
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0,
-                                                                          uint32_t tile_y0) const;
+                                                                          uint32_t tile_y0,
+                                                                          std::set<heif_item_id> processed_ids) const;
 
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
 
@@ -464,14 +466,15 @@ public:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0,
-                                                       uint32_t tile_y0) const override
+                                                       uint32_t tile_y0,
+                                                       std::set<heif_item_id> processed_ids) const override
   {
     return m_item_error;
   }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0,
-                                                                  uint32_t tile_y0) const override
+                                                                  uint32_t tile_y0, std::set<heif_item_id> processed_ids) const override
   {
     return m_item_error;
   }

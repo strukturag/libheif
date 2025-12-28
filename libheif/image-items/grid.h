@@ -130,7 +130,8 @@ public:
   }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
-                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
+                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                  std::set<heif_item_id> processed_ids) const override;
 
   heif_brand2 get_compatible_brand() const override;
 
@@ -161,14 +162,15 @@ private:
 
   Error read_grid_spec();
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options) const;
+  Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options, std::set<heif_item_id> processed_ids) const;
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
+  Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty, std::set<heif_item_id> processed_ids) const;
 
   Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                     std::shared_ptr<HeifPixelImage>& inout_image,
                                     const heif_decoding_options& options, int& progress_counter,
-                                    std::shared_ptr<std::vector<Error> > warnings) const;
+                                    std::shared_ptr<std::vector<Error> > warnings,
+                                    std::set<heif_item_id> processed_ids) const;
 };
 
 

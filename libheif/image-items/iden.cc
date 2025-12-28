@@ -36,8 +36,18 @@ ImageItem_iden::ImageItem_iden(HeifContext* ctx, heif_item_id id)
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const heif_decoding_options& options,
-                                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+                                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                                std::set<heif_item_id> processed_ids) const
 {
+  if (processed_ids.contains(get_id())) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iref' has cyclic references"};
+  }
+
+  processed_ids.insert(get_id());
+
+
   std::shared_ptr<HeifPixelImage> img;
 
   // find the ID of the image this image is derived from
@@ -52,10 +62,16 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
 
   std::vector<heif_item_id> image_references = iref_box->get_references(get_id(), fourcc("dimg"));
 
-  if ((int) image_references.size() != 1) {
+  if (image_references.size() > 1) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "'iden' image with more than one reference image");
+  }
+
+  if (image_references.empty()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iden' image without 'dimg' reference");
   }
 
 
@@ -77,7 +93,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0);
+  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0, processed_ids);
 }
 
 

@@ -60,7 +60,8 @@ public:
   // Code from encode_uncompressed_image() has been moved to here.
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
-                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
+                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                  std::set<heif_item_id> processed_ids) const override;
 
   heif_image_tiling get_heif_image_tiling() const override;
 

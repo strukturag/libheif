@@ -679,7 +679,8 @@ void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
-                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                std::set<heif_item_id> processed_ids) const
 {
   // --- check whether image size (according to 'ispe') exceeds maximum
 
@@ -704,7 +705,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
 
   // --- decode image
 
-  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0, processed_ids);
   if (!decodingResult) {
     return decodingResult.error();
   }
@@ -802,7 +803,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
       return alpha_image->get_item_error();
     }
 
-    auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0);
+    auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0, processed_ids);
     if (!alphaDecodingResult) {
       return alphaDecodingResult.error();
     }
@@ -927,8 +928,18 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 #endif
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const heif_decoding_options& options,
-                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                           std::set<heif_item_id> processed_ids) const
 {
+  if (processed_ids.contains(m_id)) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iref' has cyclic references"};
+  }
+
+  processed_ids.insert(m_id);
+
+
   DataExtent extent;
   extent.set_from_image_item(get_file(), get_id());
 

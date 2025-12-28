@@ -1283,7 +1283,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
                                                                   heif_colorspace out_colorspace,
                                                                   heif_chroma out_chroma,
                                                                   const heif_decoding_options& options,
-                                                                  bool decode_only_tile, uint32_t tx, uint32_t ty) const
+                                                                  bool decode_only_tile, uint32_t tx, uint32_t ty,
+                                                                  std::set<heif_item_id> processed_ids) const
 {
   std::shared_ptr<ImageItem> imgitem;
   if (m_all_images.contains(ID)) {
@@ -1296,7 +1297,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   }
 
 
-  auto decodingResult = imgitem->decode_image(options, decode_only_tile, tx, ty);
+  auto decodingResult = imgitem->decode_image(options, decode_only_tile, tx, ty, processed_ids);
   if (!decodingResult) {
     return decodingResult.error();
   }

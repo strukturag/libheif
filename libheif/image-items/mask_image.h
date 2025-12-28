@@ -98,7 +98,8 @@ public:
   int get_chroma_bits_per_pixel() const override { return 0; }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
-                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
+                                                                  bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                                                  std::set<heif_item_id> processed_ids) const override;
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                          heif_encoder* encoder,

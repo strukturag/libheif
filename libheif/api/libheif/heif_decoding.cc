@@ -246,7 +246,7 @@ heif_error heif_decode_image(const heif_image_handle* in_handle,
                                                                                              colorspace,
                                                                                              chroma,
                                                                                              dec_options,
-                                                                                             false, 0, 0);
+                                                                                             false, 0, 0, {});
 
   if (!decodingResult) {
     return decodingResult.error_struct(in_handle->image.get());

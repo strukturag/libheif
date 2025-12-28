@@ -759,7 +759,8 @@ void ImageItem_Tiled::process_before_write()
 
 Result<std::shared_ptr<HeifPixelImage>>
 ImageItem_Tiled::decode_compressed_image(const heif_decoding_options& options,
-                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+                                         bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
+                                         std::set<heif_item_id> processed_ids) const
 {
   if (decode_tile_only) {
     return decode_grid_tile(options, tile_x0, tile_y0);
