@@ -21,7 +21,6 @@
 #ifndef LIBHEIF_TILED_H
 #define LIBHEIF_TILED_H
 
-
 #include "image_item.h"
 #include "codecs/decoder.h"
 #include "box.h"
@@ -30,6 +29,7 @@
 #include <memory>
 #include <utility>
 #include "libheif/heif_experimental.h"
+#include <set>
 
 
 uint64_t number_of_tiles(const heif_tiled_image_parameters& params);
