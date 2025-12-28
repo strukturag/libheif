@@ -102,16 +102,12 @@ typedef struct heif_decoding_options
   // When set to NULL, default options will be used
   heif_color_conversion_options_ext* color_conversion_options_ext;
 
-  // version 8 options
+  // version 8 options (v1.21.0)
 
   // If enabled, it will decode the media timeline, ignoring the sequence tracks edit-list.
   int ignore_sequence_editlist; // bool
 
-  // version 9 options
-
   heif_color_profile_nclx* output_image_nclx_profile;
-
-  // version 10 options (v1.21.0)
 
   int num_library_threads; // 0 = let libheif decide (TODO, currently ignored)
   int num_codec_threads; // 0 = use decoder default
