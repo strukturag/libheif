@@ -3719,14 +3719,27 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   // --- check for cyclic references
 
   for (const auto& ref : m_references) {
-    if (ref.header.get_short_type() != fourcc("dimg")) {
+    if (ref.header.get_short_type() != fourcc("dimg") &&
+        ref.header.get_short_type() != fourcc("auxl")) {
       continue;
     }
 
     std::set<heif_item_id> reached_ids; // IDs that we have already reached in the DAG
     std::set<heif_item_id> todo;    // IDs that still need to be followed
 
-    todo.insert(ref.from_item_ID);  // start at base item
+    bool reverse = (ref.header.get_short_type() != fourcc("auxl"));
+
+    if (!reverse) {
+      todo.insert(ref.from_item_ID);  // start at base item
+    }
+    else {
+      if (ref.to_item_ID.empty()) {
+        continue;
+      }
+
+      // TODO: what if aux image is assigned to multiple images?
+      todo.insert(ref.to_item_ID[0]);  // start at base item
+    }
 
     while (!todo.empty()) {
       // transfer ID into set of reached IDs
@@ -3737,20 +3750,37 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
       // if this ID refers to another 'iref', follow it
 
       for (const auto& succ_ref : m_references) {
-        if (succ_ref.header.get_short_type() != fourcc("dimg")) {
+        if (succ_ref.header.get_short_type() != fourcc("dimg") &&
+            succ_ref.header.get_short_type() != fourcc("auxl")) {
           continue;
         }
 
-        if (succ_ref.from_item_ID == id) {
+        heif_item_id from;
+        std::vector<heif_item_id> to;
+
+        if (succ_ref.header.get_short_type() == fourcc("auxl")) {
+          if (succ_ref.to_item_ID.empty()) {
+            continue;
+          }
+
+          from = succ_ref.to_item_ID[0];
+          to = {succ_ref.from_item_ID};
+        }
+        else {
+          from = succ_ref.from_item_ID;
+          to = succ_ref.to_item_ID;
+        }
+
+        if (from == id) {
 
           // Check whether any successor IDs has been visited yet, which would be an error.
           // Otherwise, put that ID into the 'todo' set.
 
-          for (const auto& succ_ref_id : succ_ref.to_item_ID) {
+          for (const auto& succ_ref_id : to) {
             if (reached_ids.find(succ_ref_id) != reached_ids.end()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Unspecified,
-                           "'iref' has cyclic 'dimg' references");
+                           "'iref' has cyclic references");
             }
 
             todo.insert(succ_ref_id);
