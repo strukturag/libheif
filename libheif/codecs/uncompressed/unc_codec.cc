@@ -988,12 +988,14 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     }
 
     int bpp = image->get_bits_per_pixel(heif_channel_Y);
-    Box_uncC::Component component0 = {0, (uint8_t) (bpp), component_format_unsigned, 0};
+    heif_uncompressed_component_format format = to_unc_component_format(image, heif_channel_Y);
+    Box_uncC::Component component0 = {0, (uint8_t) (bpp), format, 0};
     uncC->add_component(component0);
 
     if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
+      heif_uncompressed_component_format format_alpha = to_unc_component_format(image, heif_channel_Alpha);
       bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-      Box_uncC::Component component1 = {1, (uint8_t) (bpp), component_format_unsigned, 0};
+      Box_uncC::Component component1 = {1, (uint8_t) (bpp), format_alpha, 0};
       uncC->add_component(component1);
     }
 
@@ -1017,4 +1019,30 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
                  "Unsupported colourspace");
   }
   return Error::Ok;
+}
+
+heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype channel_datatype)
+{
+  switch (channel_datatype) {
+    case heif_channel_datatype_signed_integer:
+      return component_format_signed;
+
+    case heif_channel_datatype_floating_point:
+      return component_format_float;
+
+    case heif_channel_datatype_complex_number:
+      return component_format_complex;
+
+    case heif_channel_datatype_unsigned_integer:
+    case heif_channel_datatype_undefined:
+    default:
+      return component_format_unsigned;
+  }
+}
+
+heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
+{
+    heif_channel_datatype datatype = image->get_datatype(channel);
+    heif_uncompressed_component_format component_format = to_unc_component_format(datatype);
+    return component_format;
 }
