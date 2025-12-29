@@ -989,13 +989,13 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
 
     int bpp = image->get_bits_per_pixel(heif_channel_Y);
     heif_uncompressed_component_format format = to_unc_component_format(image, heif_channel_Y);
-    Box_uncC::Component component0 = {0, (uint8_t) (bpp), format, 0};
+    Box_uncC::Component component0 = {0, (uint8_t) (bpp), (uint8_t) format, 0};
     uncC->add_component(component0);
 
     if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
       heif_uncompressed_component_format format_alpha = to_unc_component_format(image, heif_channel_Alpha);
       bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-      Box_uncC::Component component1 = {1, (uint8_t) (bpp), format_alpha, 0};
+      Box_uncC::Component component1 = {1, (uint8_t) (bpp), (uint8_t) format_alpha, 0};
       uncC->add_component(component1);
     }
 
