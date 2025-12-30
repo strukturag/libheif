@@ -25,7 +25,7 @@
 */
 
 #include "sdl.hh"
-#include <assert.h>
+#include <cassert>
 #include <cstdio>
 
 
