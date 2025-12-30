@@ -20,6 +20,7 @@
 
 #include "heif_image_handle.h"
 #include "api_structs.h"
+#include <climits>
 #include <string>
 
 
