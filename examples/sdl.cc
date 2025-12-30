@@ -25,11 +25,11 @@
 */
 
 #include "sdl.hh"
-#include <assert.h>
+#include <sstream>
 
 
-bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma chroma,
-                           const char* window_title)
+std::optional<std::string> SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma chroma,
+                                                 const char* window_title)
 {
   // reduce image size to a multiple of 8 (apparently required by YUV overlay)
 
@@ -39,9 +39,10 @@ bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma ch
   mChroma = chroma;
 
   if (SDL_Init(SDL_INIT_VIDEO) < 0 ) {
-    printf("SDL_Init() failed: %s\n", SDL_GetError( ) );
+    std::stringstream sstr;
+    sstr << "SDL_Init() failed: " << SDL_GetError();
     SDL_Quit();
-    return false;
+    return sstr.str();
   }
 
   // set window title
@@ -49,18 +50,19 @@ bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma ch
     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     frame_width, frame_height, 0);
   if (!mWindow) {
-    printf("SDL: Couldn't set video mode to %dx%d: %s\n",
-           frame_width, frame_height, SDL_GetError());
+    std::stringstream sstr;
+    sstr << "SDL: Couldn't set video mode to " << frame_width << "x" << frame_height << ": " << SDL_GetError();
     SDL_Quit();
-    return false;
+    return sstr.str();
   }
 
   Uint32 flags = 0;  // Empty flags prioritize SDL_RENDERER_ACCELERATED.
   mRenderer = SDL_CreateRenderer(mWindow, -1, flags);
   if (!mRenderer) {
-    printf("SDL: Couldn't create renderer: %s\n", SDL_GetError());
+    std::stringstream sstr;
+    sstr << "SDL: Couldn't create renderer: " << SDL_GetError();
     SDL_Quit();
-    return false;
+    return sstr.str();
   }
 
   Uint32 pixelFormat = 0;
@@ -69,19 +71,21 @@ bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma ch
   case SDL_CHROMA_420:  pixelFormat = SDL_PIXELFORMAT_YV12; break;
   case SDL_CHROMA_422:  pixelFormat = SDL_PIXELFORMAT_YV12; break;
   case SDL_CHROMA_444:  pixelFormat = SDL_PIXELFORMAT_YV12; break;
-  //case SDL_CHROMA_444:  pixelFormat = SDL_PIXELFORMAT_YV12; break;
-  default:
-    printf("Unsupported chroma: %d\n", mChroma);
+  default: {
+    std::stringstream sstr;
+    sstr << "Unsupported chroma: " << (int)mChroma;
     SDL_Quit();
-    return false;
+    return sstr.str();
+  }
   }
 
   mTexture = SDL_CreateTexture(mRenderer, pixelFormat,
     SDL_TEXTUREACCESS_STREAMING, frame_width, frame_height);
   if (!mTexture ) {
-    printf("SDL: Couldn't create SDL texture: %s\n", SDL_GetError());
+    std::stringstream sstr;
+    sstr << "SDL: Couldn't create SDL texture: " << SDL_GetError();
     SDL_Quit();
-    return false;
+    return sstr.str();
   }
 
   rect.x = 0;
@@ -91,7 +95,7 @@ bool SDL_YUV_Display::init(int frame_width, int frame_height, enum SDL_Chroma ch
 
   mWindowOpen=true;
 
-  return true;
+  return {};
 }
 
 void SDL_YUV_Display::display(const unsigned char *Y,

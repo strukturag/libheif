@@ -319,9 +319,9 @@ int main(int argc, char** argv)
   // --- open output window
 
   SDL_YUV_Display sdlWindow;
-  bool success = sdlWindow.init(w, h, SDL_YUV_Display::SDL_CHROMA_420, "heif-view");
-  if (!success) {
-    std::cerr << "Cannot open output window\n";
+  std::optional<std::string> sdlError = sdlWindow.init(w, h, SDL_YUV_Display::SDL_CHROMA_420, "heif-view");
+  if (sdlError) {
+    std::cerr << "Cannot open output window. " << *sdlError << "\n";
     return 10;
   }
 
