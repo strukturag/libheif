@@ -1,0 +1,39 @@
+name: gcc-versions
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        env:
+          - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 10 }
+          - { NAME: "gcc-11", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 11 }
+          - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 12 }
+          - { NAME: "gcc-13", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 13 }
+          - { NAME: "gcc-14", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 14 }
+    env: ${{ matrix.env }}
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install dependencies
+      run: |
+        ./scripts/install-ci-linux.sh
+        sudo apt install gcc-${GCC} g++-${GCC}
+
+    - name: Prepare CI
+      env:
+        CC: gcc-${{matrix.env.GCC}}
+        CXX: g++-${{matrix.env.GCC}}
+      run: |
+        ./scripts/prepare-ci.sh
+
+    - name: Run tests
+      env:
+        CC: gcc-${{matrix.env.GCC}}
+        CXX: g++-${{matrix.env.GCC}}
+      run: |
+        ./scripts/run-ci.sh
