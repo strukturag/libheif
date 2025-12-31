@@ -9,8 +9,8 @@ jobs:
     strategy:
       matrix:
         env:
-          - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC=10 }
-          - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC=12 }
+          - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 10 }
+          - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 12 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-22.04
     steps:
