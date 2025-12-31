@@ -9,7 +9,9 @@ jobs:
     strategy:
       matrix:
         env:
+          - { NAME: "gcc-9", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 9 }
           - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 10 }
+          - { NAME: "gcc-11", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 11 }
           - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 12 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-22.04
@@ -23,14 +25,14 @@ jobs:
 
     - name: Prepare CI
       env:
-        CC: gcc-${GCC}
-        CXX: g++-${GCC}
+        CC: gcc-${{matrix.env.GCC}}
+        CXX: g++-${{matrix.env.GCC}}
       run: |
         ./scripts/prepare-ci.sh
 
     - name: Run tests
       env:
-        CC: gcc-${GCC}
-        CXX: g++-${GCC}
+        CC: gcc-${{matrix.env.GCC}}
+        CXX: g++-${{matrix.env.GCC}}
       run: |
         ./scripts/run-ci.sh
