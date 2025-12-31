@@ -9,7 +9,6 @@ jobs:
     strategy:
       matrix:
         env:
-          - { NAME: "gcc-9", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 9 }
           - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 10 }
           - { NAME: "gcc-11", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 11 }
           - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 12 }
