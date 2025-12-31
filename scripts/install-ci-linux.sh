@@ -59,6 +59,12 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     ls -lR $BUILD_ROOT/libde265/dist
 fi
 
+if [ "$WITH_LIBDE265" = "3" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        libde265-dev \
+        "
+fi
+
 if [ "$WITH_AOM" = "1" ]; then
     ADD_LIBHEIF_PPA=1
     INSTALL_PACKAGES="$INSTALL_PACKAGES \

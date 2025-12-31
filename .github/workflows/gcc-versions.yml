@@ -9,11 +9,13 @@ jobs:
     strategy:
       matrix:
         env:
-          - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 10 }
-          - { NAME: "gcc-11", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 11 }
-          - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, GCC: 12 }
+          - { NAME: "gcc-10", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 10 }
+          - { NAME: "gcc-11", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 11 }
+          - { NAME: "gcc-12", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 12 }
+          - { NAME: "gcc-13", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 13 }
+          - { NAME: "gcc-14", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 14 }
     env: ${{ matrix.env }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
 
