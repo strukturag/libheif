@@ -124,6 +124,7 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
 
     if (err == Z_BUF_ERROR) {
       if (dst.size() >= 65536) { // TODO: make this a security limit
+        inflateEnd(&strm);
         std::stringstream sstr;
         sstr << "Error performing zlib inflate: maximum output buffer size exceeded\n";
         return Error(heif_error_Memory_allocation_error, heif_suberror_Compression_initialisation_error, sstr.str());
