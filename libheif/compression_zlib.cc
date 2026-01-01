@@ -91,8 +91,8 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
 
   // decompress data with zlib
 
-  const int outBufferSize = 8192;
-  uint8_t dst[outBufferSize];
+  std::vector<uint8_t> dst;
+  dst.resize(8192);
 
   z_stream strm;
   memset(&strm, 0, sizeof(z_stream));
@@ -100,8 +100,8 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
   strm.avail_in = (int)compressed_input.size();
   strm.next_in = (Bytef*) compressed_input.data();
 
-  strm.avail_out = outBufferSize;
-  strm.next_out = (Bytef*) dst;
+  strm.avail_out = (uInt)dst.size();
+  strm.next_out = (Bytef*) dst.data();
 
   strm.zalloc = Z_NULL;
   strm.zfree = Z_NULL;
@@ -117,15 +117,25 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
   }
 
   do {
-    strm.next_out = dst;
-    strm.avail_out = outBufferSize;
+    strm.avail_out = (uInt)dst.size();
+    strm.next_out = (Bytef*) dst.data();
 
-    err = inflate(&strm, Z_FINISH);
-    if (err == Z_BUF_ERROR || err == Z_OK) {
-      // this is the usual case when we run out of buffer space
-      // -> do nothing
+    err = inflate(&strm, Z_NO_FLUSH);
+
+    if (err == Z_BUF_ERROR) {
+      if (dst.size() >= 65536) { // TODO: make this a security limit
+        std::stringstream sstr;
+        sstr << "Error performing zlib inflate: maximum output buffer size exceeded\n";
+        return Error(heif_error_Memory_allocation_error, heif_suberror_Compression_initialisation_error, sstr.str());
+      }
+
+      dst.resize(dst.size() * 2);
+      strm.next_out = dst.data();
+      strm.avail_out = (uInt)dst.size();
+      continue;
     }
-    else if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
+
+    if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
       inflateEnd(&strm);
       std::stringstream sstr;
       sstr << "Error performing zlib inflate: " << (strm.msg ? strm.msg : "NULL") << " (" << err << ")\n";
@@ -133,7 +143,7 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
     }
 
     // append decoded data to output
-    output.insert(output.end(), dst, dst + outBufferSize - strm.avail_out);
+    output.insert(output.end(), dst.begin(), dst.end() - strm.avail_out);
   } while (err != Z_STREAM_END);
 
 
