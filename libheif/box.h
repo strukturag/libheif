@@ -1484,7 +1484,7 @@ public:
       principal_point_y -= clap->top(image_height);
     }
 
-    void apply_imir(const Box_imir* imir, int image_width, int image_height) {
+    void apply_imir(const Box_imir* imir, uint32_t image_width, uint32_t image_height) {
       switch (imir->get_mirror_direction()) {
         case heif_transform_mirror_direction_horizontal:
           focal_length_x *= -1;
