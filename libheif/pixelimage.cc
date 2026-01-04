@@ -575,6 +575,10 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
                plane->m_width * bytes_per_pixel);
       }
 
+      // --- replace existing image plane with reallocated plane
+
+      delete[] planeIter.second.allocated_mem;
+
       planeIter.second = newPlane;
       plane = &planeIter.second;
     }
