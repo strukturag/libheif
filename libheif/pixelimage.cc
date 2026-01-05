@@ -619,10 +619,9 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
 
 bool HeifPixelImage::has_channel(heif_channel channel) const
 {
-  for (const auto& plane : m_planes) {
-    if (plane.m_channel == channel) {
-      return true;
-    }
+  const ImagePlane* plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return true;
   }
   return false;
 }
@@ -639,10 +638,9 @@ bool HeifPixelImage::has_alpha() const
 
 uint32_t HeifPixelImage::get_width(enum heif_channel channel) const 
 {
-  for (const auto& plane : m_planes) {
-    if (plane.m_channel == channel) {
-      return plane.m_width;
-    }
+  const ImagePlane* plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return plane->m_width;
   }
   return 0;
 }
@@ -651,10 +649,9 @@ uint32_t HeifPixelImage::get_width(enum heif_channel channel) const
 
 uint32_t HeifPixelImage::get_height(enum heif_channel channel) const
 {
-  for (const auto& plane : m_planes) {
-    if (plane.m_channel == channel) {
-      return plane.m_height;
-    }
+  const ImagePlane* plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return plane->m_height;
   }
   return 0;
 }
@@ -665,7 +662,7 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
   std::set<heif_channel> channels;
 
   for (const auto& plane : m_planes) {
-    channels.insert(plane.first);
+    channels.insert(plane.m_channel);
   }
 
   return channels;
@@ -701,12 +698,11 @@ uint8_t HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) co
 
 uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
-    return -1;
+  const ImagePlane *plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return plane->m_bit_depth;
   }
-
-  return iter->second.m_bit_depth;
+  return -1;
 }
 
 
@@ -745,23 +741,23 @@ uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
 
 heif_channel_datatype HeifPixelImage::get_datatype(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
-    return heif_channel_datatype_undefined;
+  const ImagePlane* plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return plane->m_datatype;
   }
 
-  return iter->second.m_datatype;
+  return heif_channel_datatype_undefined;
 }
 
 
 int HeifPixelImage::get_number_of_interleaved_components(heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
-    return 0;
+  const ImagePlane* plane = get_first_plane_by_channel(channel);
+  if (plane) {
+    return plane->m_num_interleaved_components;
   }
 
-  return iter->second.m_num_interleaved_components;
+  return 0;
 }
 
 

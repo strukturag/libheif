@@ -394,6 +394,7 @@ private:
   uint32_t m_sample_duration = 0; // duration of a sequence frame
 
   std::vector<Error> m_warnings;
+  const ImagePlane* get_first_plane_by_channel(heif_channel channel) const;
 };
 
 #endif
