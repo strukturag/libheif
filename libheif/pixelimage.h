@@ -264,8 +264,8 @@ public:
   template <typename T>
   T* get_channel(heif_channel channel, size_t* out_stride)
   {
-    auto iter = m_planes.find(channel);
-    if (iter == m_planes.end()) {
+    ImagePlane* plane = get_first_plane_by_channel(channel);
+    if (!plane) {
       if (out_stride)
         *out_stride = 0;
 
@@ -273,12 +273,12 @@ public:
     }
 
     if (out_stride) {
-      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
+      *out_stride = static_cast<int>(plane->stride / sizeof(T));
     }
 
     //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
 
-    return static_cast<T*>(iter->second.mem);
+    return static_cast<T*>(plane->mem);
   }
 
   template <typename T>
@@ -382,6 +382,26 @@ private:
     void crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
+  ImagePlane* get_first_plane_by_channel(heif_channel channel)
+  {
+    for (auto& plane : m_planes) {
+      if (plane.m_channel == channel) {
+        return &plane;
+      }
+    }
+    return nullptr;
+  }
+
+  const ImagePlane* get_first_plane_by_channel(heif_channel channel) const
+  {
+    for (const auto& plane : m_planes) {
+      if (plane.m_channel == channel) {
+        return &plane;
+      }
+    }
+    return nullptr;
+  }
+
   uint32_t m_width = 0;
   uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
@@ -394,7 +414,6 @@ private:
   uint32_t m_sample_duration = 0; // duration of a sequence frame
 
   std::vector<Error> m_warnings;
-  const ImagePlane* get_first_plane_by_channel(heif_channel channel) const;
 };
 
 #endif

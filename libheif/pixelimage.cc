@@ -772,12 +772,17 @@ Error HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelI
   uint32_t width = src_image->get_width(src_channel);
   uint32_t height = src_image->get_height(src_channel);
 
-  auto src_plane_iter = src_image->m_planes.find(src_channel);
-  assert(src_plane_iter != src_image->m_planes.end());
-  const auto& src_plane = src_plane_iter->second;
+  const ImagePlane* src_plane = nullptr;
+  for (const auto& plane : src_image->m_planes) {
+    if (plane.m_channel == src_channel) {
+      src_plane = &plane;
+      break;
+    }
+  }
+  assert(src_plane != nullptr);
 
   auto err = add_channel(dst_channel, width, height,
-                         src_plane.m_datatype,
+                         src_plane->m_datatype,
                          src_image->get_bits_per_pixel(src_channel), limits);
   if (err) {
     return err;
@@ -883,17 +888,44 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
                                                   heif_channel dst_channel)
 {
   // TODO: check that dst_channel does not exist yet
+  
+  const size_t nplanes = source->m_planes.size();
+  for (size_t i = 0; i < nplanes; i++) {
+    if (source->m_planes[i].m_channel == src_channel) {
+      
+      // Copy Source Plane
+      ImagePlane plane = source->m_planes[i];
 
-  ImagePlane plane = source->m_planes[src_channel];
-  source->m_planes.erase(src_channel);
-  source->m_memory_handle.free(plane.allocation_size);
+      // Remove Source Plane
+      source->m_planes.erase(source->m_planes.begin() + i);
 
-  m_planes.insert(std::make_pair(dst_channel, plane));
+      // Free Source Plane Memory
+      source->m_memory_handle.free(plane.allocation_size);
 
-  // Note: we assume that image planes are never transferred between heif_contexts
-  m_memory_handle.alloc(plane.allocation_size,
-                        source->m_memory_handle.get_security_limits(),
-                        "transferred image data");
+      plane.m_channel = dst_channel;
+      m_planes.push_back(std::move(plane));
+
+      // Note: we assume that image planes are never transferred between heif_contexts
+      m_memory_handle.alloc(m_planes.back().allocation_size,
+                            source->m_memory_handle.get_security_limits(),
+                            "transferred image data");
+      break;
+    }
+    
+  }
+
+  // ========================== pre-vector verison ==========================
+  // ImagePlane plane = source->m_planes[src_channel];
+  // source->m_planes.erase(src_channel);
+  // source->m_memory_handle.free(plane.allocation_size);
+  
+  // m_planes.insert(std::make_pair(dst_channel, plane));
+  
+  // // Note: we assume that image planes are never transferred between heif_contexts
+  // m_memory_handle.alloc(plane.allocation_size,
+  //                       source->m_memory_handle.get_security_limits(),
+  //                       "transferred image data");
+  // ========================== pre-vector verison ==========================
 }
 
 
@@ -1031,9 +1063,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
 
   // --- rotate all channels
 
-  for (const auto &plane_pair: m_planes) {
-    heif_channel channel = plane_pair.first;
-    const ImagePlane &plane = plane_pair.second;
+  for (const auto &plane: m_planes) {
+    heif_channel channel = plane.m_channel;
 
     /*
     if (plane.bit_depth != 8) {
@@ -1055,24 +1086,24 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
       return err;
     }
 
-    auto out_plane_iter = out_img->m_planes.find(channel);
-    assert(out_plane_iter != out_img->m_planes.end());
-    ImagePlane& out_plane = out_plane_iter->second;
+    // Get Plane
+    ImagePlane* out_plane = out_img->get_first_plane_by_channel(channel);
+    assert(out_plane != nullptr);
 
     if (plane.m_bit_depth <= 8) {
-      plane.rotate_ccw<uint8_t>(angle_degrees, out_plane);
+      plane.rotate_ccw<uint8_t>(angle_degrees, *out_plane);
     }
     else if (plane.m_bit_depth <= 16) {
-      plane.rotate_ccw<uint16_t>(angle_degrees, out_plane);
+      plane.rotate_ccw<uint16_t>(angle_degrees, *out_plane);
     }
     else if (plane.m_bit_depth <= 32) {
-      plane.rotate_ccw<uint32_t>(angle_degrees, out_plane);
+      plane.rotate_ccw<uint32_t>(angle_degrees, *out_plane);
     }
     else if (plane.m_bit_depth <= 64) {
-      plane.rotate_ccw<uint64_t>(angle_degrees, out_plane);
+      plane.rotate_ccw<uint64_t>(angle_degrees, *out_plane);
     }
     else if (plane.m_bit_depth <= 128) {
-      plane.rotate_ccw<heif_complex64>(angle_degrees, out_plane);
+      plane.rotate_ccw<heif_complex64>(angle_degrees, *out_plane);
     }
   }
   // --- pass the color profiles to the new image
@@ -1172,8 +1203,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
   }
 
 
-  for (auto& plane_pair : m_planes) {
-    ImagePlane& plane = plane_pair.second;
+  for (auto& plane : m_planes) {
 
     if (plane.m_bit_depth <= 8) {
       plane.mirror_inplace<uint8_t>(direction);
@@ -1262,9 +1292,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 
   // --- crop all channels
 
-  for (const auto& plane_pair : m_planes) {
-    heif_channel channel = plane_pair.first;
-    const ImagePlane& plane = plane_pair.second;
+  for (const auto& plane : m_planes) {
+    heif_channel channel = plane.m_channel;
 
     uint32_t plane_left = get_subsampled_size_h(left, channel, m_chroma, scaling_mode::is_divisible); // is always divisible
     uint32_t plane_right = get_subsampled_size_h(right, channel, m_chroma, scaling_mode::round_down); // this keeps enough chroma since 'right' is a coordinate and not the width
@@ -1281,12 +1310,14 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
       return err;
     }
 
-    auto out_plane_iter = out_img->m_planes.find(channel);
-    assert(out_plane_iter != out_img->m_planes.end());
-    ImagePlane& out_plane = out_plane_iter->second;
+    // auto out_plane_iter = out_img->m_planes.find(channel);
+    // assert(out_plane_iter != out_img->m_planes.end());
+    // ImagePlane& out_plane = out_plane_iter->second;
+    ImagePlane* out_plane = out_img->get_first_plane_by_channel(channel);
+    assert(out_plane != nullptr);
 
     int bytes_per_pixel = plane.get_bytes_per_pixel();
-    plane.crop(plane_left, plane_right, plane_top, plane_bottom, bytes_per_pixel, out_plane);
+    plane.crop(plane_left, plane_right, plane_top, plane_bottom, bytes_per_pixel, *out_plane);
   }
 
   // --- pass the color profiles to the new image
@@ -1320,9 +1351,8 @@ void HeifPixelImage::ImagePlane::crop(uint32_t left, uint32_t right, uint32_t to
 Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a)
 {
   for (const auto& channel : {heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha}) {
-
-    const auto plane_iter = m_planes.find(channel);
-    if (plane_iter == m_planes.end()) {
+    ImagePlane *plane = this->get_first_plane_by_channel(channel);
+    if (plane == nullptr) {
 
       // alpha channel is optional, R,G,B is required
       if (channel == heif_channel_Alpha) {
@@ -1334,18 +1364,16 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 
     }
 
-    ImagePlane& plane = plane_iter->second;
-
-    if (plane.m_bit_depth != 8) {
+    if (plane->m_bit_depth != 8) {
       return {heif_error_Unsupported_feature,
               heif_suberror_Unspecified,
               "Can currently only fill images with 8 bits per pixel"};
     }
 
-    size_t h = plane.m_height;
+    size_t h = plane->m_height;
 
-    size_t stride = plane.stride;
-    auto* data = static_cast<uint8_t*>(plane.mem);
+    size_t stride = plane->stride;
+    auto* data = static_cast<uint8_t*>(plane->mem);
 
     uint16_t val16;
     switch (channel) {
@@ -1609,18 +1637,19 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
   int nInterleaved = num_interleaved_pixels_per_plane(m_chroma);
   if (nInterleaved > 1) {
-    auto plane_iter = m_planes.find(heif_channel_interleaved);
-    assert(plane_iter != m_planes.end()); // the plane must exist since we have an interleaved chroma format
-    const ImagePlane& plane = plane_iter->second;
+    // auto plane_iter = m_planes.find(heif_channel_interleaved);
+    // assert(plane_iter != m_planes.end()); // the plane must exist since we have an interleaved chroma format
+    const ImagePlane* plane = this->get_first_plane_by_channel(heif_channel_interleaved);
+    assert(plane != nullptr); // the plane must exist since we have an interleaved chroma format
 
     uint32_t out_w = out_img->get_width(heif_channel_interleaved);
     uint32_t out_h = out_img->get_height(heif_channel_interleaved);
 
-    if (plane.m_bit_depth <= 8) {
+    if (plane->m_bit_depth <= 8) {
       // SDR interleaved
 
-      size_t in_stride = plane.stride;
-      const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+      size_t in_stride = plane->stride;
+      const auto* in_data = static_cast<const uint8_t*>(plane->mem);
 
       size_t out_stride = 0;
       auto* out_data = out_img->get_plane(heif_channel_interleaved, &out_stride);
@@ -1641,8 +1670,8 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
       // HDR interleaved
       // TODO: untested
 
-      size_t in_stride = plane.stride;
-      const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
+      size_t in_stride = plane->stride;
+      const uint16_t* in_data = static_cast<const uint16_t*>(plane->mem);
 
       size_t out_stride = 0;
       uint16_t* out_data = out_img->get_channel<uint16_t>(heif_channel_interleaved, &out_stride);
@@ -1663,9 +1692,8 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     }
   }
   else {
-    for (const auto& plane_pair : m_planes) {
-      heif_channel channel = plane_pair.first;
-      const ImagePlane& plane = plane_pair.second;
+    for (const auto& plane : m_planes) {
+      heif_channel channel = plane.m_channel;
 
       if (!out_img->has_channel(channel)) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
