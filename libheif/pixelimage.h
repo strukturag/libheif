@@ -354,6 +354,7 @@ private:
                 const heif_security_limits* limits,
                 MemoryHandle& memory_handle);
 
+    heif_channel m_channel = heif_channel_Y;
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
     uint8_t m_num_interleaved_components = 1;
@@ -386,7 +387,8 @@ private:
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
 
-  std::map<heif_channel, ImagePlane> m_planes;
+  // std::map<heif_channel, ImagePlane> m_planes;
+  std::vector<ImagePlane> m_planes;
   MemoryHandle m_memory_handle;
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame
