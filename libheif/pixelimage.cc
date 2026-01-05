@@ -364,7 +364,7 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
 
 
 Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
-                                  const heif_security_limits* limits)
+                                  const heif_security_limits* limits, size_t* out_index)
 {
   ImagePlane plane;
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
@@ -373,6 +373,9 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
   else {
     plane.m_channel = channel;
     m_planes.push_back(plane);
+    if (out_index) {
+      *out_index = m_planes.size() - 1;
+    }
     return Error::Ok;
   }
 }
@@ -781,9 +784,10 @@ Error HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelI
   }
   assert(src_plane != nullptr);
 
+  size_t channel_index;
   auto err = add_channel(dst_channel, width, height,
                          src_plane->m_datatype,
-                         src_image->get_bits_per_pixel(src_channel), limits);
+                         src_image->get_bits_per_pixel(src_channel), limits, &channel_index);
   if (err) {
     return err;
   }
@@ -1081,7 +1085,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
       std::swap(out_plane_width, out_plane_height);
     }
 
-    Error err = out_img->add_channel(channel, out_plane_width, out_plane_height, plane.m_datatype, plane.m_bit_depth, limits);
+    size_t channel_index;
+    Error err = out_img->add_channel(channel, out_plane_width, out_plane_height, plane.m_datatype, plane.m_bit_depth, limits, &channel_index);
     if (err) {
       return err;
     }
@@ -1300,12 +1305,14 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     uint32_t plane_top = get_subsampled_size_v(top, channel, m_chroma, scaling_mode::is_divisible);
     uint32_t plane_bottom = get_subsampled_size_v(bottom, channel, m_chroma, scaling_mode::round_down);
 
+    size_t channel_index;
     auto err = out_img->add_channel(channel,
                                     plane_right - plane_left + 1,
                                     plane_bottom - plane_top + 1,
                                     plane.m_datatype,
                                     plane.m_bit_depth,
-                                    limits);
+                                    limits,
+                                    &channel_index);
     if (err) {
       return err;
     }
