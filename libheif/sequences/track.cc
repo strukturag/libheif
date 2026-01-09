@@ -409,14 +409,6 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     }
 
     if (saio) {
-      if (saio->get_num_samples() != saiz->get_num_samples()) {
-        return Error{
-          heif_error_Invalid_input,
-          heif_suberror_Unspecified,
-          "Number of samples in 'saiz' box does not match 'saio' box."
-        };
-      }
-
       if (aux_info_type == fourcc("suid")) {
         m_aux_reader_content_ids = std::make_unique<SampleAuxInfoReader>(saiz, saio);
       }
