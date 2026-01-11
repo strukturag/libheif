@@ -260,6 +260,8 @@ public:
   uint8_t* get_plane(heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
   
   uint8_t* get_plane(size_t index, size_t* out_stride) { return get_channel<uint8_t>(index, out_stride); }
+  
+  const uint8_t* get_plane(size_t index, size_t* out_stride) const { return get_channel<uint8_t>(index, out_stride); }
 
 
   const uint8_t* get_plane(heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
@@ -309,6 +311,13 @@ public:
 
     return static_cast<T*>(plane.mem);
   }
+
+  template <typename T>
+  const T* get_channel(size_t index, size_t* out_stride) const {
+    return const_cast<HeifPixelImage*>(this)->get_channel<T>(index, out_stride);
+  }
+
+  size_t get_channel_count() const { return m_planes.size(); }
 
   Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                             heif_channel src_channel,

@@ -288,18 +288,10 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
   {
     uint64_t offset = 0;
     std::vector<heif_channel> channels;
-    if (src_image->has_channel(heif_channel_Alpha))
-    {
-      channels = {heif_channel_Y, heif_channel_Alpha};
-    }
-    else
-    {
-      channels = {heif_channel_Y};
-    }
-    for (heif_channel channel : channels)
-    {
+    size_t channel_count = src_image->get_channel_count();
+    for (size_t i = 0; i < channel_count; i++) {
       size_t src_stride;
-      const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
+      const uint8_t* src_data = src_image->get_plane(i, &src_stride);
       uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_stride;
       data.resize(data.size() + out_size);
       memcpy(data.data() + offset, src_data, out_size);

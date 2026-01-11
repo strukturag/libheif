@@ -980,7 +980,9 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
   }
   else if (colourspace == heif_colorspace_monochrome) {
     Box_cmpd::Component monoComponent = {component_type_monochrome};
-    cmpd->add_component(monoComponent);
+    for (size_t i = 0; i < image->get_channel_count(); i++) {
+      cmpd->add_component(monoComponent);
+    }    
 
     if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
       Box_cmpd::Component alphaComponent = {component_type_alpha};
@@ -990,7 +992,10 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     int bpp = image->get_bits_per_pixel(heif_channel_Y);
     heif_uncompressed_component_format format = to_unc_component_format(image, heif_channel_Y);
     Box_uncC::Component component0 = {0, (uint8_t) (bpp), (uint8_t) format, 0};
-    uncC->add_component(component0);
+    for (size_t i = 0; i < image->get_channel_count(); i++) {
+      // TODO: don't assume all channels have the same bpp and format
+      uncC->add_component(component0);
+    }
 
     if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
       heif_uncompressed_component_format format_alpha = to_unc_component_format(image, heif_channel_Alpha);
