@@ -168,14 +168,20 @@ Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFil
     offset = m_singleChunk_offset + sample_idx * size;
   }
   else {
-    offset = m_sample_offsets[sample_idx];
     size = m_saiz->get_sample_size(sample_idx);
+    if (size > 0) {
+      assert(sample_idx < m_sample_offsets.size());
+      offset = m_sample_offsets[sample_idx];
+    }
   }
 
   std::vector<uint8_t> data;
-  Error err = file->append_data_from_file_range(data, offset, size);
-  if (err) {
-    return err;
+
+  if (size > 0) {
+    Error err = file->append_data_from_file_range(data, offset, size);
+    if (err) {
+      return err;
+    }
   }
 
   return data;

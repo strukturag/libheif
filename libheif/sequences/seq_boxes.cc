@@ -1898,14 +1898,23 @@ Error Box_saiz::write(StreamWriter& writer) const
   }
 
   writer.write8(m_default_sample_info_size);
-  writer.write32(m_num_samples);
 
   if (m_default_sample_info_size == 0) {
     assert(m_num_samples == m_sample_sizes.size());
 
-    for (uint8_t size : m_sample_sizes) {
-      writer.write8(size);
+    uint32_t num_nonnull_samples = static_cast<uint32_t>(m_sample_sizes.size());
+    while (num_nonnull_samples > 0 && m_sample_sizes[num_nonnull_samples-1] == 0) {
+      num_nonnull_samples--;
     }
+
+    writer.write32(num_nonnull_samples);
+
+    for (size_t i = 0; i < num_nonnull_samples; i++) {
+      writer.write8(m_sample_sizes[i]);
+    }
+  }
+  else {
+    writer.write32(m_num_samples);
   }
 
   prepend_header(writer, box_start);
