@@ -67,18 +67,24 @@ class SampleAuxInfoReader
 {
 public:
   SampleAuxInfoReader(std::shared_ptr<Box_saiz>,
-                      std::shared_ptr<Box_saio>);
+                      std::shared_ptr<Box_saio>,
+                      const std::vector<std::shared_ptr<Chunk>>& chunks);
 
   heif_sample_aux_info_type get_type() const;
 
-  Result<std::vector<uint8_t>> get_sample_info(const HeifFile* file, uint32_t idx);
+  Result<std::vector<uint8_t>> get_sample_info(const HeifFile* file, uint32_t sample_idx);
 
 private:
   std::shared_ptr<Box_saiz> m_saiz;
   std::shared_ptr<Box_saio> m_saio;
 
-  bool m_contiguous;
-  std::vector<uint64_t> m_contiguous_offsets;
+  // If there is only one chunk and the SAI data sizes are constant, we do not need an offset table.
+  // We just store the base offset and can directly calculate the sample offset from that.
+  bool m_contiguous_and_constant_size=false;
+  uint64_t m_singleChunk_offset=0;
+
+  // For chunked data or non-constant sample sizes, we use a table with the offsets for all SAI samples.
+  std::vector<uint64_t> m_sample_offsets;
 };
 
 
@@ -202,6 +208,7 @@ protected:
 
   struct SampleTiming {
     uint32_t sampleIdx = 0;
+    uint32_t sampleInChunkIdx = 0;
     uint32_t chunkIdx = 0;
     uint64_t presentation_time = 0; // TODO
     uint64_t media_composition_time = 0; // TODO

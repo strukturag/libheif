@@ -843,6 +843,8 @@ public:
 
   uint8_t get_sample_size(uint32_t idx);
 
+  bool have_samples_constant_size() const { return m_default_sample_info_size != 0; }
+
   uint32_t get_num_samples() const { return m_num_samples; }
 
   std::string dump(Indent&) const override;
