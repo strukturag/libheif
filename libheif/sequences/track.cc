@@ -96,7 +96,7 @@ void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<HeifFile>& fil
   if (m_interleaved && !m_data.empty()) {
     // TODO: I think this does not work because the image data does not know that there is SAI in-between
     uint64_t pos = file->append_mdat_data(m_data);
-    m_saio->add_sample_offset(pos);
+    m_saio->add_chunk_offset(pos);
 
     m_data.clear();
   }
@@ -109,7 +109,7 @@ void SampleAuxInfoHelper::write_all(const std::shared_ptr<Box>& parent, const st
 
   if (!m_data.empty()) {
     uint64_t pos = file->append_mdat_data(m_data);
-    m_saio->add_sample_offset(pos);
+    m_saio->add_chunk_offset(pos);
   }
 }
 
@@ -120,9 +120,9 @@ SampleAuxInfoReader::SampleAuxInfoReader(std::shared_ptr<Box_saiz> saiz,
   m_saiz = saiz;
   m_saio = saio;
 
-  m_contiguous = (saio->get_num_samples() == 1);
+  m_contiguous = (saio->get_num_chunks() == 1);
   if (m_contiguous) {
-    uint64_t offset = saio->get_sample_offset(0);
+    uint64_t offset = saio->get_chunk_offset(0);
     auto nSamples = saiz->get_num_samples();
 
     for (uint32_t i = 0; i < nSamples; i++) {
@@ -151,7 +151,7 @@ Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFil
     offset = m_contiguous_offsets[idx];
   }
   else {
-    offset = m_saio->get_sample_offset(idx);
+    offset = m_saio->get_chunk_offset(idx);
   }
 
   uint8_t size = m_saiz->get_sample_size(idx);
@@ -409,6 +409,15 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     }
 
     if (saio) {
+      if (saio->get_num_chunks() != 1 &&
+          saio->get_num_chunks() != m_stco->get_number_of_chunks()) {
+        return Error{
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "Invalid number of chunks in 'saio' box."
+        };
+      }
+
       if (aux_info_type == fourcc("suid")) {
         m_aux_reader_content_ids = std::make_unique<SampleAuxInfoReader>(saiz, saio);
       }

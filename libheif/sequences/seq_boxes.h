@@ -466,6 +466,8 @@ public:
 
   const std::vector<uint32_t>& get_offsets() const { return m_offsets; }
 
+  size_t get_number_of_chunks() const { return m_offsets.size(); }
+
   void patch_file_pointers(StreamWriter&, size_t offset) override;
 
 protected:
@@ -876,12 +878,12 @@ public:
 
   uint32_t get_aux_info_type_parameter() const { return m_aux_info_type_parameter; }
 
-  void add_sample_offset(uint64_t offset);
+  void add_chunk_offset(uint64_t offset);
 
-  // This will be 1 if all infos are written contiguously
-  size_t get_num_samples() const { return m_sample_offset.size(); }
+  // If this is 1, the SAI data of all samples is written contiguously in the file.
+  size_t get_num_chunks() const { return m_chunk_offset.size(); }
 
-  uint64_t get_sample_offset(uint32_t idx) const;
+  uint64_t get_chunk_offset(uint32_t idx) const;
 
   std::string dump(Indent&) const override;
 
@@ -901,8 +903,8 @@ private:
   bool m_need_64bit = false;
   mutable uint64_t m_offset_start_pos;
 
-  // If sample_offset==1, all samples are stored contiguous in the file
-  std::vector<uint64_t> m_sample_offset;
+  // If |chunk_offset|==1, the SAI data of all samples is stored contiguously in the file
+  std::vector<uint64_t> m_chunk_offset;
 
   MemoryHandle m_memory_handle;
 };
