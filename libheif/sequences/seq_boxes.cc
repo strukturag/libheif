@@ -2114,6 +2114,49 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
+std::string Box_sdtp::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << FullBox::dump(indent);
+
+  assert(m_sample_information.size() <= UINT32_MAX);
+
+  for (uint32_t i = 0; i < static_cast<uint32_t>(m_sample_information.size()); i++) {
+    const char* spaces = "            ";
+    int nSpaces = 6;
+    int k = i;
+    while (k >= 10 && nSpaces < 12) {
+      k /= 10;
+      nSpaces++;
+    }
+
+    spaces = spaces + 12 - nSpaces;
+
+    sstr << indent << "[" << i << "] : is_leading=" << (int) get_is_leading(i) << "\n"
+        << indent << spaces << "depends_on=" << (int) get_depends_on(i) << "\n"
+        << indent << spaces << "is_depended_on=" << (int) get_is_depended_on(i) << "\n"
+        << indent << spaces << "has_redundancy=" << (int) get_has_redundancy(i) << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_sdtp::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  // We have no easy way to get the number of samples from 'saiz' or 'stz2' as specified
+  // in the standard. Instead, we read until the end of the box.
+  size_t nSamples = range.get_remaining_bytes();
+
+  m_sample_information.resize(nSamples);
+  range.read(m_sample_information.data(), nSamples);
+
+  return Error::Ok;
+}
+
+
 Error Box_tref::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   while (!range.eof()) {

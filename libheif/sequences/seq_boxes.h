@@ -910,6 +910,35 @@ private:
 };
 
 
+class Box_sdtp : public FullBox {
+public:
+  Box_sdtp()
+  {
+    set_short_type(fourcc("sdtp"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Independent and Disposable Samples"; }
+
+  // Error write(StreamWriter& writer) const override;
+
+  uint8_t get_is_leading(uint32_t sampleIdx) const { return (m_sample_information[sampleIdx] >> 6) & 3; }
+
+  uint8_t get_depends_on(uint32_t sampleIdx) const { return (m_sample_information[sampleIdx] >> 4) & 3; }
+
+  uint8_t get_is_depended_on(uint32_t sampleIdx) const { return (m_sample_information[sampleIdx] >> 2) & 3; }
+
+  uint8_t get_has_redundancy(uint32_t sampleIdx) const { return (m_sample_information[sampleIdx]) & 3; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<uint8_t> m_sample_information;
+};
+
+
 class Box_tref : public Box
 {
 public:

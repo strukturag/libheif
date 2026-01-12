@@ -880,6 +880,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_tref>();
       break;
 
+    case fourcc("sdtp"):
+      box = std::make_shared<Box_sdtp>();
+      break;
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;
