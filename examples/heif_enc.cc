@@ -1733,6 +1733,15 @@ int main(int argc, char** argv)
   }
 
 
+  // If we get a list of image filenames, but no '-o' option, assume that the last option
+  // denotes the output filename.
+
+  if (output_filename.empty() && args.size() > 1) {
+    output_filename = args.back();
+    args.pop_back();
+  }
+
+
   if (!lossless) {
     heif_encoder_set_lossy_quality(encoder, quality);
   }
