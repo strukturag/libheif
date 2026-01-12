@@ -852,17 +852,6 @@ void Box_ctts::derive_box_version()
 }
 
 
-size_t Box_stsc::get_number_of_samples() const
-{
-  size_t total = 0;
-  for (const auto& entry : m_entries) {
-    total += entry.samples_per_chunk;
-  }
-
-  return total;
-}
-
-
 Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

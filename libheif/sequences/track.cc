@@ -334,14 +334,6 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
-  if (m_stsc->get_number_of_samples() != m_stsz->num_samples()) {
-    return {
-      heif_error_Invalid_input,
-      heif_suberror_Unspecified,
-      "Number of samples in 'stsc' and 'stsz' is inconsistent."
-    };
-  }
-
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 

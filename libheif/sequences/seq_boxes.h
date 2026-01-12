@@ -437,8 +437,6 @@ public:
     return m_entries.back().samples_per_chunk == 0;
   }
 
-  size_t get_number_of_samples() const;
-
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
