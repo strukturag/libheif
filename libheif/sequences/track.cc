@@ -170,7 +170,10 @@ Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFil
   else {
     size = m_saiz->get_sample_size(sample_idx);
     if (size > 0) {
-      assert(sample_idx < m_sample_offsets.size());
+      if (sample_idx >= m_sample_offsets.size()) {
+        return {};
+      }
+
       offset = m_sample_offsets[sample_idx];
     }
   }

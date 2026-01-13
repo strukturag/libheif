@@ -52,6 +52,7 @@ struct openh264_decoder
   // --- decoder
 
   ISVCDecoder* decoder = nullptr;
+  int fake_output_framenumber = 0;
 
   ~openh264_decoder()
   {
@@ -408,11 +409,23 @@ heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
                                        uintptr_t* out_user_data,
                                        const heif_security_limits* limits)
 {
-  if (out_user_data) {
-    *out_user_data = 0; // TODO: not supported by openH264
+  auto* decoder = (struct openh264_decoder*) decoder_raw;
+
+  heif_error err = openh264_decode_next_image(decoder_raw, out_img, limits);
+
+  if (!err.code && out_user_data) {
+
+    // TODO: openH264 does not support passing through frame numbers. Assume that there is no frame reordering.
+
+    if (*out_img) {
+      *out_user_data = decoder->fake_output_framenumber++;
+    }
+    else {
+      *out_user_data = 0;
+    }
   }
 
-  return openh264_decode_next_image(decoder_raw, out_img, limits);
+  return err;
 }
 
 heif_error openh264_decode_image(void* decoder_raw, heif_image** out_img)
