@@ -37,6 +37,10 @@ TEST_CASE( "C++ object copy (ColorProfile_nclx)" )
 
   img.create(16,16, heif_colorspace_RGB, heif_chroma_interleaved_RGBA);
 
+  heif::ColorProfile_nclx nclx;
+  nclx.set_matrix_coefficients(heif_matrix_coefficients_SMPTE_240M);
+  img.set_nclx_color_profile(nclx);
+
   heif::ColorProfile_nclx a = img.get_nclx_color_profile();
   heif::ColorProfile_nclx b(a);
 }
