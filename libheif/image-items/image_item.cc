@@ -354,7 +354,7 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
   // copy over ImageExtraData into image item
   *static_cast<ImageExtraData*>(this) = static_cast<ImageExtraData>(*image);
 
-  auto extra_data_properties = image->generate_property_boxes();
+  auto extra_data_properties = image->generate_property_boxes(false);
   codedImage.properties.insert(codedImage.properties.end(),
                                extra_data_properties.begin(),
                                extra_data_properties.end());

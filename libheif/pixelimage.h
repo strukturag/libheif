@@ -77,7 +77,10 @@ class ImageExtraData
 public:
   virtual ~ImageExtraData();
 
-  std::vector<std::shared_ptr<Box>> generate_property_boxes() const;
+  // TODO: Decide who is responsible for writing the colr boxes.
+  //       Currently it is distributed over various places.
+  //       Either here, in image_item.cc or in grid.cc.
+  std::vector<std::shared_ptr<Box>> generate_property_boxes(bool generate_colr_boxes) const;
 
 
   // --- color profile

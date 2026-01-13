@@ -178,7 +178,7 @@ std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_icc() const
 }
 
 
-std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() const
+std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes(bool generate_colr_boxes) const
 {
   std::vector<std::shared_ptr<Box>> properties;
 
@@ -218,16 +218,18 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes() cons
     properties.push_back(itai);
   }
 
-  // --- colr (nclx)
+  if (generate_colr_boxes) {
+    // --- colr (nclx)
 
-  if (has_nclx_color_profile()) {
-    properties.push_back(get_colr_box_nclx());
-  }
+    if (has_nclx_color_profile()) {
+      properties.push_back(get_colr_box_nclx());
+    }
 
-  // --- colr (icc)
+    // --- colr (icc)
 
-  if (has_icc_color_profile()) {
-    properties.push_back(get_colr_box_icc());
+    if (has_icc_color_profile()) {
+      properties.push_back(get_colr_box_icc());
+    }
   }
 
   return properties;
