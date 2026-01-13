@@ -40,7 +40,7 @@ struct openh264_decoder
   struct Packet
   {
     std::vector<uint8_t> data;
-    // uintptr_t pts;  currently unused
+    uintptr_t pts;
   };
 
   std::deque<Packet> input_data;
@@ -52,7 +52,6 @@ struct openh264_decoder
   // --- decoder
 
   ISVCDecoder* decoder = nullptr;
-  int fake_output_framenumber = 0;
 
   ~openh264_decoder()
   {
@@ -174,7 +173,7 @@ void openh264_set_strict_decoding(void* decoder_raw, int flag)
 }
 
 
-heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+heif_error openh264_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
 {
   auto* decoder = (openh264_decoder*) decoder_raw;
 
@@ -184,19 +183,21 @@ heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t 
 
   openh264_decoder::Packet pkt;
   pkt.data.insert(pkt.data.end(), input_data, input_data + frame_size);
+  pkt.pts = user_data;
   decoder->input_data.push_back(std::move(pkt));
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
-heif_error openh264_push_data2(void* decoder_raw, const void* frame_data, size_t frame_size, uintptr_t user_data)
+heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  return openh264_push_data(decoder_raw, frame_data, frame_size);
+  return openh264_push_data2(decoder_raw, frame_data, frame_size, 0);
 }
 
 
-heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
-                                      const heif_security_limits* limits)
+heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
+                                       uintptr_t* out_user_data,
+                                       const heif_security_limits* limits)
 {
   auto* decoder = (openh264_decoder*) decoder_raw;
   ISVCDecoder* pSvcDecoder = decoder->decoder;
@@ -219,8 +220,9 @@ heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
 
   int iRet;
 
-
   if (!decoder->input_data.empty()) {
+    sDstBufInfo.uiInBsTimeStamp = decoder->input_data.front().pts;
+
     const std::vector<uint8_t>& indata = decoder->input_data.front().data;
     std::vector<uint8_t> scdata;
 
@@ -309,6 +311,10 @@ heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
   if (sDstBufInfo.iBufferStatus != 1) {
     *out_img = nullptr;
     return heif_error_ok;
+  }
+
+  if (out_user_data) {
+    *out_user_data = sDstBufInfo.uiOutYuvTimeStamp;
   }
 
   /*
@@ -405,27 +411,11 @@ heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
   return heif_error_ok;
 }
 
-heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
-                                       uintptr_t* out_user_data,
-                                       const heif_security_limits* limits)
+
+heif_error openh264_decode_next_image(void* decoder_raw, heif_image** out_img,
+                                      const heif_security_limits* limits)
 {
-  auto* decoder = (struct openh264_decoder*) decoder_raw;
-
-  heif_error err = openh264_decode_next_image(decoder_raw, out_img, limits);
-
-  if (!err.code && out_user_data) {
-
-    // TODO: openH264 does not support passing through frame numbers. Assume that there is no frame reordering.
-
-    if (*out_img) {
-      *out_user_data = decoder->fake_output_framenumber++;
-    }
-    else {
-      *out_user_data = 0;
-    }
-  }
-
-  return err;
+  return openh264_decode_next_image2(decoder_raw, out_img, nullptr, limits);
 }
 
 heif_error openh264_decode_image(void* decoder_raw, heif_image** out_img)
