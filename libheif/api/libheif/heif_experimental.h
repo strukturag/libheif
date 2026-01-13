@@ -194,7 +194,10 @@ heif_error heif_image_add_channel(heif_image* image,
                                   enum heif_channel channel,
                                   int width, int height,
                                   enum heif_channel_datatype datatype,
-                                  int bit_depth);
+                                  int bit_depth,
+                                  size_t* out_index);
+
+
 
 
 LIBHEIF_API
@@ -289,7 +292,7 @@ uint64_t* heif_image_get_channel_uint64(heif_image*,
 
 LIBHEIF_API
 int16_t* heif_image_get_channel_int16(heif_image*,
-                                      enum heif_channel channel,
+                                      size_t channel_index,
                                       size_t* out_stride);
 
 LIBHEIF_API

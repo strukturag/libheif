@@ -218,7 +218,7 @@ public:
   Error add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth, const heif_security_limits* limits);
 
   Error add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
-                    const heif_security_limits* limits);
+                    const heif_security_limits* limits, size_t* out_index);
 
   bool has_channel(heif_channel channel) const;
 
@@ -258,14 +258,19 @@ public:
   //       For very large images (e.g. >2 GB), this can result in an integer overflow and corresponding illegal memory access.
   //       (see https://github.com/strukturag/libheif/issues/1419)
   uint8_t* get_plane(heif_channel channel, size_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+  
+  uint8_t* get_plane(size_t index, size_t* out_stride) { return get_channel<uint8_t>(index, out_stride); }
+  
+  const uint8_t* get_plane(size_t index, size_t* out_stride) const { return get_channel<uint8_t>(index, out_stride); }
+
 
   const uint8_t* get_plane(heif_channel channel, size_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
 
   template <typename T>
   T* get_channel(heif_channel channel, size_t* out_stride)
   {
-    auto iter = m_planes.find(channel);
-    if (iter == m_planes.end()) {
+    ImagePlane* plane = get_first_plane_by_channel(channel);
+    if (!plane) {
       if (out_stride)
         *out_stride = 0;
 
@@ -273,12 +278,12 @@ public:
     }
 
     if (out_stride) {
-      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
+      *out_stride = static_cast<int>(plane->stride / sizeof(T));
     }
 
     //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
 
-    return static_cast<T*>(iter->second.mem);
+    return static_cast<T*>(plane->mem);
   }
 
   template <typename T>
@@ -286,6 +291,33 @@ public:
   {
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
   }
+
+  template <typename T>
+  T* get_channel(size_t index, size_t* out_stride)
+  {
+    if (index >= m_planes.size()) {
+      if (out_stride)
+        *out_stride = 0;
+
+      return nullptr;
+    }
+    ImagePlane& plane = m_planes[index];
+
+    if (out_stride) {
+      *out_stride = static_cast<int>(plane.stride / sizeof(T));
+    }
+
+    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
+
+    return static_cast<T*>(plane.mem);
+  }
+
+  template <typename T>
+  const T* get_channel(size_t index, size_t* out_stride) const {
+    return const_cast<HeifPixelImage*>(this)->get_channel<T>(index, out_stride);
+  }
+
+  size_t get_channel_count() const { return m_planes.size(); }
 
   Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                             heif_channel src_channel,
@@ -354,6 +386,7 @@ private:
                 const heif_security_limits* limits,
                 MemoryHandle& memory_handle);
 
+    heif_channel m_channel = heif_channel_Y;
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
     uint8_t m_num_interleaved_components = 1;
@@ -381,12 +414,33 @@ private:
     void crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
+  ImagePlane* get_first_plane_by_channel(heif_channel channel)
+  {
+    for (auto& plane : m_planes) {
+      if (plane.m_channel == channel) {
+        return &plane;
+      }
+    }
+    return nullptr;
+  }
+
+  const ImagePlane* get_first_plane_by_channel(heif_channel channel) const
+  {
+    for (const auto& plane : m_planes) {
+      if (plane.m_channel == channel) {
+        return &plane;
+      }
+    }
+    return nullptr;
+  }
+
   uint32_t m_width = 0;
   uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
 
-  std::map<heif_channel, ImagePlane> m_planes;
+  // std::map<heif_channel, ImagePlane> m_planes;
+  std::vector<ImagePlane> m_planes;
   MemoryHandle m_memory_handle;
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame

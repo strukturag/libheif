@@ -343,9 +343,11 @@ void heif_pyramid_layer_info_release(heif_pyramid_layer_info* infos)
 heif_error heif_image_add_channel(heif_image* image,
                                   heif_channel channel,
                                   int width, int height,
-                                  heif_channel_datatype datatype, int bit_depth)
+                                  heif_channel_datatype datatype,
+                                  int bit_depth,
+                                  size_t* out_index)
 {
-  if (auto err = image->image->add_channel(channel, width, height, datatype, bit_depth, nullptr)) {
+  if (auto err = image->image->add_channel(channel, width, height, datatype, bit_depth, nullptr, out_index)) {
     return err.error_struct(image->image.get());
   }
   else {
@@ -470,3 +472,23 @@ heif_error heif_context_add_tiled_image(heif_context* ctx,
   return heif_error_success;
 }
 #endif
+
+int16_t* heif_image_get_channel_int16(heif_image* image,
+                                      size_t channel_index,
+                                      size_t* out_stride)
+{
+  if (!out_stride) {
+    return nullptr;
+  }
+
+  if (!image || !image->image) {
+    *out_stride = 0;
+    return nullptr;
+  }
+
+  size_t stride;
+  uint8_t* p = image->image->get_plane(channel_index, &stride);
+  
+  *out_stride = stride / sizeof(int16_t);
+  return reinterpret_cast<int16_t*>(p);
+}
