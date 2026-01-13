@@ -154,6 +154,12 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
     uint64_t offset = 0;
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
+      if (src_image->get_bits_per_pixel(channel) != 8) {
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     "Unsupported colourspace");
+      }
+
       size_t src_stride;
       uint32_t src_width = src_image->get_width(channel);
       uint32_t src_height = src_image->get_height(channel);
@@ -296,8 +302,15 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
     {
       channels = {heif_channel_Y};
     }
+
     for (heif_channel channel : channels)
     {
+      if (src_image->get_bits_per_pixel(channel) != 8) {
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     "Unsupported colourspace");
+      }
+
       size_t src_stride;
       const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
       uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_stride;
