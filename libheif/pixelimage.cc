@@ -99,7 +99,7 @@ ImageExtraData::~ImageExtraData()
 
 bool ImageExtraData::has_nclx_color_profile() const
 {
-  return m_color_profile_nclx != nclx_profile::defaults();
+  return m_color_profile_nclx != nclx_profile::undefined();
 }
 
 
