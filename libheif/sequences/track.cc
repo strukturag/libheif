@@ -375,6 +375,14 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       }
     }
 
+    if (current_sample_idx + sampleToChunk.samples_per_chunk > m_stsz->num_samples()) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Number of samples in 'stsc' box exceeds sample sizes in 'stsz' box."
+      };
+    }
+
     auto chunk = std::make_shared<Chunk>(m_heif_context, m_id,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
                                          m_stco->get_offsets()[chunk_idx],

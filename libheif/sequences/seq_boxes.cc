@@ -882,6 +882,13 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
       "'sample_description_index' in 'stsc' must not be 0."};
     }
 
+    if (entry.samples_per_chunk > limits->max_sequence_frames) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Number of chunk samples in `stsc` box exceeds security limits of maximum number of frames."};
+    }
+
     m_entries[i] = entry;
   }
 
