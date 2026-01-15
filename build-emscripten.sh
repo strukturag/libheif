@@ -32,7 +32,7 @@ ENABLE_WEBCODECS="${ENABLE_WEBCODECS:-0}"
 ENABLE_UNCOMPRESSED="${ENABLE_UNCOMPRESSED:-0}"
 
 # J2K still defunct. OpenJPEG compiles, but library is not picked up by libheif cmake.
-ENABLE_J2K="${ENABLE_J2K:-0}"
+ENABLE_OPENJPEG="${ENABLE_OPENJPEG:-0}"
 OPENJPEG_VERSION="${OPENJPEG_VERSION:-2.5.4}"
 
 STANDALONE="${STANDALONE:-0}"
@@ -100,8 +100,8 @@ if [ "$ENABLE_AOM" = "1" ]; then
     LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${AOM_DIR} -laom"
 fi
 
-CONFIGURE_ARGS_J2K=""
-if [ "$ENABLE_J2K" = "1" ]; then
+CONFIGURE_ARGS_OPENJPEG=""
+if [ "$ENABLE_OPENJPEG" = "1" ]; then
     [ -s "openjpeg-${OPENJPEG__VERSION}.tar.gz" ] || curl \
         -L \
         -o openjpeg-${OPENJPEG_VERSION}.tar.gz \
@@ -112,20 +112,18 @@ if [ "$ENABLE_J2K" = "1" ]; then
         cd openjpeg-${OPENJPEG_VERSION}
         emcmake cmake openjpeg-source/openjpeg-${OPENJPEG_VERSION} \
             -DBUILD_SHARED_LIBS=0 \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+	    -DCMAKE_INSTALL_PREFIX=openjpeg-install
 
         emmake make -j${CORES}
+        emmake make install -j${CORES}
 
         cd ..
     fi
 
     J2K_DIR="$(pwd)/openjpeg-${OPENJPEG_VERSION}"
-    CONFIGURE_ARGS_J2K="-DOPENJPEG_INCLUDE_DIR=${J2K_DIR}/openjpeg-source/openjpeg-${OPENJPEG_VERSION}/src/lib/openjp2 -DOPENJPEG_LIBRARY=-L${J2K_DIR}/bin"
+    CONFIGURE_ARGS_OPENJPEG="-DWITH_OpenJPEG_DECODER=ON -DCMAKE_PREFIX_PATH=${J2K_DIR}/openjpeg-install -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH"
     LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${J2K_DIR}/bin -lopenjp2"
-
-    echo ${J2K_DIR}
-    echo ${CONFIGURE_ARGS_J2K}
-    echo ${LIBRARY_LINKER_FLAGS}
 fi
 
 CONFIGURE_ARGS_WEBCODECS=""
@@ -155,7 +153,7 @@ emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
     $CONFIGURE_ARGS_AOM \
     $CONFIGURE_ARGS_WEBCODECS \
     $CONFIGURE_ARGS_UNCOMPRESSED \
-    $CONFIGURE_ARGS_J2K
+    $CONFIGURE_ARGS_OPENJPEG
 
 VERBOSE=1 emmake make -j${CORES}
 
