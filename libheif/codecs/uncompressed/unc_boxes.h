@@ -48,6 +48,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  bool is_essential() const override { return true; }
+
   struct Component
   {
     uint16_t component_type;
