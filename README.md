@@ -295,6 +295,16 @@ You can also add plugin directories programmatically.
 
 ## Usage
 
+libheif comes with a set of command line tools:
+* `heif-dec` for decoding HEIF images to JPEG or PNG. It can also decode image sequences or MP4 video.
+* `heif-enc` for encoding JPEG, PNG, TIFF, or Y4M images to HEIF images, image sequences or MP4 video.
+* `heif-info` for getting some overview information about the HEIF file or (using the `-d` option) to dump the full box structure of the file.
+* `heif-view` for displaying HEIF image sequences
+
+### `heif-enc` command line tool
+
+You can find more documentation for the `heif-enc` tool on the [wiki page](https://github.com/strukturag/libheif/wiki/heif%E2%80%90enc-Command-Line-Tool).
+
 ### Security limits
 
 Libheif defines some security limits that prevent that very large images exceed the available memory or malicious input files can be used for a denial-of-service attack.
