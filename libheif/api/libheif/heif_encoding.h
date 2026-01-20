@@ -146,12 +146,12 @@ LIBHEIF_API
 const char* heif_encoder_parameter_get_name(const heif_encoder_parameter*);
 
 
-enum heif_encoder_parameter_type
+typedef enum heif_encoder_parameter_type
 {
   heif_encoder_parameter_type_integer = 1,
   heif_encoder_parameter_type_boolean = 2,
   heif_encoder_parameter_type_string = 3
-};
+} heif_encoder_parameter_type;
 
 // Return the parameter type.
 LIBHEIF_API
@@ -256,7 +256,7 @@ int heif_encoder_has_default(heif_encoder*,
 
 
 // The orientation values are defined equal to the EXIF Orientation tag.
-enum heif_orientation
+typedef enum heif_orientation
 {
   heif_orientation_normal = 1,
   heif_orientation_flip_horizontally = 2,
@@ -266,7 +266,7 @@ enum heif_orientation
   heif_orientation_rotate_90_cw = 6,
   heif_orientation_rotate_90_cw_then_flip_vertically = 7,
   heif_orientation_rotate_270_cw = 8
-};
+} heif_orientation;
 
 
 typedef struct heif_encoding_options

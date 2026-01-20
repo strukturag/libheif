@@ -111,13 +111,13 @@ heif_track* heif_context_get_track(const heif_context*, uint32_t id);
 
 typedef uint32_t heif_track_type;
 
-enum heif_track_type_4cc
+typedef enum heif_track_type_4cc
 {
   heif_track_type_video = heif_fourcc('v', 'i', 'd', 'e'),
   heif_track_type_image_sequence = heif_fourcc('p', 'i', 'c', 't'),
   heif_track_type_auxiliary = heif_fourcc('a', 'u', 'x', 'v'),
   heif_track_type_metadata = heif_fourcc('m', 'e', 't', 'a')
-};
+} heif_track_type_4cc;
 
 /**
  * Get the four-cc track handler type.
@@ -130,11 +130,11 @@ LIBHEIF_API
 heif_track_type heif_track_get_track_handler_type(const heif_track*);
 
 
-enum heif_auxiliary_track_info_type
+typedef enum heif_auxiliary_track_info_type
 {
   heif_auxiliary_track_info_type_unknown = 0,
   heif_auxiliary_track_info_type_alpha = 1
-};
+} heif_auxiliary_track_info_type;
 
 LIBHEIF_API
 enum heif_auxiliary_track_info_type heif_track_get_auxiliary_info_type(const heif_track*);
@@ -275,12 +275,12 @@ void heif_context_set_number_of_sequence_repetitions(heif_context*, uint32_t num
  * The difference between `heif_sample_aux_info_presence_optional` and `heif_sample_aux_info_presence_mandatory`
  * is that `heif_sample_aux_info_presence_mandatory` will throw an error if the data is missing when writing a sample.
  */
-enum heif_sample_aux_info_presence
+typedef enum heif_sample_aux_info_presence
 {
   heif_sample_aux_info_presence_none = 0,
   heif_sample_aux_info_presence_optional = 1,
   heif_sample_aux_info_presence_mandatory = 2
-};
+} heif_sample_aux_info_presence;
 
 
 typedef struct heif_track_options heif_track_options;
@@ -338,7 +338,7 @@ void heif_track_options_set_gimi_track_id(heif_track_options*,
 
 // --- writing visual tracks
 
-enum heif_sequence_gop_structure
+typedef enum heif_sequence_gop_structure
 {
   // Only independently decodable keyframes.
   heif_sequence_gop_structure_intra_only,
@@ -349,7 +349,7 @@ enum heif_sequence_gop_structure
   // All frame types are allowed, including frame reordering, to achieve
   // the best compression ratio.
   heif_sequence_gop_structure_unrestricted
-};
+} heif_sequence_gop_structure;
 
 
 typedef struct heif_sequence_encoding_options
@@ -588,12 +588,12 @@ const heif_tai_clock_info* heif_track_get_tai_clock_info_of_first_cluster(heif_t
 
 // --- track references
 
-enum heif_track_reference_type
+typedef enum heif_track_reference_type
 {
   heif_track_reference_type_description = heif_fourcc('c', 'd', 's', 'c'), // track_description
   heif_track_reference_type_thumbnails = heif_fourcc('t', 'h', 'm', 'b'), // thumbnails
   heif_track_reference_type_auxiliary = heif_fourcc('a', 'u', 'x', 'l') // auxiliary data (e.g. depth maps or alpha channel)
-};
+} heif_track_reference_type;
 
 /**
  * Add a reference between tracks.

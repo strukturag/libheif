@@ -46,11 +46,11 @@ LIBHEIF_API
 int heif_have_decoder_for_format(enum heif_compression_format format);
 
 
-enum heif_progress_step
+typedef enum heif_progress_step
 {
   heif_progress_step_total = 0,
   heif_progress_step_load_tile = 1
-};
+} heif_progress_step;
 
 
 typedef struct heif_decoding_options

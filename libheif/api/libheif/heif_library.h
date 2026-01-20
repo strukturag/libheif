@@ -160,11 +160,11 @@ void heif_deinit(void);
 
 // --- Plugins are currently only supported on Unix platforms.
 
-enum heif_plugin_type
+typedef enum heif_plugin_type
 {
   heif_plugin_type_encoder,
   heif_plugin_type_decoder
-};
+} heif_plugin_type;
 
 typedef struct heif_plugin_info
 {

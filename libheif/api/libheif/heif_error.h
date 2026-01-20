@@ -29,7 +29,7 @@ extern "C" {
 #include <stdint.h>
 
 
-enum heif_error_code
+typedef enum heif_error_code
 {
   // Everything ok, no error occurred.
   heif_error_Ok = 0,
@@ -71,10 +71,10 @@ enum heif_error_code
   heif_error_Canceled = 12,
 
   heif_error_End_of_sequence = 13
-};
+} heif_error_code;
 
 
-enum heif_suberror_code
+typedef enum heif_suberror_code
 {
   // no further information available
   heif_suberror_Unspecified = 0,
@@ -278,7 +278,7 @@ enum heif_suberror_code
   heif_suberror_Plugin_is_not_loaded = 6001,         // trying to remove a plugin that is not loaded
   heif_suberror_Cannot_read_plugin_directory = 6002, // error while scanning the directory for plugins
   heif_suberror_No_matching_decoder_installed = 6003 // no decoder found for that compression format
-};
+} heif_suberror_code;
 
 
 typedef struct heif_error

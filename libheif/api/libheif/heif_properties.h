@@ -29,7 +29,7 @@ extern "C" {
 
 // ------------------------- item properties -------------------------
 
-enum heif_item_property_type
+typedef enum heif_item_property_type
 {
 //  heif_item_property_unknown = -1,
   heif_item_property_type_invalid = 0,
@@ -42,7 +42,7 @@ enum heif_item_property_type
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
   heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
   heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g')
-};
+} heif_item_property_type;
 
 // Get the heif_property_id for a heif_item_id.
 // You may specify which property 'type' you want to receive.
@@ -105,12 +105,12 @@ heif_error heif_item_add_property_user_description(const heif_context* context,
 LIBHEIF_API
 void heif_property_user_description_release(heif_property_user_description*);
 
-enum heif_transform_mirror_direction
+typedef enum heif_transform_mirror_direction
 {
   heif_transform_mirror_direction_invalid = -1,
   heif_transform_mirror_direction_vertical = 0,    // flip image vertically
   heif_transform_mirror_direction_horizontal = 1   // flip image horizontally
-};
+} heif_transform_mirror_direction;
 
 // Will return 'heif_transform_mirror_direction_invalid' in case of error.
 // If 'propertyId==0', it returns the first imir property found.

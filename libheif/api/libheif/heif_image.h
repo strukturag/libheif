@@ -31,7 +31,7 @@ extern "C" {
 #include <stdint.h>
 
 
-enum heif_chroma
+typedef enum heif_chroma
 {
   heif_chroma_undefined = 99,
   heif_chroma_monochrome = 0,
@@ -44,14 +44,14 @@ enum heif_chroma
   heif_chroma_interleaved_RRGGBBAA_BE = 13, // HDR, big endian.
   heif_chroma_interleaved_RRGGBB_LE = 14,   // HDR, little endian.
   heif_chroma_interleaved_RRGGBBAA_LE = 15  // HDR, little endian.
-};
+} heif_chroma;
 
 // DEPRECATED ENUM NAMES
 #define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
 #define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
 
 
-enum heif_colorspace
+typedef enum heif_colorspace
 {
   heif_colorspace_undefined = 99,
 
@@ -76,9 +76,9 @@ enum heif_colorspace
 
   // Indicates that this image has no visual channels.
   heif_colorspace_nonvisual = 3
-};
+} heif_colorspace;
 
-enum heif_channel
+typedef enum heif_channel
 {
   heif_channel_Y = 0,
   heif_channel_Cb = 1,
@@ -91,7 +91,7 @@ enum heif_channel
   heif_channel_filter_array = 11,
   heif_channel_depth = 12,
   heif_channel_disparity = 13
-};
+} heif_channel;
 
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,

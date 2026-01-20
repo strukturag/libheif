@@ -38,7 +38,7 @@ extern "C" {
 
 // This is similar to heif_metadata_compression. We should try to keep the integers compatible, but each enum will just
 // contain the allowed values.
-enum heif_unci_compression
+typedef enum heif_unci_compression
 {
   heif_unci_compression_off = 0,
   //heif_unci_compression_auto = 1,
@@ -46,7 +46,7 @@ enum heif_unci_compression
   heif_unci_compression_deflate = 3,
   heif_unci_compression_zlib = 4,
   heif_unci_compression_brotli = 5
-};
+} heif_unci_compression;
 
 
 typedef struct heif_unci_image_parameters

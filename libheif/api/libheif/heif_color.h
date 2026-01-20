@@ -31,7 +31,7 @@ extern "C" {
 typedef struct heif_image heif_image;
 
 
-enum heif_chroma_downsampling_algorithm
+typedef enum heif_chroma_downsampling_algorithm
 {
   heif_chroma_downsampling_nearest_neighbor = 1,
   heif_chroma_downsampling_average = 2,
@@ -39,13 +39,13 @@ enum heif_chroma_downsampling_algorithm
   // Combine with 'heif_chroma_upsampling_bilinear' for best quality.
   // Makes edges look sharper when using YUV 420 with bilinear chroma upsampling.
   heif_chroma_downsampling_sharp_yuv = 3
-};
+} heif_chroma_downsampling_algorithm;
 
-enum heif_chroma_upsampling_algorithm
+typedef enum heif_chroma_upsampling_algorithm
 {
   heif_chroma_upsampling_nearest_neighbor = 1,
   heif_chroma_upsampling_bilinear = 2
-};
+} heif_chroma_upsampling_algorithm;
 
 
 typedef struct heif_color_conversion_options
@@ -71,12 +71,12 @@ typedef struct heif_color_conversion_options
 } heif_color_conversion_options;
 
 
-enum heif_alpha_composition_mode
+typedef enum heif_alpha_composition_mode
 {
   heif_alpha_composition_mode_none,
   heif_alpha_composition_mode_solid_color,
   heif_alpha_composition_mode_checkerboard,
-};
+} heif_alpha_composition_mode;
 
 
 typedef struct heif_color_conversion_options_ext
@@ -111,13 +111,13 @@ void heif_color_conversion_options_ext_free(heif_color_conversion_options_ext*);
 
 // ------------------------- color profiles -------------------------
 
-enum heif_color_profile_type
+typedef enum heif_color_profile_type
 {
   heif_color_profile_type_not_present = 0,
   heif_color_profile_type_nclx = heif_fourcc('n', 'c', 'l', 'x'),
   heif_color_profile_type_rICC = heif_fourcc('r', 'I', 'C', 'C'),
   heif_color_profile_type_prof = heif_fourcc('p', 'r', 'o', 'f')
-};
+} heif_color_profile_type;
 
 
 // Returns 'heif_color_profile_type_not_present' if there is no color profile.
@@ -137,7 +137,7 @@ struct heif_error heif_image_handle_get_raw_color_profile(const heif_image_handl
                                                           void* out_data);
 
 
-enum heif_color_primaries
+typedef enum heif_color_primaries
 {
   heif_color_primaries_ITU_R_BT_709_5 = 1, // g=0.3;0.6, b=0.15;0.06, r=0.64;0.33, w=0.3127,0.3290
   heif_color_primaries_unspecified = 2,
@@ -151,9 +151,9 @@ enum heif_color_primaries
   heif_color_primaries_SMPTE_RP_431_2 = 11,
   heif_color_primaries_SMPTE_EG_432_1 = 12,
   heif_color_primaries_EBU_Tech_3213_E = 22
-};
+} heif_color_primaries;
 
-enum heif_transfer_characteristics
+typedef enum heif_transfer_characteristics
 {
   heif_transfer_characteristic_ITU_R_BT_709_5 = 1,
   heif_transfer_characteristic_unspecified = 2,
@@ -172,9 +172,9 @@ enum heif_transfer_characteristics
   heif_transfer_characteristic_ITU_R_BT_2100_0_PQ = 16,
   heif_transfer_characteristic_SMPTE_ST_428_1 = 17,
   heif_transfer_characteristic_ITU_R_BT_2100_0_HLG = 18
-};
+} heif_transfer_characteristics;
 
-enum heif_matrix_coefficients
+typedef enum heif_matrix_coefficients
 {
   heif_matrix_coefficients_RGB_GBR = 0,
   heif_matrix_coefficients_ITU_R_BT_709_5 = 1,  // TODO: or 709-6 according to h.273
@@ -190,7 +190,7 @@ enum heif_matrix_coefficients
   heif_matrix_coefficients_chromaticity_derived_non_constant_luminance = 12,
   heif_matrix_coefficients_chromaticity_derived_constant_luminance = 13,
   heif_matrix_coefficients_ICtCp = 14
-};
+} heif_matrix_coefficients;
 
 typedef struct heif_color_profile_nclx
 {

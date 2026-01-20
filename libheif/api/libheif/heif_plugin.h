@@ -162,24 +162,24 @@ typedef struct heif_decoder_plugin
 } heif_decoder_plugin;
 
 
-enum heif_encoded_data_type
+typedef enum heif_encoded_data_type
 {
   heif_encoded_data_type_HEVC_header = 1,
   heif_encoded_data_type_HEVC_image = 2,
   heif_encoded_data_type_HEVC_depth_SEI = 3
-};
+} heif_encoded_data_type;
 
 
 // Specifies the class of the input image content.
 // The encoder may want to encode different classes with different parameters
 // (e.g. always encode alpha lossless)
-enum heif_image_input_class
+typedef enum heif_image_input_class
 {
   heif_image_input_class_normal = 1,
   heif_image_input_class_alpha = 2,
   heif_image_input_class_depth = 3,
   heif_image_input_class_thumbnail = 4
-};
+} heif_image_input_class;
 
 
 typedef struct heif_encoder_plugin

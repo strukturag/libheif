@@ -179,14 +179,14 @@ void heif_pyramid_layer_info_release(heif_pyramid_layer_info*);
 
 // --- other pixel datatype support
 
-enum heif_channel_datatype
+typedef enum heif_channel_datatype
 {
   heif_channel_datatype_undefined = 0,
   heif_channel_datatype_unsigned_integer = 1,
   heif_channel_datatype_signed_integer = 2,
   heif_channel_datatype_floating_point = 3,
   heif_channel_datatype_complex_number = 4
-};
+} heif_channel_datatype;
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 LIBHEIF_API
