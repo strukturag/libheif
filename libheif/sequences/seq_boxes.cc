@@ -862,6 +862,15 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
+  // Note: test against maximum number of frames (upper limit) since we have no limit on maximum number of chunks
+  if (entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of chunks in `stsc` box exceeds security limits of maximum number of frames."};
+  }
+
+
   if (auto err = m_memory_handle.alloc(entry_count * sizeof(SampleToChunk),
                                        limits, "the 'stsc' table")) {
     return err;
