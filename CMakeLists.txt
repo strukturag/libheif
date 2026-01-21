@@ -145,6 +145,9 @@ if (WITH_KVAZAAR)
     else ()
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
     endif ()
+    if (HAVE_KVAZAAR_VERSION_STRING)
+        add_definitions(-DHAVE_KVAZAAR_VERSION_STRING=1)
+    endif ()
 endif ()
 
 # uvg266

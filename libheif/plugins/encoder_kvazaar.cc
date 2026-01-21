@@ -102,7 +102,11 @@ static void kvazaar_set_default_parameters(void* encoder);
 
 static const char* kvazaar_plugin_name()
 {
+#if HAVE_KVAZAAR_VERSION_STRING
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "kvazaar HEVC encoder %s", kvz_get_version_string());
+#else
   strcpy(plugin_name, "kvazaar HEVC encoder");
+#endif
   return plugin_name;
 }
 
