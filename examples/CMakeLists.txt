@@ -14,6 +14,13 @@ add_executable(heif-info ${getopt_sources}
         heif_info.cc
         common.cc
         common.h)
+if(WIN32)
+    if(MSVC)
+        target_sources(heif-info PRIVATE utf8.manifest)
+    elseif(MINGW)
+        target_sources(heif-info PRIVATE utf8.rc)
+    endif()
+endif()
 target_link_libraries(heif-info heif)
 install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
@@ -23,6 +30,13 @@ add_executable(heif-dec ${getopt_sources}
         heif_dec.cc
         common.cc
         common.h)
+if(WIN32)
+    if(MSVC)
+        target_sources(heif-dec PRIVATE utf8.manifest)
+    elseif(MINGW)
+        target_sources(heif-dec PRIVATE utf8.rc)
+    endif()
+endif()
 target_link_libraries(heif-dec PRIVATE heif heifio)
 target_include_directories(heif-dec PRIVATE ${libheif_SOURCE_DIR})
 install(TARGETS heif-dec RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -44,6 +58,13 @@ add_executable(heif-enc ${getopt_sources}
         common.h
         SAI_datafile.cc
         SAI_datafile.h)
+if(WIN32)
+    if(MSVC)
+        target_sources(heif-enc PRIVATE utf8.manifest)
+    elseif(MINGW)
+        target_sources(heif-enc PRIVATE utf8.rc)
+    endif()
+endif()
 target_link_libraries(heif-enc PRIVATE heif heifio)
 target_include_directories(heif-enc PRIVATE ${libheif_SOURCE_DIR})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -59,6 +80,13 @@ if (WITH_EXAMPLE_HEIF_THUMB AND PNG_FOUND)
             heif_thumbnailer.cc
             common.cc
             common.h)
+    if(WIN32)
+        if(MSVC)
+                target_sources(heif-thumbnailer PRIVATE utf8.manifest)
+        elseif(MINGW)
+                target_sources(heif-thumbnailer PRIVATE utf8.rc)
+        endif()
+    endif()
     target_link_libraries(heif-thumbnailer heif heifio)
     target_include_directories(heif-thumbnailer PRIVATE ${libheif_SOURCE_DIR})
 
@@ -78,6 +106,13 @@ if (WITH_EXAMPLE_HEIF_VIEW)
                 sdl.hh
                 common.cc
                 common.h)
+        if(WIN32)
+            if(MSVC)
+                target_sources(heif-view PRIVATE utf8.manifest)
+            elseif(MINGW)
+                target_sources(heif-view PRIVATE utf8.rc)
+            endif()
+        endif()
         target_link_libraries(heif-view PRIVATE heif SDL2::SDL2main SDL2::SDL2)
         install(TARGETS heif-view RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif ()
@@ -88,4 +123,11 @@ add_executable(heif-test ${getopt_sources}
         heif_test.cc
         common.cc
         common.h)
+if(WIN32)
+    if(MSVC)
+        target_sources(heif-test PRIVATE utf8.manifest)
+    elseif(MINGW)
+        target_sources(heif-test PRIVATE utf8.rc)
+    endif()
+endif()
 target_link_libraries(heif-test heif)
