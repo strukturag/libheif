@@ -147,6 +147,8 @@ if (WITH_KVAZAAR)
     endif ()
     if (HAVE_KVAZAAR_VERSION_STRING)
         add_definitions(-DHAVE_KVAZAAR_VERSION_STRING=1)
+    else ()
+        add_definitions(-DHAVE_KVAZAAR_VERSION_STRING=0)
     endif ()
 endif ()
 
