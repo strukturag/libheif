@@ -838,8 +838,20 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
     // svt_config.force_key_frames = true; TODO: this does not seem to work (see all [1])
 
 #if 1
+#if SVT_AV1_CHECK_VERSION(4, 0, 0)
+    switch (options->gop_structure) {
+      case heif_sequence_gop_structure_intra_only:
+        //svt_config.pred_structure = 1; // LOW_DELAY
+        break;
+      case heif_sequence_gop_structure_lowdelay:
+        //svt_config.pred_structure = 1; // LOW_DELAY
+        break;
+      case heif_sequence_gop_structure_unrestricted:
+        svt_config.pred_structure = 2; // RANDOM_ACCESS
+        break;
+    }
+#else
     // TODO: setting pref_structure to SVT_AV1_PRED_LOW_DELAY_B hangs the encoder
-
     switch (options->gop_structure) {
       case heif_sequence_gop_structure_intra_only:
         //svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
@@ -851,6 +863,7 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
         svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_RANDOM_ACCESS;
         break;
     }
+#endif
 
     if (options->keyframe_distance_max) {
       svt_config.intra_period_length = options->keyframe_distance_max; // TODO -1 ?
@@ -921,7 +934,7 @@ static heif_error read_encoder_output_packets(void* encoder_raw, bool done_sendi
 
         /* TODO: this is a hack
          * When using
-         *           svt_config.pred_structure = SvtAv1PredStructure::SVT_AV1_PRED_LOW_DELAY_B;
+         *           svt_config.pred_structure = 1; // LOW_DELAY
          * svt_av1_enc_get_packet() hangs on the second call. As a workaround, we can leave the
          * loop when we got the image:
          */
