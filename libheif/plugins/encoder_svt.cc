@@ -858,9 +858,10 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
 #endif
   }
   else {
-    // TODO: enable when https://gitlab.com/AOMediaCodec/SVT-AV1/-/issues/2245 is resolved
-    // svt_config.avif = true;
-    // encoder->still_image_mode = true;
+#if SVT_AV1_CHECK_VERSION(4, 0, 0)
+    svt_config.avif = true;
+    encoder->still_image_mode = true;
+#endif
   }
 
   if (color_format == EB_YUV422 || bitdepth_y > 10) {
