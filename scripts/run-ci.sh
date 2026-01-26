@@ -164,7 +164,7 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ] ; then
     echo "Building libheif ..."
     cmake . $CMAKE_OPTIONS
-    make -j $(nproc)
+    make VERBOSE=1 -j $(nproc)
     if [ "$CURRENT_OS" = "linux" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ] && [ ! -z "$TESTS" ] ; then
         echo "Running tests ..."
         make test
@@ -275,7 +275,7 @@ if [ ! -z "$TARBALL" ]; then
     mkdir build
     pushd build
     cmake .. --preset=release
-    make -j $(nproc)
+    make VERBOSE=1 -j $(nproc)
     popd
 fi
 
