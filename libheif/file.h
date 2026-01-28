@@ -73,7 +73,7 @@ public:
 
   Error read_from_memory(const void* data, size_t size, bool copy);
 
-  bool has_images() const { return m_meta_box != nullptr; }
+  bool has_images() const;
 
   bool has_sequences() const { return m_moov_box != nullptr; }
 

@@ -143,6 +143,16 @@ Error HeifFile::read(const std::shared_ptr<StreamReader>& reader)
 }
 
 
+bool HeifFile::has_images() const
+{
+  if (!m_meta_box) {
+    return false;
+  }
+
+  return m_hdlr_box && m_hdlr_box->get_handler_type() == fourcc("pict");
+}
+
+
 void HeifFile::new_empty_file()
 {
   //m_input_stream.reset();
@@ -423,8 +433,7 @@ Error HeifFile::parse_heif_images()
 
   if (m_hdlr_box &&
       m_hdlr_box->get_handler_type() != fourcc("pict")) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_pict_handler);
+    return {};
   }
 
 
