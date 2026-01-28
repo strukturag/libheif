@@ -431,6 +431,26 @@ Error HeifFile::parse_heif_images()
                  heif_suberror_No_hdlr_box);
   }
 
+  // --- assign item boxes
+
+  m_iinf_box = m_meta_box->get_child_box<Box_iinf>();
+  if (!m_iinf_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iinf_box);
+  }
+
+  std::vector<std::shared_ptr<Box_infe>> infe_boxes = m_iinf_box->get_child_boxes<Box_infe>();
+
+  for (auto& infe_box : infe_boxes) {
+    if (!infe_box) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_infe_box);
+    }
+
+    m_infe_boxes.insert(std::make_pair(infe_box->get_item_ID(), infe_box));
+  }
+
+
   if (m_hdlr_box &&
       m_hdlr_box->get_handler_type() != fourcc("pict")) {
     return {};
@@ -483,27 +503,8 @@ Error HeifFile::parse_heif_images()
     }
   }
 
-  m_iinf_box = m_meta_box->get_child_box<Box_iinf>();
-  if (!m_iinf_box) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_iinf_box);
-  }
-
   m_grpl_box = m_meta_box->get_child_box<Box_grpl>();
 
-
-  // --- build list of images
-
-  std::vector<std::shared_ptr<Box_infe>> infe_boxes = m_iinf_box->get_child_boxes<Box_infe>();
-
-  for (auto& infe_box : infe_boxes) {
-    if (!infe_box) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_No_infe_box);
-    }
-
-    m_infe_boxes.insert(std::make_pair(infe_box->get_item_ID(), infe_box));
-  }
 
   return Error::Ok;
 }
