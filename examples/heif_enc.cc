@@ -2189,6 +2189,49 @@ static std::vector<uint8_t> hex_to_binary(const std::string& line)
 }
 
 
+uint32_t parse_vmt_timestamp(const std::string& vmt_time)
+{
+  std::regex pattern(R"(-?((\d\d):)?(\d\d):(\d\d)(\.(\d*))?)");
+  std::smatch match;
+
+  if (!std::regex_match(vmt_time, match, pattern)) {
+    return 0; // no match
+  }
+
+  std::string hh = match[2]; // optional
+  std::string mm = match[3];
+  std::string ss = match[4];
+  std::string fs = match[6]; // optional
+
+  uint32_t ms = 0;
+
+  if (fs != "") {
+    if (fs.length() == 3) { // ms
+      ms = std::stoi(fs);
+    }
+    else if (fs.length() < 3) { // scale integer up
+      uint32_t scale = pow(10.0, 3 - fs.length());
+      ms = std::stoi(fs) * scale;
+    }
+    else { // scale integer down
+      uint32_t scale = pow(10.0, fs.length() - 3);
+      ms = std::stoi(fs) / scale;
+    }
+  }
+
+  uint32_t ts = ((hh != "" ? std::stoi(hh) : 0) * 3600 * 1000 +
+                 std::stoi(mm) * 60 * 1000 +
+                 std::stoi(ss) * 1000 +
+                 ms);
+
+  if (vmt_time.find('-') != std::string::npos) {
+    ts = 0; // negative time not supported
+  }
+
+  return ts;
+}
+
+
 int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
                               const std::string& track_uri, bool binary)
 {
@@ -2205,7 +2248,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
 
   std::ifstream istr(vmt_metadata_file.c_str());
 
-  std::regex pattern(R"((\d\d):(\d\d):(\d\d).(\d\d\d) -->$)");
+  std::regex pattern(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?)");
 
   static std::vector<uint8_t> prev_metadata;
   static std::optional<uint32_t> prev_ts;
@@ -2219,15 +2262,10 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
       continue;
     }
 
-    std::string hh = match[1];
-    std::string mm = match[2];
-    std::string ss = match[3];
-    std::string mil = match[4];
+    std::string cue_start = match[1];
+    std::string cue_end = match[3]; // == "" for unbounded cues
 
-    uint32_t ts = (std::stoi(hh) * 3600 * 1000 +
-                   std::stoi(mm) * 60 * 1000 +
-                   std::stoi(ss) * 1000 +
-                   std::stoi(mil));
+    uint32_t ts = parse_vmt_timestamp(cue_start);
 
     std::vector<uint8_t> concat;
 
