@@ -1,0 +1,141 @@
+name: "Build libheif AVIF-only (Windows x64: SVT-AV1 + rav1e) -> Draft Release"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to attach assets to (must already exist, e.g. v1.0.0)"
+        required: true
+      asset_name:
+        description: "Zip base name (optional)"
+        required: false
+        default: "libheif-windows-x64-avif-only"
+
+permissions:
+  contents: write
+
+jobs:
+  win-x64:
+    runs-on: windows-latest
+
+    env:
+      TRIPLET: x64-windows
+      BUILD_TYPE: Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Only the AVIF encoders you requested.
+      - name: Write vcpkg manifest (SVT-AV1 + rav1e only)
+        shell: pwsh
+        run: |
+          @'
+          {
+            "name": "libheif-avif-only-win",
+            "version-string": "0.0.0",
+            "dependencies": [
+              "svt-av1",
+              "rav1e"
+            ]
+          }
+          '@ | Out-File -Encoding ascii vcpkg.json
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Setup vcpkg (cache) + install deps
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: "vcpkg.json"
+          runVcpkgInstall: true
+
+      - name: Configure (CMake) - AVIF encoders ONLY
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $PWD "install"
+
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_INSTALL_PREFIX="$installDir" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=${{ env.TRIPLET }} `
+            -DBUILD_SHARED_LIBS=ON `
+            -DWITH_EXAMPLES=OFF `
+            -DENABLE_PLUGIN_LOADING=OFF `
+            `
+            -DWITH_SvtEnc=ON `
+            -DWITH_RAV1E=ON `
+            `
+            -DWITH_AOM_DECODER=OFF `
+            -DWITH_AOM_ENCODER=OFF `
+            -DWITH_DAV1D=OFF `
+            -DWITH_LIBDE265=OFF `
+            -DWITH_X265=OFF `
+            -DWITH_KVAZAAR=OFF `
+            -DWITH_OpenH264=OFF `
+            -DWITH_X264=OFF `
+            -DWITH_FFMPEG_DECODER=OFF `
+            -DWITH_JPEG_DECODER=OFF `
+            -DWITH_JPEG_ENCODER=OFF `
+            -DWITH_OpenJPEG_DECODER=OFF `
+            -DWITH_OpenJPEG_ENCODER=OFF `
+            -DWITH_OPENJPH_ENCODER=OFF `
+            -DWITH_VVDEC=OFF `
+            -DWITH_VVENC=OFF `
+            -DWITH_UVG266=OFF `
+            -DWITH_WEBCODECS=OFF `
+            -DWITH_UNCOMPRESSED_CODEC=OFF `
+            -DWITH_HEADER_COMPRESSION=OFF `
+            -DWITH_LIBSHARPYUV=OFF
+
+      - name: Build + Install
+        shell: pwsh
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }}
+          cmake --install build --config ${{ env.BUILD_TYPE }}
+
+      # Make the zip runnable: add encoder runtime DLLs next to libheif.dll
+      - name: Copy runtime DLLs (svt-av1 + rav1e) into install\bin
+        shell: pwsh
+        run: |
+          $vbin = Join-Path $env:VCPKG_ROOT "installed\${{ env.TRIPLET }}\bin"
+          $ibin = Join-Path $PWD "install\bin"
+          New-Item -ItemType Directory -Force -Path $ibin | Out-Null
+
+          $patterns = @(
+            "SvtAv1Enc*.dll",
+            "rav1e*.dll"
+          )
+
+          foreach ($p in $patterns) {
+            Get-ChildItem -Path $vbin -Filter $p -ErrorAction SilentlyContinue | ForEach-Object {
+              Copy-Item $_.FullName -Destination $ibin -Force
+            }
+          }
+
+          Write-Host "install\bin now contains:"
+          Get-ChildItem $ibin | Select-Object Name, Length
+
+      - name: Package (zip)
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag }}"
+          $base = "${{ inputs.asset_name }}"
+          if ([string]::IsNullOrWhiteSpace($base)) { $base = "libheif-windows-x64-avif-only" }
+
+          $zip = "$base-$tag.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+
+          Compress-Archive -Path "install\*" -DestinationPath $zip
+          "ASSET_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding ascii
+
+      - name: Upload to Draft Release (manual)
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ inputs.tag }}
+          files: ${{ env.ASSET_ZIP }}
