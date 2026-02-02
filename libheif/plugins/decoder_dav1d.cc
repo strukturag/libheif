@@ -108,13 +108,13 @@ heif_error dav1d_new_decoder2(void** dec, const heif_decoder_plugin_options* opt
 
   decoder->settings.all_layers = 0;
 
+  if (options->num_threads) {
+    decoder->settings.n_threads = options->num_threads;
+  }
+
   if (dav1d_open(&decoder->context, &decoder->settings) != 0) {
     delete decoder;
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
-  }
-
-  if (options->num_threads) {
-    decoder->settings.n_threads = options->num_threads;
   }
 
   *dec = decoder;
