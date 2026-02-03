@@ -240,7 +240,7 @@ int decode_single_image(heif_image_handle* handle,
   int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
   if (bit_depth < 0) {
     std::cerr << "Input image has undefined bit-depth\n";
-    //return 1;
+    return 1;
   }
 
   int has_alpha = heif_image_handle_has_alpha_channel(handle);
