@@ -143,8 +143,14 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   dst->max_children_per_box = src->max_children_per_box;
 
   if (src->version >= 2) {
+    dst->max_total_memory = src->max_total_memory;
     dst->max_sample_description_box_entries = src->max_sample_description_box_entries;
     dst->max_sample_group_description_box_entries = src->max_sample_group_description_box_entries;
+  }
+
+  if (src->version >= 3) {
+    dst->max_sequence_frames = src->max_sequence_frames;
+    dst->max_number_of_file_brands = src->max_number_of_file_brands;
   }
 }
 
