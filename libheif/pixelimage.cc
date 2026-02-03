@@ -429,7 +429,16 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
             sstr.str()};
   }
 
-  allocation_size = static_cast<size_t>(m_mem_height) * stride + alignment - 1;
+  // Check for allocation size overflow using 64-bit arithmetic
+  // Test case was an overlay image with size 1x134217727.
+  // Width 1 gets aligned to 64 and then width * height overflows 32 bit systems.
+  uint64_t alloc_64 = static_cast<uint64_t>(m_mem_height) * stride + alignment - 1;
+  if (alloc_64 > std::numeric_limits<size_t>::max()) {
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            "Image allocation size overflow"};
+  }
+  allocation_size = static_cast<size_t>(alloc_64);
 
   if (auto err = memory_handle.alloc(allocation_size, limits, "image data")) {
     return err;
