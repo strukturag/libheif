@@ -394,7 +394,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   if (parameters->image_width % parameters->tile_width != 0 ||
       parameters->image_height % parameters->tile_height != 0) {
-    return Error{heif_error_Invalid_input,
+    return Error{heif_error_Usage_error,
                  heif_suberror_Invalid_parameter_value,
                  "ISO 23001-17 image size must be an integer multiple of the tile size."};
   }
@@ -499,7 +499,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
   if (tile_y >= uncC->get_number_of_tile_rows() ||
       tile_x >= uncC->get_number_of_tile_columns()) {
-    return Error{heif_error_Invalid_input,
+    return Error{heif_error_Usage_error,
                  heif_suberror_Invalid_parameter_value,
                  "tile_x and/or tile_y are out of range."};
   }
