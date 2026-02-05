@@ -96,6 +96,7 @@ uint32_t sequence_repetitions = 1;
 std::string vmt_metadata_file;
 bool binary_metadata_track = false;
 std::string metadata_track_uri = "vmt:metadata";
+const uint32_t BAD_VMT_TIMESTAMP = 0xFFFFFFFE;
 
 int quality = 50;
 bool lossless = false;
@@ -2191,7 +2192,7 @@ static std::vector<uint8_t> hex_to_binary(const std::string& line)
 
 uint32_t parse_vmt_timestamp(const std::string& vmt_time)
 {
-  std::regex pattern(R"(-?((\d\d):)?(\d\d):(\d\d)(\.(\d*))?)");
+  std::regex pattern(R"(-?((\d*):)?(\d\d):(\d\d)(\.(\d*))?)");
   std::smatch match;
 
   if (!std::regex_match(vmt_time, match, pattern)) {
@@ -2203,19 +2204,18 @@ uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   std::string ss = match[4];
   std::string fs = match[6]; // optional
 
+  if (vmt_time.find('-') != std::string::npos) {
+    return 0; // negative time not supported
+  }
+
   uint32_t ms = 0;
 
   if (fs != "") {
-    if (fs.length() == 3) { // ms
+    if (fs.length() == 3) {
       ms = std::stoi(fs);
     }
-    else if (fs.length() < 3) { // scale integer up
-      uint32_t scale = pow(10.0, 3 - fs.length());
-      ms = std::stoi(fs) * scale;
-    }
-    else { // scale integer down
-      uint32_t scale = pow(10.0, fs.length() - 3);
-      ms = std::stoi(fs) / scale;
+    else {
+      return BAD_VMT_TIMESTAMP; // invalid
     }
   }
 
@@ -2223,10 +2223,6 @@ uint32_t parse_vmt_timestamp(const std::string& vmt_time)
                  std::stoi(mm) * 60 * 1000 +
                  std::stoi(ss) * 1000 +
                  ms);
-
-  if (vmt_time.find('-') != std::string::npos) {
-    ts = 0; // negative time not supported
-  }
 
   return ts;
 }
@@ -2293,14 +2289,26 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
       concat.push_back(0);
     }
 
-    if (prev_ts) {
-      heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
-      heif_raw_sequence_sample_set_duration(sample, ts - *prev_ts);
-      heif_track_add_raw_sequence_sample(track, sample);
-    }
+    if (ts != BAD_VMT_TIMESTAMP) {
 
-    prev_ts = ts;
-    prev_metadata = concat;
+      if (ts > *prev_ts) {
+        heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
+        heif_raw_sequence_sample_set_duration(sample, ts - *prev_ts);
+        heif_track_add_raw_sequence_sample(track, sample);
+      }
+      else if (ts == *prev_ts) {
+        concat.insert(concat.begin(), prev_metadata.begin(), prev_metadata.end());
+      }
+      else {
+        std::cerr << "Bad VMT timestamp order: " << cue_start << "\n";
+      }
+
+      prev_ts = ts;
+      prev_metadata = concat;
+    }
+    else {
+      std::cerr << "Bad VMT timestamp: " << cue_start << "\n";
+    }
   }
 
   // --- flush last metadata packet
