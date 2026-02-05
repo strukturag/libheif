@@ -497,6 +497,13 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
   uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
 
+  if (tile_y >= uncC->get_number_of_tile_rows() ||
+      tile_x >= uncC->get_number_of_tile_columns()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "tile_x and/or tile_y are out of range."};
+  }
+
   Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image, save_alpha);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
