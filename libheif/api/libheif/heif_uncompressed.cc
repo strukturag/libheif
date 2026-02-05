@@ -96,6 +96,12 @@ heif_error heif_context_add_empty_unci_image(heif_context* ctx,
   Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
   unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
 
+  // mark the new image as primary image
+
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(*unciImageResult);
+  }
+
   if (encoding_options) {
     heif_encoding_options_free(default_options);
   }
