@@ -271,16 +271,13 @@ Error unc_decoder::decode_image(const DataExtent& extent,
 
   for (uint32_t tile_y0 = 0; tile_y0 < m_height; tile_y0 += tile_height)
     for (uint32_t tile_x0 = 0; tile_x0 < m_width; tile_x0 += tile_width) {
-      uint32_t tile_x = tile_x0 / tile_width;
-      uint32_t tile_y = tile_y0 / tile_height;
-
       std::vector<uint8_t> tile_data;
-      Error error = fetch_tile_data(extent, properties, tile_x, tile_y, tile_data);
+      Error error = fetch_tile_data(extent, properties, tile_x0 / tile_width, tile_y0 / tile_height, tile_data);
       if (error) {
         return error;
       }
 
-      error = decode_tile(tile_data, img, tile_x0, tile_y0, tile_x, tile_y);
+      error = decode_tile(tile_data, img, tile_x0, tile_y0);
       if (error) {
         return error;
       }

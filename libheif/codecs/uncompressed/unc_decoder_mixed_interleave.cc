@@ -62,18 +62,17 @@ std::vector<uint64_t> unc_decoder_mixed_interleave::get_tile_data_sizes() const
 
 Error unc_decoder_mixed_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
                                                  std::shared_ptr<HeifPixelImage>& img,
-                                                 uint32_t out_x0, uint32_t out_y0,
-                                                 uint32_t tile_x, uint32_t tile_y)
+                                                 uint32_t out_x0, uint32_t out_y0)
 {
   UncompressedBitReader srcBits(tile_data);
 
-  processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+  processTile(srcBits, out_x0, out_y0);
 
   return Error::Ok;
 }
 
 
-void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
+void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0)
 {
   bool haveProcessedChromaForThisTile = false;
   for (ChannelListEntry& entry : channelList) {
@@ -100,8 +99,8 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
       }
       else {
         for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-          uint64_t dst_row_offset = entry.getDestinationRowOffset(tile_row, tile_y);
-          processComponentRow(entry, srcBits, dst_row_offset, tile_column);
+          uint64_t dst_row_offset = uint64_t{(out_y0 + tile_y)} * entry.dst_plane_stride;
+          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
         }
       }
     }

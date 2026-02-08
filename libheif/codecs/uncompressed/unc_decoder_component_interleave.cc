@@ -90,8 +90,7 @@ std::vector<uint64_t> unc_decoder_component_interleave::get_tile_data_sizes() co
 
 Error unc_decoder_component_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
                                                      std::shared_ptr<HeifPixelImage>& img,
-                                                     uint32_t out_x0, uint32_t out_y0,
-                                                     uint32_t tile_x, uint32_t tile_y)
+                                                     uint32_t out_x0, uint32_t out_y0)
 {
   UncompressedBitReader srcBits(tile_data);
 

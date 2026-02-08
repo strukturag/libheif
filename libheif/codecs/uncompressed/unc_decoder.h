@@ -48,8 +48,7 @@ public:
 
   virtual Error decode_tile(const std::vector<uint8_t>& tile_data,
                             std::shared_ptr<HeifPixelImage>& img,
-                            uint32_t out_x0, uint32_t out_y0,
-                            uint32_t tile_x, uint32_t tile_y) = 0;
+                            uint32_t out_x0, uint32_t out_y0) = 0;
 
   Error decode_image(const DataExtent& extent,
                      const UncompressedImageCodec::unci_properties& properties,

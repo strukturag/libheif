@@ -538,7 +538,7 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
     return err;
   }
 
-  return decoder->decode_tile(tile_data, img, 0, 0, tile_x0, tile_y0);
+  return decoder->decode_tile(tile_data, img, 0, 0);
 }
 
 

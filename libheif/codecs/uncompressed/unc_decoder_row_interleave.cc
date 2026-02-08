@@ -68,18 +68,17 @@ std::vector<uint64_t> unc_decoder_row_interleave::get_tile_data_sizes() const
 
 Error unc_decoder_row_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
                                                std::shared_ptr<HeifPixelImage>& img,
-                                               uint32_t out_x0, uint32_t out_y0,
-                                               uint32_t tile_x, uint32_t tile_y)
+                                               uint32_t out_x0, uint32_t out_y0)
 {
   UncompressedBitReader srcBits(tile_data);
 
-  processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+  processTile(srcBits, out_x0, out_y0);
 
   return Error::Ok;
 }
 
 
-void unc_decoder_row_interleave::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
+void unc_decoder_row_interleave::processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0)
 {
   for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
     for (ChannelListEntry& entry : channelList) {
