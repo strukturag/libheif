@@ -28,8 +28,7 @@
 
 
 bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                       const heif_encoding_options& options,
-                                       bool save_alpha) const
+                                       const heif_encoding_options& options) const
 {
   if (image->get_colorspace() == heif_colorspace_RGB &&
       image->get_chroma_format() == heif_chroma_interleaved_RGB) {
@@ -37,8 +36,7 @@ bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImag
   }
 
   if (image->get_colorspace() == heif_colorspace_RGB &&
-      image->get_chroma_format() == heif_chroma_interleaved_RGBA &&
-      save_alpha) {
+      image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
     return true;
   }
 
@@ -49,14 +47,13 @@ bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImag
 void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
                                                std::shared_ptr<Box_uncC>& uncC,
                                                const std::shared_ptr<const HeifPixelImage>& image,
-                                               const heif_encoding_options& options,
-                                               bool save_alpha_channel) const
+                                               const heif_encoding_options& options) const
 {
   cmpd->add_component({component_type_red});
   cmpd->add_component({component_type_green});
   cmpd->add_component({component_type_blue});
 
-  bool save_alpha = image->has_alpha() && save_alpha_channel;
+  bool save_alpha = image->has_alpha();
 
   if (save_alpha) {
     cmpd->add_component({component_type_alpha});
@@ -81,12 +78,11 @@ void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
 
 
 std::vector<uint8_t> unc_encoder_rgb3_rgba::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                        const heif_encoding_options& options,
-                                                        bool save_alpha_channel) const
+                                                        const heif_encoding_options& options) const
 {
   std::vector<uint8_t> data;
 
-  bool save_alpha = src_image->has_alpha() && save_alpha_channel;
+  bool save_alpha = src_image->has_alpha();
 
   int bytes_per_pixel = save_alpha ? 4 : 3;
 

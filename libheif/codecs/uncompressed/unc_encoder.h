@@ -37,23 +37,19 @@ public:
   virtual ~unc_encoder() = default;
 
   virtual bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                          const heif_encoding_options& options,
-                          bool save_alpha) const = 0;
+                          const heif_encoding_options& options) const = 0;
 
   virtual void fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& out_cmpd,
                                   std::shared_ptr<Box_uncC>& out_uncC,
                                   const std::shared_ptr<const HeifPixelImage>& image,
-                                  const heif_encoding_options& options,
-                                  bool save_alpha) const = 0;
+                                  const heif_encoding_options& options) const = 0;
 
   [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image,
-                                           const heif_encoding_options& options,
-                                           bool save_alpha) const = 0;
+                                           const heif_encoding_options& options) const = 0;
 
 
   static Result<const unc_encoder*> get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
-                                                    const heif_encoding_options& options,
-                                                    bool save_alpha);
+                                                    const heif_encoding_options& options);
 
   Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                 const heif_encoding_options& options) const;

@@ -92,7 +92,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared
                                                                  const heif_encoding_options& options,
                                                                  heif_image_input_class input_class)
 {
-  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(src_image, options, options.save_alpha_channel);
+  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(src_image, options);
   if (!uncEncoder) {
     return {uncEncoder.error()};
   }
@@ -118,7 +118,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   }
 
 
-  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(prototype, *encoding_options, encoding_options->save_alpha_channel);
+  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(prototype, *encoding_options);
   if (!uncEncoder) {
     return {uncEncoder.error()};
   }
@@ -233,7 +233,12 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
                  "tile_x and/or tile_y are out of range."};
   }
 
-  Result<std::vector<uint8_t>> codedBitstreamResult = m_unc_encoder->encode_tile(image, m_encoding_options, save_alpha);
+
+  if (image->has_alpha() && !save_alpha) {
+    // TODO: drop alpha
+  }
+
+  Result<std::vector<uint8_t>> codedBitstreamResult = m_unc_encoder->encode_tile(image, m_encoding_options);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }

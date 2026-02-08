@@ -27,18 +27,15 @@ class unc_encoder_rgb3_rgba : public unc_encoder
 {
 public:
   [[nodiscard]] bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                const heif_encoding_options& options,
-                                bool save_alpha) const override;
+                                const heif_encoding_options& options) const override;
 
   void fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& out_cmpd,
                           std::shared_ptr<Box_uncC>& out_uncC,
                           const std::shared_ptr<const HeifPixelImage>& image,
-                          const heif_encoding_options& options,
-                          bool save_alpha) const override;
+                          const heif_encoding_options& options) const override;
 
   [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image,
-                                                 const heif_encoding_options& options,
-                                                 bool save_alpha) const override;
+                                                 const heif_encoding_options& options) const override;
 };
 
 

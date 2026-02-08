@@ -49,8 +49,7 @@ heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype
 
 
 Result<const unc_encoder*> unc_encoder::get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
-                                                        const heif_encoding_options& options,
-                                                        bool save_alpha)
+                                                        const heif_encoding_options& options)
 {
   static unc_encoder_rgb3_rgba enc_rgb3_rgba;
   static const unc_encoder* encoders[] {
@@ -58,7 +57,7 @@ Result<const unc_encoder*> unc_encoder::get_unc_encoder(const std::shared_ptr<co
   };
 
   for (const unc_encoder* enc : encoders) {
-    if (enc->can_encode(prototype_image, options, save_alpha)) {
+    if (enc->can_encode(prototype_image, options)) {
       return {enc};
     }
   }
@@ -344,7 +343,7 @@ Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>
 Result<Encoder::CodedImageData> unc_encoder::encode_full_image(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                          const heif_encoding_options& options)
 {
-  auto uncEncoder = get_unc_encoder(src_image, options, options.save_alpha_channel);
+  auto uncEncoder = get_unc_encoder(src_image, options);
   if (uncEncoder.error()) {
     return uncEncoder.error();
   }
@@ -354,7 +353,7 @@ Result<Encoder::CodedImageData> unc_encoder::encode_full_image(const std::shared
 
 
 Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                           const heif_encoding_options& options) const
+                                                           const heif_encoding_options& in_options) const
 {
   auto parameters = std::unique_ptr<heif_unci_image_parameters,
                                     void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
@@ -366,12 +365,18 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
   parameters->tile_height = parameters->image_height;
 
 
+  heif_encoding_options options = in_options;
+  if (src_image->has_alpha() && !options.save_alpha_channel) {
+    // TODO: drop alpha channel
+  }
+
+
   // --- generate configuration property boxes
 
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
   std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-  this->fill_cmpd_and_uncC(cmpd, uncC, src_image, options, options.save_alpha_channel);
+  this->fill_cmpd_and_uncC(cmpd, uncC, src_image, options);
 
   Encoder::CodedImageData codedImageData;
   codedImageData.properties.push_back(uncC);
@@ -382,7 +387,7 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
 
   // --- encode image
 
-  Result<std::vector<uint8_t> > codedBitstreamResult = encode_tile(src_image, options, options.save_alpha_channel);
+  Result<std::vector<uint8_t> > codedBitstreamResult = encode_tile(src_image, options);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }
