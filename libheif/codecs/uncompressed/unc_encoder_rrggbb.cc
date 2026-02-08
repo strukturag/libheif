@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unc_encoder_rgb3_rgba.h"
+#include "unc_encoder_rrggbb.h"
 
 #include <cstring>
 
@@ -27,27 +27,31 @@
 #include "unc_types.h"
 
 
-bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                       const heif_encoding_options& options) const
+bool unc_encoder_rrggbb::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                    const heif_encoding_options& options) const
 {
   if (image->get_colorspace() != heif_colorspace_RGB) {
     return false;
   }
 
   switch (image->get_chroma_format()) {
-    case heif_chroma_interleaved_RGB:
-    case heif_chroma_interleaved_RGBA:
-      return true;
+    case heif_chroma_interleaved_RRGGBB_LE:
+    case heif_chroma_interleaved_RRGGBB_BE:
+    case heif_chroma_interleaved_RRGGBBAA_LE:
+    case heif_chroma_interleaved_RRGGBBAA_BE:
+      break;
     default:
       return false;
   }
+
+  return true;
 }
 
 
-void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                                               std::shared_ptr<Box_uncC>& uncC,
-                                               const std::shared_ptr<const HeifPixelImage>& image,
-                                               const heif_encoding_options& options) const
+void unc_encoder_rrggbb::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
+                                            std::shared_ptr<Box_uncC>& uncC,
+                                            const std::shared_ptr<const HeifPixelImage>& image,
+                                            const heif_encoding_options& options) const
 {
   cmpd->add_component({component_type_red});
   cmpd->add_component({component_type_green});
@@ -59,24 +63,20 @@ void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     cmpd->add_component({component_type_alpha});
   }
 
+  bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
+                        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
+
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
-  if (bpp == 8) {
-    if (save_alpha) {
-      uncC->set_profile(fourcc("rgba"));
-    }
-    else {
-      uncC->set_profile(fourcc("rgb3"));
-    }
-  }
-
-  uint8_t component_align_size = 0;
-  if (bpp != 8) {
-    component_align_size = 1;
+  uint8_t component_align_size = 2;
+  if (bpp == 16) {
+    component_align_size = 0;
   }
 
   uncC->set_interleave_type(interleave_mode_pixel);
   uncC->set_sampling_type(0);
+  uncC->set_components_little_endian(little_endian);
+
   uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
   uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
   uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
@@ -86,14 +86,14 @@ void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb3_rgba::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                        const heif_encoding_options& options) const
+std::vector<uint8_t> unc_encoder_rrggbb::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                                     const heif_encoding_options& options) const
 {
   std::vector<uint8_t> data;
 
   bool save_alpha = src_image->has_alpha();
 
-  int bytes_per_pixel = save_alpha ? 4 : 3;
+  int bytes_per_pixel = save_alpha ? 8 : 6;
 
   size_t src_stride;
   const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);

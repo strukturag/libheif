@@ -25,6 +25,7 @@
 #include "pixelimage.h"
 #include "unc_boxes.h"
 #include "unc_encoder_rgb3_rgba.h"
+#include "unc_encoder_rrggbb.h"
 #include "libheif/heif_uncompressed.h"
 
 
@@ -52,8 +53,11 @@ Result<const unc_encoder*> unc_encoder::get_unc_encoder(const std::shared_ptr<co
                                                         const heif_encoding_options& options)
 {
   static unc_encoder_rgb3_rgba enc_rgb3_rgba;
+  static unc_encoder_rrggbb enc_rrggbb;
+
   static const unc_encoder* encoders[] {
-    &enc_rgb3_rgba
+    &enc_rgb3_rgba,
+    &enc_rrggbb
   };
 
   for (const unc_encoder* enc : encoders) {
