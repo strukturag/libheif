@@ -138,7 +138,7 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
                                                                                         std::shared_ptr<HeifPixelImage>& img)
 {
   ChannelListEntry entry;
-  entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, m_uncC, component, &(entry.channel));
+  entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, component, &(entry.channel));
   entry.dst_plane = img->get_plane(entry.channel, &(entry.dst_plane_stride));
   entry.tile_width = m_tile_width;
   entry.tile_height = m_tile_height;

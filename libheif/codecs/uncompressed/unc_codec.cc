@@ -158,58 +158,10 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
 }
 
 bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>& cmpd,
-                                           const std::shared_ptr<const Box_uncC>& uncC,
                                            Box_uncC::Component component,
                                            heif_channel* channel)
 {
   uint16_t component_index = component.component_index;
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    if (uncC->get_profile() == fourcc("rgb3")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_R;
-          return true;
-        case 1:
-          *channel = heif_channel_G;
-          return true;
-        case 2:
-          *channel = heif_channel_B;
-          return true;
-      }
-    }
-    else if (uncC->get_profile() == fourcc("rgba")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_R;
-          return true;
-        case 1:
-          *channel = heif_channel_G;
-          return true;
-        case 2:
-          *channel = heif_channel_B;
-          return true;
-        case 3:
-          *channel = heif_channel_Alpha;
-          return true;
-      }
-    }
-    else if (uncC->get_profile() == fourcc("abgr")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_Alpha;
-          return true;
-        case 1:
-          *channel = heif_channel_B;
-          return true;
-        case 2:
-          *channel = heif_channel_G;
-          return true;
-        case 3:
-          *channel = heif_channel_R;
-          return true;
-      }
-    }
-  }
   uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
   switch (component_type) {
@@ -270,7 +222,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
 
   for (Box_uncC::Component component : uncC->get_components()) {
     heif_channel channel;
-    if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
+    if (map_uncompressed_component_to_channel(cmpd, component, &channel)) {
       if (img->has_channel(channel)) {
         return Error{heif_error_Unsupported_feature,
                      heif_suberror_Unspecified,
