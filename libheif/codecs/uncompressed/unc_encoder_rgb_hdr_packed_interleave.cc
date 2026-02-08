@@ -52,17 +52,15 @@ void unc_encoder_rgb_hdr_packed_interleave::fill_cmpd_and_uncC(std::shared_ptr<B
   cmpd->add_component({component_type_green});
   cmpd->add_component({component_type_blue});
 
-  bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE);
-
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
   uint8_t nBits = static_cast<uint8_t>(3 * bpp);
-  uint8_t bytes_per_pixel = (nBits + 7) / 8;
+  uint8_t bytes_per_pixel = static_cast<uint8_t>((nBits + 7) / 8);
 
   uncC->set_interleave_type(interleave_mode_pixel);
   uncC->set_pixel_size(bytes_per_pixel);
   uncC->set_sampling_type(0);
-  uncC->set_components_little_endian(little_endian);
+  uncC->set_components_little_endian(true);
 
   uncC->add_component({0, bpp, component_format_unsigned, 0});
   uncC->add_component({1, bpp, component_format_unsigned, 0});
@@ -78,7 +76,7 @@ std::vector<uint8_t> unc_encoder_rgb_hdr_packed_interleave::encode_tile(const st
   uint8_t bpp = src_image->get_bits_per_pixel(heif_channel_interleaved);
 
   uint8_t nBits = static_cast<uint8_t>(3 * bpp);
-  uint8_t bytes_per_pixel = (nBits + 7) / 8;
+  uint8_t bytes_per_pixel = static_cast<uint8_t>((nBits + 7) / 8);
 
   size_t src_stride;
   const auto* src_data = reinterpret_cast<const uint16_t*>(src_image->get_plane(heif_channel_interleaved, &src_stride));
