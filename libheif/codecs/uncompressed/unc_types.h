@@ -29,7 +29,7 @@
  *
  * See ISO/IEC 23001-17 Table 1.
 */
-enum heif_uncompressed_component_type
+enum heif_uncompressed_component_type : uint16_t
 {
   /**
    * Monochrome component.

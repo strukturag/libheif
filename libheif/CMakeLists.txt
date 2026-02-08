@@ -310,7 +310,9 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_encoder_rgb3_rgba.cc
             codecs/uncompressed/unc_encoder_rgb3_rgba.h
             codecs/uncompressed/unc_encoder_rrggbb.cc
-            codecs/uncompressed/unc_encoder_rrggbb.h)
+            codecs/uncompressed/unc_encoder_rrggbb.h
+            codecs/uncompressed/unc_encoder_planar.cc
+            codecs/uncompressed/unc_encoder_planar.h)
 endif ()
 
 if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
