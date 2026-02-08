@@ -488,8 +488,13 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
 void UncompressedImageCodec::unci_properties::fill_from_image_item(const std::shared_ptr<const ImageItem>& image)
 {
   ispe = image->get_property<Box_ispe>();
-  cmpd = image->get_property<Box_cmpd>();
-  uncC = image->get_property<Box_uncC>();
+  auto cmpd_mut = image->get_property<Box_cmpd>();
+  auto uncC_mut = image->get_property<Box_uncC>();
+  if (uncC_mut) {
+    fill_uncC_and_cmpd_from_profile(*uncC_mut, cmpd_mut);
+  }
+  cmpd = cmpd_mut;
+  uncC = uncC_mut;
   cmpC = image->get_property<Box_cmpC>();
   icef = image->get_property<Box_icef>();
 }

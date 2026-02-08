@@ -349,6 +349,8 @@ Error ImageItem_uncompressed::initialize_decoder()
                  "No 'uncC' box found."};
   }
 
+  fill_uncC_and_cmpd_from_profile(*uncC, cmpd);
+
   m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
   return Error::Ok;

@@ -216,6 +216,10 @@ public:
 
   uint32_t get_number_of_tiles() const { return m_num_tile_rows * m_num_tile_rows; }
 
+  std::shared_ptr<Box_cmpd> get_synthetic_cmpd() const { return m_synthetic_cmpd; }
+
+  void set_synthetic_cmpd(std::shared_ptr<Box_cmpd> cmpd) { m_synthetic_cmpd = std::move(cmpd); }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
@@ -235,6 +239,8 @@ protected:
   uint32_t m_tile_align_size = 0;
   uint32_t m_num_tile_cols = 1;
   uint32_t m_num_tile_rows = 1;
+
+  std::shared_ptr<Box_cmpd> m_synthetic_cmpd;
 };
 
 
@@ -374,6 +380,10 @@ protected:
   uint16_t m_pattern_height = 0;
   std::vector<PatternComponent> m_components;
 };
+
+
+void fill_uncC_and_cmpd_from_profile(Box_uncC& uncC,
+                                     std::shared_ptr<Box_cmpd>& cmpd);
 
 
 class Box_uncv : public Box_VisualSampleEntry
