@@ -38,12 +38,6 @@
 #include "security_limits.h"
 
 
-bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
-{
-  return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
-}
-
-
 Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
                                                            const std::shared_ptr<const Box_cmpd>& cmpd,
                                                            heif_chroma* out_chroma, heif_colorspace* out_colourspace,
@@ -443,7 +437,7 @@ void UncompressedImageCodec::unci_properties::fill_from_image_item(const std::sh
   auto cmpd_mut = image->get_property<Box_cmpd>();
   auto uncC_mut = image->get_property<Box_uncC>();
   if (uncC_mut) {
-    fill_uncC_and_cmpd_from_profile(*uncC_mut, cmpd_mut);
+    fill_uncC_and_cmpd_from_profile(uncC_mut, cmpd_mut);
   }
   cmpd = cmpd_mut;
   uncC = uncC_mut;

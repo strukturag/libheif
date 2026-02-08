@@ -40,8 +40,6 @@
 class HeifContext;
 
 
-bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC);
-
 bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd> &cmpd,
                                            Box_uncC::Component component,
                                            heif_channel *channel);

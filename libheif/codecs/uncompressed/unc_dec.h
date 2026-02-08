@@ -36,9 +36,9 @@ class Box_cmpd;
 class Decoder_uncompressed : public Decoder
 {
 public:
-  explicit Decoder_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
-                                const std::shared_ptr<const Box_cmpd>& cmpd,
-                                const std::shared_ptr<const Box_ispe>& ispe) : m_uncC(uncC), m_cmpd(cmpd), m_ispe(ispe) {}
+  explicit Decoder_uncompressed(std::shared_ptr<Box_uncC> uncC,
+                                std::shared_ptr<Box_cmpd> cmpd,
+                                std::shared_ptr<const Box_ispe> ispe);
 
   heif_compression_format get_compression_format() const override { return heif_compression_uncompressed; }
 
@@ -73,9 +73,9 @@ public:
                                                              const heif_security_limits* limits) override;
 
 private:
-  const std::shared_ptr<const Box_uncC> m_uncC;
-  const std::shared_ptr<const Box_cmpd> m_cmpd;
-  const std::shared_ptr<const Box_ispe> m_ispe;
+  std::shared_ptr<const Box_uncC> m_uncC;
+  std::shared_ptr<const Box_cmpd> m_cmpd;
+  std::shared_ptr<const Box_ispe> m_ispe;
 
   std::shared_ptr<HeifPixelImage> m_decoded_image;
   uintptr_t m_decoded_image_user_data;

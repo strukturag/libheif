@@ -382,7 +382,7 @@ protected:
 };
 
 
-void fill_uncC_and_cmpd_from_profile(Box_uncC& uncC,
+void fill_uncC_and_cmpd_from_profile(const std::shared_ptr<Box_uncC>& uncC,
                                      std::shared_ptr<Box_cmpd>& cmpd);
 
 

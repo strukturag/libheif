@@ -292,10 +292,6 @@ Error unc_decoder::decode_image(const DataExtent& extent,
 
 bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const Box_uncC>& uncC)
 {
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    return true;
-  }
-
   for (const auto& component : uncC->get_components()) {
     if (component.component_bit_depth > 16) {
       return false;

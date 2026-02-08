@@ -19,6 +19,7 @@
  */
 
 #include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #include "codecs/uncompressed/unc_codec.h"
 #include "error.h"
 #include "context.h"
@@ -26,6 +27,19 @@
 #include <string>
 #include <algorithm>
 #include <utility>
+
+
+Decoder_uncompressed::Decoder_uncompressed(std::shared_ptr<Box_uncC> uncC,
+                                           std::shared_ptr<Box_cmpd> cmpd,
+                                           std::shared_ptr<const Box_ispe> ispe)
+    : m_ispe(std::move(ispe))
+{
+  if (uncC) {
+    fill_uncC_and_cmpd_from_profile(uncC, cmpd);
+  }
+  m_uncC = std::move(uncC);
+  m_cmpd = std::move(cmpd);
+}
 
 
 Result<std::vector<uint8_t>> Decoder_uncompressed::read_bitstream_configuration_data() const
@@ -39,12 +53,7 @@ int Decoder_uncompressed::get_luma_bits_per_pixel() const
   assert(m_uncC);
 
   if (!m_cmpd) {
-    if (isKnownUncompressedFrameConfigurationBoxProfile(m_uncC)) {
-      return 8;
-    }
-    else {
-      return -1;
-    }
+    return -1;
   }
 
   int luma_bits = 0;
