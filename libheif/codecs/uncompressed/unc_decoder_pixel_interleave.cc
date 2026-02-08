@@ -22,24 +22,16 @@
 #include "context.h"
 #include "error.h"
 
-#include <cassert>
 #include <vector>
 
 
-Error unc_decoder_pixel_interleave::fetch_tile_data(const DataExtent& dataExtent,
-                                                     const UncompressedImageCodec::unci_properties& properties,
-                                                     uint32_t tile_x, uint32_t tile_y,
-                                                     std::vector<uint8_t>& tile_data)
+std::vector<uint64_t> unc_decoder_pixel_interleave::get_tile_data_sizes() const
 {
-  if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_pixel_interleave tile_width=0"};
-  }
-
   uint32_t bits_per_row = 0;
   for (uint32_t x = 0; x < m_tile_width; x++) {
     uint32_t bits_per_pixel = 0;
 
-    for (ChannelListEntry& entry : channelList) {
+    for (const ChannelListEntry& entry : channelList) {
       uint32_t bits_per_component = entry.bits_per_component_sample;
       if (entry.component_alignment > 0) {
         // start at byte boundary
@@ -70,11 +62,7 @@ Error unc_decoder_pixel_interleave::fetch_tile_data(const DataExtent& dataExtent
     skip_to_alignment(total_tile_size, m_uncC->get_tile_align_size());
   }
 
-  assert(m_tile_width > 0);
-  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
-  uint64_t tile_start_offset = total_tile_size * tileIdx;
-
-  return get_compressed_image_data_uncompressed(dataExtent, properties, &tile_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
+  return {total_tile_size};
 }
 
 

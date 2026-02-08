@@ -41,10 +41,10 @@ public:
 
   virtual void ensure_channel_list(std::shared_ptr<HeifPixelImage>& img) {}
 
-  virtual Error fetch_tile_data(const DataExtent& dataExtent,
-                                const UncompressedImageCodec::unci_properties& properties,
-                                uint32_t tile_x, uint32_t tile_y,
-                                std::vector<uint8_t>& tile_data) = 0;
+  Error fetch_tile_data(const DataExtent& dataExtent,
+                        const UncompressedImageCodec::unci_properties& properties,
+                        uint32_t tile_x, uint32_t tile_y,
+                        std::vector<uint8_t>& tile_data);
 
   virtual Error decode_tile(const std::vector<uint8_t>& tile_data,
                             std::shared_ptr<HeifPixelImage>& img,
@@ -64,6 +64,8 @@ protected:
   unc_decoder(uint32_t width, uint32_t height,
               const std::shared_ptr<const Box_cmpd>& cmpd,
               const std::shared_ptr<const Box_uncC>& uncC);
+
+  virtual std::vector<uint64_t> get_tile_data_sizes() const = 0;
 
   const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
                                                      const UncompressedImageCodec::unci_properties& properties,

@@ -23,22 +23,14 @@
 #include "error.h"
 
 #include <cstring>
-#include <cassert>
 #include <vector>
 
 
-Error unc_decoder_mixed_interleave::fetch_tile_data(const DataExtent& dataExtent,
-                                                     const UncompressedImageCodec::unci_properties& properties,
-                                                     uint32_t tile_x, uint32_t tile_y,
-                                                     std::vector<uint8_t>& tile_data)
+std::vector<uint64_t> unc_decoder_mixed_interleave::get_tile_data_sizes() const
 {
-  if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_mixed_interleave tile_width=0"};
-  }
-
   uint64_t tile_size = 0;
 
-  for (ChannelListEntry& entry : channelList) {
+  for (const ChannelListEntry& entry : channelList) {
     if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
       uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
       bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
@@ -64,11 +56,7 @@ Error unc_decoder_mixed_interleave::fetch_tile_data(const DataExtent& dataExtent
     skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
   }
 
-  assert(m_tile_width > 0);
-  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
-  uint64_t tile_start_offset = tile_size * tileIdx;
-
-  return get_compressed_image_data_uncompressed(dataExtent, properties, &tile_data, tile_start_offset, tile_size, tileIdx, nullptr);
+  return {tile_size};
 }
 
 

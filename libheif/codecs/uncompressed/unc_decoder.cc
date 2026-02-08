@@ -51,6 +51,46 @@ unc_decoder::unc_decoder(uint32_t width, uint32_t height,
 }
 
 
+Error unc_decoder::fetch_tile_data(const DataExtent& dataExtent,
+                                   const UncompressedImageCodec::unci_properties& properties,
+                                   uint32_t tile_x, uint32_t tile_y,
+                                   std::vector<uint8_t>& tile_data)
+{
+  if (m_tile_width == 0 || m_tile_height == 0) {
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder tile dimensions are 0"};
+  }
+
+  auto sizes = get_tile_data_sizes();
+  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
+
+  if (sizes.size() == 1) {
+    // Single contiguous read (component, pixel, mixed, row interleave)
+    uint64_t tile_start_offset = sizes[0] * tileIdx;
+    return get_compressed_image_data_uncompressed(dataExtent, properties, &tile_data, tile_start_offset, sizes[0], tileIdx, nullptr);
+  }
+  else {
+    // Scattered per-component reads (tile_component interleave)
+    uint32_t num_tiles = (m_width / m_tile_width) * (m_height / m_tile_height);
+    uint64_t component_offset = 0;
+
+    for (uint64_t size : sizes) {
+      uint64_t tile_start = component_offset + size * tileIdx;
+
+      std::vector<uint8_t> channel_data;
+      Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &channel_data, tile_start, size, tileIdx, nullptr);
+      if (err) {
+        return err;
+      }
+
+      tile_data.insert(tile_data.end(), channel_data.begin(), channel_data.end());
+      component_offset += size * num_tiles;
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
                                                                  const UncompressedImageCodec::unci_properties& properties,
                                                                  std::vector<uint8_t>* data,

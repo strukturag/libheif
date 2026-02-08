@@ -22,29 +22,51 @@
 #include "context.h"
 #include "error.h"
 
-#include <cassert>
-#include <map>
 #include <vector>
 
 
-Error unc_decoder_component_interleave::fetch_tile_data(const DataExtent& dataExtent,
-                                                         const UncompressedImageCodec::unci_properties& properties,
-                                                         uint32_t tile_x, uint32_t tile_y,
-                                                         std::vector<uint8_t>& tile_data)
+std::vector<uint64_t> unc_decoder_component_interleave::get_tile_data_sizes() const
 {
-  if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_component_interleave tile_width=0"};
-  }
-
   if (m_uncC->get_interleave_type() == interleave_mode_tile_component) {
-    return fetch_tile_data_tile_component(dataExtent, properties, tile_x, tile_y, tile_data);
+    // Per-component sizes for scattered reads
+    std::vector<uint64_t> sizes;
+
+    for (const ChannelListEntry& entry : channelList) {
+      uint32_t bits_per_pixel = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        uint32_t bytes_per_component = (bits_per_pixel + 7) / 8;
+        skip_to_alignment(bytes_per_component, entry.component_alignment);
+        bits_per_pixel = bytes_per_component * 8;
+      }
+
+      uint32_t bytes_per_row;
+      if (m_uncC->get_pixel_size() != 0) {
+        uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+        skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
+        bytes_per_row = bytes_per_pixel * m_tile_width;
+      }
+      else {
+        bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
+      }
+
+      skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
+
+      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+
+      if (m_uncC->get_tile_align_size() != 0) {
+        skip_to_alignment(component_tile_size, m_uncC->get_tile_align_size());
+      }
+
+      sizes.push_back(component_tile_size);
+    }
+
+    return sizes;
   }
 
-  // --- interleave_mode_component: single contiguous read
-
+  // interleave_mode_component: single contiguous block
   uint64_t total_tile_size = 0;
 
-  for (ChannelListEntry& entry : channelList) {
+  for (const ChannelListEntry& entry : channelList) {
     uint32_t bits_per_component = entry.bits_per_component_sample;
     if (entry.component_alignment > 0) {
       uint32_t bytes_per_component = (bits_per_component + 7) / 8;
@@ -62,78 +84,7 @@ Error unc_decoder_component_interleave::fetch_tile_data(const DataExtent& dataEx
     skip_to_alignment(total_tile_size, m_uncC->get_tile_align_size());
   }
 
-  assert(m_tile_width > 0);
-  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
-  uint64_t tile_start_offset = total_tile_size * tileIdx;
-
-  return get_compressed_image_data_uncompressed(dataExtent, properties, &tile_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
-}
-
-
-Error unc_decoder_component_interleave::fetch_tile_data_tile_component(const DataExtent& dataExtent,
-                                                                        const UncompressedImageCodec::unci_properties& properties,
-                                                                        uint32_t tile_x, uint32_t tile_y,
-                                                                        std::vector<uint8_t>& tile_data)
-{
-  if (m_tile_height == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_component_interleave tile_height=0"};
-  }
-
-  // Compute per-channel tile sizes (with per-channel tile alignment)
-  std::map<heif_channel, uint64_t> channel_tile_size;
-
-  for (ChannelListEntry& entry : channelList) {
-    uint32_t bits_per_pixel = entry.bits_per_component_sample;
-    if (entry.component_alignment > 0) {
-      uint32_t bytes_per_component = (bits_per_pixel + 7) / 8;
-      skip_to_alignment(bytes_per_component, entry.component_alignment);
-      bits_per_pixel = bytes_per_component * 8;
-    }
-
-    uint32_t bytes_per_row;
-    if (m_uncC->get_pixel_size() != 0) {
-      uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-      skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
-      bytes_per_row = bytes_per_pixel * m_tile_width;
-    }
-    else {
-      bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
-    }
-
-    skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
-
-    uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
-
-    if (m_uncC->get_tile_align_size() != 0) {
-      skip_to_alignment(component_tile_size, m_uncC->get_tile_align_size());
-    }
-
-    channel_tile_size[entry.channel] = component_tile_size;
-  }
-
-  // Read each channel's tile data and concatenate
-  uint64_t component_start_offset = 0;
-  uint32_t num_tiles = (m_width / m_tile_width) * (m_height / m_tile_height);
-  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
-
-  assert(m_tile_width > 0);
-  assert(m_tile_height > 0);
-
-  for (ChannelListEntry& entry : channelList) {
-    uint64_t tile_start_offset = component_start_offset + channel_tile_size[entry.channel] * tileIdx;
-
-    std::vector<uint8_t> channel_data;
-    Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &channel_data, tile_start_offset, channel_tile_size[entry.channel], tileIdx, nullptr);
-    if (err) {
-      return err;
-    }
-
-    tile_data.insert(tile_data.end(), channel_data.begin(), channel_data.end());
-
-    component_start_offset += channel_tile_size[entry.channel] * num_tiles;
-  }
-
-  return Error::Ok;
+  return {total_tile_size};
 }
 
 

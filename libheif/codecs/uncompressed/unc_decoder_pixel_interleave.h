@@ -32,10 +32,7 @@ public:
   unc_decoder_pixel_interleave(uint32_t width, uint32_t height, std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
       unc_decoder_legacybase(width, height, std::move(cmpd), std::move(uncC)) {}
 
-  Error fetch_tile_data(const DataExtent& dataExtent,
-                        const UncompressedImageCodec::unci_properties& properties,
-                        uint32_t tile_x, uint32_t tile_y,
-                        std::vector<uint8_t>& tile_data) override;
+  std::vector<uint64_t> get_tile_data_sizes() const override;
 
   Error decode_tile(const std::vector<uint8_t>& tile_data,
                     std::shared_ptr<HeifPixelImage>& img,
