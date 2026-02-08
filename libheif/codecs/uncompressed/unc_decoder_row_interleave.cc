@@ -26,19 +26,14 @@
 #include <vector>
 
 
-Error unc_decoder_row_interleave::decode_tile(const DataExtent& dataExtent,
-                                               const UncompressedImageCodec::unci_properties& properties,
-                                               std::shared_ptr<HeifPixelImage>& img,
-                                               uint32_t out_x0, uint32_t out_y0,
-                                               uint32_t tile_x, uint32_t tile_y)
+Error unc_decoder_row_interleave::fetch_tile_data(const DataExtent& dataExtent,
+                                                   const UncompressedImageCodec::unci_properties& properties,
+                                                   uint32_t tile_x, uint32_t tile_y,
+                                                   std::vector<uint8_t>& tile_data)
 {
-  ensureChannelList(img);
-
   if (m_tile_width == 0) {
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_row_interleave tile_width=0"};
   }
-
-  // --- compute which file range we need to read for the tile
 
   uint32_t bits_per_row = 0;
   for (ChannelListEntry& entry : channelList) {
@@ -80,16 +75,16 @@ Error unc_decoder_row_interleave::decode_tile(const DataExtent& dataExtent,
   uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
   uint64_t tile_start_offset = total_tile_size * tileIdx;
 
+  return get_compressed_image_data_uncompressed(dataExtent, properties, &tile_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
+}
 
-  // --- read required file range
 
-  std::vector<uint8_t> src_data;
-  Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
-  if (err) {
-    return err;
-  }
-
-  UncompressedBitReader srcBits(src_data);
+Error unc_decoder_row_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
+                                               std::shared_ptr<HeifPixelImage>& img,
+                                               uint32_t out_x0, uint32_t out_y0,
+                                               uint32_t tile_x, uint32_t tile_y)
+{
+  UncompressedBitReader srcBits(tile_data);
 
   processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
 

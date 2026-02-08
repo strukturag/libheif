@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "error.h"
 #include "unc_codec.h"
@@ -38,8 +39,14 @@ class unc_decoder
 public:
   virtual ~unc_decoder() = default;
 
-  virtual Error decode_tile(const DataExtent& dataExtent,
-                            const UncompressedImageCodec::unci_properties& properties,
+  virtual void ensure_channel_list(std::shared_ptr<HeifPixelImage>& img) {}
+
+  virtual Error fetch_tile_data(const DataExtent& dataExtent,
+                                const UncompressedImageCodec::unci_properties& properties,
+                                uint32_t tile_x, uint32_t tile_y,
+                                std::vector<uint8_t>& tile_data) = 0;
+
+  virtual Error decode_tile(const std::vector<uint8_t>& tile_data,
                             std::shared_ptr<HeifPixelImage>& img,
                             uint32_t out_x0, uint32_t out_y0,
                             uint32_t tile_x, uint32_t tile_y) = 0;
@@ -57,6 +64,16 @@ protected:
   unc_decoder(uint32_t width, uint32_t height,
               const std::shared_ptr<const Box_cmpd>& cmpd,
               const std::shared_ptr<const Box_uncC>& uncC);
+
+  const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
+                                                     const UncompressedImageCodec::unci_properties& properties,
+                                                     std::vector<uint8_t>* data,
+                                                     uint64_t range_start_offset, uint64_t range_size,
+                                                     uint32_t tile_idx,
+                                                     const Box_iloc::Item* item) const;
+
+  Result<std::vector<uint8_t>> do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+                                                  std::vector<uint8_t> compressed_data) const;
 
   const uint32_t m_width;
   const uint32_t m_height;

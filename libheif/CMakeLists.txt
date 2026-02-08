@@ -305,8 +305,6 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_decoder_mixed_interleave.cc
             codecs/uncompressed/unc_decoder_row_interleave.h
             codecs/uncompressed/unc_decoder_row_interleave.cc
-            codecs/uncompressed/unc_decoder_tile_component_interleave.h
-            codecs/uncompressed/unc_decoder_tile_component_interleave.cc
             codecs/uncompressed/unc_encoder.h
             codecs/uncompressed/unc_encoder.cc
             codecs/uncompressed/unc_encoder_rgb3_rgba.cc

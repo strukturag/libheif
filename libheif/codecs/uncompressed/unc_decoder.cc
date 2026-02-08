@@ -26,9 +26,9 @@
 #include "unc_decoder_pixel_interleave.h"
 #include "unc_decoder_mixed_interleave.h"
 #include "unc_decoder_row_interleave.h"
-#include "unc_decoder_tile_component_interleave.h"
 #include "unc_codec.h"
 #include "unc_boxes.h"
+#include "compression.h"
 #include "codecs/decoder.h"
 #include "security_limits.h"
 
@@ -51,6 +51,175 @@ unc_decoder::unc_decoder(uint32_t width, uint32_t height,
 }
 
 
+const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
+                                                                 const UncompressedImageCodec::unci_properties& properties,
+                                                                 std::vector<uint8_t>* data,
+                                                                 uint64_t range_start_offset, uint64_t range_size,
+                                                                 uint32_t tile_idx,
+                                                                 const Box_iloc::Item* item) const
+{
+  // --- get codec configuration
+
+  std::shared_ptr<const Box_cmpC> cmpC_box = properties.cmpC;
+  std::shared_ptr<const Box_icef> icef_box = properties.icef;
+
+  if (!cmpC_box) {
+    // assume no generic compression
+    auto readResult = dataExtent.read_data(range_start_offset, range_size);
+    if (!readResult) {
+      return readResult.error();
+    }
+
+    data->insert(data->end(), readResult->begin(), readResult->end());
+
+    return Error::Ok;
+  }
+
+  if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
+    const auto& units = icef_box->get_units();
+    if (tile_idx >= units.size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "no icef-box entry for tile index"};
+    }
+
+    const auto unit = units[tile_idx];
+
+    // get data needed for one tile
+    Result<std::vector<uint8_t>> readingResult = dataExtent.read_data(unit.unit_offset, unit.unit_size);
+    if (!readingResult) {
+      return readingResult.error();
+    }
+
+    const std::vector<uint8_t>& compressed_bytes = *readingResult;
+
+    // decompress only the unit
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    if (!dataResult) {
+      return dataResult.error();
+    }
+
+    *data = std::move(*dataResult);
+  }
+  else if (icef_box) {
+    // get all data and decode all
+    Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
+    if (!readResult) {
+      return readResult.error();
+    }
+
+    const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
+
+    for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
+      if (unit_info.unit_offset + unit_info.unit_size > compressed_bytes.size()) {
+        return Error{
+          heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "incomplete data in unci image"
+        };
+      }
+
+      auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
+      auto unit_end = unit_start + unit_info.unit_size;
+      std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
+
+      auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data));
+      if (!dataResult) {
+        return dataResult.error();
+      }
+
+      const std::vector<uint8_t> uncompressed_unit_data = std::move(*dataResult);
+      data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
+    }
+
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
+    }
+
+    // cut out the range that we actually need
+    memcpy(data->data(), data->data() + range_start_offset, range_size);
+    data->resize(range_size);
+  }
+  else {
+    // get all data and decode all
+    Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
+    if (!readResult) {
+      return readResult.error();
+    }
+
+    std::vector<uint8_t> compressed_bytes = std::move(**readResult);
+
+    // Decode as a single blob
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    if (!dataResult) {
+      return dataResult.error();
+    }
+
+    *data = std::move(*dataResult);
+
+    if (range_start_offset + range_size > data->size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Data range out of existing range"};
+    }
+
+    // cut out the range that we actually need
+    memcpy(data->data(), data->data() + range_start_offset, range_size);
+    data->resize(range_size);
+  }
+
+  return Error::Ok;
+}
+
+
+Result<std::vector<uint8_t>> unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+                                                              std::vector<uint8_t> compressed_data) const
+{
+  if (cmpC_box->get_compression_type() == fourcc("brot")) {
+#if HAVE_BROTLI
+    return decompress_brotli(compressed_data);
+#else
+    std::stringstream sstr;
+  sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
+  return Error(heif_error_Unsupported_feature,
+               heif_suberror_Unsupported_generic_compression_method,
+               sstr.str());
+#endif
+  }
+  else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
+#if HAVE_ZLIB
+    return decompress_zlib(compressed_data);
+#else
+    std::stringstream sstr;
+    sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
+  }
+  else if (cmpC_box->get_compression_type() == fourcc("defl")) {
+#if HAVE_ZLIB
+    return decompress_deflate(compressed_data);
+#else
+    std::stringstream sstr;
+    sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
+  }
+  else {
+    std::stringstream sstr;
+    sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+  }
+}
+
+
 Error unc_decoder::decode_image(const DataExtent& extent,
                                 const UncompressedImageCodec::unci_properties& properties,
                                 std::shared_ptr<HeifPixelImage>& img)
@@ -58,10 +227,20 @@ Error unc_decoder::decode_image(const DataExtent& extent,
   uint32_t tile_width = m_width / m_uncC->get_number_of_tile_columns();
   uint32_t tile_height = m_height / m_uncC->get_number_of_tile_rows();
 
+  ensure_channel_list(img);
+
   for (uint32_t tile_y0 = 0; tile_y0 < m_height; tile_y0 += tile_height)
     for (uint32_t tile_x0 = 0; tile_x0 < m_width; tile_x0 += tile_width) {
-      Error error = decode_tile(extent, properties, img, tile_x0, tile_y0,
-                                tile_x0 / tile_width, tile_y0 / tile_height);
+      uint32_t tile_x = tile_x0 / tile_width;
+      uint32_t tile_y = tile_y0 / tile_height;
+
+      std::vector<uint8_t> tile_data;
+      Error error = fetch_tile_data(extent, properties, tile_x, tile_y, tile_data);
+      if (error) {
+        return error;
+      }
+
+      error = decode_tile(tile_data, img, tile_x0, tile_y0, tile_x, tile_y);
       if (error) {
         return error;
       }
@@ -82,10 +261,9 @@ Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
   static unc_decoder_factory_pixel_interleave dec_pixel;
   static unc_decoder_factory_mixed_interleave dec_mixed;
   static unc_decoder_factory_row_interleave dec_row;
-  static unc_decoder_factory_tile_component_interleave dec_tile_component;
 
   static const unc_decoder_factory* decoders[]{
-    &dec_component, &dec_pixel, &dec_mixed, &dec_row, &dec_tile_component
+    &dec_component, &dec_pixel, &dec_mixed, &dec_row
   };
 
   for (const unc_decoder_factory* dec : decoders) {

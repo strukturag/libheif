@@ -134,6 +134,8 @@ class unc_decoder_legacybase : public unc_decoder
 public:
   ~unc_decoder_legacybase() override = default;
 
+  void ensure_channel_list(std::shared_ptr<HeifPixelImage>& img) override { ensureChannelList(img); }
+
 protected:
   unc_decoder_legacybase(uint32_t width, uint32_t height,
                          const std::shared_ptr<const Box_cmpd>& cmpd,
@@ -187,17 +189,6 @@ protected:
   // Not valid for the Cb/Cr channels in Mixed Interleave
   // Not valid for multi-Y pixel interleave
   void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset);
-
-  // generic compression and uncompressed, per 23001-17
-  const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
-                                                     const UncompressedImageCodec::unci_properties& properties,
-                                                     std::vector<uint8_t>* data,
-                                                     uint64_t range_start_offset, uint64_t range_size,
-                                                     uint32_t tile_idx,
-                                                     const Box_iloc::Item* item) const;
-
-  Result<std::vector<uint8_t>> do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                  std::vector<uint8_t> compressed_data) const;
 
 protected:
   void memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample);

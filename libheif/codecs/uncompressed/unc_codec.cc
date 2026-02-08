@@ -530,8 +530,15 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
   DataExtent dataExtent;
   dataExtent.set_from_image_item(file, ID);
 
-  return decoder->decode_tile(dataExtent, properties, img, 0, 0,
-                              tile_x0, tile_y0);
+  decoder->ensure_channel_list(img);
+
+  std::vector<uint8_t> tile_data;
+  Error err = decoder->fetch_tile_data(dataExtent, properties, tile_x0, tile_y0, tile_data);
+  if (err) {
+    return err;
+  }
+
+  return decoder->decode_tile(tile_data, img, 0, 0, tile_x0, tile_y0);
 }
 
 
