@@ -527,8 +527,6 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   auto& decoder = *decoderResult;
 
-  decoder->buildChannelList(img);
-
   DataExtent dataExtent;
   dataExtent.set_from_image_item(file, ID);
 

@@ -35,6 +35,8 @@ Error unc_decoder_tile_component_interleave::decode_tile(const DataExtent& dataE
                                                           uint32_t image_width, uint32_t image_height,
                                                           uint32_t tile_column, uint32_t tile_row)
 {
+  ensureChannelList(img);
+
   if (m_tile_width == 0) {
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_tile_component_interleave tile_width=0"};
   }

@@ -295,6 +295,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_enc.cc
             codecs/uncompressed/unc_decoder.h
             codecs/uncompressed/unc_decoder.cc
+            codecs/uncompressed/unc_decoder_legacybase.h
+            codecs/uncompressed/unc_decoder_legacybase.cc
             codecs/uncompressed/unc_decoder_component_interleave.h
             codecs/uncompressed/unc_decoder_component_interleave.cc
             codecs/uncompressed/unc_decoder_pixel_interleave.h

@@ -21,16 +21,16 @@
 #ifndef LIBHEIF_UNC_DECODER_MIXED_INTERLEAVE_H
 #define LIBHEIF_UNC_DECODER_MIXED_INTERLEAVE_H
 
-#include "unc_decoder.h"
+#include "unc_decoder_legacybase.h"
 #include <memory>
 #include <utility>
 
 
-class unc_decoder_mixed_interleave : public unc_decoder
+class unc_decoder_mixed_interleave : public unc_decoder_legacybase
 {
 public:
   unc_decoder_mixed_interleave(uint32_t width, uint32_t height, std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
-      unc_decoder(width, height, std::move(cmpd), std::move(uncC)) {}
+      unc_decoder_legacybase(width, height, std::move(cmpd), std::move(uncC)) {}
 
   Error decode_tile(const DataExtent& dataExtent,
                     const UncompressedImageCodec::unci_properties& properties,
