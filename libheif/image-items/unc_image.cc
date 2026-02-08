@@ -140,22 +140,23 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // Generate headers
 
-  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, *encoding_options);
-  if (!genHeadersResult) {
-    return genHeadersResult.error();
+  // --- generate configuration property boxes
+
+  Result<const unc_encoder*> encoderResult = unc_encoder::get_unc_encoder(prototype, *encoding_options);
+  if (encoderResult.error()) {
+    return encoderResult.error();
   }
 
-  const unciHeaders& headers = *genHeadersResult;
+  std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
+  std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-  assert(headers.uncC);
+  (*encoderResult)->fill_cmpd_and_uncC(cmpd, uncC, prototype, *encoding_options);
 
-  if (headers.uncC) {
-    unci_image->add_property(headers.uncC, true);
+  unci_image->add_property(uncC, true);
+  if (!uncC->is_minimized()) {
+    unci_image->add_property(cmpd, true);
   }
 
-  if (headers.cmpd) {
-    unci_image->add_property(headers.cmpd, true);
-  }
 
   // Add `ispe` property
 
@@ -195,8 +196,9 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   // Create empty image. If we use compression, we append the data piece by piece.
 
   if (parameters->compression == heif_unci_compression_off) {
-    uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
-                                                                    parameters->image_height / headers.uncC->get_number_of_tile_rows());
+    assert(false); // TODO compute_tile_data_size_bytes() is too simplistic
+    uint64_t tile_size = uncC->compute_tile_data_size_bytes(parameters->image_width / uncC->get_number_of_tile_columns(),
+                                                            parameters->image_height / uncC->get_number_of_tile_rows());
 
     std::vector<uint8_t> dummydata;
     dummydata.resize(tile_size);

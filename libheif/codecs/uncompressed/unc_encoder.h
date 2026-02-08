@@ -58,15 +58,4 @@ public:
                                                            const heif_encoding_options& options);
 };
 
-
-struct unciHeaders
-{
-  std::shared_ptr<Box_uncC> uncC;
-  std::shared_ptr<Box_cmpd> cmpd;
-};
-
-Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                     const struct heif_unci_image_parameters* parameters,
-                                     const heif_encoding_options& options);
-
 #endif //LIBHEIF_UNC_ENCODER_H
