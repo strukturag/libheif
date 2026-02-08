@@ -27,12 +27,8 @@
 #include "unc_types.h"
 #include "unc_boxes.h"
 
-#include "decoder_abstract.h"
-#include "decoder_component_interleave.h"
-#include "decoder_pixel_interleave.h"
-#include "decoder_mixed_interleave.h"
-#include "decoder_row_interleave.h"
-#include "decoder_tile_component_interleave.h"
+#include "unc_decoder.h"
+#include "codecs/decoder.h"
 
 #include <algorithm>
 #include <map>
@@ -445,25 +441,6 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
 
 
 
-static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd>& cmpd, const std::shared_ptr<const Box_uncC>& uncC)
-{
-  switch (uncC->get_interleave_type()) {
-    case interleave_mode_component:
-      return new ComponentInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_pixel:
-      return new PixelInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_mixed:
-      return new MixedInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_row:
-      return new RowInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_tile_component:
-      return new TileComponentInterleaveDecoder(width, height, cmpd, uncC);
-    default:
-      return nullptr;
-  }
-}
-
-
 Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(const std::shared_ptr<const Box_cmpd> cmpd,
                                                                              const std::shared_ptr<const Box_uncC> uncC,
                                                                              uint32_t width,
@@ -543,26 +520,21 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   img = *createImgResult;
 
-
-  AbstractDecoder* decoder = makeDecoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
+  auto decoderResult = unc_decoder_factory::get_unc_decoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
+  if (!decoderResult) {
+    return decoderResult.error();
   }
+
+  auto& decoder = *decoderResult;
 
   decoder->buildChannelList(img);
 
   DataExtent dataExtent;
   dataExtent.set_from_image_item(file, ID);
 
-  Error result = decoder->decode_tile(dataExtent, properties, img, 0, 0,
-                                      ispe->get_width(), ispe->get_height(),
-                                      tile_x0, tile_y0);
-  delete decoder;
-  return result;
+  return decoder->decode_tile(dataExtent, properties, img, 0, 0,
+                              ispe->get_width(), ispe->get_height(),
+                              tile_x0, tile_y0);
 }
 
 
@@ -685,44 +657,15 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     };
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, context->get_security_limits());
-  if (!createImgResult) {
-    return createImgResult.error();
-  }
-  else {
-    img = *createImgResult;
-  }
-
-  AbstractDecoder* decoder = makeDecoder(width, height, cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  decoder->buildChannelList(img);
-
-  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
-  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
-
   DataExtent dataExtent;
   dataExtent.set_from_image_item(context->get_heif_file(), ID);
 
-  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
-    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
-      error = decoder->decode_tile(dataExtent, properties, img, tile_x0, tile_y0,
-                                   width, height,
-                                   tile_x0 / tile_width, tile_y0 / tile_height);
-      if (error) {
-        delete decoder;
-        return error;
-      }
-    }
+  auto result = unc_decoder::decode_full_image(properties, dataExtent, context->get_security_limits());
+  if (!result) {
+    return result.error();
+  }
 
-  //Error result = decoder->decode(source_data, img);
-  delete decoder;
+  img = *result;
   return Error::Ok;
 }
 
@@ -742,8 +685,6 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
                                                   const DataExtent& extent,
                                                   const heif_security_limits* securityLimits)
 {
-  std::shared_ptr<HeifPixelImage> img;
-
   const std::shared_ptr<const Box_ispe>& ispe = properties.ispe;
   const std::shared_ptr<const Box_cmpd>& cmpd = properties.cmpd;
   const std::shared_ptr<const Box_uncC>& uncC = properties.uncC;
@@ -777,40 +718,5 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
     };
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, securityLimits);
-  if (!createImgResult) {
-    return createImgResult.error();
-  }
-  else {
-    img = *createImgResult;
-  }
-
-  AbstractDecoder* decoder = makeDecoder(width, height, cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  decoder->buildChannelList(img);
-
-  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
-  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
-
-  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
-    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
-      error = decoder->decode_tile(extent, properties, img, tile_x0, tile_y0,
-                                   width, height,
-                                   tile_x0 / tile_width, tile_y0 / tile_height);
-      if (error) {
-        delete decoder;
-        return error;
-      }
-    }
-
-  //Error result = decoder->decode(source_data, img);
-  delete decoder;
-  return img;
+  return unc_decoder::decode_full_image(properties, extent, securityLimits);
 }

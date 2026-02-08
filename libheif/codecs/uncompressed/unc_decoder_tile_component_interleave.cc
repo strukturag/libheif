@@ -19,7 +19,7 @@
  */
 
 
-#include "decoder_tile_component_interleave.h"
+#include "unc_decoder_tile_component_interleave.h"
 #include "context.h"
 #include "error.h"
 
@@ -28,32 +28,27 @@
 #include <vector>
 
 
-Error TileComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
-                                                  const UncompressedImageCodec::unci_properties& properties,
-                                                  std::shared_ptr<HeifPixelImage>& img,
-                                                  uint32_t out_x0, uint32_t out_y0,
-                                                  uint32_t image_width, uint32_t image_height,
-                                                  uint32_t tile_column, uint32_t tile_row)
+Error unc_decoder_tile_component_interleave::decode_tile(const DataExtent& dataExtent,
+                                                          const UncompressedImageCodec::unci_properties& properties,
+                                                          std::shared_ptr<HeifPixelImage>& img,
+                                                          uint32_t out_x0, uint32_t out_y0,
+                                                          uint32_t image_width, uint32_t image_height,
+                                                          uint32_t tile_column, uint32_t tile_row)
 {
   if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: TileComponentInterleaveDecoder tile_width=0"};
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_tile_component_interleave tile_width=0"};
   }
   if (m_tile_height == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: TileComponentInterleaveDecoder tile_height=0"};
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_tile_component_interleave tile_height=0"};
   }
 
   // --- compute which file range we need to read for the tile
 
   std::map<heif_channel, uint64_t> channel_tile_size;
 
-  //uint64_t total_tile_size = 0;
-
   for (ChannelListEntry& entry : channelList) {
     uint32_t bits_per_pixel = entry.bits_per_component_sample;
     if (entry.component_alignment > 0) {
-      // start at byte boundary
-      //bits_per_row = (bits_per_row + 7) & ~7U;
-
       uint32_t bytes_per_component = (bits_per_pixel + 7) / 8;
       skip_to_alignment(bytes_per_component, entry.component_alignment);
       bits_per_pixel = bytes_per_component * 8;
@@ -78,8 +73,6 @@ Error TileComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
     }
 
     channel_tile_size[entry.channel] = component_tile_size;
-
-    //total_tile_size += component_tile_size;
   }
 
   uint64_t component_start_offset = 0;
@@ -88,12 +81,7 @@ Error TileComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
   assert(m_tile_height > 0);
 
   for (ChannelListEntry& entry : channelList) {
-    //processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
-
     if (!entry.use_channel) {
-      //uint64_t bytes_per_component = entry.get_bytes_per_tile() * m_uncC->get_number_of_tile_columns() * m_uncC->get_number_of_tile_rows();
-      //srcBits.skip_bytes((int)bytes_per_component);
-
       component_start_offset += channel_tile_size[entry.channel] * (m_width / m_tile_width) * (m_height / m_tile_height);
       continue;
     }
@@ -105,7 +93,6 @@ Error TileComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
 
     std::vector<uint8_t> src_data;
     Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, channel_tile_size[entry.channel], tileIdx, nullptr);
-    //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, channel_tile_size[entry.channel]);
     if (err) {
       return err;
     }
@@ -129,3 +116,15 @@ Error TileComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
 }
 
 
+bool unc_decoder_factory_tile_component_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return uncC->get_interleave_type() == interleave_mode_tile_component;
+}
+
+std::unique_ptr<unc_decoder> unc_decoder_factory_tile_component_interleave::create(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return std::make_unique<unc_decoder_tile_component_interleave>(width, height, cmpd, uncC);
+}

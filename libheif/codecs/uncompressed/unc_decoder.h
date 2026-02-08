@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef UNCI_DECODER_ABSTRACT_H
-#define UNCI_DECODER_ABSTRACT_H
+#ifndef LIBHEIF_UNC_DECODER_H
+#define LIBHEIF_UNC_DECODER_H
 
 #include <cstdint>
 #include <cstring>
@@ -128,10 +128,10 @@ template<typename T> void skip_to_alignment(T& position, uint32_t alignment)
 }
 
 
-class AbstractDecoder
+class unc_decoder
 {
 public:
-  virtual ~AbstractDecoder() = default;
+  virtual ~unc_decoder() = default;
 
   virtual Error decode_tile(const DataExtent& dataExtent,
                             const UncompressedImageCodec::unci_properties& properties,
@@ -142,10 +142,19 @@ public:
 
   void buildChannelList(std::shared_ptr<HeifPixelImage>& img);
 
+  static Result<std::shared_ptr<HeifPixelImage>> decode_full_image(
+      const UncompressedImageCodec::unci_properties& properties,
+      const DataExtent& extent,
+      const heif_security_limits* limits);
+
+  Error decode_image(const DataExtent& extent,
+                     const UncompressedImageCodec::unci_properties& properties,
+                     std::shared_ptr<HeifPixelImage>& img);
+
 protected:
-  AbstractDecoder(uint32_t width, uint32_t height,
-                  const std::shared_ptr<const Box_cmpd> cmpd,
-                  const std::shared_ptr<const Box_uncC> uncC);
+  unc_decoder(uint32_t width, uint32_t height,
+              const std::shared_ptr<const Box_cmpd> cmpd,
+              const std::shared_ptr<const Box_uncC> uncC);
 
   const uint32_t m_width;
   const uint32_t m_height;
@@ -217,6 +226,26 @@ protected:
 
 private:
   ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
+};
+
+
+class unc_decoder_factory
+{
+public:
+  virtual ~unc_decoder_factory() = default;
+
+  static Result<std::unique_ptr<unc_decoder>> get_unc_decoder(
+      uint32_t width, uint32_t height,
+      const std::shared_ptr<const Box_cmpd>& cmpd,
+      const std::shared_ptr<const Box_uncC>& uncC);
+
+private:
+  virtual bool can_decode(const std::shared_ptr<const Box_uncC>& uncC) const = 0;
+
+  virtual std::unique_ptr<unc_decoder> create(
+      uint32_t width, uint32_t height,
+      const std::shared_ptr<const Box_cmpd>& cmpd,
+      const std::shared_ptr<const Box_uncC>& uncC) const = 0;
 };
 
 #endif

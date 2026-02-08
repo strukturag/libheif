@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "decoder_component_interleave.h"
+#include "unc_decoder_component_interleave.h"
 #include "context.h"
 #include "error.h"
 
@@ -26,15 +26,15 @@
 #include <vector>
 
 
-Error ComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
-                                              const UncompressedImageCodec::unci_properties& properties,
-                                              std::shared_ptr<HeifPixelImage>& img,
-                                              uint32_t out_x0, uint32_t out_y0,
-                                              uint32_t image_width, uint32_t image_height,
-                                              uint32_t tile_x, uint32_t tile_y)
+Error unc_decoder_component_interleave::decode_tile(const DataExtent& dataExtent,
+                                                     const UncompressedImageCodec::unci_properties& properties,
+                                                     std::shared_ptr<HeifPixelImage>& img,
+                                                     uint32_t out_x0, uint32_t out_y0,
+                                                     uint32_t image_width, uint32_t image_height,
+                                                     uint32_t tile_x, uint32_t tile_y)
 {
   if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: ComponentInterleaveDecoder tile_width=0"};
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_component_interleave tile_width=0"};
   }
 
   // --- compute which file range we need to read for the tile
@@ -67,7 +67,6 @@ Error ComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
   // --- read required file range
 
   std::vector<uint8_t> src_data;
-  //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
   Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
   if (err) {
     return err;
@@ -93,4 +92,18 @@ Error ComponentInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
   }
 
   return Error::Ok;
+}
+
+
+bool unc_decoder_factory_component_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return uncC->get_interleave_type() == interleave_mode_component;
+}
+
+std::unique_ptr<unc_decoder> unc_decoder_factory_component_interleave::create(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return std::make_unique<unc_decoder_component_interleave>(width, height, cmpd, uncC);
 }

@@ -38,12 +38,18 @@
 #include "unc_types.h"
 #include "unc_boxes.h"
 #include "unc_codec.h"
-#include "decoder_abstract.h"
+#include "unc_decoder.h"
+#include "unc_decoder_component_interleave.h"
+#include "unc_decoder_pixel_interleave.h"
+#include "unc_decoder_mixed_interleave.h"
+#include "unc_decoder_row_interleave.h"
+#include "unc_decoder_tile_component_interleave.h"
 #include "codecs/decoder.h"
 #include "codecs/uncompressed/unc_codec.h"
+#include "security_limits.h"
 
 
-AbstractDecoder::AbstractDecoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd> cmpd, const std::shared_ptr<const Box_uncC> uncC) :
+unc_decoder::unc_decoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd> cmpd, const std::shared_ptr<const Box_uncC> uncC) :
     m_width(width),
     m_height(height),
     m_cmpd(std::move(cmpd)),
@@ -56,7 +62,7 @@ AbstractDecoder::AbstractDecoder(uint32_t width, uint32_t height, const std::sha
   assert(m_tile_height > 0);
 }
 
-void AbstractDecoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
+void unc_decoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
 {
   for (Box_uncC::Component component : m_uncC->get_components()) {
     ChannelListEntry entry = buildChannelListEntry(component, img);
@@ -64,7 +70,7 @@ void AbstractDecoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
   }
 }
 
-void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample)
+void unc_decoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample)
 {
   // TODO: this assumes that the file endianness is always big-endian. The endianness flags in the uncC header are not taken into account yet.
 
@@ -84,7 +90,7 @@ void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint
   }
 }
 
-void AbstractDecoder::processComponentSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_row_offset, uint32_t tile_column, uint32_t tile_x)
+void unc_decoder::processComponentSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_row_offset, uint32_t tile_column, uint32_t tile_x)
 {
   uint64_t dst_col_number = static_cast<uint64_t>(tile_column) * entry.tile_width + tile_x;
   uint64_t dst_column_offset = dst_col_number * entry.bytes_per_component_sample;
@@ -96,7 +102,7 @@ void AbstractDecoder::processComponentSample(UncompressedBitReader& srcBits, con
 // Not valid for Pixel interleave
 // Not valid for the Cb/Cr channels in Mixed Interleave
 // Not valid for multi-Y pixel interleave
-void AbstractDecoder::processComponentRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_row_offset, uint32_t tile_column)
+void unc_decoder::processComponentRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_row_offset, uint32_t tile_column)
 {
   for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
     if (entry.component_alignment != 0) {
@@ -109,7 +115,7 @@ void AbstractDecoder::processComponentRow(ChannelListEntry& entry, UncompressedB
   srcBits.skip_to_byte_boundary();
 }
 
-void AbstractDecoder::processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_offset, uint32_t tile_x)
+void unc_decoder::processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_offset, uint32_t tile_x)
 {
   uint64_t dst_sample_offset = uint64_t{tile_x} * entry.bytes_per_component_sample;
   int val = srcBits.get_bits(entry.bits_per_component_sample);
@@ -120,7 +126,7 @@ void AbstractDecoder::processComponentTileSample(UncompressedBitReader& srcBits,
 // Not valid for Pixel interleave
 // Not valid for the Cb/Cr channels in Mixed Interleave
 // Not valid for multi-Y pixel interleave
-void AbstractDecoder::processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset)
+void unc_decoder::processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset)
 {
   for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
     if (entry.component_alignment != 0) {
@@ -134,8 +140,8 @@ void AbstractDecoder::processComponentTileRow(ChannelListEntry& entry, Uncompres
 }
 
 
-AbstractDecoder::ChannelListEntry AbstractDecoder::buildChannelListEntry(Box_uncC::Component component,
-                                                                         std::shared_ptr<HeifPixelImage>& img)
+unc_decoder::ChannelListEntry unc_decoder::buildChannelListEntry(Box_uncC::Component component,
+                                                                  std::shared_ptr<HeifPixelImage>& img)
 {
   ChannelListEntry entry;
   entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, m_uncC, component, &(entry.channel));
@@ -166,12 +172,12 @@ AbstractDecoder::ChannelListEntry AbstractDecoder::buildChannelListEntry(Box_unc
 }
 
 
-const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
-                                                                    const UncompressedImageCodec::unci_properties& properties,
-                                                                    std::vector<uint8_t>* data,
-                                                                    uint64_t range_start_offset, uint64_t range_size,
-                                                                    uint32_t tile_idx,
-                                                                    const Box_iloc::Item* item) const
+const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
+                                                                 const UncompressedImageCodec::unci_properties& properties,
+                                                                 std::vector<uint8_t>* data,
+                                                                 uint64_t range_start_offset, uint64_t range_size,
+                                                                 uint32_t tile_idx,
+                                                                 const Box_iloc::Item* item) const
 {
   // --- get codec configuration
 
@@ -289,8 +295,8 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
 }
 
 
-Result<std::vector<uint8_t>> AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                                 std::vector<uint8_t> compressed_data) const
+Result<std::vector<uint8_t>> unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+                                                              std::vector<uint8_t> compressed_data) const
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
 #if HAVE_BROTLI
@@ -332,4 +338,94 @@ Result<std::vector<uint8_t>> AbstractDecoder::do_decompress_data(std::shared_ptr
                  heif_suberror_Unsupported_generic_compression_method,
                  sstr.str());
   }
+}
+
+
+// --- unc_decoder_factory ---
+
+Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC)
+{
+  static unc_decoder_factory_component_interleave dec_component;
+  static unc_decoder_factory_pixel_interleave dec_pixel;
+  static unc_decoder_factory_mixed_interleave dec_mixed;
+  static unc_decoder_factory_row_interleave dec_row;
+  static unc_decoder_factory_tile_component_interleave dec_tile_component;
+
+  static const unc_decoder_factory* decoders[]{
+    &dec_component, &dec_pixel, &dec_mixed, &dec_row, &dec_tile_component
+  };
+
+  for (const unc_decoder_factory* dec : decoders) {
+    if (dec->can_decode(uncC)) {
+      return {dec->create(width, height, cmpd, uncC)};
+    }
+  }
+
+  std::stringstream sstr;
+  sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+  return Error{heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, sstr.str()};
+}
+
+
+// --- decode orchestration ---
+
+Result<std::shared_ptr<HeifPixelImage>> unc_decoder::decode_full_image(
+    const UncompressedImageCodec::unci_properties& properties,
+    const DataExtent& extent,
+    const heif_security_limits* limits)
+{
+  const std::shared_ptr<const Box_ispe>& ispe = properties.ispe;
+  const std::shared_ptr<const Box_cmpd>& cmpd = properties.cmpd;
+  const std::shared_ptr<const Box_uncC>& uncC = properties.uncC;
+
+  assert(ispe);
+  uint32_t width = ispe->get_width();
+  uint32_t height = ispe->get_height();
+
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = UncompressedImageCodec::create_image(cmpd, uncC, width, height, limits);
+  if (!createImgResult) {
+    return createImgResult.error();
+  }
+
+  auto img = *createImgResult;
+
+  auto decoderResult = unc_decoder_factory::get_unc_decoder(width, height, cmpd, uncC);
+  if (!decoderResult) {
+    return decoderResult.error();
+  }
+
+  auto& decoder = *decoderResult;
+
+  decoder->buildChannelList(img);
+
+  Error error = decoder->decode_image(extent, properties, img);
+  if (error) {
+    return error;
+  }
+
+  return img;
+}
+
+
+Error unc_decoder::decode_image(const DataExtent& extent,
+                                const UncompressedImageCodec::unci_properties& properties,
+                                std::shared_ptr<HeifPixelImage>& img)
+{
+  uint32_t tile_width = m_width / m_uncC->get_number_of_tile_columns();
+  uint32_t tile_height = m_height / m_uncC->get_number_of_tile_rows();
+
+  for (uint32_t tile_y0 = 0; tile_y0 < m_height; tile_y0 += tile_height)
+    for (uint32_t tile_x0 = 0; tile_x0 < m_width; tile_x0 += tile_width) {
+      Error error = decode_tile(extent, properties, img, tile_x0, tile_y0,
+                                m_width, m_height,
+                                tile_x0 / tile_width, tile_y0 / tile_height);
+      if (error) {
+        return error;
+      }
+    }
+
+  return Error::Ok;
 }

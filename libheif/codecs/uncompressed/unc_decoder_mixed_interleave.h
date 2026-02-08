@@ -18,27 +18,41 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef UNCI_DECODER_TILE_COMPONENT_INTERLEAVE_H
-#define UNCI_DECODER_TILE_COMPONENT_INTERLEAVE_H
+#ifndef LIBHEIF_UNC_DECODER_MIXED_INTERLEAVE_H
+#define LIBHEIF_UNC_DECODER_MIXED_INTERLEAVE_H
 
-#include "decoder_abstract.h"
+#include "unc_decoder.h"
 #include <memory>
 #include <utility>
 
 
-class TileComponentInterleaveDecoder : public AbstractDecoder
+class unc_decoder_mixed_interleave : public unc_decoder
 {
 public:
-  TileComponentInterleaveDecoder(uint32_t width, uint32_t height,
-                                 std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
-      AbstractDecoder(width, height, std::move(cmpd), std::move(uncC)) {}
+  unc_decoder_mixed_interleave(uint32_t width, uint32_t height, std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
+      unc_decoder(width, height, std::move(cmpd), std::move(uncC)) {}
 
   Error decode_tile(const DataExtent& dataExtent,
                     const UncompressedImageCodec::unci_properties& properties,
                     std::shared_ptr<HeifPixelImage>& img,
                     uint32_t out_x0, uint32_t out_y0,
                     uint32_t image_width, uint32_t image_height,
-                    uint32_t tile_column, uint32_t tile_row) override;
+                    uint32_t tile_x, uint32_t tile_y) override;
+
+  void processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column,
+                   uint32_t out_x0, uint32_t out_y0);
 };
 
-#endif // UNCI_DECODER_TILE_COMPONENT_INTERLEAVE_H
+
+class unc_decoder_factory_mixed_interleave : public unc_decoder_factory
+{
+private:
+  bool can_decode(const std::shared_ptr<const Box_uncC>& uncC) const override;
+
+  std::unique_ptr<unc_decoder> create(
+      uint32_t width, uint32_t height,
+      const std::shared_ptr<const Box_cmpd>& cmpd,
+      const std::shared_ptr<const Box_uncC>& uncC) const override;
+};
+
+#endif // LIBHEIF_UNC_DECODER_MIXED_INTERLEAVE_H

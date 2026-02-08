@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "decoder_mixed_interleave.h"
+#include "unc_decoder_mixed_interleave.h"
 #include "context.h"
 #include "error.h"
 
@@ -27,15 +27,15 @@
 #include <vector>
 
 
-Error MixedInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
-                                          const UncompressedImageCodec::unci_properties& properties,
-                                          std::shared_ptr<HeifPixelImage>& img,
-                                          uint32_t out_x0, uint32_t out_y0,
-                                          uint32_t image_width, uint32_t image_height,
-                                          uint32_t tile_x, uint32_t tile_y)
+Error unc_decoder_mixed_interleave::decode_tile(const DataExtent& dataExtent,
+                                                 const UncompressedImageCodec::unci_properties& properties,
+                                                 std::shared_ptr<HeifPixelImage>& img,
+                                                 uint32_t out_x0, uint32_t out_y0,
+                                                 uint32_t image_width, uint32_t image_height,
+                                                 uint32_t tile_x, uint32_t tile_y)
 {
   if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: MixedInterleaveDecoder tile_width=0"};
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder_mixed_interleave tile_width=0"};
   }
 
   // --- compute which file range we need to read for the tile
@@ -78,7 +78,6 @@ Error MixedInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
 
   std::vector<uint8_t> src_data;
   Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, tile_size, tileIdx, nullptr);
-  //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, tile_size);
   if (err) {
     return err;
   }
@@ -91,7 +90,7 @@ Error MixedInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
 }
 
 
-void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
+void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
 {
   bool haveProcessedChromaForThisTile = false;
   for (ChannelListEntry& entry : channelList) {
@@ -129,4 +128,18 @@ void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_
       continue;
     }
   }
+}
+
+
+bool unc_decoder_factory_mixed_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return uncC->get_interleave_type() == interleave_mode_mixed;
+}
+
+std::unique_ptr<unc_decoder> unc_decoder_factory_mixed_interleave::create(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return std::make_unique<unc_decoder_mixed_interleave>(width, height, cmpd, uncC);
 }

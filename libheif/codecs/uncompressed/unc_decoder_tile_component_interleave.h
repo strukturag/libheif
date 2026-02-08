@@ -18,48 +18,39 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef UNCI_DECODER_PIXEL_INTERLEAVE_H
-#define UNCI_DECODER_PIXEL_INTERLEAVE_H
+#ifndef LIBHEIF_UNC_DECODER_TILE_COMPONENT_INTERLEAVE_H
+#define LIBHEIF_UNC_DECODER_TILE_COMPONENT_INTERLEAVE_H
 
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
-#include <map>
-#include <iostream>
-#include <cassert>
-#include <utility>
-
-#include "common_utils.h"
-#include "context.h"
-#include "compression.h"
-#include "error.h"
-#include "libheif/heif.h"
-#include "unc_types.h"
-#include "unc_boxes.h"
-#include "unc_codec.h"
-#include "unc_dec.h"
-
-#include "decoder_abstract.h"
-#include "decoder_component_interleave.h"
+#include "unc_decoder.h"
 #include <memory>
 #include <utility>
 
 
-class PixelInterleaveDecoder : public AbstractDecoder
+class unc_decoder_tile_component_interleave : public unc_decoder
 {
 public:
-  PixelInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
-      AbstractDecoder(width, height, std::move(cmpd), std::move(uncC)) {}
+  unc_decoder_tile_component_interleave(uint32_t width, uint32_t height,
+                                         std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
+      unc_decoder(width, height, std::move(cmpd), std::move(uncC)) {}
 
   Error decode_tile(const DataExtent& dataExtent,
                     const UncompressedImageCodec::unci_properties& properties,
                     std::shared_ptr<HeifPixelImage>& img,
                     uint32_t out_x0, uint32_t out_y0,
                     uint32_t image_width, uint32_t image_height,
-                    uint32_t tile_x, uint32_t tile_y) override;
-
-  [[nodiscard]] Error processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column,
-                                  uint32_t out_x0, uint32_t out_y0);
+                    uint32_t tile_column, uint32_t tile_row) override;
 };
 
-#endif // UNCI_DECODER_PIXEL_INTERLEAVE_H
+
+class unc_decoder_factory_tile_component_interleave : public unc_decoder_factory
+{
+private:
+  bool can_decode(const std::shared_ptr<const Box_uncC>& uncC) const override;
+
+  std::unique_ptr<unc_decoder> create(
+      uint32_t width, uint32_t height,
+      const std::shared_ptr<const Box_cmpd>& cmpd,
+      const std::shared_ptr<const Box_uncC>& uncC) const override;
+};
+
+#endif // LIBHEIF_UNC_DECODER_TILE_COMPONENT_INTERLEAVE_H
