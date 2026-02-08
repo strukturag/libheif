@@ -143,6 +143,10 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   // --- generate configuration property boxes
 
   auto uncC = unci_image->m_unc_encoder->get_uncC();
+
+  uncC->set_number_of_tile_columns(parameters->image_width / parameters->tile_width);
+  uncC->set_number_of_tile_rows(parameters->image_height / parameters->tile_height);
+
   unci_image->add_property(uncC, true);
   if (!uncC->is_minimized()) {
     unci_image->add_property(unci_image->m_unc_encoder->get_cmpd(), true);
