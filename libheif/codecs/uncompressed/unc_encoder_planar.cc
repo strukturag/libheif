@@ -121,13 +121,13 @@ unc_encoder_planar::unc_encoder_planar(const std::shared_ptr<const HeifPixelImag
   m_uncC->set_components_little_endian(little_endian);
 
   if (image->get_chroma_format() == heif_chroma_420) {
-    m_uncC->set_sampling_type(2);
+    m_uncC->set_sampling_type(sampling_mode_420);
   }
   else if (image->get_chroma_format() == heif_chroma_422) {
-    m_uncC->set_sampling_type(1);
+    m_uncC->set_sampling_type(sampling_mode_422);
   }
   else {
-    m_uncC->set_sampling_type(0);
+    m_uncC->set_sampling_type(sampling_mode_no_subsampling);
   }
 
 
