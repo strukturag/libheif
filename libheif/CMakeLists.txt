@@ -180,7 +180,11 @@ set(libheif_sources
         sequences/track_visual.cc
         sequences/track_metadata.h
         sequences/track_metadata.cc
-        ${libheif_headers})
+        ${libheif_headers}
+        codecs/uncompressed/unc_encoder.h
+        codecs/uncompressed/unc_encoder.cc
+        codecs/uncompressed/unc_encoder_rgb3.cc
+        codecs/uncompressed/unc_encoder_rgb3.h)
 
 add_library(heif ${libheif_sources})
 

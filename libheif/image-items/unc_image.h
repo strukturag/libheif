@@ -33,6 +33,7 @@
 #include <memory>
 #include <set>
 
+class unc_encoder;
 class HeifContext;
 
 
@@ -81,13 +82,10 @@ public:
                                          const heif_encoding_options& options,
                                          heif_image_input_class input_class) override;
 
-  static Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<HeifPixelImage>& image,
-                                                       const heif_encoding_options& options);
-
-  static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
-                                                                const heif_unci_image_parameters* parameters,
-                                                                const heif_encoding_options* encoding_options,
-                                                                const std::shared_ptr<const HeifPixelImage>& prototype);
+  static Result<std::shared_ptr<ImageItem_uncompressed> > add_unci_item(HeifContext* ctx,
+                                                                        const heif_unci_image_parameters* parameters,
+                                                                        const heif_encoding_options* encoding_options,
+                                                                        const std::shared_ptr<const HeifPixelImage>& prototype);
 
   Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image, bool save_alpha);
 
@@ -99,6 +97,9 @@ protected:
 private:
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
   std::shared_ptr<class Encoder_uncompressed> m_encoder;
+
+  const unc_encoder* m_unc_encoder = nullptr;
+  heif_encoding_options m_encoding_options;
 
   /*
   Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,

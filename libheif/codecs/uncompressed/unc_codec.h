@@ -42,20 +42,10 @@ class HeifContext;
 
 bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC);
 
-Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                         std::shared_ptr<Box_uncC>& uncC,
-                         const std::shared_ptr<const HeifPixelImage>& image,
-                         const heif_unci_image_parameters* parameters,
-                         bool save_alpha_channel);
-
 bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd> &cmpd,
                                            const std::shared_ptr<const Box_uncC> &uncC,
                                            Box_uncC::Component component,
                                            heif_channel *channel);
-
-heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype);
-
-heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr<const HeifPixelImage>&, heif_channel);
 
 class UncompressedImageCodec
 {

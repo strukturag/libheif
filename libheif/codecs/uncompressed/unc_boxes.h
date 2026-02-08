@@ -87,7 +87,15 @@ public:
 
   bool is_essential() const override { return true; }
 
-  void derive_box_version() override {};
+  bool is_minimized() const
+  {
+    return m_profile != 0 && m_num_tile_cols==1 && m_num_tile_rows==1;
+  }
+
+  void derive_box_version() override
+  {
+    set_version(is_minimized() ? 1 : 0);
+  }
 
   std::string dump(Indent&) const override;
 
