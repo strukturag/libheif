@@ -1,5 +1,4 @@
 /*
- *
  * HEIF codec.
  * Copyright (c) 2026 Dirk Farin <dirk.farin@gmail.com>
  *
@@ -19,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unc_encoder_rgb3.h"
+#include "unc_encoder_rgb3_rgba.h"
 
 #include <cstring>
 
@@ -28,12 +27,18 @@
 #include "unc_types.h"
 
 
-bool unc_encoder_rgb3::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                  const heif_encoding_options& options,
-                                  bool save_alpha) const
+bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                       const heif_encoding_options& options,
+                                       bool save_alpha) const
 {
   if (image->get_colorspace() == heif_colorspace_RGB &&
       image->get_chroma_format() == heif_chroma_interleaved_RGB) {
+    return true;
+  }
+
+  if (image->get_colorspace() == heif_colorspace_RGB &&
+      image->get_chroma_format() == heif_chroma_interleaved_RGBA &&
+      save_alpha) {
     return true;
   }
 
@@ -41,32 +46,49 @@ bool unc_encoder_rgb3::can_encode(const std::shared_ptr<const HeifPixelImage>& i
 }
 
 
-void unc_encoder_rgb3::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                                          std::shared_ptr<Box_uncC>& uncC,
-                                          const std::shared_ptr<const HeifPixelImage>& image,
-                                          const heif_encoding_options& options,
-                                          bool save_alpha_channel) const
+void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
+                                               std::shared_ptr<Box_uncC>& uncC,
+                                               const std::shared_ptr<const HeifPixelImage>& image,
+                                               const heif_encoding_options& options,
+                                               bool save_alpha_channel) const
 {
   cmpd->add_component({component_type_red});
   cmpd->add_component({component_type_green});
   cmpd->add_component({component_type_blue});
 
-  uncC->set_profile(fourcc("rgb3"));
+  bool save_alpha = image->has_alpha() && save_alpha_channel;
+
+  if (save_alpha) {
+    cmpd->add_component({component_type_alpha});
+  }
+
+  if (save_alpha) {
+    uncC->set_profile(fourcc("rgba"));
+  }
+  else {
+    uncC->set_profile(fourcc("rgb3"));
+  }
+
   uncC->set_interleave_type(interleave_mode_pixel);
   uncC->set_sampling_type(0);
   uncC->add_component({0, 8, component_format_unsigned, 0});
   uncC->add_component({1, 8, component_format_unsigned, 0});
   uncC->add_component({2, 8, component_format_unsigned, 0});
+  if (save_alpha) {
+    uncC->add_component({3, 8, component_format_unsigned, 0});
+  }
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb3::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                   const heif_encoding_options& options,
-                                                   bool save_alpha) const
+std::vector<uint8_t> unc_encoder_rgb3_rgba::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                                        const heif_encoding_options& options,
+                                                        bool save_alpha_channel) const
 {
   std::vector<uint8_t> data;
 
-  int bytes_per_pixel = 3;
+  bool save_alpha = src_image->has_alpha() && save_alpha_channel;
+
+  int bytes_per_pixel = save_alpha ? 4 : 3;
 
   size_t src_stride;
   const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);

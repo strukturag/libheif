@@ -18,12 +18,12 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_UNC_ENCODER_RGB3_H
-#define LIBHEIF_UNC_ENCODER_RGB3_H
+#ifndef LIBHEIF_UNC_ENCODER_RGB3_RGBA_H
+#define LIBHEIF_UNC_ENCODER_RGB3_RGBA_H
 #include "unc_encoder.h"
 
 
-class unc_encoder_rgb3 : public unc_encoder
+class unc_encoder_rgb3_rgba : public unc_encoder
 {
 public:
   [[nodiscard]] bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
@@ -42,4 +42,4 @@ public:
 };
 
 
-#endif //LIBHEIF_UNC_ENCODER_RGB3_H
+#endif //LIBHEIF_UNC_ENCODER_RGB3_RGBA_H

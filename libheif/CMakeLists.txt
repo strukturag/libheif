@@ -180,11 +180,7 @@ set(libheif_sources
         sequences/track_visual.cc
         sequences/track_metadata.h
         sequences/track_metadata.cc
-        ${libheif_headers}
-        codecs/uncompressed/unc_encoder.h
-        codecs/uncompressed/unc_encoder.cc
-        codecs/uncompressed/unc_encoder_rgb3.cc
-        codecs/uncompressed/unc_encoder_rgb3.h)
+        ${libheif_headers})
 
 add_library(heif ${libheif_sources})
 
@@ -308,7 +304,11 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/decoder_row_interleave.h
             codecs/uncompressed/decoder_row_interleave.cc
             codecs/uncompressed/decoder_tile_component_interleave.h
-            codecs/uncompressed/decoder_tile_component_interleave.cc)
+            codecs/uncompressed/decoder_tile_component_interleave.cc
+            codecs/uncompressed/unc_encoder.h
+            codecs/uncompressed/unc_encoder.cc
+            codecs/uncompressed/unc_encoder_rgb3_rgba.cc
+            codecs/uncompressed/unc_encoder_rgb3_rgba.h)
 endif ()
 
 if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
