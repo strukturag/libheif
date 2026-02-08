@@ -42,7 +42,6 @@ public:
                             const UncompressedImageCodec::unci_properties& properties,
                             std::shared_ptr<HeifPixelImage>& img,
                             uint32_t out_x0, uint32_t out_y0,
-                            uint32_t image_width, uint32_t image_height,
                             uint32_t tile_x, uint32_t tile_y) = 0;
 
   Error decode_image(const DataExtent& extent,

@@ -531,7 +531,6 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
   dataExtent.set_from_image_item(file, ID);
 
   return decoder->decode_tile(dataExtent, properties, img, 0, 0,
-                              ispe->get_width(), ispe->get_height(),
                               tile_x0, tile_y0);
 }
 

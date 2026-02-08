@@ -61,7 +61,6 @@ Error unc_decoder::decode_image(const DataExtent& extent,
   for (uint32_t tile_y0 = 0; tile_y0 < m_height; tile_y0 += tile_height)
     for (uint32_t tile_x0 = 0; tile_x0 < m_width; tile_x0 += tile_width) {
       Error error = decode_tile(extent, properties, img, tile_x0, tile_y0,
-                                m_width, m_height,
                                 tile_x0 / tile_width, tile_y0 / tile_height);
       if (error) {
         return error;

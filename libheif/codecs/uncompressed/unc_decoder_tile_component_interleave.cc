@@ -32,7 +32,6 @@ Error unc_decoder_tile_component_interleave::decode_tile(const DataExtent& dataE
                                                           const UncompressedImageCodec::unci_properties& properties,
                                                           std::shared_ptr<HeifPixelImage>& img,
                                                           uint32_t out_x0, uint32_t out_y0,
-                                                          uint32_t image_width, uint32_t image_height,
                                                           uint32_t tile_column, uint32_t tile_row)
 {
   ensureChannelList(img);
@@ -90,7 +89,7 @@ Error unc_decoder_tile_component_interleave::decode_tile(const DataExtent& dataE
 
     // --- read required file range
 
-    uint32_t tileIdx = tile_column + tile_row * (image_width / m_tile_width);
+    uint32_t tileIdx = tile_column + tile_row * (m_width / m_tile_width);
     uint64_t tile_start_offset = component_start_offset + channel_tile_size[entry.channel] * tileIdx;
 
     std::vector<uint8_t> src_data;

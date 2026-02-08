@@ -31,7 +31,6 @@ Error unc_decoder_mixed_interleave::decode_tile(const DataExtent& dataExtent,
                                                  const UncompressedImageCodec::unci_properties& properties,
                                                  std::shared_ptr<HeifPixelImage>& img,
                                                  uint32_t out_x0, uint32_t out_y0,
-                                                 uint32_t image_width, uint32_t image_height,
                                                  uint32_t tile_x, uint32_t tile_y)
 {
   ensureChannelList(img);
@@ -72,7 +71,7 @@ Error unc_decoder_mixed_interleave::decode_tile(const DataExtent& dataExtent,
   }
 
   assert(m_tile_width > 0);
-  uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
+  uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
   uint64_t tile_start_offset = tile_size * tileIdx;
 
 
