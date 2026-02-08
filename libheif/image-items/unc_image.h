@@ -32,6 +32,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include "codecs/uncompressed/unc_encoder.h"
 
 class unc_encoder;
 class HeifContext;
@@ -98,7 +99,7 @@ private:
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
   std::shared_ptr<class Encoder_uncompressed> m_encoder;
 
-  const unc_encoder* m_unc_encoder = nullptr;
+  std::unique_ptr<const unc_encoder> m_unc_encoder;
   heif_encoding_options m_encoding_options;
 
   /*

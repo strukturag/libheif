@@ -92,7 +92,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared
                                                                  const heif_encoding_options& options,
                                                                  heif_image_input_class input_class)
 {
-  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(src_image, options);
+  Result<std::unique_ptr<const unc_encoder>> uncEncoder = unc_encoder_factory::get_unc_encoder(src_image, options);
   if (!uncEncoder) {
     return {uncEncoder.error()};
   }
@@ -118,7 +118,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   }
 
 
-  Result<const unc_encoder*> uncEncoder = unc_encoder::get_unc_encoder(prototype, *encoding_options);
+  Result<std::unique_ptr<const unc_encoder>> uncEncoder = unc_encoder_factory::get_unc_encoder(prototype, *encoding_options);
   if (!uncEncoder) {
     return {uncEncoder.error()};
   }
@@ -131,7 +131,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   heif_item_id unci_id = ctx->get_heif_file()->add_new_image(fourcc("unci"));
   auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
   unci_image->set_resolution(parameters->image_width, parameters->image_height);
-  unci_image->m_unc_encoder = *uncEncoder;
+  unci_image->m_unc_encoder = std::move(*uncEncoder);
   unci_image->m_encoding_options = *encoding_options;
 
   ctx->insert_image_item(unci_id, unci_image);
@@ -142,19 +142,10 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // --- generate configuration property boxes
 
-  Result<const unc_encoder*> encoderResult = unc_encoder::get_unc_encoder(prototype, *encoding_options);
-  if (encoderResult.error()) {
-    return encoderResult.error();
-  }
-
-  std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
-
-  (*encoderResult)->fill_cmpd_and_uncC(cmpd, uncC, prototype, *encoding_options);
-
+  auto uncC = unci_image->m_unc_encoder->get_uncC();
   unci_image->add_property(uncC, true);
   if (!uncC->is_minimized()) {
-    unci_image->add_property(cmpd, true);
+    unci_image->add_property(unci_image->m_unc_encoder->get_cmpd(), true);
   }
 
 
@@ -240,7 +231,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     // TODO: drop alpha
   }
 
-  Result<std::vector<uint8_t>> codedBitstreamResult = m_unc_encoder->encode_tile(image, m_encoding_options);
+  Result<std::vector<uint8_t>> codedBitstreamResult = m_unc_encoder->encode_tile(image);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }

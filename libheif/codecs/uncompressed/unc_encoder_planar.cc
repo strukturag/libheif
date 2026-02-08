@@ -21,7 +21,7 @@
 #include "unc_boxes.h"
 
 
-bool unc_encoder_planar::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+bool unc_encoder_factory_planar::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                                     const heif_encoding_options& options) const
 {
   if (image->has_channel(heif_channel_interleaved)) {
@@ -30,6 +30,14 @@ bool unc_encoder_planar::can_encode(const std::shared_ptr<const HeifPixelImage>&
 
   return true;
 }
+
+
+std::unique_ptr<const unc_encoder>  unc_encoder_factory_planar::create(const std::shared_ptr<const HeifPixelImage>& image,
+                                                        const heif_encoding_options& options) const
+{
+  return std::make_unique<unc_encoder_planar>(image, options);
+}
+
 
 
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
@@ -42,8 +50,9 @@ heif_uncompressed_component_type heif_channel_to_component_type(heif_channel cha
     case heif_channel_G: return heif_uncompressed_component_type::component_type_green;
     case heif_channel_B: return heif_uncompressed_component_type::component_type_blue;
     case heif_channel_Alpha: return heif_uncompressed_component_type::component_type_alpha;
-    case heif_channel_interleaved: assert(false); break;
-    case heif_channel_filter_array:  return heif_uncompressed_component_type::component_type_filter_array;
+    case heif_channel_interleaved: assert(false);
+      break;
+    case heif_channel_filter_array: return heif_uncompressed_component_type::component_type_filter_array;
     case heif_channel_depth: return heif_uncompressed_component_type::component_type_depth;
     case heif_channel_disparity: return heif_uncompressed_component_type::component_type_disparity;
   }
@@ -95,19 +104,18 @@ std::vector<channel_component> get_channels(const std::shared_ptr<const HeifPixe
   return channels;
 }
 
-void unc_encoder_planar::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                                            std::shared_ptr<Box_uncC>& uncC,
-                                            const std::shared_ptr<const HeifPixelImage>& image,
-                                            const heif_encoding_options& options) const
+
+unc_encoder_planar::unc_encoder_planar(const std::shared_ptr<const HeifPixelImage>& image,
+                                                        const heif_encoding_options& options)
 {
   auto channels = get_channels(image);
 
   // if we have any component > 8 bits, we enable this
   bool little_endian = false;
 
-  uint16_t index=0;
+  uint16_t index = 0;
   for (channel_component channelcomponent : channels) {
-    cmpd->add_component({channelcomponent.component_type});
+    m_cmpd->add_component({channelcomponent.component_type});
 
     uint8_t bpp = image->get_bits_per_pixel(channelcomponent.channel);
     uint8_t component_align_size = static_cast<uint8_t>((bpp + 7) / 8);
@@ -120,27 +128,26 @@ void unc_encoder_planar::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
       little_endian = true; // TODO: depending on the host endianness
     }
 
-    uncC->add_component({index, bpp, component_format_unsigned, component_align_size});
+    m_uncC->add_component({index, bpp, component_format_unsigned, component_align_size});
     index++;
   }
 
-  uncC->set_interleave_type(interleave_mode_component);
-  uncC->set_components_little_endian(little_endian);
+  m_uncC->set_interleave_type(interleave_mode_component);
+  m_uncC->set_components_little_endian(little_endian);
 
   if (image->get_chroma_format() == heif_chroma_420) {
-    uncC->set_sampling_type(2);
+    m_uncC->set_sampling_type(2);
   }
   else if (image->get_chroma_format() == heif_chroma_422) {
-    uncC->set_sampling_type(1);
+    m_uncC->set_sampling_type(1);
   }
   else {
-    uncC->set_sampling_type(0);
+    m_uncC->set_sampling_type(0);
   }
 }
 
 
-std::vector<uint8_t> unc_encoder_planar::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                     const heif_encoding_options& options) const
+std::vector<uint8_t> unc_encoder_planar::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
@@ -161,7 +168,7 @@ std::vector<uint8_t> unc_encoder_planar::encode_tile(const std::shared_ptr<const
 
   // output all component planes
 
-  uint64_t out_data_start_pos=0;
+  uint64_t out_data_start_pos = 0;
 
   for (channel_component channelcomponent : channels) {
     int bpp = src_image->get_bits_per_pixel(channelcomponent.channel);

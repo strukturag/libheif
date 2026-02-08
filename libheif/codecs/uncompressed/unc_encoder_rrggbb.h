@@ -26,16 +26,21 @@
 class unc_encoder_rrggbb : public unc_encoder
 {
 public:
+  unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImage>& image,
+                     const heif_encoding_options& options);
+
+  [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
+};
+
+
+class unc_encoder_factory_rrggbb : public unc_encoder_factory
+{
+public:
   [[nodiscard]] bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                                 const heif_encoding_options& options) const override;
 
-  void fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& out_cmpd,
-                          std::shared_ptr<Box_uncC>& out_uncC,
-                          const std::shared_ptr<const HeifPixelImage>& image,
-                          const heif_encoding_options& options) const override;
-
-  [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image,
-                                                 const heif_encoding_options& options) const override;
+  std::unique_ptr<const unc_encoder> create(const std::shared_ptr<const HeifPixelImage>& image,
+                                            const heif_encoding_options& options) const override;
 };
 
 

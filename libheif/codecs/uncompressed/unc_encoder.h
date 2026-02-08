@@ -34,28 +34,41 @@ class HeifPixelImage;
 class unc_encoder
 {
 public:
+  unc_encoder();
+
   virtual ~unc_encoder() = default;
 
-  virtual bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                          const heif_encoding_options& options) const = 0;
-
-  virtual void fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& out_cmpd,
-                                  std::shared_ptr<Box_uncC>& out_uncC,
-                                  const std::shared_ptr<const HeifPixelImage>& image,
-                                  const heif_encoding_options& options) const = 0;
-
-  [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image,
-                                           const heif_encoding_options& options) const = 0;
+  std::shared_ptr<Box_cmpd> get_cmpd() const { return m_cmpd; }
+  std::shared_ptr<Box_uncC> get_uncC() const { return m_uncC; }
 
 
-  static Result<const unc_encoder*> get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
-                                                    const heif_encoding_options& options);
+  [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const = 0;
 
   Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                 const heif_encoding_options& options) const;
 
   static Result<Encoder::CodedImageData> encode_full_image(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                            const heif_encoding_options& options);
+
+protected:
+  std::shared_ptr<Box_cmpd> m_cmpd;
+  std::shared_ptr<Box_uncC> m_uncC;
+};
+
+
+class unc_encoder_factory
+{
+public:
+  virtual ~unc_encoder_factory() = default;
+
+  static Result<std::unique_ptr<const unc_encoder> > get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
+                                                                     const heif_encoding_options& options);
+
+  virtual bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                          const heif_encoding_options& options) const = 0;
+
+  virtual std::unique_ptr<const unc_encoder> create(const std::shared_ptr<const HeifPixelImage>& prototype_image,
+                                                    const heif_encoding_options& options) const = 0;
 };
 
 #endif //LIBHEIF_UNC_ENCODER_H

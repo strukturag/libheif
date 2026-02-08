@@ -51,24 +51,31 @@ heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype
 }
 
 
-Result<const unc_encoder*> unc_encoder::get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
-                                                        const heif_encoding_options& options)
+unc_encoder::unc_encoder()
 {
-  static unc_encoder_rgb3_rgba enc_rgb3_rgba;
-  static unc_encoder_rgb_hdr_packed_interleave enc_rgb10_12;
-  static unc_encoder_rrggbb enc_rrggbb;
-  static unc_encoder_planar enc_planar;
+  m_cmpd = std::make_shared<Box_cmpd>();
+  m_uncC = std::make_shared<Box_uncC>();
+}
 
-  static const unc_encoder* encoders[] {
+
+Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
+                                                                                 const heif_encoding_options& options)
+{
+  static unc_encoder_factory_rgb3_rgba enc_rgb3_rgba;
+  static unc_encoder_factory_rgb_hdr_packed_interleave enc_rgb10_12;
+  static unc_encoder_factory_rrggbb enc_rrggbb;
+  static unc_encoder_factory_planar enc_planar;
+
+  static const unc_encoder_factory* encoders[]{
     &enc_rgb3_rgba,
     &enc_rgb10_12,
     &enc_rrggbb,
     &enc_planar
   };
 
-  for (const unc_encoder* enc : encoders) {
+  for (const unc_encoder_factory* enc : encoders) {
     if (enc->can_encode(prototype_image, options)) {
-      return {enc};
+      return {enc->create(prototype_image, options)};
     }
   }
 
@@ -80,7 +87,6 @@ Result<const unc_encoder*> unc_encoder::get_unc_encoder(const std::shared_ptr<co
 }
 
 
-
 heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
 {
   heif_channel_datatype datatype = image->get_datatype(channel);
@@ -90,9 +96,9 @@ heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr
 
 
 Result<Encoder::CodedImageData> unc_encoder::encode_full_image(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                         const heif_encoding_options& options)
+                                                               const heif_encoding_options& options)
 {
-  auto uncEncoder = get_unc_encoder(src_image, options);
+  auto uncEncoder = unc_encoder_factory::get_unc_encoder(src_image, options);
   if (uncEncoder.error()) {
     return uncEncoder.error();
   }
@@ -122,21 +128,18 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
 
   // --- generate configuration property boxes
 
-  std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
-
-  this->fill_cmpd_and_uncC(cmpd, uncC, src_image, options);
+  auto uncC = this->get_uncC();
 
   Encoder::CodedImageData codedImageData;
   codedImageData.properties.push_back(uncC);
   if (!uncC->is_minimized()) {
-    codedImageData.properties.push_back(cmpd);
+    codedImageData.properties.push_back(this->get_cmpd());
   }
 
 
   // --- encode image
 
-  Result<std::vector<uint8_t> > codedBitstreamResult = encode_tile(src_image, options);
+  Result<std::vector<uint8_t> > codedBitstreamResult = this->encode_tile(src_image);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();
   }
@@ -145,5 +148,3 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
 
   return codedImageData;
 }
-
-

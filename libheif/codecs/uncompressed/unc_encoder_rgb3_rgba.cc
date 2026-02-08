@@ -27,8 +27,8 @@
 #include "unc_types.h"
 
 
-bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                       const heif_encoding_options& options) const
+bool unc_encoder_factory_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                               const heif_encoding_options& options) const
 {
   if (image->get_colorspace() != heif_colorspace_RGB) {
     return false;
@@ -44,29 +44,34 @@ bool unc_encoder_rgb3_rgba::can_encode(const std::shared_ptr<const HeifPixelImag
 }
 
 
-void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                                               std::shared_ptr<Box_uncC>& uncC,
-                                               const std::shared_ptr<const HeifPixelImage>& image,
-                                               const heif_encoding_options& options) const
+std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb3_rgba::create(const std::shared_ptr<const HeifPixelImage>& image,
+                                                                         const heif_encoding_options& options) const
 {
-  cmpd->add_component({component_type_red});
-  cmpd->add_component({component_type_green});
-  cmpd->add_component({component_type_blue});
+  return std::make_unique<unc_encoder_rgb3_rgba>(image, options);
+}
+
+
+unc_encoder_rgb3_rgba::unc_encoder_rgb3_rgba(const std::shared_ptr<const HeifPixelImage>& image,
+                                             const heif_encoding_options& options)
+{
+  m_cmpd->add_component({component_type_red});
+  m_cmpd->add_component({component_type_green});
+  m_cmpd->add_component({component_type_blue});
 
   bool save_alpha = image->has_alpha();
 
   if (save_alpha) {
-    cmpd->add_component({component_type_alpha});
+    m_cmpd->add_component({component_type_alpha});
   }
 
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
   if (bpp == 8) {
     if (save_alpha) {
-      uncC->set_profile(fourcc("rgba"));
+      m_uncC->set_profile(fourcc("rgba"));
     }
     else {
-      uncC->set_profile(fourcc("rgb3"));
+      m_uncC->set_profile(fourcc("rgb3"));
     }
   }
 
@@ -75,19 +80,18 @@ void unc_encoder_rgb3_rgba::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     component_align_size = 1;
   }
 
-  uncC->set_interleave_type(interleave_mode_pixel);
-  uncC->set_sampling_type(0);
-  uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
-  uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
-  uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
+  m_uncC->set_interleave_type(interleave_mode_pixel);
+  m_uncC->set_sampling_type(0);
+  m_uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
   if (save_alpha) {
-    uncC->add_component({3, bpp, component_format_unsigned, component_align_size});
+    m_uncC->add_component({3, bpp, component_format_unsigned, component_align_size});
   }
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb3_rgba::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                        const heif_encoding_options& options) const
+std::vector<uint8_t> unc_encoder_rgb3_rgba::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 

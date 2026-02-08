@@ -27,8 +27,8 @@
 #include "unc_types.h"
 
 
-bool unc_encoder_rrggbb::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                    const heif_encoding_options& options) const
+bool unc_encoder_factory_rrggbb::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                            const heif_encoding_options& options) const
 {
   if (image->get_colorspace() != heif_colorspace_RGB) {
     return false;
@@ -48,19 +48,24 @@ bool unc_encoder_rrggbb::can_encode(const std::shared_ptr<const HeifPixelImage>&
 }
 
 
-void unc_encoder_rrggbb::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                                            std::shared_ptr<Box_uncC>& uncC,
-                                            const std::shared_ptr<const HeifPixelImage>& image,
-                                            const heif_encoding_options& options) const
+std::unique_ptr<const unc_encoder> unc_encoder_factory_rrggbb::create(const std::shared_ptr<const HeifPixelImage>& image,
+                                                                      const heif_encoding_options& options) const
 {
-  cmpd->add_component({component_type_red});
-  cmpd->add_component({component_type_green});
-  cmpd->add_component({component_type_blue});
+  return std::make_unique<unc_encoder_rrggbb>(image, options);
+}
+
+
+unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImage>& image,
+                                       const heif_encoding_options& options)
+{
+  m_cmpd->add_component({component_type_red});
+  m_cmpd->add_component({component_type_green});
+  m_cmpd->add_component({component_type_blue});
 
   bool save_alpha = image->has_alpha();
 
   if (save_alpha) {
-    cmpd->add_component({component_type_alpha});
+    m_cmpd->add_component({component_type_alpha});
   }
 
   bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
@@ -73,21 +78,20 @@ void unc_encoder_rrggbb::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     component_align_size = 0;
   }
 
-  uncC->set_interleave_type(interleave_mode_pixel);
-  uncC->set_sampling_type(0);
-  uncC->set_components_little_endian(little_endian);
+  m_uncC->set_interleave_type(interleave_mode_pixel);
+  m_uncC->set_sampling_type(0);
+  m_uncC->set_components_little_endian(little_endian);
 
-  uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
-  uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
-  uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
   if (save_alpha) {
-    uncC->add_component({3, bpp, component_format_unsigned, component_align_size});
+    m_uncC->add_component({3, bpp, component_format_unsigned, component_align_size});
   }
 }
 
 
-std::vector<uint8_t> unc_encoder_rrggbb::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                     const heif_encoding_options& options) const
+std::vector<uint8_t> unc_encoder_rrggbb::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
