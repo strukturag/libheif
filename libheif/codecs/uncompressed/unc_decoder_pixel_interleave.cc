@@ -111,7 +111,19 @@ Error unc_decoder_pixel_interleave::processTile(UncompressedBitReader& srcBits, 
 
 bool unc_decoder_factory_pixel_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
 {
-  return uncC->get_interleave_type() == interleave_mode_pixel;
+  if (!check_common_requirements(uncC)) {
+    return false;
+  }
+
+  if (uncC->get_interleave_type() != interleave_mode_pixel) {
+    return false;
+  }
+
+  if (uncC->get_sampling_type() != sampling_mode_no_subsampling) {
+    return false;
+  }
+
+  return true;
 }
 
 std::unique_ptr<unc_decoder> unc_decoder_factory_pixel_interleave::create(

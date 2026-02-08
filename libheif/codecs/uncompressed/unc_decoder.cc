@@ -18,6 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
 
@@ -288,6 +289,50 @@ Error unc_decoder::decode_image(const DataExtent& extent,
 
 
 // --- unc_decoder_factory ---
+
+bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const Box_uncC>& uncC)
+{
+  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
+    return true;
+  }
+
+  for (const auto& component : uncC->get_components()) {
+    if (component.component_bit_depth > 16) {
+      return false;
+    }
+    if (component.component_format != component_format_unsigned) {
+      return false;
+    }
+    if (component.component_align_size > 2) {
+      return false;
+    }
+  }
+
+  if (uncC->get_block_size() != 0) {
+    return false;
+  }
+  if (uncC->is_block_pad_lsb()) {
+    return false;
+  }
+  if (uncC->is_block_little_endian()) {
+    return false;
+  }
+  if (uncC->is_block_reversed()) {
+    return false;
+  }
+
+  if (uncC->is_components_little_endian()) {
+    const auto& comps = uncC->get_components();
+    bool all_8_bit = std::all_of(comps.begin(), comps.end(),
+                                 [](const Box_uncC::Component& c) { return c.component_bit_depth == 8; });
+    if (!all_8_bit) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 
 Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
     uint32_t width, uint32_t height,

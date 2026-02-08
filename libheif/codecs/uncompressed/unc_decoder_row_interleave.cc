@@ -98,7 +98,23 @@ void unc_decoder_row_interleave::processTile(UncompressedBitReader& srcBits, uin
 
 bool unc_decoder_factory_row_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
 {
-  return uncC->get_interleave_type() == interleave_mode_row;
+  if (!check_common_requirements(uncC)) {
+    return false;
+  }
+
+  if (uncC->get_interleave_type() != interleave_mode_row) {
+    return false;
+  }
+
+  if (uncC->get_sampling_type() != sampling_mode_no_subsampling) {
+    return false;
+  }
+
+  if (uncC->get_pixel_size() != 0) {
+    return false;
+  }
+
+  return true;
 }
 
 std::unique_ptr<unc_decoder> unc_decoder_factory_row_interleave::create(

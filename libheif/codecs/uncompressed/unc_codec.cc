@@ -31,207 +31,16 @@
 #include "codecs/decoder.h"
 
 #include <algorithm>
-#include <map>
-#include <iostream>
 #include <cassert>
+#include <iostream>
+#include <map>
+#include <sstream>
 #include "security_limits.h"
 
 
 bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
 {
   return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
-}
-
-
-static Error uncompressed_image_type_is_supported(const std::shared_ptr<const Box_uncC>& uncC,
-                                                  const std::shared_ptr<const Box_cmpd>& cmpd)
-{
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    return Error::Ok;
-  }
-  if (!cmpd) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Missing required cmpd box (no match in uncC box) for uncompressed codec");
-  }
-
-  for (Box_uncC::Component component : uncC->get_components()) {
-    uint16_t component_index = component.component_index;
-    uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if ((component_type > 7) && (component_type != component_type_padded) && (component_type != component_type_filter_array)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-
-    if ((component.component_bit_depth > 16)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_bit_depth " << ((int) component.component_bit_depth) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (component.component_format != component_format_unsigned) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (component.component_align_size > 2) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-  }
-  if ((uncC->get_sampling_type() != sampling_mode_no_subsampling)
-      && (uncC->get_sampling_type() != sampling_mode_422)
-      && (uncC->get_sampling_type() != sampling_mode_420)
-      ) {
-    std::stringstream sstr;
-    sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-  if ((uncC->get_interleave_type() != interleave_mode_component)
-      && (uncC->get_interleave_type() != interleave_mode_pixel)
-      && (uncC->get_interleave_type() != interleave_mode_mixed)
-      && (uncC->get_interleave_type() != interleave_mode_row)
-      && (uncC->get_interleave_type() != interleave_mode_tile_component)
-      ) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-  // Validity checks per ISO/IEC 23001-17 Section 5.2.1.5.3
-  if (uncC->get_sampling_type() == sampling_mode_422) {
-    // We check Y Cb and Cr appear in the chroma test
-    // TODO: error for tile width not multiple of 2
-    if ((uncC->get_interleave_type() != interleave_mode_component)
-        && (uncC->get_interleave_type() != interleave_mode_mixed)
-        && (uncC->get_interleave_type() != interleave_mode_multi_y)) {
-      std::stringstream sstr;
-      sstr << "YCbCr 4:2:2 subsampling is only valid with component, mixed or multi-Y interleave mode (ISO/IEC 23001-17 5.2.1.5.3).";
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   sstr.str());
-    }
-    if ((uncC->get_row_align_size() != 0) && (uncC->get_interleave_type() == interleave_mode_component)) {
-      if (uncC->get_row_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling with component interleave requires row_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-    if (uncC->get_tile_align_size() != 0) {
-      if (uncC->get_tile_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling requires tile_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-  }
-  // Validity checks per ISO/IEC 23001-17 Section 5.2.1.5.4
-  if (uncC->get_sampling_type() == sampling_mode_422) {
-    // We check Y Cb and Cr appear in the chroma test
-    // TODO: error for tile width not multiple of 2
-    if ((uncC->get_interleave_type() != interleave_mode_component)
-        && (uncC->get_interleave_type() != interleave_mode_mixed)) {
-      std::stringstream sstr;
-      sstr << "YCbCr 4:2:0 subsampling is only valid with component or mixed interleave mode (ISO/IEC 23001-17 5.2.1.5.4).";
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   sstr.str());
-    }
-    if ((uncC->get_row_align_size() != 0) && (uncC->get_interleave_type() == interleave_mode_component)) {
-      if (uncC->get_row_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling with component interleave requires row_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.4).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-    if (uncC->get_tile_align_size() != 0) {
-      if (uncC->get_tile_align_size() % 4 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling requires tile_align_size to be a multiple of 4 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-  }
-  if ((uncC->get_interleave_type() == interleave_mode_mixed) && (uncC->get_sampling_type() == sampling_mode_no_subsampling)) {
-    std::stringstream sstr;
-    sstr << "Interleave interleave mode is not valid with subsampling mode (ISO/IEC 23001-17 5.2.1.6.4).";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  if ((uncC->get_interleave_type() == interleave_mode_multi_y)
-      && ((uncC->get_sampling_type() != sampling_mode_422) && (uncC->get_sampling_type() != sampling_mode_411))) {
-    std::stringstream sstr;
-    sstr << "Multi-Y interleave mode is only valid with 4:2:2 and 4:1:1 subsampling modes (ISO/IEC 23001-17 5.2.1.6.7).";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  // TODO: throw error if mixed and Cb and Cr are not adjacent.
-
-  if (uncC->get_block_size() != 0) {
-    std::stringstream sstr;
-    sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  if (uncC->is_components_little_endian()) {
-    const auto& comps = uncC->get_components();
-    bool all_8_bit = std::all_of(comps.begin(), comps.end(),
-                                 [](const Box_uncC::Component& c) { return c.component_bit_depth==8; });
-    if (!all_8_bit) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed components_little_endian == 1 is not implemented yet");
-    }
-  }
-
-  if (uncC->is_block_pad_lsb()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_pad_lsb == 1 is not implemented yet");
-  }
-  if (uncC->is_block_little_endian()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_little_endian == 1 is not implemented yet");
-  }
-  if (uncC->is_block_reversed()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_reversed == 1 is not implemented yet");
-  }
-  if ((uncC->get_pixel_size() != 0) && ((uncC->get_interleave_type() != interleave_mode_pixel) && (uncC->get_interleave_type() != interleave_mode_multi_y))) {
-    std::stringstream sstr;
-    sstr << "Uncompressed pixel_size of " << ((int) uncC->get_pixel_size()) << " is only valid with interleave_type 1 or 5 (ISO/IEC 23001-17 5.2.1.7)";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  return Error::Ok;
 }
 
 
@@ -567,6 +376,15 @@ Error UncompressedImageCodec::check_header_validity(std::optional<const std::sha
                 heif_suberror_Unspecified,
                 "Invalid component index in uncC box"};
       }
+
+      uint16_t component_type = cmpd->get_components()[comp.component_index].component_type;
+      if (component_type > 7 && component_type != component_type_padded && component_type != component_type_filter_array) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
+        return {heif_error_Unsupported_feature,
+                heif_suberror_Unsupported_data_version,
+                sstr.str()};
+      }
     }
   }
 
@@ -624,13 +442,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   auto cmpd = properties.cmpd;
 
   error = check_header_validity(ispe, cmpd, uncC);
-  if (error) {
-    return error;
-  }
-
-  // check if we support the type of image
-
-  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
   if (error) {
     return error;
   }
@@ -694,13 +505,6 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
   const std::shared_ptr<const Box_uncC>& uncC = properties.uncC;
 
   Error error = check_header_validity(ispe, cmpd, uncC);
-  if (error) {
-    return error;
-  }
-
-  // check if we support the type of image
-
-  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
   if (error) {
     return error;
   }

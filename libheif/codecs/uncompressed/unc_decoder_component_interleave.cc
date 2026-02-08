@@ -120,8 +120,45 @@ Error unc_decoder_component_interleave::decode_tile(const std::vector<uint8_t>& 
 
 bool unc_decoder_factory_component_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
 {
-  return uncC->get_interleave_type() == interleave_mode_component ||
-         uncC->get_interleave_type() == interleave_mode_tile_component;
+  if (!check_common_requirements(uncC)) {
+    return false;
+  }
+
+  if (uncC->get_interleave_type() != interleave_mode_component &&
+      uncC->get_interleave_type() != interleave_mode_tile_component) {
+    return false;
+  }
+
+  auto sampling = uncC->get_sampling_type();
+  if (sampling != sampling_mode_no_subsampling &&
+      sampling != sampling_mode_422 &&
+      sampling != sampling_mode_420) {
+    return false;
+  }
+
+  if (sampling == sampling_mode_422 || sampling == sampling_mode_420) {
+    if (uncC->get_row_align_size() != 0 && uncC->get_row_align_size() % 2 != 0) {
+      return false;
+    }
+  }
+
+  if (sampling == sampling_mode_422) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 2 != 0) {
+      return false;
+    }
+  }
+
+  if (sampling == sampling_mode_420) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 4 != 0) {
+      return false;
+    }
+  }
+
+  if (uncC->get_pixel_size() != 0) {
+    return false;
+  }
+
+  return true;
 }
 
 std::unique_ptr<unc_decoder> unc_decoder_factory_component_interleave::create(
