@@ -110,7 +110,7 @@ void unc_encoder_planar::fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
     cmpd->add_component({channelcomponent.component_type});
 
     uint8_t bpp = image->get_bits_per_pixel(channelcomponent.channel);
-    uint8_t component_align_size = (bpp + 7) / 8;
+    uint8_t component_align_size = static_cast<uint8_t>((bpp + 7) / 8);
 
     if (bpp % 8 == 0) {
       component_align_size = 0;
