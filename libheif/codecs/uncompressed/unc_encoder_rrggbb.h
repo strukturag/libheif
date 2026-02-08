@@ -41,6 +41,8 @@ private:
 class unc_encoder_factory_rrggbb : public unc_encoder_factory
 {
 public:
+
+private:
   [[nodiscard]] bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                                 const heif_encoding_options& options) const override;
 

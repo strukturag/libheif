@@ -66,6 +66,7 @@ public:
   static Result<std::unique_ptr<const unc_encoder> > get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
                                                                      const heif_encoding_options& options);
 
+private:
   virtual bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                           const heif_encoding_options& options) const = 0;
 
