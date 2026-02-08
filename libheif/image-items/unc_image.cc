@@ -191,9 +191,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   // Create empty image. If we use compression, we append the data piece by piece.
 
   if (parameters->compression == heif_unci_compression_off) {
-    assert(false); // TODO compute_tile_data_size_bytes() is too simplistic
-    uint64_t tile_size = uncC->compute_tile_data_size_bytes(parameters->image_width / uncC->get_number_of_tile_columns(),
-                                                            parameters->image_height / uncC->get_number_of_tile_rows());
+    uint64_t tile_size = unci_image->m_unc_encoder->compute_tile_data_size_bytes(parameters->image_width / uncC->get_number_of_tile_columns(),
+                                                                                 parameters->image_height / uncC->get_number_of_tile_rows());
 
     std::vector<uint8_t> dummydata;
     dummydata.resize(tile_size);
@@ -249,7 +248,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
     // uncompressed
 
-    uint64_t tile_data_size = uncC->compute_tile_data_size_bytes(tile_width, tile_height);
+    uint64_t tile_data_size = m_unc_encoder->compute_tile_data_size_bytes(tile_width, tile_height);
 
     get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
   }

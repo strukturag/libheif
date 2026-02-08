@@ -22,7 +22,7 @@
 
 
 bool unc_encoder_factory_planar::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                    const heif_encoding_options& options) const
+                                            const heif_encoding_options& options) const
 {
   if (image->has_channel(heif_channel_interleaved)) {
     return false;
@@ -32,12 +32,11 @@ bool unc_encoder_factory_planar::can_encode(const std::shared_ptr<const HeifPixe
 }
 
 
-std::unique_ptr<const unc_encoder>  unc_encoder_factory_planar::create(const std::shared_ptr<const HeifPixelImage>& image,
-                                                        const heif_encoding_options& options) const
+std::unique_ptr<const unc_encoder> unc_encoder_factory_planar::create(const std::shared_ptr<const HeifPixelImage>& image,
+                                                                      const heif_encoding_options& options) const
 {
   return std::make_unique<unc_encoder_planar>(image, options);
 }
-
 
 
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
@@ -61,60 +60,46 @@ heif_uncompressed_component_type heif_channel_to_component_type(heif_channel cha
 }
 
 
-struct channel_component
-{
-  heif_channel channel;
-  heif_uncompressed_component_type component_type;
-};
-
-void add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, std::vector<channel_component>& list, heif_channel channel)
+void unc_encoder_planar::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
 {
   if (image->has_channel(channel)) {
-    list.push_back({channel, heif_channel_to_component_type(channel)});
+    m_components.push_back({channel, heif_channel_to_component_type(channel)});
   }
 }
 
-std::vector<channel_component> get_channels(const std::shared_ptr<const HeifPixelImage>& image)
-{
-  std::vector<channel_component> channels;
 
+unc_encoder_planar::unc_encoder_planar(const std::shared_ptr<const HeifPixelImage>& image,
+                                       const heif_encoding_options& options)
+{
   // Special case for heif_channel_Y:
   // - if this an YCbCr image, use component_type_Y,
   // - otherwise, use component_type_monochrome
 
   if (image->has_channel(heif_channel_Y)) {
     if (image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr)) {
-      channels.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_Y});
+      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_Y});
     }
     else {
-      channels.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_monochrome});
+      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_monochrome});
     }
   }
 
-  add_channel_if_exists(image, channels, heif_channel_Cb);
-  add_channel_if_exists(image, channels, heif_channel_Cr);
-  add_channel_if_exists(image, channels, heif_channel_R);
-  add_channel_if_exists(image, channels, heif_channel_G);
-  add_channel_if_exists(image, channels, heif_channel_B);
-  add_channel_if_exists(image, channels, heif_channel_Alpha);
-  add_channel_if_exists(image, channels, heif_channel_filter_array);
-  add_channel_if_exists(image, channels, heif_channel_depth);
-  add_channel_if_exists(image, channels, heif_channel_disparity);
+  add_channel_if_exists(image, heif_channel_Cb);
+  add_channel_if_exists(image, heif_channel_Cr);
+  add_channel_if_exists(image, heif_channel_R);
+  add_channel_if_exists(image, heif_channel_G);
+  add_channel_if_exists(image, heif_channel_B);
+  add_channel_if_exists(image, heif_channel_Alpha);
+  add_channel_if_exists(image, heif_channel_filter_array);
+  add_channel_if_exists(image, heif_channel_depth);
+  add_channel_if_exists(image, heif_channel_disparity);
 
-  return channels;
-}
-
-
-unc_encoder_planar::unc_encoder_planar(const std::shared_ptr<const HeifPixelImage>& image,
-                                                        const heif_encoding_options& options)
-{
-  auto channels = get_channels(image);
 
   // if we have any component > 8 bits, we enable this
   bool little_endian = false;
 
   uint16_t index = 0;
-  for (channel_component channelcomponent : channels) {
+  for (channel_component channelcomponent : m_components) {
     m_cmpd->add_component({channelcomponent.component_type});
 
     uint8_t bpp = image->get_bits_per_pixel(channelcomponent.channel);
@@ -144,6 +129,30 @@ unc_encoder_planar::unc_encoder_planar(const std::shared_ptr<const HeifPixelImag
   else {
     m_uncC->set_sampling_type(0);
   }
+
+
+  // --- compute bytes per pixel
+
+  m_bytes_per_pixel_x4 = 0;
+
+  for (channel_component channelcomponent : m_components) {
+    int bpp = image->get_bits_per_pixel(channelcomponent.channel);
+    int bytes_per_pixel = 4 * (bpp + 7) / 8;
+
+    if (channelcomponent.channel == heif_channel_Cb ||
+        channelcomponent.channel == heif_channel_Cr) {
+      int downsampling = chroma_h_subsampling(image->get_chroma_format()) * chroma_v_subsampling(image->get_chroma_format());
+      bytes_per_pixel /= downsampling;
+    }
+
+    m_bytes_per_pixel_x4 += bytes_per_pixel;
+  }
+}
+
+
+uint64_t unc_encoder_planar::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+{
+  return tile_width * tile_height * m_bytes_per_pixel_x4 / 4;
 }
 
 
@@ -151,13 +160,11 @@ std::vector<uint8_t> unc_encoder_planar::encode_tile(const std::shared_ptr<const
 {
   std::vector<uint8_t> data;
 
-  auto channels = get_channels(src_image);
-
   // compute total size of all components
 
   uint64_t total_size = 0;
 
-  for (channel_component channelcomponent : channels) {
+  for (channel_component channelcomponent : m_components) {
     int bpp = src_image->get_bits_per_pixel(channelcomponent.channel);
     int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -170,7 +177,7 @@ std::vector<uint8_t> unc_encoder_planar::encode_tile(const std::shared_ptr<const
 
   uint64_t out_data_start_pos = 0;
 
-  for (channel_component channelcomponent : channels) {
+  for (channel_component channelcomponent : m_components) {
     int bpp = src_image->get_bits_per_pixel(channelcomponent.channel);
     int bytes_per_pixel = (bpp + 7) / 8;
 

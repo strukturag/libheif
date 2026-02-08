@@ -68,6 +68,8 @@ unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImag
     m_cmpd->add_component({component_type_alpha});
   }
 
+  m_bytes_per_pixel = save_alpha ? 8 : 6;
+
   bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
                         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
 
@@ -91,22 +93,24 @@ unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImag
 }
 
 
+uint64_t unc_encoder_rrggbb::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+{
+  return tile_width * tile_height * m_bytes_per_pixel;
+}
+
+
 std::vector<uint8_t> unc_encoder_rrggbb::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
-  bool save_alpha = src_image->has_alpha();
-
-  int bytes_per_pixel = save_alpha ? 8 : 6;
-
   size_t src_stride;
   const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
 
-  uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * bytes_per_pixel;
+  uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * m_bytes_per_pixel;
   data.resize(out_size);
 
   for (uint32_t y = 0; y < src_image->get_height(); y++) {
-    memcpy(data.data() + y * src_image->get_width() * bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * bytes_per_pixel);
+    memcpy(data.data() + y * src_image->get_width() * m_bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * m_bytes_per_pixel);
   }
 
   return data;

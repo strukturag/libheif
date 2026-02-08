@@ -17,6 +17,7 @@
 #define LIBHEIF_UNC_ENCODER_PLANAR_H
 
 #include "unc_encoder.h"
+#include "unc_types.h"
 
 class unc_encoder_planar : public unc_encoder
 {
@@ -24,7 +25,21 @@ public:
   unc_encoder_planar(const std::shared_ptr<const HeifPixelImage>& image,
                      const heif_encoding_options& options);
 
+  uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const override;
+
   [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
+
+private:
+  struct channel_component
+  {
+    heif_channel channel;
+    heif_uncompressed_component_type component_type;
+  };
+
+  std::vector<channel_component> m_components;
+  uint32_t m_bytes_per_pixel_x4;
+
+  void add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel);
 };
 
 

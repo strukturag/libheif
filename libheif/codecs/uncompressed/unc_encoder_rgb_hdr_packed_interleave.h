@@ -24,7 +24,12 @@ public:
   unc_encoder_rgb_hdr_packed_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                         const heif_encoding_options& options);
 
+  uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const override;
+
   [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
+
+private:
+  uint8_t m_bytes_per_pixel = 0;
 };
 
 

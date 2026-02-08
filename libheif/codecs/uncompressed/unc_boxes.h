@@ -216,8 +216,6 @@ public:
 
   uint32_t get_number_of_tiles() const { return m_num_tile_rows * m_num_tile_rows; }
 
-  uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const;
-
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 

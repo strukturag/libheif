@@ -60,10 +60,10 @@ unc_encoder_rgb_hdr_packed_interleave::unc_encoder_rgb_hdr_packed_interleave(con
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
   uint8_t nBits = static_cast<uint8_t>(3 * bpp);
-  uint8_t bytes_per_pixel = static_cast<uint8_t>((nBits + 7) / 8);
+  m_bytes_per_pixel = static_cast<uint8_t>((nBits + 7) / 8);
 
   m_uncC->set_interleave_type(interleave_mode_pixel);
-  m_uncC->set_pixel_size(bytes_per_pixel);
+  m_uncC->set_pixel_size(m_bytes_per_pixel);
   m_uncC->set_sampling_type(0);
   m_uncC->set_components_little_endian(true);
 
@@ -73,20 +73,23 @@ unc_encoder_rgb_hdr_packed_interleave::unc_encoder_rgb_hdr_packed_interleave(con
 }
 
 
+uint64_t unc_encoder_rgb_hdr_packed_interleave::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+{
+  return tile_width * tile_height * m_bytes_per_pixel;
+}
+
+
 std::vector<uint8_t> unc_encoder_rgb_hdr_packed_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
   uint8_t bpp = src_image->get_bits_per_pixel(heif_channel_interleaved);
 
-  uint8_t nBits = static_cast<uint8_t>(3 * bpp);
-  uint8_t bytes_per_pixel = static_cast<uint8_t>((nBits + 7) / 8);
-
   size_t src_stride;
   const auto* src_data = reinterpret_cast<const uint16_t*>(src_image->get_plane(heif_channel_interleaved, &src_stride));
   src_stride /= 2;
 
-  uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * bytes_per_pixel;
+  uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * m_bytes_per_pixel;
   data.resize(out_size);
 
   uint8_t* p = data.data();
@@ -104,7 +107,7 @@ std::vector<uint8_t> unc_encoder_rgb_hdr_packed_interleave::encode_tile(const st
       *p++ = static_cast<uint8_t>((combined_pixel >> 16) & 0xFF);
       *p++ = static_cast<uint8_t>((combined_pixel >> 24) & 0xFF);
 
-      if (bytes_per_pixel > 4) {
+      if (m_bytes_per_pixel > 4) {
         *p++ = static_cast<uint8_t>((combined_pixel >> 32) & 0xFF);
       }
     }

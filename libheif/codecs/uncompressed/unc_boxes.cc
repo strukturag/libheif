@@ -414,41 +414,6 @@ Error Box_uncC::write(StreamWriter& writer) const
 }
 
 
-uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
-{
-  if (m_profile != 0) {
-    switch (m_profile) {
-      case fourcc("rgba"):
-        return 4 * uint64_t{tile_width} * tile_height;
-
-      case fourcc("rgb3"):
-        return 3 * uint64_t{tile_width} * tile_height;
-
-      default:
-        assert(false);
-        return 0;
-    }
-  }
-
-  switch (m_interleave_type) {
-    case interleave_mode_component:
-    case interleave_mode_pixel: {
-      uint32_t bytes_per_pixel = 0;
-
-      for (const auto& comp : m_components) {
-        assert(comp.component_bit_depth % 8 == 0); // TODO: component sizes that are no multiples of bytes
-        bytes_per_pixel += comp.component_bit_depth / 8;
-      }
-
-      return bytes_per_pixel * uint64_t{tile_width} * tile_height;
-    }
-    default:
-      assert(false);
-      return 0;
-  }
-}
-
-
 Error Box_cmpC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

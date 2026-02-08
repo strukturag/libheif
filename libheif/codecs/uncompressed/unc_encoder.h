@@ -42,6 +42,8 @@ public:
   std::shared_ptr<Box_uncC> get_uncC() const { return m_uncC; }
 
 
+  virtual uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const = 0;
+
   [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const = 0;
 
   Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
