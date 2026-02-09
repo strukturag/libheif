@@ -104,7 +104,7 @@ Error unc_decoder_block_pixel_interleave::decode_tile(const std::vector<uint8_t>
   if (!pad_lsb) {
     uint32_t bit_offset = 0;
     for (uint32_t i = 0; i < num_components; i++) {
-      uint32_t idx = reversed ? (num_components - 1 - i) : i;
+      uint32_t idx = reversed ? i : (num_components - 1 - i);
       comp[idx].shift = bit_offset;
       bit_offset += components[idx].component_bit_depth;
     }
@@ -113,7 +113,7 @@ Error unc_decoder_block_pixel_interleave::decode_tile(const std::vector<uint8_t>
     uint32_t total_bits = block_size * 8;
     uint32_t bit_offset = total_bits;
     for (uint32_t i = 0; i < num_components; i++) {
-      uint32_t idx = reversed ? (num_components - 1 - i) : i;
+      uint32_t idx = reversed ? i : (num_components - 1 - i);
       bit_offset -= components[idx].component_bit_depth;
       comp[idx].shift = bit_offset;
     }

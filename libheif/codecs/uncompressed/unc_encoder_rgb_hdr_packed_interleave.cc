@@ -64,8 +64,9 @@ unc_encoder_rgb_hdr_packed_interleave::unc_encoder_rgb_hdr_packed_interleave(con
 
   m_uncC->set_interleave_type(interleave_mode_pixel);
   m_uncC->set_pixel_size(m_bytes_per_pixel);
+  m_uncC->set_block_size(m_bytes_per_pixel);
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
-  m_uncC->set_components_little_endian(true);
+  m_uncC->set_block_little_endian(true);
 
   m_uncC->add_component({0, bpp, component_format_unsigned, 0});
   m_uncC->add_component({1, bpp, component_format_unsigned, 0});
