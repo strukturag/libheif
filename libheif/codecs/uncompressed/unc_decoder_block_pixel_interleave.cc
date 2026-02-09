@@ -60,11 +60,15 @@ Error unc_decoder_block_pixel_interleave::decode_tile(const std::vector<uint8_t>
                                                        std::shared_ptr<HeifPixelImage>& img,
                                                        uint32_t out_x0, uint32_t out_y0)
 {
-  const uint32_t block_size = m_uncC->get_block_size();
+  uint32_t block_size = m_uncC->get_block_size();
   const uint32_t pixel_size = m_uncC->get_pixel_size();
   const bool little_endian = m_uncC->is_block_little_endian();
   const bool pad_lsb = m_uncC->is_block_pad_lsb();
   const bool reversed = m_uncC->is_block_reversed();
+
+  if (block_size == 0) {
+    block_size = pixel_size;
+  }
 
   // Build per-component info
   struct ComponentInfo {
@@ -196,6 +200,10 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
   }
 
   if (uncC->get_sampling_type() != sampling_mode_no_subsampling) {
+    return false;
+  }
+
+  if (uncC->is_components_little_endian()) {
     return false;
   }
 

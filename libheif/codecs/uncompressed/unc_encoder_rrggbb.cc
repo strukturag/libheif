@@ -83,6 +83,7 @@ unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImag
   m_uncC->set_interleave_type(interleave_mode_pixel);
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
   m_uncC->set_components_little_endian(little_endian);
+  m_uncC->set_pixel_size(m_bytes_per_pixel);
 
   m_uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
   m_uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
