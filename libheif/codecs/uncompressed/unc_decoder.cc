@@ -28,6 +28,7 @@
 #include "unc_decoder_mixed_interleave.h"
 #include "unc_decoder_row_interleave.h"
 #include "unc_decoder_block_pixel_interleave.h"
+#include "unc_decoder_bytealign_component_interleave.h"
 #include "unc_decoder_block_component_interleave.h"
 #include "unc_codec.h"
 #include "unc_boxes.h"
@@ -338,6 +339,7 @@ Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
     const std::shared_ptr<const Box_uncC>& uncC)
 {
   static unc_decoder_factory_component_interleave dec_component;
+  static unc_decoder_factory_bytealign_component_interleave dec_bytealign_component;
   static unc_decoder_factory_block_component_interleave dec_block_component;
   static unc_decoder_factory_pixel_interleave dec_pixel;
   static unc_decoder_factory_block_pixel_interleave dec_block_pixel;
@@ -345,7 +347,7 @@ Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
   static unc_decoder_factory_row_interleave dec_row;
 
   static const unc_decoder_factory* decoders[]{
-    &dec_block_component, &dec_component, &dec_pixel, &dec_block_pixel, &dec_mixed, &dec_row
+    &dec_bytealign_component, &dec_block_component, &dec_component, &dec_pixel, &dec_block_pixel, &dec_mixed, &dec_row
   };
 
   for (const unc_decoder_factory* dec : decoders) {

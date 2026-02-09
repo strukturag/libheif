@@ -303,6 +303,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_decoder_pixel_interleave.cc
             codecs/uncompressed/unc_decoder_block_pixel_interleave.h
             codecs/uncompressed/unc_decoder_block_pixel_interleave.cc
+            codecs/uncompressed/unc_decoder_bytealign_component_interleave.h
+            codecs/uncompressed/unc_decoder_bytealign_component_interleave.cc
             codecs/uncompressed/unc_decoder_block_component_interleave.h
             codecs/uncompressed/unc_decoder_block_component_interleave.cc
             codecs/uncompressed/unc_decoder_mixed_interleave.h
