@@ -313,16 +313,16 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_decoder_row_interleave.cc
             codecs/uncompressed/unc_encoder.h
             codecs/uncompressed/unc_encoder.cc
-            codecs/uncompressed/unc_encoder_rgb3_rgba.cc
-            codecs/uncompressed/unc_encoder_rgb3_rgba.h
-            codecs/uncompressed/unc_encoder_rrggbb.cc
-            codecs/uncompressed/unc_encoder_rrggbb.h
-            codecs/uncompressed/unc_encoder_packed_planar.cc
-            codecs/uncompressed/unc_encoder_packed_planar.h
-            codecs/uncompressed/unc_encoder_planar.cc
-            codecs/uncompressed/unc_encoder_planar.h
-            codecs/uncompressed/unc_encoder_rgb_hdr_packed_interleave.cc
-            codecs/uncompressed/unc_encoder_rgb_hdr_packed_interleave.h)
+            codecs/uncompressed/unc_encoder_rgb_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_pixel_interleave.h
+            codecs/uncompressed/unc_encoder_rgb_bytealign_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_bytealign_pixel_interleave.h
+            codecs/uncompressed/unc_encoder_component_interleave.cc
+            codecs/uncompressed/unc_encoder_component_interleave.h
+            codecs/uncompressed/unc_encoder_bytealign_component_interleave.cc
+            codecs/uncompressed/unc_encoder_bytealign_component_interleave.h
+            codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.h)
 endif ()
 
 if (ENABLE_EXPERIMENTAL_MINI_FORMAT)

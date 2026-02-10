@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unc_encoder_rrggbb.h"
+#include "unc_encoder_rgb_pixel_interleave.h"
 
 #include <cstring>
 
@@ -27,36 +27,32 @@
 #include "unc_types.h"
 
 
-bool unc_encoder_factory_rrggbb::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                            const heif_encoding_options& options) const
+bool unc_encoder_factory_rgb_pixel_interleave::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                               const heif_encoding_options& options) const
 {
   if (image->get_colorspace() != heif_colorspace_RGB) {
     return false;
   }
 
   switch (image->get_chroma_format()) {
-    case heif_chroma_interleaved_RRGGBB_LE:
-    case heif_chroma_interleaved_RRGGBB_BE:
-    case heif_chroma_interleaved_RRGGBBAA_LE:
-    case heif_chroma_interleaved_RRGGBBAA_BE:
-      break;
+    case heif_chroma_interleaved_RGB:
+    case heif_chroma_interleaved_RGBA:
+      return true;
     default:
       return false;
   }
-
-  return true;
 }
 
 
-std::unique_ptr<const unc_encoder> unc_encoder_factory_rrggbb::create(const std::shared_ptr<const HeifPixelImage>& image,
-                                                                      const heif_encoding_options& options) const
+std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_pixel_interleave::create(const std::shared_ptr<const HeifPixelImage>& image,
+                                                                         const heif_encoding_options& options) const
 {
-  return std::make_unique<unc_encoder_rrggbb>(image, options);
+  return std::make_unique<unc_encoder_rgb_pixel_interleave>(image, options);
 }
 
 
-unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImage>& image,
-                                       const heif_encoding_options& options)
+unc_encoder_rgb_pixel_interleave::unc_encoder_rgb_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
+                                             const heif_encoding_options& options)
 {
   m_cmpd->add_component({component_type_red});
   m_cmpd->add_component({component_type_green});
@@ -68,23 +64,26 @@ unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImag
     m_cmpd->add_component({component_type_alpha});
   }
 
-  m_bytes_per_pixel = save_alpha ? 8 : 6;
-
-  bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
-                        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
+  m_bytes_per_pixel = save_alpha ? 4 : 3;
 
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
-  uint8_t component_align_size = 2;
-  if (bpp == 16) {
-    component_align_size = 0;
+  if (bpp == 8) {
+    if (save_alpha) {
+      m_uncC->set_profile(fourcc("rgba"));
+    }
+    else {
+      m_uncC->set_profile(fourcc("rgb3"));
+    }
+  }
+
+  uint8_t component_align_size = 0;
+  if (bpp != 8) {
+    component_align_size = 1;
   }
 
   m_uncC->set_interleave_type(interleave_mode_pixel);
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
-  m_uncC->set_components_little_endian(little_endian);
-  m_uncC->set_pixel_size(m_bytes_per_pixel);
-
   m_uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
   m_uncC->add_component({1, bpp, component_format_unsigned, component_align_size});
   m_uncC->add_component({2, bpp, component_format_unsigned, component_align_size});
@@ -94,13 +93,14 @@ unc_encoder_rrggbb::unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImag
 }
 
 
-uint64_t unc_encoder_rrggbb::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+
+uint64_t unc_encoder_rgb_pixel_interleave::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
 {
   return tile_width * tile_height * m_bytes_per_pixel;
 }
 
 
-std::vector<uint8_t> unc_encoder_rrggbb::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_rgb_pixel_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 

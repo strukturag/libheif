@@ -13,27 +13,37 @@
  * from Dirk Farin.
  */
 
-#ifndef LIBHEIF_UNC_ENCODER_RGB10_12_H
-#define LIBHEIF_UNC_ENCODER_RGB10_12_H
+#ifndef LIBHEIF_UNC_ENCODER_BYTEALIGN_COMPONENT_INTERLEAVE_H
+#define LIBHEIF_UNC_ENCODER_BYTEALIGN_COMPONENT_INTERLEAVE_H
+
 #include "unc_encoder.h"
+#include "unc_types.h"
 
-
-class unc_encoder_rgb_hdr_packed_interleave : public unc_encoder
+class unc_encoder_bytealign_component_interleave : public unc_encoder
 {
 public:
-  unc_encoder_rgb_hdr_packed_interleave(const std::shared_ptr<const HeifPixelImage>& image,
-                                        const heif_encoding_options& options);
+  unc_encoder_bytealign_component_interleave(const std::shared_ptr<const HeifPixelImage>& image,
+                     const heif_encoding_options& options);
 
   uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const override;
 
   [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
 
 private:
-  uint8_t m_bytes_per_pixel = 0;
+  struct channel_component
+  {
+    heif_channel channel;
+    heif_uncompressed_component_type component_type;
+  };
+
+  std::vector<channel_component> m_components;
+  uint32_t m_bytes_per_pixel_x4;
+
+  void add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel);
 };
 
 
-class unc_encoder_factory_rgb_hdr_packed_interleave : public unc_encoder_factory
+class unc_encoder_factory_bytealign_component_interleave : public unc_encoder_factory
 {
 public:
 
@@ -45,4 +55,4 @@ private:
                                             const heif_encoding_options& options) const override;
 };
 
-#endif //LIBHEIF_UNC_ENCODER_RGB10_12_H
+#endif //LIBHEIF_UNC_ENCODER_BYTEALIGN_COMPONENT_INTERLEAVE_H

@@ -18,16 +18,16 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_UNC_ENCODER_RRGGBB_H
-#define LIBHEIF_UNC_ENCODER_RRGGBB_H
+#ifndef LIBHEIF_UNC_ENCODER_RGB_BYTEALIGN_PIXEL_INTERLEAVE_H
+#define LIBHEIF_UNC_ENCODER_RGB_BYTEALIGN_PIXEL_INTERLEAVE_H
 #include "unc_encoder.h"
 
 
-class unc_encoder_rrggbb : public unc_encoder
+class unc_encoder_rgb_bytealign_pixel_interleave : public unc_encoder
 {
 public:
-  unc_encoder_rrggbb(const std::shared_ptr<const HeifPixelImage>& image,
-                     const heif_encoding_options& options);
+  unc_encoder_rgb_bytealign_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
+                                             const heif_encoding_options& options);
 
   uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const override;
 
@@ -38,7 +38,7 @@ private:
 };
 
 
-class unc_encoder_factory_rrggbb : public unc_encoder_factory
+class unc_encoder_factory_rgb_bytealign_pixel_interleave : public unc_encoder_factory
 {
 public:
 
@@ -51,4 +51,4 @@ private:
 };
 
 
-#endif //LIBHEIF_UNC_ENCODER_RRGGBB_H
+#endif //LIBHEIF_UNC_ENCODER_RGB_BYTEALIGN_PIXEL_INTERLEAVE_H

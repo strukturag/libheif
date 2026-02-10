@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unc_encoder_packed_planar.h"
+#include "unc_encoder_component_interleave.h"
 
 #include <cstring>
 
@@ -26,7 +26,7 @@
 #include "unc_boxes.h"
 
 
-bool unc_encoder_factory_packed_planar::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+bool unc_encoder_factory_component_interleave::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                                                    const heif_encoding_options& options) const
 {
   if (image->has_channel(heif_channel_interleaved)) {
@@ -50,14 +50,14 @@ bool unc_encoder_factory_packed_planar::can_encode(const std::shared_ptr<const H
 }
 
 
-std::unique_ptr<const unc_encoder> unc_encoder_factory_packed_planar::create(const std::shared_ptr<const HeifPixelImage>& image,
+std::unique_ptr<const unc_encoder> unc_encoder_factory_component_interleave::create(const std::shared_ptr<const HeifPixelImage>& image,
                                                                               const heif_encoding_options& options) const
 {
-  return std::make_unique<unc_encoder_packed_planar>(image, options);
+  return std::make_unique<unc_encoder_component_interleave>(image, options);
 }
 
 
-void unc_encoder_packed_planar::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
+void unc_encoder_component_interleave::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
 {
   if (image->has_channel(channel)) {
     uint8_t bpp = image->get_bits_per_pixel(channel);
@@ -66,7 +66,7 @@ void unc_encoder_packed_planar::add_channel_if_exists(const std::shared_ptr<cons
 }
 
 
-unc_encoder_packed_planar::unc_encoder_packed_planar(const std::shared_ptr<const HeifPixelImage>& image,
+unc_encoder_component_interleave::unc_encoder_component_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                                      const heif_encoding_options& options)
 {
   // Special case for heif_channel_Y:
@@ -117,7 +117,7 @@ unc_encoder_packed_planar::unc_encoder_packed_planar(const std::shared_ptr<const
 }
 
 
-uint64_t unc_encoder_packed_planar::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+uint64_t unc_encoder_component_interleave::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
 {
   uint64_t total = 0;
   for (const auto& comp : m_components) {
@@ -142,7 +142,7 @@ uint64_t unc_encoder_packed_planar::compute_tile_data_size_bytes(uint32_t tile_w
 }
 
 
-std::vector<uint8_t> unc_encoder_packed_planar::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_component_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   uint64_t total_size = compute_tile_data_size_bytes(src_image->get_width(), src_image->get_height());
   std::vector<uint8_t> data;

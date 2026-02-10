@@ -25,11 +25,11 @@
 
 #include "pixelimage.h"
 #include "unc_boxes.h"
-#include "unc_encoder_packed_planar.h"
-#include "unc_encoder_planar.h"
-#include "unc_encoder_rgb_hdr_packed_interleave.h"
-#include "unc_encoder_rgb3_rgba.h"
-#include "unc_encoder_rrggbb.h"
+#include "unc_encoder_component_interleave.h"
+#include "unc_encoder_bytealign_component_interleave.h"
+#include "unc_encoder_rgb_block_pixel_interleave.h"
+#include "unc_encoder_rgb_pixel_interleave.h"
+#include "unc_encoder_rgb_bytealign_pixel_interleave.h"
 #include "libheif/heif_uncompressed.h"
 
 
@@ -84,18 +84,18 @@ unc_encoder::unc_encoder()
 Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
                                                                                  const heif_encoding_options& options)
 {
-  static unc_encoder_factory_rgb3_rgba enc_rgb3_rgba;
-  static unc_encoder_factory_rgb_hdr_packed_interleave enc_rgb10_12;
-  static unc_encoder_factory_rrggbb enc_rrggbb;
-  static unc_encoder_factory_packed_planar enc_packed_planar;
-  static unc_encoder_factory_planar enc_planar;
+  static unc_encoder_factory_rgb_pixel_interleave enc_rgb_pixel_interleave;
+  static unc_encoder_factory_rgb_block_pixel_interleave enc_rgb_block_pixel_interleave;
+  static unc_encoder_factory_rgb_bytealign_pixel_interleave enc_rgb_bytealign_pixel_interleave;
+  static unc_encoder_factory_component_interleave enc_component_interleave;
+  static unc_encoder_factory_bytealign_component_interleave enc_bytealign_component_interleave;
 
   static const unc_encoder_factory* encoders[]{
-    &enc_rgb3_rgba,
-    &enc_rgb10_12,
-    &enc_rrggbb,
-    &enc_packed_planar,
-    &enc_planar
+    &enc_rgb_pixel_interleave,
+    &enc_rgb_block_pixel_interleave,
+    &enc_rgb_bytealign_pixel_interleave,
+    &enc_component_interleave,
+    &enc_bytealign_component_interleave
   };
 
   for (const unc_encoder_factory* enc : encoders) {

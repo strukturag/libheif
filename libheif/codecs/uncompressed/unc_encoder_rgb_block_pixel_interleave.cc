@@ -13,14 +13,14 @@
  * from Dirk Farin.
  */
 
-#include "unc_encoder_rgb_hdr_packed_interleave.h"
+#include "unc_encoder_rgb_block_pixel_interleave.h"
 
 #include "pixelimage.h"
 #include "unc_boxes.h"
 #include "unc_types.h"
 
 
-bool unc_encoder_factory_rgb_hdr_packed_interleave::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+bool unc_encoder_factory_rgb_block_pixel_interleave::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
                                                                const heif_encoding_options& options) const
 {
   if (image->get_colorspace() != heif_colorspace_RGB) {
@@ -43,14 +43,14 @@ bool unc_encoder_factory_rgb_hdr_packed_interleave::can_encode(const std::shared
 }
 
 
-std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_hdr_packed_interleave::create(const std::shared_ptr<const HeifPixelImage>& image,
+std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_block_pixel_interleave::create(const std::shared_ptr<const HeifPixelImage>& image,
                                                                                          const heif_encoding_options& options) const
 {
-  return std::make_unique<unc_encoder_rgb_hdr_packed_interleave>(image, options);
+  return std::make_unique<unc_encoder_rgb_block_pixel_interleave>(image, options);
 }
 
 
-unc_encoder_rgb_hdr_packed_interleave::unc_encoder_rgb_hdr_packed_interleave(const std::shared_ptr<const HeifPixelImage>& image,
+unc_encoder_rgb_block_pixel_interleave::unc_encoder_rgb_block_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                                                              const heif_encoding_options& options)
 {
   m_cmpd->add_component({component_type_red});
@@ -74,13 +74,13 @@ unc_encoder_rgb_hdr_packed_interleave::unc_encoder_rgb_hdr_packed_interleave(con
 }
 
 
-uint64_t unc_encoder_rgb_hdr_packed_interleave::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+uint64_t unc_encoder_rgb_block_pixel_interleave::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
 {
   return tile_width * tile_height * m_bytes_per_pixel;
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb_hdr_packed_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_rgb_block_pixel_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
