@@ -24,6 +24,7 @@
 #include "unc_decoder_legacybase.h"
 #include <memory>
 #include <utility>
+#include <vector>
 
 
 class unc_decoder_row_interleave : public unc_decoder_legacybase

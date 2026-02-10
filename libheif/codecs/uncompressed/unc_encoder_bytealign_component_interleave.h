@@ -25,7 +25,7 @@
 #include "unc_types.h"
 
 #include <memory>
-#include <string>
+#include <vector>
 
 class unc_encoder_bytealign_component_interleave : public unc_encoder
 {

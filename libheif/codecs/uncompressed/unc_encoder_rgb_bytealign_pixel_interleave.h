@@ -24,7 +24,7 @@
 #include "unc_encoder.h"
 
 #include <memory>
-#include <string>
+#include <vector>
 
 class unc_encoder_rgb_bytealign_pixel_interleave : public unc_encoder
 {

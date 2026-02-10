@@ -23,6 +23,7 @@
 
 #include "unc_decoder_legacybase.h"
 #include <memory>
+#include <vector>
 #include <utility>
 
 
