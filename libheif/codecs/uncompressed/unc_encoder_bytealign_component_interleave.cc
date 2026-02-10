@@ -44,61 +44,53 @@ std::unique_ptr<const unc_encoder> unc_encoder_factory_bytealign_component_inter
 }
 
 
-void unc_encoder_bytealign_component_interleave::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
-{
-  if (image->has_channel(channel)) {
-    m_components.push_back({channel, heif_channel_to_component_type(channel)});
-  }
-}
-
-
 unc_encoder_bytealign_component_interleave::unc_encoder_bytealign_component_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                        const heif_encoding_options& options)
 {
-  // Special case for heif_channel_Y:
-  // - if this an YCbCr image, use component_type_Y,
-  // - otherwise, use component_type_monochrome
+  bool is_nonvisual = (image->get_colorspace() == heif_colorspace_nonvisual);
+  uint32_t num_components = image->get_number_of_components();
 
-  if (image->has_channel(heif_channel_Y)) {
-    if (image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr)) {
-      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_Y});
+  for (uint32_t idx = 0; idx < num_components; idx++) {
+    heif_uncompressed_component_type comp_type;
+
+    if (is_nonvisual) {
+      comp_type = static_cast<heif_uncompressed_component_type>(image->get_component_type(idx));
     }
     else {
-      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_monochrome});
+      heif_channel ch = image->get_component_channel(idx);
+      if (ch == heif_channel_Y && !image->has_channel(heif_channel_Cb)) {
+        comp_type = component_type_monochrome;
+      }
+      else {
+        comp_type = heif_channel_to_component_type(ch);
+      }
     }
+
+    uint8_t bpp = image->get_component_bits_per_pixel(idx);
+    auto datatype = image->get_component_datatype(idx);
+    auto comp_format = to_unc_component_format(datatype);
+
+    m_components.push_back({idx, comp_type, comp_format, bpp});
   }
 
-  add_channel_if_exists(image, heif_channel_Cb);
-  add_channel_if_exists(image, heif_channel_Cr);
-  add_channel_if_exists(image, heif_channel_R);
-  add_channel_if_exists(image, heif_channel_G);
-  add_channel_if_exists(image, heif_channel_B);
-  add_channel_if_exists(image, heif_channel_Alpha);
-  add_channel_if_exists(image, heif_channel_filter_array);
-  add_channel_if_exists(image, heif_channel_depth);
-  add_channel_if_exists(image, heif_channel_disparity);
-
-
-  // if we have any component > 8 bits, we enable this
+  // Build cmpd/uncC boxes
   bool little_endian = false;
 
-  uint16_t index = 0;
-  for (channel_component channelcomponent : m_components) {
-    m_cmpd->add_component({channelcomponent.component_type});
+  uint16_t box_index = 0;
+  for (const auto& comp : m_components) {
+    m_cmpd->add_component({comp.component_type});
 
-    uint8_t bpp = image->get_bits_per_pixel(channelcomponent.channel);
-    uint8_t component_align_size = static_cast<uint8_t>((bpp + 7) / 8);
-
-    if (bpp % 8 == 0) {
+    uint8_t component_align_size = static_cast<uint8_t>((comp.bpp + 7) / 8);
+    if (comp.bpp % 8 == 0) {
       component_align_size = 0;
     }
 
-    if (bpp > 8) {
-      little_endian = true; // TODO: depending on the host endianness
+    if (comp.bpp > 8) {
+      little_endian = true;
     }
 
-    m_uncC->add_component({index, bpp, component_format_unsigned, component_align_size});
-    index++;
+    m_uncC->add_component({box_index, comp.bpp, comp.component_format, component_align_size});
+    box_index++;
   }
 
   m_uncC->set_interleave_type(interleave_mode_component);
@@ -114,19 +106,20 @@ unc_encoder_bytealign_component_interleave::unc_encoder_bytealign_component_inte
     m_uncC->set_sampling_type(sampling_mode_no_subsampling);
   }
 
-
   // --- compute bytes per pixel
 
   m_bytes_per_pixel_x4 = 0;
 
-  for (channel_component channelcomponent : m_components) {
-    int bpp = image->get_bits_per_pixel(channelcomponent.channel);
-    int bytes_per_pixel = 4 * (bpp + 7) / 8;
+  for (const auto& comp : m_components) {
+    int bytes_per_pixel = 4 * (comp.bpp + 7) / 8;
 
-    if (channelcomponent.channel == heif_channel_Cb ||
-        channelcomponent.channel == heif_channel_Cr) {
-      int downsampling = chroma_h_subsampling(image->get_chroma_format()) * chroma_v_subsampling(image->get_chroma_format());
-      bytes_per_pixel /= downsampling;
+    if (!is_nonvisual) {
+      heif_channel ch = image->get_component_channel(comp.component_idx);
+      if (ch == heif_channel_Cb || ch == heif_channel_Cr) {
+        int downsampling = chroma_h_subsampling(image->get_chroma_format())
+                         * chroma_v_subsampling(image->get_chroma_format());
+        bytes_per_pixel /= downsampling;
+      }
     }
 
     m_bytes_per_pixel_x4 += bytes_per_pixel;
@@ -142,36 +135,37 @@ uint64_t unc_encoder_bytealign_component_interleave::compute_tile_data_size_byte
 
 std::vector<uint8_t> unc_encoder_bytealign_component_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
-  std::vector<uint8_t> data;
-
   // compute total size of all components
 
   uint64_t total_size = 0;
 
-  for (channel_component channelcomponent : m_components) {
-    int bpp = src_image->get_bits_per_pixel(channelcomponent.channel);
-    int bytes_per_pixel = (bpp + 7) / 8;
-
-    total_size += static_cast<uint64_t>(src_image->get_height(channelcomponent.channel)) * src_image->get_width(channelcomponent.channel) * bytes_per_pixel;
+  for (const auto& comp : m_components) {
+    int bytes_per_pixel = (comp.bpp + 7) / 8;
+    uint32_t w = src_image->get_component_width(comp.component_idx);
+    uint32_t h = src_image->get_component_height(comp.component_idx);
+    total_size += static_cast<uint64_t>(h) * w * bytes_per_pixel;
   }
 
+  std::vector<uint8_t> data;
   data.resize(total_size);
 
   // output all component planes
 
   uint64_t out_data_start_pos = 0;
 
-  for (channel_component channelcomponent : m_components) {
-    int bpp = src_image->get_bits_per_pixel(channelcomponent.channel);
-    int bytes_per_pixel = (bpp + 7) / 8;
+  for (const auto& comp : m_components) {
+    int bytes_per_pixel = (comp.bpp + 7) / 8;
+    uint32_t w = src_image->get_component_width(comp.component_idx);
+    uint32_t h = src_image->get_component_height(comp.component_idx);
 
     size_t src_stride;
-    const uint8_t* src_data = src_image->get_plane(channelcomponent.channel, &src_stride);
+    const uint8_t* src_data = src_image->get_component(comp.component_idx, &src_stride);
 
-    for (uint32_t y = 0; y < src_image->get_height(channelcomponent.channel); y++) {
-      uint32_t width = src_image->get_width(channelcomponent.channel);
-      memcpy(data.data() + out_data_start_pos, src_data + src_stride * y, width * bytes_per_pixel);
-      out_data_start_pos += width * bytes_per_pixel;
+    for (uint32_t y = 0; y < h; y++) {
+      memcpy(data.data() + out_data_start_pos,
+             src_data + src_stride * y,
+             w * bytes_per_pixel);
+      out_data_start_pos += w * bytes_per_pixel;
     }
   }
 

@@ -35,6 +35,8 @@ class HeifPixelImage;
 
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel);
 
+heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype channel_datatype);
+
 
 class unc_encoder
 {

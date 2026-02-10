@@ -46,6 +46,7 @@ bool is_valid_component_format(uint8_t format)
 
 static std::map<heif_uncompressed_component_format, const char*> sNames_uncompressed_component_format{
     {component_format_unsigned, "unsigned"},
+    {component_format_signed,   "signed"},
     {component_format_float,    "float"},
     {component_format_complex,  "complex"}
 };

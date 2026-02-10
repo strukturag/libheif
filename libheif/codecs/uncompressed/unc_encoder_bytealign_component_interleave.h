@@ -38,16 +38,16 @@ public:
   [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
 
 private:
-  struct channel_component
+  struct encoded_component
   {
-    heif_channel channel;
+    uint32_t component_idx;
     heif_uncompressed_component_type component_type;
+    heif_uncompressed_component_format component_format;
+    uint8_t bpp;
   };
 
-  std::vector<channel_component> m_components;
+  std::vector<encoded_component> m_components;
   uint32_t m_bytes_per_pixel_x4;
-
-  void add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel);
 };
 
 
