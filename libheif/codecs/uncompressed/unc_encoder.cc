@@ -20,15 +20,38 @@
 
 #include "unc_encoder.h"
 
+#include <cassert>
 #include <cstring>
 
 #include "pixelimage.h"
 #include "unc_boxes.h"
+#include "unc_encoder_packed_planar.h"
 #include "unc_encoder_planar.h"
 #include "unc_encoder_rgb_hdr_packed_interleave.h"
 #include "unc_encoder_rgb3_rgba.h"
 #include "unc_encoder_rrggbb.h"
 #include "libheif/heif_uncompressed.h"
+
+
+heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
+{
+  switch (channel) {
+    case heif_channel_Y: return heif_uncompressed_component_type::component_type_Y;
+    case heif_channel_Cb: return heif_uncompressed_component_type::component_type_Cb;
+    case heif_channel_Cr: return heif_uncompressed_component_type::component_type_Cr;
+    case heif_channel_R: return heif_uncompressed_component_type::component_type_red;
+    case heif_channel_G: return heif_uncompressed_component_type::component_type_green;
+    case heif_channel_B: return heif_uncompressed_component_type::component_type_blue;
+    case heif_channel_Alpha: return heif_uncompressed_component_type::component_type_alpha;
+    case heif_channel_interleaved: assert(false);
+      break;
+    case heif_channel_filter_array: return heif_uncompressed_component_type::component_type_filter_array;
+    case heif_channel_depth: return heif_uncompressed_component_type::component_type_depth;
+    case heif_channel_disparity: return heif_uncompressed_component_type::component_type_disparity;
+  }
+
+  return heif_uncompressed_component_type::component_type_padded;
+}
 
 
 heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype channel_datatype)
@@ -64,12 +87,14 @@ Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder
   static unc_encoder_factory_rgb3_rgba enc_rgb3_rgba;
   static unc_encoder_factory_rgb_hdr_packed_interleave enc_rgb10_12;
   static unc_encoder_factory_rrggbb enc_rrggbb;
+  static unc_encoder_factory_packed_planar enc_packed_planar;
   static unc_encoder_factory_planar enc_planar;
 
   static const unc_encoder_factory* encoders[]{
     &enc_rgb3_rgba,
     &enc_rgb10_12,
     &enc_rrggbb,
+    &enc_packed_planar,
     &enc_planar
   };
 

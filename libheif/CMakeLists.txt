@@ -317,6 +317,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_encoder_rgb3_rgba.h
             codecs/uncompressed/unc_encoder_rrggbb.cc
             codecs/uncompressed/unc_encoder_rrggbb.h
+            codecs/uncompressed/unc_encoder_packed_planar.cc
+            codecs/uncompressed/unc_encoder_packed_planar.h
             codecs/uncompressed/unc_encoder_planar.cc
             codecs/uncompressed/unc_encoder_planar.h
             codecs/uncompressed/unc_encoder_rgb_hdr_packed_interleave.cc

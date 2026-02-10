@@ -25,10 +25,13 @@
 #include "error.h"
 #include "codecs/encoder.h"
 #include "libheif/heif_encoding.h"
+#include "unc_types.h"
 
 class Box_uncC;
 class Box_cmpd;
 class HeifPixelImage;
+
+heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel);
 
 
 class unc_encoder

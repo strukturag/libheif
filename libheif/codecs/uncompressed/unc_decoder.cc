@@ -357,7 +357,7 @@ Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
   }
 
   std::stringstream sstr;
-  sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+  sstr << "No decoder found for uncompressed format (interleave_type of " << ((int) uncC->get_interleave_type()) << ")";
   return Error{heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, sstr.str()};
 }
 

@@ -39,27 +39,6 @@ std::unique_ptr<const unc_encoder> unc_encoder_factory_planar::create(const std:
 }
 
 
-heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
-{
-  switch (channel) {
-    case heif_channel_Y: return heif_uncompressed_component_type::component_type_Y;
-    case heif_channel_Cb: return heif_uncompressed_component_type::component_type_Cb;
-    case heif_channel_Cr: return heif_uncompressed_component_type::component_type_Cr;
-    case heif_channel_R: return heif_uncompressed_component_type::component_type_red;
-    case heif_channel_G: return heif_uncompressed_component_type::component_type_green;
-    case heif_channel_B: return heif_uncompressed_component_type::component_type_blue;
-    case heif_channel_Alpha: return heif_uncompressed_component_type::component_type_alpha;
-    case heif_channel_interleaved: assert(false);
-      break;
-    case heif_channel_filter_array: return heif_uncompressed_component_type::component_type_filter_array;
-    case heif_channel_depth: return heif_uncompressed_component_type::component_type_depth;
-    case heif_channel_disparity: return heif_uncompressed_component_type::component_type_disparity;
-  }
-
-  return heif_uncompressed_component_type::component_type_padded;
-}
-
-
 void unc_encoder_planar::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
 {
   if (image->has_channel(channel)) {
