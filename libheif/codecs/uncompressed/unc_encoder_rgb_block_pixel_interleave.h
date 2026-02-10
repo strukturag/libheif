@@ -1,0 +1,48 @@
+/*
+ * ImageMeter confidential
+ *
+ * Copyright (C) 2026 by Dirk Farin, Kronenstr. 49b, 70174 Stuttgart, Germany
+ * All Rights Reserved.
+ *
+ * NOTICE:  All information contained herein is, and remains the property
+ * of Dirk Farin.  The intellectual and technical concepts contained
+ * herein are proprietary to Dirk Farin and are protected by trade secret
+ * and copyright law.
+ * Dissemination of this information or reproduction of this material
+ * is strictly forbidden unless prior written permission is obtained
+ * from Dirk Farin.
+ */
+
+#ifndef LIBHEIF_UNC_ENCODER_RGB_BLOCK_PIXEL_INTERLEAVE_H
+#define LIBHEIF_UNC_ENCODER_RGB_BLOCK_PIXEL_INTERLEAVE_H
+#include "unc_encoder.h"
+
+
+class unc_encoder_rgb_block_pixel_interleave : public unc_encoder
+{
+public:
+  unc_encoder_rgb_block_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
+                                        const heif_encoding_options& options);
+
+  uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const override;
+
+  [[nodiscard]] std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const override;
+
+private:
+  uint8_t m_bytes_per_pixel = 0;
+};
+
+
+class unc_encoder_factory_rgb_block_pixel_interleave : public unc_encoder_factory
+{
+public:
+
+private:
+  [[nodiscard]] bool can_encode(const std::shared_ptr<const HeifPixelImage>& image,
+                                const heif_encoding_options& options) const override;
+
+  std::unique_ptr<const unc_encoder> create(const std::shared_ptr<const HeifPixelImage>& image,
+                                            const heif_encoding_options& options) const override;
+};
+
+#endif //LIBHEIF_UNC_ENCODER_RGB_BLOCK_PIXEL_INTERLEAVE_H

@@ -27,216 +27,15 @@
 #include "unc_types.h"
 #include "unc_boxes.h"
 
-#include "decoder_abstract.h"
-#include "decoder_component_interleave.h"
-#include "decoder_pixel_interleave.h"
-#include "decoder_mixed_interleave.h"
-#include "decoder_row_interleave.h"
-#include "decoder_tile_component_interleave.h"
+#include "unc_decoder.h"
+#include "codecs/decoder.h"
 
 #include <algorithm>
-#include <map>
-#include <iostream>
 #include <cassert>
+#include <iostream>
+#include <map>
+#include <sstream>
 #include "security_limits.h"
-
-
-bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
-{
-  return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
-}
-
-
-static Error uncompressed_image_type_is_supported(const std::shared_ptr<const Box_uncC>& uncC,
-                                                  const std::shared_ptr<const Box_cmpd>& cmpd)
-{
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    return Error::Ok;
-  }
-  if (!cmpd) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Missing required cmpd box (no match in uncC box) for uncompressed codec");
-  }
-
-  for (Box_uncC::Component component : uncC->get_components()) {
-    uint16_t component_index = component.component_index;
-    uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if ((component_type > 7) && (component_type != component_type_padded) && (component_type != component_type_filter_array)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-
-    if ((component.component_bit_depth > 16)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_bit_depth " << ((int) component.component_bit_depth) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (component.component_format != component_format_unsigned) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (component.component_align_size > 2) {
-      std::stringstream sstr;
-      sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-  }
-  if ((uncC->get_sampling_type() != sampling_mode_no_subsampling)
-      && (uncC->get_sampling_type() != sampling_mode_422)
-      && (uncC->get_sampling_type() != sampling_mode_420)
-      ) {
-    std::stringstream sstr;
-    sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-  if ((uncC->get_interleave_type() != interleave_mode_component)
-      && (uncC->get_interleave_type() != interleave_mode_pixel)
-      && (uncC->get_interleave_type() != interleave_mode_mixed)
-      && (uncC->get_interleave_type() != interleave_mode_row)
-      && (uncC->get_interleave_type() != interleave_mode_tile_component)
-      ) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-  // Validity checks per ISO/IEC 23001-17 Section 5.2.1.5.3
-  if (uncC->get_sampling_type() == sampling_mode_422) {
-    // We check Y Cb and Cr appear in the chroma test
-    // TODO: error for tile width not multiple of 2
-    if ((uncC->get_interleave_type() != interleave_mode_component)
-        && (uncC->get_interleave_type() != interleave_mode_mixed)
-        && (uncC->get_interleave_type() != interleave_mode_multi_y)) {
-      std::stringstream sstr;
-      sstr << "YCbCr 4:2:2 subsampling is only valid with component, mixed or multi-Y interleave mode (ISO/IEC 23001-17 5.2.1.5.3).";
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   sstr.str());
-    }
-    if ((uncC->get_row_align_size() != 0) && (uncC->get_interleave_type() == interleave_mode_component)) {
-      if (uncC->get_row_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling with component interleave requires row_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-    if (uncC->get_tile_align_size() != 0) {
-      if (uncC->get_tile_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling requires tile_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-  }
-  // Validity checks per ISO/IEC 23001-17 Section 5.2.1.5.4
-  if (uncC->get_sampling_type() == sampling_mode_422) {
-    // We check Y Cb and Cr appear in the chroma test
-    // TODO: error for tile width not multiple of 2
-    if ((uncC->get_interleave_type() != interleave_mode_component)
-        && (uncC->get_interleave_type() != interleave_mode_mixed)) {
-      std::stringstream sstr;
-      sstr << "YCbCr 4:2:0 subsampling is only valid with component or mixed interleave mode (ISO/IEC 23001-17 5.2.1.5.4).";
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   sstr.str());
-    }
-    if ((uncC->get_row_align_size() != 0) && (uncC->get_interleave_type() == interleave_mode_component)) {
-      if (uncC->get_row_align_size() % 2 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling with component interleave requires row_align_size to be a multiple of 2 (ISO/IEC 23001-17 5.2.1.5.4).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-    if (uncC->get_tile_align_size() != 0) {
-      if (uncC->get_tile_align_size() % 4 != 0) {
-        std::stringstream sstr;
-        sstr << "YCbCr 4:2:2 subsampling requires tile_align_size to be a multiple of 4 (ISO/IEC 23001-17 5.2.1.5.3).";
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_parameter_value,
-                     sstr.str());
-      }
-    }
-  }
-  if ((uncC->get_interleave_type() == interleave_mode_mixed) && (uncC->get_sampling_type() == sampling_mode_no_subsampling)) {
-    std::stringstream sstr;
-    sstr << "Interleave interleave mode is not valid with subsampling mode (ISO/IEC 23001-17 5.2.1.6.4).";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  if ((uncC->get_interleave_type() == interleave_mode_multi_y)
-      && ((uncC->get_sampling_type() != sampling_mode_422) && (uncC->get_sampling_type() != sampling_mode_411))) {
-    std::stringstream sstr;
-    sstr << "Multi-Y interleave mode is only valid with 4:2:2 and 4:1:1 subsampling modes (ISO/IEC 23001-17 5.2.1.6.7).";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  // TODO: throw error if mixed and Cb and Cr are not adjacent.
-
-  if (uncC->get_block_size() != 0) {
-    std::stringstream sstr;
-    sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  if (uncC->is_components_little_endian()) {
-    const auto& comps = uncC->get_components();
-    bool all_8_bit = std::all_of(comps.begin(), comps.end(),
-                                 [](const Box_uncC::Component& c) { return c.component_bit_depth==8; });
-    if (!all_8_bit) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed components_little_endian == 1 is not implemented yet");
-    }
-  }
-
-  if (uncC->is_block_pad_lsb()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_pad_lsb == 1 is not implemented yet");
-  }
-  if (uncC->is_block_little_endian()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_little_endian == 1 is not implemented yet");
-  }
-  if (uncC->is_block_reversed()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed block_reversed == 1 is not implemented yet");
-  }
-  if ((uncC->get_pixel_size() != 0) && ((uncC->get_interleave_type() != interleave_mode_pixel) && (uncC->get_interleave_type() != interleave_mode_multi_y))) {
-    std::stringstream sstr;
-    sstr << "Uncompressed pixel_size of " << ((int) uncC->get_pixel_size()) << " is only valid with interleave_type 1 or 5 (ISO/IEC 23001-17 5.2.1.7)";
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 sstr.str());
-  }
-  return Error::Ok;
-}
 
 
 Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
@@ -353,58 +152,10 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
 }
 
 bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>& cmpd,
-                                           const std::shared_ptr<const Box_uncC>& uncC,
                                            Box_uncC::Component component,
                                            heif_channel* channel)
 {
   uint16_t component_index = component.component_index;
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    if (uncC->get_profile() == fourcc("rgb3")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_R;
-          return true;
-        case 1:
-          *channel = heif_channel_G;
-          return true;
-        case 2:
-          *channel = heif_channel_B;
-          return true;
-      }
-    }
-    else if (uncC->get_profile() == fourcc("rgba")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_R;
-          return true;
-        case 1:
-          *channel = heif_channel_G;
-          return true;
-        case 2:
-          *channel = heif_channel_B;
-          return true;
-        case 3:
-          *channel = heif_channel_Alpha;
-          return true;
-      }
-    }
-    else if (uncC->get_profile() == fourcc("abgr")) {
-      switch (component_index) {
-        case 0:
-          *channel = heif_channel_Alpha;
-          return true;
-        case 1:
-          *channel = heif_channel_B;
-          return true;
-        case 2:
-          *channel = heif_channel_G;
-          return true;
-        case 3:
-          *channel = heif_channel_R;
-          return true;
-      }
-    }
-  }
   uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
   switch (component_type) {
@@ -445,25 +196,6 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
 
 
 
-static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd>& cmpd, const std::shared_ptr<const Box_uncC>& uncC)
-{
-  switch (uncC->get_interleave_type()) {
-    case interleave_mode_component:
-      return new ComponentInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_pixel:
-      return new PixelInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_mixed:
-      return new MixedInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_row:
-      return new RowInterleaveDecoder(width, height, cmpd, uncC);
-    case interleave_mode_tile_component:
-      return new TileComponentInterleaveDecoder(width, height, cmpd, uncC);
-    default:
-      return nullptr;
-  }
-}
-
-
 Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(const std::shared_ptr<const Box_cmpd> cmpd,
                                                                              const std::shared_ptr<const Box_uncC> uncC,
                                                                              uint32_t width,
@@ -484,7 +216,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
 
   for (Box_uncC::Component component : uncC->get_components()) {
     heif_channel channel;
-    if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
+    if (map_uncompressed_component_to_channel(cmpd, component, &channel)) {
       if (img->has_channel(channel)) {
         return Error{heif_error_Unsupported_feature,
                      heif_suberror_Unspecified,
@@ -543,26 +275,25 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   img = *createImgResult;
 
-
-  AbstractDecoder* decoder = makeDecoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
+  auto decoderResult = unc_decoder_factory::get_unc_decoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
+  if (!decoderResult) {
+    return decoderResult.error();
   }
 
-  decoder->buildChannelList(img);
+  auto& decoder = *decoderResult;
 
   DataExtent dataExtent;
   dataExtent.set_from_image_item(file, ID);
 
-  Error result = decoder->decode_tile(dataExtent, properties, img, 0, 0,
-                                      ispe->get_width(), ispe->get_height(),
-                                      tile_x0, tile_y0);
-  delete decoder;
-  return result;
+  decoder->ensure_channel_list(img);
+
+  std::vector<uint8_t> tile_data;
+  Error err = decoder->fetch_tile_data(dataExtent, properties, tile_x0, tile_y0, tile_data);
+  if (err) {
+    return err;
+  }
+
+  return decoder->decode_tile(tile_data, img, 0, 0);
 }
 
 
@@ -590,6 +321,15 @@ Error UncompressedImageCodec::check_header_validity(std::optional<const std::sha
         return {heif_error_Invalid_input,
                 heif_suberror_Unspecified,
                 "Invalid component index in uncC box"};
+      }
+
+      uint16_t component_type = cmpd->get_components()[comp.component_index].component_type;
+      if (component_type > 7 && component_type != component_type_padded && component_type != component_type_filter_array) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
+        return {heif_error_Unsupported_feature,
+                heif_suberror_Unsupported_data_version,
+                sstr.str()};
       }
     }
   }
@@ -652,13 +392,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  // check if we support the type of image
-
-  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
-  if (error) {
-    return error;
-  }
-
   assert(ispe);
   uint32_t width = ispe->get_width();
   uint32_t height = ispe->get_height();
@@ -685,44 +418,15 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     };
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, context->get_security_limits());
-  if (!createImgResult) {
-    return createImgResult.error();
-  }
-  else {
-    img = *createImgResult;
-  }
-
-  AbstractDecoder* decoder = makeDecoder(width, height, cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  decoder->buildChannelList(img);
-
-  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
-  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
-
   DataExtent dataExtent;
   dataExtent.set_from_image_item(context->get_heif_file(), ID);
 
-  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
-    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
-      error = decoder->decode_tile(dataExtent, properties, img, tile_x0, tile_y0,
-                                   width, height,
-                                   tile_x0 / tile_width, tile_y0 / tile_height);
-      if (error) {
-        delete decoder;
-        return error;
-      }
-    }
+  auto result = unc_decoder::decode_full_image(properties, dataExtent, context->get_security_limits());
+  if (!result) {
+    return result.error();
+  }
 
-  //Error result = decoder->decode(source_data, img);
-  delete decoder;
+  img = *result;
   return Error::Ok;
 }
 
@@ -730,8 +434,13 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
 void UncompressedImageCodec::unci_properties::fill_from_image_item(const std::shared_ptr<const ImageItem>& image)
 {
   ispe = image->get_property<Box_ispe>();
-  cmpd = image->get_property<Box_cmpd>();
-  uncC = image->get_property<Box_uncC>();
+  auto cmpd_mut = image->get_property<Box_cmpd>();
+  auto uncC_mut = image->get_property<Box_uncC>();
+  if (uncC_mut) {
+    fill_uncC_and_cmpd_from_profile(uncC_mut, cmpd_mut);
+  }
+  cmpd = cmpd_mut;
+  uncC = uncC_mut;
   cmpC = image->get_property<Box_cmpC>();
   icef = image->get_property<Box_icef>();
 }
@@ -742,20 +451,11 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
                                                   const DataExtent& extent,
                                                   const heif_security_limits* securityLimits)
 {
-  std::shared_ptr<HeifPixelImage> img;
-
   const std::shared_ptr<const Box_ispe>& ispe = properties.ispe;
   const std::shared_ptr<const Box_cmpd>& cmpd = properties.cmpd;
   const std::shared_ptr<const Box_uncC>& uncC = properties.uncC;
 
   Error error = check_header_validity(ispe, cmpd, uncC);
-  if (error) {
-    return error;
-  }
-
-  // check if we support the type of image
-
-  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
   if (error) {
     return error;
   }
@@ -777,272 +477,5 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
     };
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, securityLimits);
-  if (!createImgResult) {
-    return createImgResult.error();
-  }
-  else {
-    img = *createImgResult;
-  }
-
-  AbstractDecoder* decoder = makeDecoder(width, height, cmpd, uncC);
-  if (decoder == nullptr) {
-    std::stringstream sstr;
-    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
-  }
-
-  decoder->buildChannelList(img);
-
-  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
-  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
-
-  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
-    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
-      error = decoder->decode_tile(extent, properties, img, tile_x0, tile_y0,
-                                   width, height,
-                                   tile_x0 / tile_width, tile_y0 / tile_height);
-      if (error) {
-        delete decoder;
-        return error;
-      }
-    }
-
-  //Error result = decoder->decode(source_data, img);
-  delete decoder;
-  return img;
-}
-
-
-Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
-                         std::shared_ptr<Box_uncC>& uncC,
-                         const std::shared_ptr<const HeifPixelImage>& image,
-                         const heif_unci_image_parameters* parameters,
-                         bool save_alpha_channel)
-{
-  uint32_t nTileColumns = parameters->image_width / parameters->tile_width;
-  uint32_t nTileRows = parameters->image_height / parameters->tile_height;
-
-  const heif_colorspace colourspace = image->get_colorspace();
-  if (colourspace == heif_colorspace_YCbCr) {
-    if (!(image->has_channel(heif_channel_Y) && image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr))) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Invalid colourspace / channel combination - YCbCr");
-    }
-    Box_cmpd::Component yComponent = {component_type_Y};
-    cmpd->add_component(yComponent);
-    Box_cmpd::Component cbComponent = {component_type_Cb};
-    cmpd->add_component(cbComponent);
-    Box_cmpd::Component crComponent = {component_type_Cr};
-    cmpd->add_component(crComponent);
-    uint8_t bpp_y = image->get_bits_per_pixel(heif_channel_Y);
-    Box_uncC::Component component0 = {0, bpp_y, component_format_unsigned, 0};
-    uncC->add_component(component0);
-    uint8_t bpp_cb = image->get_bits_per_pixel(heif_channel_Cb);
-    Box_uncC::Component component1 = {1, bpp_cb, component_format_unsigned, 0};
-    uncC->add_component(component1);
-    uint8_t bpp_cr = image->get_bits_per_pixel(heif_channel_Cr);
-    Box_uncC::Component component2 = {2, bpp_cr, component_format_unsigned, 0};
-    uncC->add_component(component2);
-    if (image->get_chroma_format() == heif_chroma_444) {
-      uncC->set_sampling_type(sampling_mode_no_subsampling);
-    }
-    else if (image->get_chroma_format() == heif_chroma_422) {
-      uncC->set_sampling_type(sampling_mode_422);
-    }
-    else if (image->get_chroma_format() == heif_chroma_420) {
-      uncC->set_sampling_type(sampling_mode_420);
-    }
-    else {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Unsupported YCbCr sub-sampling type");
-    }
-    uncC->set_interleave_type(interleave_mode_component);
-    uncC->set_block_size(0);
-    uncC->set_components_little_endian(false);
-    uncC->set_block_pad_lsb(false);
-    uncC->set_block_little_endian(false);
-    uncC->set_block_reversed(false);
-    uncC->set_pad_unknown(false);
-    uncC->set_pixel_size(0);
-    uncC->set_row_align_size(0);
-    uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(nTileColumns);
-    uncC->set_number_of_tile_rows(nTileRows);
-  }
-  else if (colourspace == heif_colorspace_RGB) {
-    if (!((image->get_chroma_format() == heif_chroma_444) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RGB) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
-          (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Unsupported colourspace / chroma combination - RGB");
-    }
-
-    Box_cmpd::Component rComponent = {component_type_red};
-    cmpd->add_component(rComponent);
-    Box_cmpd::Component gComponent = {component_type_green};
-    cmpd->add_component(gComponent);
-    Box_cmpd::Component bComponent = {component_type_blue};
-    cmpd->add_component(bComponent);
-
-    if (save_alpha_channel &&
-        (image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
-         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
-         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
-         image->has_channel(heif_channel_Alpha))) {
-      Box_cmpd::Component alphaComponent = {component_type_alpha};
-      cmpd->add_component(alphaComponent);
-    }
-
-    if (image->get_chroma_format() == heif_chroma_interleaved_RGB ||
-        image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_BE ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
-        image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE) {
-      uncC->set_interleave_type(interleave_mode_pixel);
-      int bpp = image->get_bits_per_pixel(heif_channel_interleaved);
-      uint8_t component_align = 1;
-      if (bpp == 8) {
-        component_align = 0;
-      }
-      else if (bpp > 8) {
-        component_align = 2;
-      }
-
-      Box_uncC::Component component0 = {0, (uint8_t) (bpp), component_format_unsigned, component_align};
-      uncC->add_component(component0);
-      Box_uncC::Component component1 = {1, (uint8_t) (bpp), component_format_unsigned, component_align};
-      uncC->add_component(component1);
-      Box_uncC::Component component2 = {2, (uint8_t) (bpp), component_format_unsigned, component_align};
-      uncC->add_component(component2);
-
-      if (save_alpha_channel &&
-          (image->get_chroma_format() == heif_chroma_interleaved_RGBA ||
-           image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
-           image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE)) {
-        Box_uncC::Component component3 = {
-            3, (uint8_t) (bpp), component_format_unsigned, component_align};
-        uncC->add_component(component3);
-      }
-    }
-    else {
-      uncC->set_interleave_type(interleave_mode_component);
-
-      int bpp_red = image->get_bits_per_pixel(heif_channel_R);
-      Box_uncC::Component component0 = {0, (uint8_t) (bpp_red), component_format_unsigned, 0};
-      uncC->add_component(component0);
-
-      int bpp_green = image->get_bits_per_pixel(heif_channel_G);
-      Box_uncC::Component component1 = {1, (uint8_t) (bpp_green), component_format_unsigned, 0};
-      uncC->add_component(component1);
-
-      int bpp_blue = image->get_bits_per_pixel(heif_channel_B);
-      Box_uncC::Component component2 = {2, (uint8_t) (bpp_blue), component_format_unsigned, 0};
-      uncC->add_component(component2);
-
-      if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-        int bpp_alpha = image->get_bits_per_pixel(heif_channel_Alpha);
-        Box_uncC::Component component3 = {3, (uint8_t) (bpp_alpha), component_format_unsigned, 0};
-        uncC->add_component(component3);
-      }
-    }
-
-    uncC->set_sampling_type(sampling_mode_no_subsampling);
-    uncC->set_block_size(0);
-
-    if ((image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ||
-        (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE)) {
-      uncC->set_components_little_endian(true);
-    }
-    else {
-      uncC->set_components_little_endian(false);
-    }
-
-    uncC->set_block_pad_lsb(false);
-    uncC->set_block_little_endian(false);
-    uncC->set_block_reversed(false);
-    uncC->set_pad_unknown(false);
-    uncC->set_pixel_size(0);
-    uncC->set_row_align_size(0);
-    uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(nTileColumns);
-    uncC->set_number_of_tile_rows(nTileRows);
-  }
-  else if (colourspace == heif_colorspace_monochrome) {
-    Box_cmpd::Component monoComponent = {component_type_monochrome};
-    cmpd->add_component(monoComponent);
-
-    if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-      Box_cmpd::Component alphaComponent = {component_type_alpha};
-      cmpd->add_component(alphaComponent);
-    }
-
-    int bpp = image->get_bits_per_pixel(heif_channel_Y);
-    heif_uncompressed_component_format format = to_unc_component_format(image, heif_channel_Y);
-    Box_uncC::Component component0 = {0, (uint8_t) (bpp), (uint8_t) format, 0};
-    uncC->add_component(component0);
-
-    if (save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-      heif_uncompressed_component_format format_alpha = to_unc_component_format(image, heif_channel_Alpha);
-      bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-      Box_uncC::Component component1 = {1, (uint8_t) (bpp), (uint8_t) format_alpha, 0};
-      uncC->add_component(component1);
-    }
-
-    uncC->set_sampling_type(sampling_mode_no_subsampling);
-    uncC->set_interleave_type(interleave_mode_component);
-    uncC->set_block_size(0);
-    uncC->set_components_little_endian(false);
-    uncC->set_block_pad_lsb(false);
-    uncC->set_block_little_endian(false);
-    uncC->set_block_reversed(false);
-    uncC->set_pad_unknown(false);
-    uncC->set_pixel_size(0);
-    uncC->set_row_align_size(0);
-    uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(nTileColumns);
-    uncC->set_number_of_tile_rows(nTileRows);
-  }
-  else {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Unsupported colourspace");
-  }
-  return Error::Ok;
-}
-
-heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype channel_datatype)
-{
-  switch (channel_datatype) {
-    case heif_channel_datatype_signed_integer:
-      return component_format_signed;
-
-    case heif_channel_datatype_floating_point:
-      return component_format_float;
-
-    case heif_channel_datatype_complex_number:
-      return component_format_complex;
-
-    case heif_channel_datatype_unsigned_integer:
-    case heif_channel_datatype_undefined:
-    default:
-      return component_format_unsigned;
-  }
-}
-
-heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
-{
-    heif_channel_datatype datatype = image->get_datatype(channel);
-    heif_uncompressed_component_format component_format = to_unc_component_format(datatype);
-    return component_format;
+  return unc_decoder::decode_full_image(properties, extent, securityLimits);
 }

@@ -293,18 +293,36 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_dec.cc
             codecs/uncompressed/unc_enc.h
             codecs/uncompressed/unc_enc.cc
-            codecs/uncompressed/decoder_abstract.h
-            codecs/uncompressed/decoder_abstract.cc
-            codecs/uncompressed/decoder_component_interleave.h
-            codecs/uncompressed/decoder_component_interleave.cc
-            codecs/uncompressed/decoder_pixel_interleave.h
-            codecs/uncompressed/decoder_pixel_interleave.cc
-            codecs/uncompressed/decoder_mixed_interleave.h
-            codecs/uncompressed/decoder_mixed_interleave.cc
-            codecs/uncompressed/decoder_row_interleave.h
-            codecs/uncompressed/decoder_row_interleave.cc
-            codecs/uncompressed/decoder_tile_component_interleave.h
-            codecs/uncompressed/decoder_tile_component_interleave.cc)
+            codecs/uncompressed/unc_decoder.h
+            codecs/uncompressed/unc_decoder.cc
+            codecs/uncompressed/unc_decoder_legacybase.h
+            codecs/uncompressed/unc_decoder_legacybase.cc
+            codecs/uncompressed/unc_decoder_component_interleave.h
+            codecs/uncompressed/unc_decoder_component_interleave.cc
+            codecs/uncompressed/unc_decoder_pixel_interleave.h
+            codecs/uncompressed/unc_decoder_pixel_interleave.cc
+            codecs/uncompressed/unc_decoder_block_pixel_interleave.h
+            codecs/uncompressed/unc_decoder_block_pixel_interleave.cc
+            codecs/uncompressed/unc_decoder_bytealign_component_interleave.h
+            codecs/uncompressed/unc_decoder_bytealign_component_interleave.cc
+            codecs/uncompressed/unc_decoder_block_component_interleave.h
+            codecs/uncompressed/unc_decoder_block_component_interleave.cc
+            codecs/uncompressed/unc_decoder_mixed_interleave.h
+            codecs/uncompressed/unc_decoder_mixed_interleave.cc
+            codecs/uncompressed/unc_decoder_row_interleave.h
+            codecs/uncompressed/unc_decoder_row_interleave.cc
+            codecs/uncompressed/unc_encoder.h
+            codecs/uncompressed/unc_encoder.cc
+            codecs/uncompressed/unc_encoder_rgb_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_pixel_interleave.h
+            codecs/uncompressed/unc_encoder_rgb_bytealign_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_bytealign_pixel_interleave.h
+            codecs/uncompressed/unc_encoder_component_interleave.cc
+            codecs/uncompressed/unc_encoder_component_interleave.h
+            codecs/uncompressed/unc_encoder_bytealign_component_interleave.cc
+            codecs/uncompressed/unc_encoder_bytealign_component_interleave.h
+            codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.cc
+            codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.h)
 endif ()
 
 if (ENABLE_EXPERIMENTAL_MINI_FORMAT)

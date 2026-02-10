@@ -232,26 +232,29 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_profile = range.read32();
 
   if (get_version() == 1) {
-    if (m_profile == fourcc("rgb3")) {
-      Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
-      add_component(component0);
-      Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
-      add_component(component1);
-      Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
-      add_component(component2);
-    }
-    else if ((m_profile == fourcc("rgba")) || (m_profile == fourcc("abgr"))) {
-      Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
-      add_component(component0);
-      Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
-      add_component(component1);
-      Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
-      add_component(component2);
-      Box_uncC::Component component3 = {3, 8, component_format_unsigned, 0};
-      add_component(component3);
-    }
-    else {
-        return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
+    switch (m_profile) {
+      case fourcc("rgb3"):
+      case fourcc("rgba"):
+      case fourcc("abgr"):
+      case fourcc("2vuy"):
+      case fourcc("yuv2"):
+      case fourcc("yvyu"):
+      case fourcc("vyuy"):
+      case fourcc("yuv1"):
+      case fourcc("v308"):
+      case fourcc("v408"):
+      case fourcc("y210"):
+      case fourcc("v410"):
+      case fourcc("v210"):
+      case fourcc("i420"):
+      case fourcc("nv12"):
+      case fourcc("nv21"):
+      case fourcc("yu22"):
+      case fourcc("yv22"):
+      case fourcc("yv20"):
+        break;
+      default:
+        return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Unknown uncC v1 profile"};
     }
   } else if (get_version() == 0) {
 
@@ -414,38 +417,286 @@ Error Box_uncC::write(StreamWriter& writer) const
 }
 
 
-uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+void fill_uncC_and_cmpd_from_profile(const std::shared_ptr<Box_uncC>& uncC,
+                                     std::shared_ptr<Box_cmpd>& cmpd)
 {
-  if (m_profile != 0) {
-    switch (m_profile) {
-      case fourcc("rgba"):
-        return 4 * uint64_t{tile_width} * tile_height;
-
-      case fourcc("rgb3"):
-        return 3 * uint64_t{tile_width} * tile_height;
-
-      default:
-        assert(false);
-        return 0;
-    }
+  if (uncC->get_version() != 1 || cmpd) {
+    return;
   }
 
-  switch (m_interleave_type) {
-    case interleave_mode_component:
-    case interleave_mode_pixel: {
-      uint32_t bytes_per_pixel = 0;
-
-      for (const auto& comp : m_components) {
-        assert(comp.component_bit_depth % 8 == 0); // TODO: component sizes that are no multiples of bytes
-        bytes_per_pixel += comp.component_bit_depth / 8;
-      }
-
-      return bytes_per_pixel * uint64_t{tile_width} * tile_height;
-    }
-    default:
-      assert(false);
-      return 0;
+  // Return cached synthetic cmpd if we already created one.
+  if (auto synthetic = uncC->get_synthetic_cmpd()) {
+    cmpd = synthetic;
+    return;
   }
+
+  uint32_t profile = uncC->get_profile();
+  cmpd = std::make_shared<Box_cmpd>();
+
+  // Profiles from ISO/IEC 23001-17 Table 5.
+  // Format: {profile, [{component_type, bit_depth_minus_1}, ...], sampling_type, interleave_type}
+  // The implicit cmpd is the unique component_types in order of first appearance.
+  // The uncC component_index refers into that cmpd.
+
+  if (profile == fourcc("rgb3")) {
+    // {'rgb3', [{4,7},{5,7},{6,7}], 0, 1}
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_red});
+    cmpd->add_component({component_type_green});
+    cmpd->add_component({component_type_blue});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+  }
+  else if (profile == fourcc("rgba")) {
+    // {'rgba', [{4,7},{5,7},{6,7},{7,7}], 0, 1}
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    uncC->add_component({3, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_red});
+    cmpd->add_component({component_type_green});
+    cmpd->add_component({component_type_blue});
+    cmpd->add_component({component_type_alpha});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+  }
+  else if (profile == fourcc("abgr")) {
+    // {'abgr', [{7,7},{6,7},{5,7},{4,7}], 0, 1}
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    uncC->add_component({3, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_alpha});
+    cmpd->add_component({component_type_blue});
+    cmpd->add_component({component_type_green});
+    cmpd->add_component({component_type_red});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+  }
+  else if (profile == fourcc("2vuy")) {
+    // {'2vuy', [{2,7},{1,7},{3,7},{1,7}], 1, 5}  Cb Y0 Cr Y1
+    // cmpd: Cb(0) Y(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+  }
+  else if (profile == fourcc("yuv2")) {
+    // {'yuv2', [{1,7},{2,7},{1,7},{3,7}], 1, 5}  Y0 Cb Y1 Cr
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+  }
+  else if (profile == fourcc("yvyu")) {
+    // {'yvyu', [{1,7},{3,7},{1,7},{2,7}], 1, 5}  Y0 Cr Y1 Cb
+    // cmpd: Y(0) Cr(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+  }
+  else if (profile == fourcc("vyuy")) {
+    // {'vyuy', [{3,7},{1,7},{2,7},{1,7}], 1, 5}  Cr Y0 Cb Y1
+    // cmpd: Cr(0) Y(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+  }
+  else if (profile == fourcc("yuv1")) {
+    // {'yuv1', [{1,7},{1,7},{2,7},{1,7},{1,7},{3,7}], 3, 5}  Y0 Y1 Cb Y2 Y3 Cr
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_411);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+  }
+  else if (profile == fourcc("v308")) {
+    // {'v308', [{3,7},{1,7},{2,7}], 0, 1}  Cr Y Cb
+    // cmpd: Cr(0) Y(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+  }
+  else if (profile == fourcc("v408")) {
+    // {'v408', [{2,7},{1,7},{3,7},{7,7}], 0, 1}  Cb Y Cr A
+    // cmpd: Cb(0) Y(1) Cr(2) alpha(3)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    uncC->add_component({3, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_alpha});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+  }
+  else if (profile == fourcc("y210")) {
+    // {'y210', [{1,9},{2,9},{1,9},{3,9}], 1, 5}  Y0 Cb Y1 Cr
+    // block_size=2, block_little_endian=1, block_pad_lsb=1
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 10, component_format_unsigned, 0});
+    uncC->add_component({1, 10, component_format_unsigned, 0});
+    uncC->add_component({0, 10, component_format_unsigned, 0});
+    uncC->add_component({2, 10, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+    uncC->set_block_size(2);
+    uncC->set_block_little_endian(true);
+    uncC->set_block_pad_lsb(true);
+  }
+  else if (profile == fourcc("v410")) {
+    // {'v410', [{2,9},{1,9},{3,9}], 0, 1}  Cb Y Cr
+    // block_size=4, block_little_endian=1, block_pad_lsb=1, block_reversed=1
+    // cmpd: Cb(0) Y(1) Cr(2)
+    uncC->add_component({0, 10, component_format_unsigned, 0});
+    uncC->add_component({1, 10, component_format_unsigned, 0});
+    uncC->add_component({2, 10, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+    uncC->set_block_size(4);
+    uncC->set_block_little_endian(true);
+    uncC->set_block_pad_lsb(true);
+    uncC->set_block_reversed(true);
+  }
+  else if (profile == fourcc("v210")) {
+    // {'v210', [{2,9},{1,9},{3,9},{1,9}], 1, 5}  Cb Y0 Cr Y1
+    // block_size=4, block_little_endian=1, block_reversed=1
+    // cmpd: Cb(0) Y(1) Cr(2)
+    uncC->add_component({0, 10, component_format_unsigned, 0});
+    uncC->add_component({1, 10, component_format_unsigned, 0});
+    uncC->add_component({2, 10, component_format_unsigned, 0});
+    uncC->add_component({1, 10, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_multi_y);
+    uncC->set_block_size(4);
+    uncC->set_block_little_endian(true);
+    uncC->set_block_reversed(true);
+  }
+  else if (profile == fourcc("i420")) {
+    // {'i420', [{1,7},{2,7},{3,7}], 2, 0}  planar YCbCr
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_420);
+    uncC->set_interleave_type(interleave_mode_component);
+  }
+  else if (profile == fourcc("nv12")) {
+    // {'nv12', [{1,7},{2,7},{3,7}], 2, 2}  semi-planar YCbCr
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_420);
+    uncC->set_interleave_type(interleave_mode_mixed);
+  }
+  else if (profile == fourcc("nv21")) {
+    // {'nv21', [{1,7},{3,7},{2,7}], 2, 2}  semi-planar YCrCb
+    // cmpd: Y(0) Cr(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_420);
+    uncC->set_interleave_type(interleave_mode_mixed);
+  }
+  else if (profile == fourcc("yu22")) {
+    // {'yu22', [{1,7},{2,7},{3,7}], 1, 0}  planar YCbCr
+    // cmpd: Y(0) Cb(1) Cr(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cb});
+    cmpd->add_component({component_type_Cr});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_component);
+  }
+  else if (profile == fourcc("yv22")) {
+    // {'yv22', [{1,7},{3,7},{2,7}], 1, 0}  planar YCrCb
+    // cmpd: Y(0) Cr(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_422);
+    uncC->set_interleave_type(interleave_mode_component);
+  }
+  else if (profile == fourcc("yv20")) {
+    // {'yv20', [{1,7},{3,7},{2,7}], 2, 0}  planar YCrCb
+    // cmpd: Y(0) Cr(1) Cb(2)
+    uncC->add_component({0, 8, component_format_unsigned, 0});
+    uncC->add_component({1, 8, component_format_unsigned, 0});
+    uncC->add_component({2, 8, component_format_unsigned, 0});
+    cmpd->add_component({component_type_Y});
+    cmpd->add_component({component_type_Cr});
+    cmpd->add_component({component_type_Cb});
+    uncC->set_sampling_type(sampling_mode_420);
+    uncC->set_interleave_type(interleave_mode_component);
+  }
+  else {
+    cmpd.reset();
+    return;
+  }
+
+  uncC->set_synthetic_cmpd(cmpd);
 }
 
 

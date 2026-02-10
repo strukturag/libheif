@@ -18,31 +18,19 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "decoder_mixed_interleave.h"
+#include "unc_decoder_mixed_interleave.h"
 #include "context.h"
 #include "error.h"
 
 #include <cstring>
-#include <cassert>
 #include <vector>
 
 
-Error MixedInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
-                                          const UncompressedImageCodec::unci_properties& properties,
-                                          std::shared_ptr<HeifPixelImage>& img,
-                                          uint32_t out_x0, uint32_t out_y0,
-                                          uint32_t image_width, uint32_t image_height,
-                                          uint32_t tile_x, uint32_t tile_y)
+std::vector<uint64_t> unc_decoder_mixed_interleave::get_tile_data_sizes() const
 {
-  if (m_tile_width == 0) {
-    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: MixedInterleaveDecoder tile_width=0"};
-  }
-
-  // --- compute which file range we need to read for the tile
-
   uint64_t tile_size = 0;
 
-  for (ChannelListEntry& entry : channelList) {
+  for (const ChannelListEntry& entry : channelList) {
     if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
       uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
       bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
@@ -64,34 +52,27 @@ Error MixedInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
     }
   }
 
-
   if (m_uncC->get_tile_align_size() != 0) {
     skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
   }
 
-  assert(m_tile_width > 0);
-  uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
-  uint64_t tile_start_offset = tile_size * tileIdx;
+  return {tile_size};
+}
 
 
-  // --- read required file range
+Error unc_decoder_mixed_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
+                                                 std::shared_ptr<HeifPixelImage>& img,
+                                                 uint32_t out_x0, uint32_t out_y0)
+{
+  UncompressedBitReader srcBits(tile_data);
 
-  std::vector<uint8_t> src_data;
-  Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, tile_size, tileIdx, nullptr);
-  //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, tile_size);
-  if (err) {
-    return err;
-  }
-
-  UncompressedBitReader srcBits(src_data);
-
-  processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+  processTile(srcBits, out_x0, out_y0);
 
   return Error::Ok;
 }
 
 
-void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
+void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0)
 {
   bool haveProcessedChromaForThisTile = false;
   for (ChannelListEntry& entry : channelList) {
@@ -118,8 +99,8 @@ void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_
       }
       else {
         for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-          uint64_t dst_row_offset = entry.getDestinationRowOffset(tile_row, tile_y);
-          processComponentRow(entry, srcBits, dst_row_offset, tile_column);
+          uint64_t dst_row_offset = uint64_t{(out_y0 + tile_y)} * entry.dst_plane_stride;
+          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
         }
       }
     }
@@ -129,4 +110,47 @@ void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_
       continue;
     }
   }
+}
+
+
+bool unc_decoder_factory_mixed_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  if (!check_common_requirements(uncC)) {
+    return false;
+  }
+
+  if (uncC->get_interleave_type() != interleave_mode_mixed) {
+    return false;
+  }
+
+  auto sampling = uncC->get_sampling_type();
+  if (sampling != sampling_mode_422 && sampling != sampling_mode_420) {
+    return false;
+  }
+
+  if (sampling == sampling_mode_422) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 2 != 0) {
+      return false;
+    }
+  }
+
+  if (sampling == sampling_mode_420) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 4 != 0) {
+      return false;
+    }
+  }
+
+  if (uncC->get_pixel_size() != 0) {
+    return false;
+  }
+
+  return true;
+}
+
+std::unique_ptr<unc_decoder> unc_decoder_factory_mixed_interleave::create(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return std::make_unique<unc_decoder_mixed_interleave>(width, height, cmpd, uncC);
 }

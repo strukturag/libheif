@@ -28,15 +28,17 @@
 
 #include <string>
 
+#include "unc_encoder.h"
+
 
 Result<Encoder::CodedImageData> Encoder_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                     struct heif_encoder* encoder,
-                                                     const struct heif_encoding_options& options,
-                                                     enum heif_image_input_class input_class)
+                                                             struct heif_encoder* encoder,
+                                                             const struct heif_encoding_options& options,
+                                                             enum heif_image_input_class input_class)
 {
   Encoder::CodedImageData codedImage;
 
-  Result<Encoder::CodedImageData> codingResult = ImageItem_uncompressed::encode_static(image, options);
+  Result<Encoder::CodedImageData> codingResult = unc_encoder::encode_full_image(image, options);
   if (!codingResult) {
     return codingResult.error();
   }
