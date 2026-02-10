@@ -574,7 +574,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   // interleaved output format.
   // For planar formats, we include an alpha plane when included in the input.
 
-  if (num_interleaved_pixels_per_plane(target_chroma) > 1) {
+  if (num_interleaved_components_per_plane(target_chroma) > 1) {
     output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {

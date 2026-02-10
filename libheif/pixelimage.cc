@@ -239,13 +239,34 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes(bool g
 
 HeifPixelImage::~HeifPixelImage()
 {
-  for (auto& iter : m_planes) {
-    delete[] iter.second.allocated_mem;
+  for (auto& component : m_planes) {
+    delete[] component.allocated_mem;
   }
 }
 
 
-int num_interleaved_pixels_per_plane(heif_chroma chroma)
+HeifPixelImage::ImageComponent* HeifPixelImage::find_component_for_channel(heif_channel channel)
+{
+  for (auto& component : m_planes) {
+    if (component.m_channel == channel) {
+      return &component;
+    }
+  }
+  return nullptr;
+}
+
+const HeifPixelImage::ImageComponent* HeifPixelImage::find_component_for_channel(heif_channel channel) const
+{
+  for (const auto& component : m_planes) {
+    if (component.m_channel == channel) {
+      return &component;
+    }
+  }
+  return nullptr;
+}
+
+
+int num_interleaved_components_per_plane(heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_undefined:
@@ -339,10 +360,9 @@ static uint32_t rounded_size(uint32_t s)
 Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth,
                                 const heif_security_limits* limits)
 {
-  assert(!has_channel(channel));
-
-  ImagePlane plane;
-  int num_interleaved_pixels = num_interleaved_pixels_per_plane(m_chroma);
+  ImageComponent plane;
+  plane.m_channel = channel;
+  int num_interleaved_pixels = num_interleaved_components_per_plane(m_chroma);
 
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
@@ -358,7 +378,7 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
     return err;
   }
   else {
-    m_planes.insert(std::make_pair(channel, plane));
+    m_planes.push_back(plane);
     return Error::Ok;
   }
 }
@@ -367,18 +387,19 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
 Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                   const heif_security_limits* limits)
 {
-  ImagePlane plane;
+  ImageComponent plane;
+  plane.m_channel = channel;
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
   else {
-    m_planes.insert(std::make_pair(channel, plane));
+    m_planes.push_back(plane);
     return Error::Ok;
   }
 }
 
 
-Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+Error HeifPixelImage::ImageComponent::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                         int num_interleaved_components,
                                         const heif_security_limits* limits,
                                         MemoryHandle& memory_handle)
@@ -408,8 +429,7 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
   m_datatype = datatype;
 
 
-  int bytes_per_component = get_bytes_per_pixel();
-  int bytes_per_pixel = num_interleaved_components * bytes_per_component;
+  int bytes_per_pixel = get_bytes_per_pixel();
 
   stride = m_mem_width * bytes_per_pixel;
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
@@ -475,24 +495,23 @@ Error HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_ch
 Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
                                              const heif_security_limits* limits)
 {
-  for (auto& planeIter : m_planes) {
-    auto* plane = &planeIter.second;
-
+  for (auto& component : m_planes) {
     uint32_t subsampled_width, subsampled_height;
-    get_subsampled_size(width, height, planeIter.first, m_chroma,
+    get_subsampled_size(width, height, component.m_channel, m_chroma,
                         &subsampled_width, &subsampled_height);
 
-    uint32_t old_width = plane->m_width;
-    uint32_t old_height = plane->m_height;
+    uint32_t old_width = component.m_width;
+    uint32_t old_height = component.m_height;
 
-    int bytes_per_pixel = get_storage_bits_per_pixel(planeIter.first) / 8;
+    int bytes_per_pixel = component.get_bytes_per_pixel();
 
-    if (plane->m_mem_width < subsampled_width ||
-        plane->m_mem_height < subsampled_height) {
+    if (component.m_mem_width < subsampled_width ||
+        component.m_mem_height < subsampled_height) {
 
-      ImagePlane newPlane;
-      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth,
-                                    num_interleaved_pixels_per_plane(m_chroma),
+      ImageComponent newPlane;
+      newPlane.m_channel = component.m_channel;
+      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, component.m_datatype, component.m_bit_depth,
+                                    num_interleaved_components_per_plane(m_chroma),
                                     limits, m_memory_handle))
       {
         return err;
@@ -505,14 +524,13 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
 
       // copy the visible part of the old plane into the new plane
 
-      for (uint32_t y = 0; y < plane->m_height; y++) {
+      for (uint32_t y = 0; y < component.m_height; y++) {
         memcpy(static_cast<uint8_t*>(newPlane.mem) + y * newPlane.stride,
-               static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-               plane->m_width * bytes_per_pixel);
+               static_cast<uint8_t*>(component.mem) + y * component.stride,
+               component.m_width * bytes_per_pixel);
       }
 
-      planeIter.second = newPlane;
-      plane = &planeIter.second;
+      component = newPlane;
     }
 
     // extend plane size
@@ -520,23 +538,23 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
     if (old_width != subsampled_width) {
       for (uint32_t y = 0; y < old_height; y++) {
         for (uint32_t x = old_width; x < subsampled_width; x++) {
-          memcpy(static_cast<uint8_t*>(plane->mem) + y * plane->stride + x * bytes_per_pixel,
-                 static_cast<uint8_t*>(plane->mem) + y * plane->stride + (old_width - 1) * bytes_per_pixel,
+          memcpy(static_cast<uint8_t*>(component.mem) + y * component.stride + x * bytes_per_pixel,
+                 static_cast<uint8_t*>(component.mem) + y * component.stride + (old_width - 1) * bytes_per_pixel,
                  bytes_per_pixel);
         }
       }
     }
 
     for (uint32_t y = old_height; y < subsampled_height; y++) {
-      memcpy(static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-             static_cast<uint8_t*>(plane->mem) + (old_height - 1) * plane->stride,
+      memcpy(static_cast<uint8_t*>(component.mem) + y * component.stride,
+             static_cast<uint8_t*>(component.mem) + (old_height - 1) * component.stride,
              subsampled_width * bytes_per_pixel);
     }
 
 
     if (adjust_size) {
-      plane->m_width = subsampled_width;
-      plane->m_height = subsampled_height;
+      component.m_width = subsampled_width;
+      component.m_height = subsampled_height;
     }
   }
 
@@ -553,23 +571,22 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
 
 Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits)
 {
-  for (auto& planeIter : m_planes) {
-    auto* plane = &planeIter.second;
-
+  for (auto& component : m_planes) {
     uint32_t subsampled_width, subsampled_height;
-    get_subsampled_size(width, height, planeIter.first, m_chroma,
+    get_subsampled_size(width, height, component.m_channel, m_chroma,
                         &subsampled_width, &subsampled_height);
 
-    uint32_t old_width = plane->m_width;
-    uint32_t old_height = plane->m_height;
+    uint32_t old_width = component.m_width;
+    uint32_t old_height = component.m_height;
 
-    int bytes_per_pixel = get_storage_bits_per_pixel(planeIter.first) / 8;
+    int bytes_per_pixel = component.get_bytes_per_pixel();
 
-    if (plane->m_mem_width < subsampled_width ||
-        plane->m_mem_height < subsampled_height) {
+    if (component.m_mem_width < subsampled_width ||
+        component.m_mem_height < subsampled_height) {
 
-      ImagePlane newPlane;
-      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma), limits, m_memory_handle)) {
+      ImageComponent newPlane;
+      newPlane.m_channel = component.m_channel;
+      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, component.m_datatype, component.m_bit_depth, num_interleaved_components_per_plane(m_chroma), limits, m_memory_handle)) {
         return err;
       }
 
@@ -580,44 +597,43 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
 
       // copy the visible part of the old plane into the new plane
 
-      for (uint32_t y = 0; y < plane->m_height; y++) {
+      for (uint32_t y = 0; y < component.m_height; y++) {
         memcpy(static_cast<uint8_t*>(newPlane.mem) + y * newPlane.stride,
-               static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-               plane->m_width * bytes_per_pixel);
+               static_cast<uint8_t*>(component.mem) + y * component.stride,
+               component.m_width * bytes_per_pixel);
       }
 
       // --- replace existing image plane with reallocated plane
 
-      delete[] planeIter.second.allocated_mem;
+      delete[] component.allocated_mem;
 
-      planeIter.second = newPlane;
-      plane = &planeIter.second;
+      component = newPlane;
     }
 
     // extend plane size
 
     uint8_t fill = 0;
-    if (bytes_per_pixel == 1 && (planeIter.first == heif_channel_Cb || planeIter.first == heif_channel_Cr)) {
+    if (bytes_per_pixel == 1 && (component.m_channel == heif_channel_Cb || component.m_channel == heif_channel_Cr)) {
       fill = 128;
     }
 
     if (old_width != subsampled_width) {
       for (uint32_t y = 0; y < old_height; y++) {
-        memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride + old_width * bytes_per_pixel,
+        memset(static_cast<uint8_t*>(component.mem) + y * component.stride + old_width * bytes_per_pixel,
                fill,
                bytes_per_pixel * (subsampled_width - old_width));
       }
     }
 
     for (uint32_t y = old_height; y < subsampled_height; y++) {
-      memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride,
+      memset(static_cast<uint8_t*>(component.mem) + y * component.stride,
              fill,
              subsampled_width * bytes_per_pixel);
     }
 
 
-    plane->m_width = subsampled_width;
-    plane->m_height = subsampled_height;
+    component.m_width = subsampled_width;
+    component.m_height = subsampled_height;
   }
 
   // modify the logical image size
@@ -630,7 +646,7 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
 
 bool HeifPixelImage::has_channel(heif_channel channel) const
 {
-  return (m_planes.find(channel) != m_planes.end());
+  return find_component_for_channel(channel) != nullptr;
 }
 
 
@@ -645,23 +661,23 @@ bool HeifPixelImage::has_alpha() const
 
 uint32_t HeifPixelImage::get_width(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
     return 0;
   }
 
-  return iter->second.m_width;
+  return comp->m_width;
 }
 
 
 uint32_t HeifPixelImage::get_height(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
     return 0;
   }
 
-  return iter->second.m_height;
+  return comp->m_height;
 }
 
 
@@ -669,8 +685,8 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
 {
   std::set<heif_channel> channels;
 
-  for (const auto& plane : m_planes) {
-    channels.insert(plane.first);
+  for (const auto& component : m_planes) {
+    channels.insert(component.m_channel);
   }
 
   return channels;
@@ -679,39 +695,25 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
 
 uint8_t HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) const
 {
-  if (channel == heif_channel_interleaved) {
-    auto chroma = get_chroma_format();
-    switch (chroma) {
-      case heif_chroma_interleaved_RGB:
-        return 24;
-      case heif_chroma_interleaved_RGBA:
-        return 32;
-      case heif_chroma_interleaved_RRGGBB_BE:
-      case heif_chroma_interleaved_RRGGBB_LE:
-        return 48;
-      case heif_chroma_interleaved_RRGGBBAA_BE:
-      case heif_chroma_interleaved_RRGGBBAA_LE:
-        return 64;
-      default:
-        return -1; // invalid channel/chroma specification
-    }
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
+    return -1;
   }
-  else {
-    uint32_t bpp = (get_bits_per_pixel(channel) + 7U) & ~7U;
-    assert(bpp <= 255);
-    return static_cast<uint8_t>(bpp);
-  }
+
+  uint32_t bpp = comp->get_bytes_per_pixel() * 8;
+  assert(bpp <= 255);
+  return static_cast<uint8_t>(bpp);
 }
 
 
 uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
     return -1;
   }
 
-  return iter->second.m_bit_depth;
+  return comp->m_bit_depth;
 }
 
 
@@ -750,23 +752,23 @@ uint8_t HeifPixelImage::get_visual_image_bits_per_pixel() const
 
 heif_channel_datatype HeifPixelImage::get_datatype(enum heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
     return heif_channel_datatype_undefined;
   }
 
-  return iter->second.m_datatype;
+  return comp->m_datatype;
 }
 
 
 int HeifPixelImage::get_number_of_interleaved_components(heif_channel channel) const
 {
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
+  auto* comp = find_component_for_channel(channel);
+  if (!comp) {
     return 0;
   }
 
-  return iter->second.m_num_interleaved_components;
+  return comp->m_num_interleaved_components;
 }
 
 
@@ -781,9 +783,9 @@ Error HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelI
   uint32_t width = src_image->get_width(src_channel);
   uint32_t height = src_image->get_height(src_channel);
 
-  auto src_plane_iter = src_image->m_planes.find(src_channel);
-  assert(src_plane_iter != src_image->m_planes.end());
-  const auto& src_plane = src_plane_iter->second;
+  const auto* src_plane_ptr = src_image->find_component_for_channel(src_channel);
+  assert(src_plane_ptr != nullptr);
+  const auto& src_plane = *src_plane_ptr;
 
   auto err = add_channel(dst_channel, width, height,
                          src_plane.m_datatype,
@@ -857,7 +859,7 @@ Error HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, i
 
 void HeifPixelImage::fill_plane(heif_channel dst_channel, uint16_t value)
 {
-  int num_interleaved = num_interleaved_pixels_per_plane(m_chroma);
+  int num_interleaved = num_interleaved_components_per_plane(m_chroma);
 
   int bpp = get_bits_per_pixel(dst_channel);
   uint32_t width = get_width(dst_channel);
@@ -893,11 +895,19 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
 {
   // TODO: check that dst_channel does not exist yet
 
-  ImagePlane plane = source->m_planes[src_channel];
-  source->m_planes.erase(src_channel);
+  // Find and remove the component from source
+  ImageComponent plane;
+  for (auto it = source->m_planes.begin(); it != source->m_planes.end(); ++it) {
+    if (it->m_channel == src_channel) {
+      plane = *it;
+      source->m_planes.erase(it);
+      break;
+    }
+  }
   source->m_memory_handle.free(plane.allocation_size);
 
-  m_planes.insert(std::make_pair(dst_channel, plane));
+  plane.m_channel = dst_channel;
+  m_planes.push_back(plane);
 
   // Note: we assume that image planes are never transferred between heif_contexts
   m_memory_handle.alloc(plane.allocation_size,
@@ -1040,48 +1050,38 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
 
   // --- rotate all channels
 
-  for (const auto &plane_pair: m_planes) {
-    heif_channel channel = plane_pair.first;
-    const ImagePlane &plane = plane_pair.second;
+  for (const auto &component: m_planes) {
+    heif_channel channel = component.m_channel;
 
-    /*
-    if (plane.bit_depth != 8) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unspecified,
-                   "Can currently only rotate images with 8 bits per pixel");
-    }
-    */
-
-    uint32_t out_plane_width = plane.m_width;
-    uint32_t out_plane_height = plane.m_height;
+    uint32_t out_plane_width = component.m_width;
+    uint32_t out_plane_height = component.m_height;
 
     if (angle_degrees == 90 || angle_degrees == 270) {
       std::swap(out_plane_width, out_plane_height);
     }
 
-    Error err = out_img->add_channel(channel, out_plane_width, out_plane_height, plane.m_datatype, plane.m_bit_depth, limits);
+    Error err = out_img->add_channel(channel, out_plane_width, out_plane_height, component.m_datatype, component.m_bit_depth, limits);
     if (err) {
       return err;
     }
 
-    auto out_plane_iter = out_img->m_planes.find(channel);
-    assert(out_plane_iter != out_img->m_planes.end());
-    ImagePlane& out_plane = out_plane_iter->second;
+    // The output plane is the last one added
+    ImageComponent& out_plane = out_img->m_planes.back();
 
-    if (plane.m_bit_depth <= 8) {
-      plane.rotate_ccw<uint8_t>(angle_degrees, out_plane);
+    if (component.m_bit_depth <= 8) {
+      component.rotate_ccw<uint8_t>(angle_degrees, out_plane);
     }
-    else if (plane.m_bit_depth <= 16) {
-      plane.rotate_ccw<uint16_t>(angle_degrees, out_plane);
+    else if (component.m_bit_depth <= 16) {
+      component.rotate_ccw<uint16_t>(angle_degrees, out_plane);
     }
-    else if (plane.m_bit_depth <= 32) {
-      plane.rotate_ccw<uint32_t>(angle_degrees, out_plane);
+    else if (component.m_bit_depth <= 32) {
+      component.rotate_ccw<uint32_t>(angle_degrees, out_plane);
     }
-    else if (plane.m_bit_depth <= 64) {
-      plane.rotate_ccw<uint64_t>(angle_degrees, out_plane);
+    else if (component.m_bit_depth <= 64) {
+      component.rotate_ccw<uint64_t>(angle_degrees, out_plane);
     }
-    else if (plane.m_bit_depth <= 128) {
-      plane.rotate_ccw<heif_complex64>(angle_degrees, out_plane);
+    else if (component.m_bit_depth <= 128) {
+      component.rotate_ccw<heif_complex64>(angle_degrees, out_plane);
     }
   }
   // --- pass the color profiles to the new image
@@ -1095,8 +1095,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
 }
 
 template<typename T>
-void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
-                                            ImagePlane& out_plane) const
+void HeifPixelImage::ImageComponent::rotate_ccw(int angle_degrees,
+                                            ImageComponent& out_plane) const
 {
   uint32_t w = m_width;
   uint32_t h = m_height;
@@ -1127,7 +1127,7 @@ void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
 
 
 template<typename T>
-void HeifPixelImage::ImagePlane::mirror_inplace(heif_transform_mirror_direction direction)
+void HeifPixelImage::ImageComponent::mirror_inplace(heif_transform_mirror_direction direction)
 {
   uint32_t w = m_width;
   uint32_t h = m_height;
@@ -1181,27 +1181,25 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
   }
 
 
-  for (auto& plane_pair : m_planes) {
-    ImagePlane& plane = plane_pair.second;
-
-    if (plane.m_bit_depth <= 8) {
-      plane.mirror_inplace<uint8_t>(direction);
+  for (auto& component : m_planes) {
+    if (component.m_bit_depth <= 8) {
+      component.mirror_inplace<uint8_t>(direction);
     }
-    else if (plane.m_bit_depth <= 16) {
-      plane.mirror_inplace<uint16_t>(direction);
+    else if (component.m_bit_depth <= 16) {
+      component.mirror_inplace<uint16_t>(direction);
     }
-    else if (plane.m_bit_depth <= 32) {
-      plane.mirror_inplace<uint32_t>(direction);
+    else if (component.m_bit_depth <= 32) {
+      component.mirror_inplace<uint32_t>(direction);
     }
-    else if (plane.m_bit_depth <= 64) {
-      plane.mirror_inplace<uint64_t>(direction);
+    else if (component.m_bit_depth <= 64) {
+      component.mirror_inplace<uint64_t>(direction);
     }
-    else if (plane.m_bit_depth <= 128) {
-      plane.mirror_inplace<heif_complex64>(direction);
+    else if (component.m_bit_depth <= 128) {
+      component.mirror_inplace<heif_complex64>(direction);
     }
     else {
       std::stringstream sstr;
-      sstr << "Cannot mirror images with " << plane.m_bit_depth << " bits per pixel";
+      sstr << "Cannot mirror images with " << component.m_bit_depth << " bits per pixel";
       return Error{heif_error_Unsupported_feature,
                    heif_suberror_Unspecified,
                    sstr.str()};
@@ -1212,24 +1210,28 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
 }
 
 
-int HeifPixelImage::ImagePlane::get_bytes_per_pixel() const
+int HeifPixelImage::ImageComponent::get_bytes_per_pixel() const
 {
+  int bytes_per_component;
+
   if (m_bit_depth <= 8) {
-    return 1;
+    bytes_per_component = 1;
   }
   else if (m_bit_depth <= 16) {
-    return 2;
+    bytes_per_component = 2;
   }
   else if (m_bit_depth <= 32) {
-    return 4;
+    bytes_per_component = 4;
   }
   else if (m_bit_depth <= 64) {
-    return 8;
+    bytes_per_component = 8;
   }
   else {
     assert(m_bit_depth <= 128);
-    return 16;
+    bytes_per_component = 16;
   }
+
+  return bytes_per_component * m_num_interleaved_components;
 }
 
 
@@ -1271,9 +1273,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 
   // --- crop all channels
 
-  for (const auto& plane_pair : m_planes) {
-    heif_channel channel = plane_pair.first;
-    const ImagePlane& plane = plane_pair.second;
+  for (const auto& component : m_planes) {
+    heif_channel channel = component.m_channel;
 
     uint32_t plane_left = get_subsampled_size_h(left, channel, m_chroma, scaling_mode::is_divisible); // is always divisible
     uint32_t plane_right = get_subsampled_size_h(right, channel, m_chroma, scaling_mode::round_down); // this keeps enough chroma since 'right' is a coordinate and not the width
@@ -1283,19 +1284,18 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     auto err = out_img->add_channel(channel,
                                     plane_right - plane_left + 1,
                                     plane_bottom - plane_top + 1,
-                                    plane.m_datatype,
-                                    plane.m_bit_depth,
+                                    component.m_datatype,
+                                    component.m_bit_depth,
                                     limits);
     if (err) {
       return err;
     }
 
-    auto out_plane_iter = out_img->m_planes.find(channel);
-    assert(out_plane_iter != out_img->m_planes.end());
-    ImagePlane& out_plane = out_plane_iter->second;
+    // The output plane is the last one added
+    ImageComponent& out_plane = out_img->m_planes.back();
 
-    int bytes_per_pixel = plane.get_bytes_per_pixel();
-    plane.crop(plane_left, plane_right, plane_top, plane_bottom, bytes_per_pixel, out_plane);
+    int bytes_per_pixel = component.get_bytes_per_pixel();
+    component.crop(plane_left, plane_right, plane_top, plane_bottom, bytes_per_pixel, out_plane);
   }
 
   // --- pass the color profiles to the new image
@@ -1309,8 +1309,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 }
 
 
-void HeifPixelImage::ImagePlane::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
-                                      int bytes_per_pixel, ImagePlane& out_plane) const
+void HeifPixelImage::ImageComponent::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
+                                      int bytes_per_pixel, ImageComponent& out_plane) const
 {
   size_t in_stride = stride;
   auto* in_data = static_cast<const uint8_t*>(mem);
@@ -1330,8 +1330,8 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 {
   for (const auto& channel : {heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha}) {
 
-    const auto plane_iter = m_planes.find(channel);
-    if (plane_iter == m_planes.end()) {
+    auto* comp = find_component_for_channel(channel);
+    if (!comp) {
 
       // alpha channel is optional, R,G,B is required
       if (channel == heif_channel_Alpha) {
@@ -1343,7 +1343,7 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 
     }
 
-    ImagePlane& plane = plane_iter->second;
+    ImageComponent& plane = *comp;
 
     if (plane.m_bit_depth != 8) {
       return {heif_error_Unsupported_feature,
@@ -1373,7 +1373,7 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
       default:
         // initialization only to avoid warning of uninitialized variable.
         val16 = 0;
-        // Should already be detected by the check above ("m_planes.find").
+        // Should already be detected by the check above ("find_component_for_channel").
         assert(false);
     }
 
@@ -1616,11 +1616,11 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
   // --- scale all channels
 
-  int nInterleaved = num_interleaved_pixels_per_plane(m_chroma);
+  int nInterleaved = num_interleaved_components_per_plane(m_chroma);
   if (nInterleaved > 1) {
-    auto plane_iter = m_planes.find(heif_channel_interleaved);
-    assert(plane_iter != m_planes.end()); // the plane must exist since we have an interleaved chroma format
-    const ImagePlane& plane = plane_iter->second;
+    const auto* comp = find_component_for_channel(heif_channel_interleaved);
+    assert(comp != nullptr); // the plane must exist since we have an interleaved chroma format
+    const ImageComponent& plane = *comp;
 
     uint32_t out_w = out_img->get_width(heif_channel_interleaved);
     uint32_t out_h = out_img->get_height(heif_channel_interleaved);
@@ -1672,9 +1672,9 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     }
   }
   else {
-    for (const auto& plane_pair : m_planes) {
-      heif_channel channel = plane_pair.first;
-      const ImagePlane& plane = plane_pair.second;
+    for (const auto& component : m_planes) {
+      heif_channel channel = component.m_channel;
+      const ImageComponent& plane = component;
 
       if (!out_img->has_channel(channel)) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
@@ -1885,4 +1885,62 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
   }
 
   return areaImg;
+}
+
+
+// --- index-based component access methods
+
+heif_channel HeifPixelImage::get_component_channel(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  return m_planes[component_idx].m_channel;
+}
+
+
+uint32_t HeifPixelImage::get_component_width(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  return m_planes[component_idx].m_width;
+}
+
+
+uint32_t HeifPixelImage::get_component_height(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  return m_planes[component_idx].m_height;
+}
+
+
+uint8_t HeifPixelImage::get_component_bits_per_pixel(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  return m_planes[component_idx].m_bit_depth;
+}
+
+
+uint8_t HeifPixelImage::get_component_storage_bits_per_pixel(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  uint32_t bpp = m_planes[component_idx].get_bytes_per_pixel() * 8;
+  assert(bpp <= 255);
+  return static_cast<uint8_t>(bpp);
+}
+
+
+heif_channel_datatype HeifPixelImage::get_component_datatype(int component_idx) const
+{
+  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  return m_planes[component_idx].m_datatype;
+}
+
+
+uint8_t* HeifPixelImage::get_component(int component_idx, size_t* out_stride)
+{
+  return get_component_data<uint8_t>(component_idx, out_stride);
+}
+
+
+const uint8_t* HeifPixelImage::get_component(int component_idx, size_t* out_stride) const
+{
+  return get_component_data<uint8_t>(component_idx, out_stride);
 }

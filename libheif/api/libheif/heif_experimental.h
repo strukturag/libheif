@@ -321,6 +321,91 @@ LIBHEIF_API
 heif_complex64* heif_image_get_channel_complex64(heif_image*,
                                                  enum heif_channel channel,
                                                  size_t* out_stride);
+
+
+// --- index-based component access (for ISO 23001-17 multi-component images)
+
+LIBHEIF_API
+int heif_image_get_number_of_components(const heif_image*);
+
+LIBHEIF_API
+enum heif_channel heif_image_get_component_channel(const heif_image*, int component_idx);
+
+LIBHEIF_API
+int heif_image_get_component_width(const heif_image*, int component_idx);
+
+LIBHEIF_API
+int heif_image_get_component_height(const heif_image*, int component_idx);
+
+LIBHEIF_API
+int heif_image_get_component_bits_per_pixel(const heif_image*, int component_idx);
+
+LIBHEIF_API
+const uint8_t* heif_image_get_component_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+uint8_t* heif_image_get_component(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const uint16_t* heif_image_get_component_uint16_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+uint16_t* heif_image_get_component_uint16(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const uint32_t* heif_image_get_component_uint32_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+uint32_t* heif_image_get_component_uint32(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const uint64_t* heif_image_get_component_uint64_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+uint64_t* heif_image_get_component_uint64(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const int16_t* heif_image_get_component_int16_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+int16_t* heif_image_get_component_int16(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const int32_t* heif_image_get_component_int32_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+int32_t* heif_image_get_component_int32(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const int64_t* heif_image_get_component_int64_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+int64_t* heif_image_get_component_int64(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const float* heif_image_get_component_float32_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+float* heif_image_get_component_float32(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const double* heif_image_get_component_float64_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+double* heif_image_get_component_float64(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const heif_complex32* heif_image_get_component_complex32_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+heif_complex32* heif_image_get_component_complex32(heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+const heif_complex64* heif_image_get_component_complex64_readonly(const heif_image*, int component_idx, size_t* out_stride);
+
+LIBHEIF_API
+heif_complex64* heif_image_get_component_complex64(heif_image*, int component_idx, size_t* out_stride);
+
 #endif
 
 #ifdef __cplusplus

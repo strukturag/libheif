@@ -69,7 +69,7 @@ uint16_t SwapBytesIfNeeded(uint16_t v, heif_chroma chroma) {
 template <typename T>
 std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
   heif_chroma chroma = image.get_chroma_format();
-  int num_interleaved = num_interleaved_pixels_per_plane(chroma);
+  int num_interleaved = num_interleaved_components_per_plane(chroma);
   bool is_interleaved = num_interleaved > 1;
   uint32_t max_cols = is_interleaved ? 3 : 10;
   uint32_t max_rows = 10;
@@ -135,7 +135,7 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   compressed_stride /= (int)sizeof(T);
   double mse = 0.0;
 
-  int num_interleaved = num_interleaved_pixels_per_plane(chroma);
+  int num_interleaved = num_interleaved_components_per_plane(chroma);
   int alpha_max = (1 << original.get_bits_per_pixel(channel)) - 1;
   CAPTURE(expect_alpha_max);
   for (uint32_t y = 0; y < h; y++) {

@@ -48,7 +48,7 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel);
 
 bool is_interleaved_with_alpha(heif_chroma chroma);
 
-int num_interleaved_pixels_per_plane(heif_chroma chroma);
+int num_interleaved_components_per_plane(heif_chroma chroma);
 
 bool is_integer_multiple_of_chroma_size(uint32_t width,
                                         uint32_t height,
@@ -267,8 +267,8 @@ public:
   template <typename T>
   T* get_channel(heif_channel channel, size_t* out_stride)
   {
-    auto iter = m_planes.find(channel);
-    if (iter == m_planes.end()) {
+    auto* comp = find_component_for_channel(channel);
+    if (!comp) {
       if (out_stride)
         *out_stride = 0;
 
@@ -276,18 +276,53 @@ public:
     }
 
     if (out_stride) {
-      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
+      *out_stride = static_cast<int>(comp->stride / sizeof(T));
     }
 
-    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
-
-    return static_cast<T*>(iter->second.mem);
+    return static_cast<T*>(comp->mem);
   }
 
   template <typename T>
   const T* get_channel(heif_channel channel, size_t* out_stride) const
   {
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
+  }
+
+
+  // --- index-based component access (for ISO 23001-17 multi-component images)
+
+  int get_number_of_components() const { return static_cast<int>(m_planes.size()); }
+
+  heif_channel get_component_channel(int component_idx) const;
+
+  uint32_t get_component_width(int component_idx) const;
+  uint32_t get_component_height(int component_idx) const;
+  uint8_t get_component_bits_per_pixel(int component_idx) const;
+  uint8_t get_component_storage_bits_per_pixel(int component_idx) const;
+  heif_channel_datatype get_component_datatype(int component_idx) const;
+
+  uint8_t* get_component(int component_idx, size_t* out_stride);
+  const uint8_t* get_component(int component_idx, size_t* out_stride) const;
+
+  template <typename T>
+  T* get_component_data(int component_idx, size_t* out_stride)
+  {
+    if (component_idx < 0 || component_idx >= static_cast<int>(m_planes.size())) {
+      if (out_stride) *out_stride = 0;
+      return nullptr;
+    }
+
+    auto& comp = m_planes[component_idx];
+    if (out_stride) {
+      *out_stride = comp.stride / sizeof(T);
+    }
+    return static_cast<T*>(comp.mem);
+  }
+
+  template <typename T>
+  const T* get_component_data(int component_idx, size_t* out_stride) const
+  {
+    return const_cast<HeifPixelImage*>(this)->get_component_data<T>(component_idx, out_stride);
   }
 
   Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
@@ -349,8 +384,10 @@ public:
   const std::vector<Error>& get_warnings() const { return m_warnings; }
 
 private:
-  struct ImagePlane
+  struct ImageComponent
   {
+    heif_channel m_channel = heif_channel_Y;
+
     // limits=nullptr disables the limits
     Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                 int num_interleaved_components,
@@ -358,6 +395,10 @@ private:
                 MemoryHandle& memory_handle);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
+
+    // logical bit depth per component
+    // For interleaved formats, it is the number of bits for one component.
+    // It is not the storage width.
     uint8_t m_bit_depth = 0;
     uint8_t m_num_interleaved_components = 1;
 
@@ -379,17 +420,20 @@ private:
     template <typename T> void mirror_inplace(heif_transform_mirror_direction);
 
     template<typename T>
-    void rotate_ccw(int angle_degrees, ImagePlane& out_plane) const;
+    void rotate_ccw(int angle_degrees, ImageComponent& out_plane) const;
 
-    void crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
+    void crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, int bytes_per_pixel, ImageComponent& out_plane) const;
   };
+
+  ImageComponent* find_component_for_channel(heif_channel channel);
+  const ImageComponent* find_component_for_channel(heif_channel channel) const;
 
   uint32_t m_width = 0;
   uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
 
-  std::map<heif_channel, ImagePlane> m_planes;
+  std::vector<ImageComponent> m_planes;
   MemoryHandle m_memory_handle;
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame
