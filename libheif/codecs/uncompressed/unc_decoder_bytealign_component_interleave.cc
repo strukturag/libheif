@@ -129,10 +129,10 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
           else if (comp[c].bytes_per_sample == 2) {
             uint16_t value;
             if (little_endian) {
-              value = static_cast<uint16_t>(src[0]) | (static_cast<uint16_t>(src[1]) << 8);
+              value = static_cast<uint16_t>(src[0] | (src[1] << 8));
             }
             else {
-              value = (static_cast<uint16_t>(src[0]) << 8) | static_cast<uint16_t>(src[1]);
+              value = static_cast<uint16_t>((src[0] << 8) | src[1]);
             }
             std::memcpy(dst, &value, 2);
           }
