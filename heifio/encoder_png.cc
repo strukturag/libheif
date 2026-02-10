@@ -152,9 +152,9 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
 
 #ifdef PNG_cICP_SUPPORTED
     if (heif_image_handle_get_color_profile_type(handle) == heif_color_profile_type_nclx) {
-      heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+      heif_color_profile_nclx* nclx = nullptr;
+      heif_image_handle_get_nclx_color_profile(handle, &nclx);
       if (nclx) {
-        heif_image_handle_get_nclx_color_profile(handle, &nclx);
         // Setting matrix coefficients to 0 (RGB) and full range flag to 1 (full range)
         // because data is converted into RGB specified by PngEncoder::colorspace (heif_colorspace_RGB)
         png_set_cICP(png_ptr, info_ptr, nclx->color_primaries, nclx->transfer_characteristics, 0, 1);
