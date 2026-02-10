@@ -38,6 +38,7 @@ public:
 
 private:
   uint8_t m_bytes_per_pixel = 0;
+  bool m_swap_endianess = false;
 };
 
 

@@ -106,7 +106,7 @@ std::vector<uint8_t> unc_encoder_rgb_block_pixel_interleave::encode_tile(const s
       uint16_t g = src_data[src_stride * y + 3 * x + 1];
       uint16_t b = src_data[src_stride * y + 3 * x + 2];
 
-      uint64_t combined_pixel = (r << (2 * bpp)) | (g << bpp) | b;
+      uint64_t combined_pixel = (static_cast<uint64_t>(r) << (2 * bpp)) | (static_cast<uint64_t>(g) << bpp) | b;
 
       *p++ = static_cast<uint8_t>(combined_pixel & 0xFF);
       *p++ = static_cast<uint8_t>((combined_pixel >> 8) & 0xFF);

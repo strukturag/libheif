@@ -80,9 +80,12 @@ unc_encoder_rgb_bytealign_pixel_interleave::unc_encoder_rgb_bytealign_pixel_inte
     component_align_size = 0;
   }
 
+  // make sure that we always save as big-endian so that we can read it with out own reader (unc_decoder_pixel_interleave, which only supports big-endian)
+  m_swap_endianess = little_endian;
+
   m_uncC->set_interleave_type(interleave_mode_pixel);
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
-  m_uncC->set_components_little_endian(little_endian);
+  m_uncC->set_components_little_endian(false); // little_endian);
   m_uncC->set_pixel_size(m_bytes_per_pixel);
 
   m_uncC->add_component({0, bpp, component_format_unsigned, component_align_size});
@@ -100,6 +103,20 @@ uint64_t unc_encoder_rgb_bytealign_pixel_interleave::compute_tile_data_size_byte
 }
 
 
+void *memcpy_swap16(uint8_t *dst, const uint8_t *src, size_t n)
+{
+  assert(n % 2 == 0);
+
+  /* swap pairs */
+  for (size_t i = 0; i + 1 < n; i += 2) {
+    dst[i] = src[i + 1];
+    dst[i + 1] = src[i];
+  }
+
+  return dst;
+}
+
+
 std::vector<uint8_t> unc_encoder_rgb_bytealign_pixel_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
@@ -111,7 +128,12 @@ std::vector<uint8_t> unc_encoder_rgb_bytealign_pixel_interleave::encode_tile(con
   data.resize(out_size);
 
   for (uint32_t y = 0; y < src_image->get_height(); y++) {
-    memcpy(data.data() + y * src_image->get_width() * m_bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * m_bytes_per_pixel);
+    if (m_swap_endianess) {
+      memcpy_swap16(data.data() + y * src_image->get_width() * m_bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * m_bytes_per_pixel);
+    }
+    else {
+      memcpy(data.data() + y * src_image->get_width() * m_bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * m_bytes_per_pixel);
+    }
   }
 
   return data;

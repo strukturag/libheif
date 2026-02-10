@@ -123,6 +123,10 @@ bool unc_decoder_factory_pixel_interleave::can_decode(const std::shared_ptr<cons
     return false;
   }
 
+  if (uncC->is_components_little_endian()) {
+    return false;
+  }
+
   return true;
 }
 

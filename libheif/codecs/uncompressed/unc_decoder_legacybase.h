@@ -70,6 +70,9 @@ public:
         uint32_t padding = pixel_size - bytes_in_pixel;
         skip_bytes(padding);
       }
+      if (pixel_size == bytes_in_pixel) {
+        // NOP
+      }
       else {
         return {
           heif_error_Invalid_input,

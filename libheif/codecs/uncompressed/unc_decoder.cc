@@ -321,6 +321,7 @@ bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const 
     return false;
   }
 
+#if 0
   if (uncC->is_components_little_endian()) {
     const auto& comps = uncC->get_components();
     bool all_8_bit = std::all_of(comps.begin(), comps.end(),
@@ -329,6 +330,7 @@ bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const 
       return false;
     }
   }
+#endif
 
   return true;
 }
