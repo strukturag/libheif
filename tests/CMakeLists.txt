@@ -93,6 +93,10 @@ if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode_ycbcr422)
     add_libheif_test(uncompressed_encode)
 
+    if (ENABLE_EXPERIMENTAL_FEATURES)
+        add_libheif_test(uncompressed_encode_multicomponent)
+    endif()
+
     if (ZLIB_FOUND)
         add_libheif_test(uncompressed_decode_generic_compression)
     else()

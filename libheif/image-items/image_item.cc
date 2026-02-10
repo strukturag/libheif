@@ -347,7 +347,10 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
       pixi->add_channel_bits(bpp);
     }
   }
-  codedImage.properties.push_back(pixi);
+
+  if (pixi->get_num_channels() != 0) {
+    codedImage.properties.push_back(pixi);
+  }
 
   // --- generate properties for image extra data
 

@@ -291,23 +291,30 @@ public:
 
   // --- index-based component access (for ISO 23001-17 multi-component images)
 
-  int get_number_of_components() const { return static_cast<int>(m_planes.size()); }
+  uint32_t get_number_of_components() const { return static_cast<uint32_t>(m_planes.size()); }
 
-  heif_channel get_component_channel(int component_idx) const;
+  heif_channel get_component_channel(uint32_t component_idx) const;
 
-  uint32_t get_component_width(int component_idx) const;
-  uint32_t get_component_height(int component_idx) const;
-  uint8_t get_component_bits_per_pixel(int component_idx) const;
-  uint8_t get_component_storage_bits_per_pixel(int component_idx) const;
-  heif_channel_datatype get_component_datatype(int component_idx) const;
+  uint32_t get_component_width(uint32_t component_idx) const;
+  uint32_t get_component_height(uint32_t component_idx) const;
+  uint8_t get_component_bits_per_pixel(uint32_t component_idx) const;
+  uint8_t get_component_storage_bits_per_pixel(uint32_t component_idx) const;
+  heif_channel_datatype get_component_datatype(uint32_t component_idx) const;
 
-  uint8_t* get_component(int component_idx, size_t* out_stride);
-  const uint8_t* get_component(int component_idx, size_t* out_stride) const;
+  uint16_t get_component_type(uint32_t component_idx) const;
+
+  Result<uint32_t> add_component(uint32_t width, uint32_t height,
+                                 uint16_t component_type,
+                                 heif_channel_datatype datatype, int bit_depth,
+                                 const heif_security_limits* limits);
+
+  uint8_t* get_component(uint32_t component_idx, size_t* out_stride);
+  const uint8_t* get_component(uint32_t component_idx, size_t* out_stride) const;
 
   template <typename T>
-  T* get_component_data(int component_idx, size_t* out_stride)
+  T* get_component_data(uint32_t component_idx, size_t* out_stride)
   {
-    if (component_idx < 0 || component_idx >= static_cast<int>(m_planes.size())) {
+    if (component_idx >= m_planes.size()) {
       if (out_stride) *out_stride = 0;
       return nullptr;
     }
@@ -320,7 +327,7 @@ public:
   }
 
   template <typename T>
-  const T* get_component_data(int component_idx, size_t* out_stride) const
+  const T* get_component_data(uint32_t component_idx, size_t* out_stride) const
   {
     return const_cast<HeifPixelImage*>(this)->get_component_data<T>(component_idx, out_stride);
   }
@@ -387,6 +394,7 @@ private:
   struct ImageComponent
   {
     heif_channel m_channel = heif_channel_Y;
+    uint16_t m_component_type = 0;  // ISO 23001-17 component type (0 = monochrome)
 
     // limits=nullptr disables the limits
     Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,

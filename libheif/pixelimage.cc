@@ -1890,57 +1890,81 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
 
 // --- index-based component access methods
 
-heif_channel HeifPixelImage::get_component_channel(int component_idx) const
+heif_channel HeifPixelImage::get_component_channel(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   return m_planes[component_idx].m_channel;
 }
 
 
-uint32_t HeifPixelImage::get_component_width(int component_idx) const
+uint32_t HeifPixelImage::get_component_width(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   return m_planes[component_idx].m_width;
 }
 
 
-uint32_t HeifPixelImage::get_component_height(int component_idx) const
+uint32_t HeifPixelImage::get_component_height(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   return m_planes[component_idx].m_height;
 }
 
 
-uint8_t HeifPixelImage::get_component_bits_per_pixel(int component_idx) const
+uint8_t HeifPixelImage::get_component_bits_per_pixel(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   return m_planes[component_idx].m_bit_depth;
 }
 
 
-uint8_t HeifPixelImage::get_component_storage_bits_per_pixel(int component_idx) const
+uint8_t HeifPixelImage::get_component_storage_bits_per_pixel(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   uint32_t bpp = m_planes[component_idx].get_bytes_per_pixel() * 8;
   assert(bpp <= 255);
   return static_cast<uint8_t>(bpp);
 }
 
 
-heif_channel_datatype HeifPixelImage::get_component_datatype(int component_idx) const
+heif_channel_datatype HeifPixelImage::get_component_datatype(uint32_t component_idx) const
 {
-  assert(component_idx >= 0 && component_idx < static_cast<int>(m_planes.size()));
+  assert(component_idx < m_planes.size());
   return m_planes[component_idx].m_datatype;
 }
 
 
-uint8_t* HeifPixelImage::get_component(int component_idx, size_t* out_stride)
+uint16_t HeifPixelImage::get_component_type(uint32_t component_idx) const
+{
+  assert(component_idx < m_planes.size());
+  return m_planes[component_idx].m_component_type;
+}
+
+
+Result<uint32_t> HeifPixelImage::add_component(uint32_t width, uint32_t height,
+                                               uint16_t component_type,
+                                               heif_channel_datatype datatype, int bit_depth,
+                                               const heif_security_limits* limits)
+{
+  ImageComponent plane;
+  plane.m_channel = heif_channel_Y;
+  plane.m_component_type = component_type;
+  if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
+    return err;
+  }
+
+  m_planes.push_back(plane);
+  return static_cast<uint32_t>(m_planes.size() - 1);
+}
+
+
+uint8_t* HeifPixelImage::get_component(uint32_t component_idx, size_t* out_stride)
 {
   return get_component_data<uint8_t>(component_idx, out_stride);
 }
 
 
-const uint8_t* HeifPixelImage::get_component(int component_idx, size_t* out_stride) const
+const uint8_t* HeifPixelImage::get_component(uint32_t component_idx, size_t* out_stride) const
 {
   return get_component_data<uint8_t>(component_idx, out_stride);
 }
