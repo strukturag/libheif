@@ -20,8 +20,11 @@
 
 #ifndef LIBHEIF_UNC_ENCODER_RGB_PIXEL_INTERLEAVE_H
 #define LIBHEIF_UNC_ENCODER_RGB_PIXEL_INTERLEAVE_H
+
 #include "unc_encoder.h"
 
+#include <memory>
+#include <string>
 
 class unc_encoder_rgb_pixel_interleave : public unc_encoder
 {

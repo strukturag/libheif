@@ -24,6 +24,9 @@
 #include "unc_encoder.h"
 #include "unc_types.h"
 
+#include <memory>
+#include <string>
+
 class unc_encoder_component_interleave : public unc_encoder
 {
 public:

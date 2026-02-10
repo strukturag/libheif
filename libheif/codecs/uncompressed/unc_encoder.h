@@ -20,7 +20,9 @@
 
 #ifndef LIBHEIF_UNC_ENCODER_H
 #define LIBHEIF_UNC_ENCODER_H
+
 #include <memory>
+#include <vector>
 
 #include "error.h"
 #include "codecs/encoder.h"
