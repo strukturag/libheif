@@ -204,6 +204,9 @@ protected:
 };
 
 
+heif_channel map_uncompressed_component_to_channel(uint16_t component_type);
+
+
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ImageExtraData,
                        public ErrorBuffer

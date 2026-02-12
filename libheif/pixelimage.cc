@@ -30,6 +30,8 @@
 #include <algorithm>
 #include <color-conversion/colorconversion.h>
 
+#include "codecs/uncompressed/unc_types.h"
+
 
 heif_chroma chroma_from_subsampling(int h, int v)
 {
@@ -89,6 +91,39 @@ uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
     return h;
   }
 }
+
+
+heif_channel map_uncompressed_component_to_channel(uint16_t component_type)
+{
+  switch (component_type) {
+    case component_type_monochrome:
+    case component_type_Y:
+      return heif_channel_Y;
+    case component_type_Cb:
+      return heif_channel_Cb;
+    case component_type_Cr:
+      return heif_channel_Cr;
+    case component_type_red:
+      return heif_channel_R;
+    case component_type_green:
+      return heif_channel_G;
+    case component_type_blue:
+      return heif_channel_B;
+    case component_type_alpha:
+      return heif_channel_Alpha;
+    case component_type_filter_array:
+      return heif_channel_filter_array;
+    case component_type_depth:
+      return heif_channel_depth;
+    case component_type_disparity:
+      return heif_channel_disparity;
+
+    case component_type_padded:
+    default:
+      return heif_channel_unknown;
+  }
+}
+
 
 
 ImageExtraData::~ImageExtraData()
@@ -1947,7 +1982,7 @@ Result<uint32_t> HeifPixelImage::add_component(uint32_t width, uint32_t height,
                                                const heif_security_limits* limits)
 {
   ImageComponent plane;
-  plane.m_channel = heif_channel_Y;
+  plane.m_channel = map_uncompressed_component_to_channel(component_type);
   plane.m_component_type = component_type;
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;

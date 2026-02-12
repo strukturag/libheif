@@ -158,40 +158,8 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
   uint16_t component_index = component.component_index;
   uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
-  switch (component_type) {
-    case component_type_monochrome:
-      *channel = heif_channel_Y;
-      return true;
-    case component_type_Y:
-      *channel = heif_channel_Y;
-      return true;
-    case component_type_Cb:
-      *channel = heif_channel_Cb;
-      return true;
-    case component_type_Cr:
-      *channel = heif_channel_Cr;
-      return true;
-    case component_type_red:
-      *channel = heif_channel_R;
-      return true;
-    case component_type_green:
-      *channel = heif_channel_G;
-      return true;
-    case component_type_blue:
-      *channel = heif_channel_B;
-      return true;
-    case component_type_alpha:
-      *channel = heif_channel_Alpha;
-      return true;
-    case component_type_filter_array:
-      // TODO: this is just a temporary hack
-      *channel = heif_channel_Y;
-      return true;
-    case component_type_padded:
-      return false;
-    default:
-      return false;
-  }
+  *channel = map_uncompressed_component_to_channel(component_type);
+  return true;
 }
 
 

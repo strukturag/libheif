@@ -70,7 +70,7 @@ public:
         uint32_t padding = pixel_size - bytes_in_pixel;
         skip_bytes(padding);
       }
-      if (pixel_size == bytes_in_pixel) {
+      else if (pixel_size == bytes_in_pixel) {
         // NOP
       }
       else {

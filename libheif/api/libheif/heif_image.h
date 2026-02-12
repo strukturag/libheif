@@ -90,7 +90,8 @@ typedef enum heif_channel
   heif_channel_interleaved = 10,
   heif_channel_filter_array = 11,
   heif_channel_depth = 12,
-  heif_channel_disparity = 13
+  heif_channel_disparity = 13,
+  heif_channel_unknown = 65535
 } heif_channel;
 
 
