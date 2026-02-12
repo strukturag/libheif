@@ -48,6 +48,7 @@ heif_uncompressed_component_type heif_channel_to_component_type(heif_channel cha
     case heif_channel_filter_array: return heif_uncompressed_component_type::component_type_filter_array;
     case heif_channel_depth: return heif_uncompressed_component_type::component_type_depth;
     case heif_channel_disparity: return heif_uncompressed_component_type::component_type_disparity;
+    case heif_channel_unknown: return heif_uncompressed_component_type::component_type_padded;
   }
 
   return heif_uncompressed_component_type::component_type_padded;
