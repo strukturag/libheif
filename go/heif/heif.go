@@ -123,6 +123,7 @@ const (
 	ChannelFilterArray = C.heif_channel_filter_array
 	ChannelDepth       = C.heif_channel_depth
 	ChannelDisparity   = C.heif_channel_disparity
+	ChannelUnknown     = C.heif_channel_unknown
 )
 
 type ProgressStep C.enum_heif_progress_step

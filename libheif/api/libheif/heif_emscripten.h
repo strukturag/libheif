@@ -580,7 +580,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_channel_interleaved", heif_channel_interleaved)
     .value("heif_channel_filter_array", heif_channel_filter_array)
     .value("heif_channel_depth", heif_channel_depth)
-    .value("heif_channel_disparity", heif_channel_disparity);
+    .value("heif_channel_disparity", heif_channel_disparity)
+    .value("heif_channel_unknown", heif_channel_unknown);
 
     emscripten::enum_<heif_filetype_result>("heif_filetype_result")
     .value("heif_filetype_no", heif_filetype_no)
