@@ -192,6 +192,10 @@ bool unc_decoder_factory_block_component_interleave::can_decode(const std::share
     return false;
   }
 
+  if (uncC->is_components_little_endian() == true) {
+    return false;
+  }
+
   uint32_t block_bits = uncC->get_block_size() * 8;
 
   for (const auto& component : uncC->get_components()) {
