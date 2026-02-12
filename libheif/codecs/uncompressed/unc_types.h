@@ -132,7 +132,7 @@ enum heif_uncompressed_component_type : uint16_t
  *
  * See ISO/IEC 23001-17 Table 2.
  */
-enum heif_uncompressed_component_format
+enum heif_uncompressed_component_format : uint8_t
 {
   /**
    * Unsigned integer.

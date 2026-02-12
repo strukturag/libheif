@@ -84,10 +84,9 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
     const auto& c = components[i];
     comp[i].bytes_per_sample = (c.component_bit_depth + 7) / 8;
 
-    heif_channel channel;
-    comp[i].use = map_uncompressed_component_to_channel(m_cmpd, c, &channel);
+    comp[i].use = true; // map_uncompressed_component_to_channel(m_cmpd, c, &channel);
     if (comp[i].use) {
-      comp[i].dst_plane = img->get_plane(channel, &comp[i].dst_plane_stride);
+      comp[i].dst_plane = img->get_component(i, &comp[i].dst_plane_stride);
     }
     else {
       comp[i].dst_plane = nullptr;
@@ -152,7 +151,7 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
             }
             std::memcpy(dst, &value, 4);
           }
-          else {
+          else if (comp[c].bytes_per_sample == 8) {
             // 8-byte sample
             uint64_t value;
             if (little_endian) {
@@ -176,6 +175,50 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
                       | static_cast<uint64_t>(src[7]);
             }
             std::memcpy(dst, &value, 8);
+          }
+          else if (comp[c].bytes_per_sample == 16) {
+            // 16-byte sample (2* 8 complex)
+            uint64_t value[2];
+            if (little_endian) {
+              value[0] = static_cast<uint64_t>(src[0])
+                         | (static_cast<uint64_t>(src[1]) << 8)
+                         | (static_cast<uint64_t>(src[2]) << 16)
+                         | (static_cast<uint64_t>(src[3]) << 24)
+                         | (static_cast<uint64_t>(src[4]) << 32)
+                         | (static_cast<uint64_t>(src[5]) << 40)
+                         | (static_cast<uint64_t>(src[6]) << 48)
+                         | (static_cast<uint64_t>(src[7]) << 56);
+              value[1] = static_cast<uint64_t>(src[8])
+                         | (static_cast<uint64_t>(src[9]) << 8)
+                         | (static_cast<uint64_t>(src[10]) << 16)
+                         | (static_cast<uint64_t>(src[11]) << 24)
+                         | (static_cast<uint64_t>(src[12]) << 32)
+                         | (static_cast<uint64_t>(src[13]) << 40)
+                         | (static_cast<uint64_t>(src[14]) << 48)
+                         | (static_cast<uint64_t>(src[15]) << 56);
+            }
+            else {
+              value[0] = (static_cast<uint64_t>(src[0]) << 56)
+                         | (static_cast<uint64_t>(src[1]) << 48)
+                         | (static_cast<uint64_t>(src[2]) << 40)
+                         | (static_cast<uint64_t>(src[3]) << 32)
+                         | (static_cast<uint64_t>(src[4]) << 24)
+                         | (static_cast<uint64_t>(src[5]) << 16)
+                         | (static_cast<uint64_t>(src[6]) << 8)
+                         | static_cast<uint64_t>(src[7]);
+              value[1] = (static_cast<uint64_t>(src[8]) << 56)
+                         | (static_cast<uint64_t>(src[9]) << 48)
+                         | (static_cast<uint64_t>(src[10]) << 40)
+                         | (static_cast<uint64_t>(src[11]) << 32)
+                         | (static_cast<uint64_t>(src[12]) << 24)
+                         | (static_cast<uint64_t>(src[13]) << 16)
+                         | (static_cast<uint64_t>(src[14]) << 8)
+                         | static_cast<uint64_t>(src[15]);
+            }
+            std::memcpy(dst, &value, 2*8);
+          }
+          else {
+            assert(false);
           }
         }
 
@@ -213,10 +256,11 @@ bool unc_decoder_factory_bytealign_component_interleave::can_decode(const std::s
 
   for (const auto& component : uncC->get_components()) {
     uint32_t d = component.component_bit_depth;
-    if (d != 8 && d != 16 && d != 32 && d != 64) {
+    if (d != 8 && d != 16 && d != 32 && d != 64 && d != 128) {
       return false;
     }
-    if (component.component_format != component_format_unsigned) {
+
+    if (d == 128 && component.component_format != heif_uncompressed_component_format::component_format_complex) {
       return false;
     }
   }

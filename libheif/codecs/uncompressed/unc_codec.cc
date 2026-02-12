@@ -195,6 +195,26 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
 }
 
 
+heif_channel_datatype unc_component_format_to_datatype(uint8_t format)
+{
+  switch (format) {
+    case component_format_unsigned:
+      return heif_channel_datatype_unsigned_integer;
+
+    case component_format_signed:
+      return heif_channel_datatype_signed_integer;
+
+    case component_format_float:
+      return heif_channel_datatype_floating_point;
+
+    case component_format_complex:
+      return heif_channel_datatype_complex_number;
+
+    default:
+      return heif_channel_datatype_undefined;
+  }
+}
+
 
 Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(const std::shared_ptr<const Box_cmpd> cmpd,
                                                                              const std::shared_ptr<const Box_uncC> uncC,
@@ -202,6 +222,8 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
                                                                              uint32_t height,
                                                                              const heif_security_limits* limits)
 {
+  const auto& components = cmpd->get_components();
+
   auto img = std::make_shared<HeifPixelImage>();
   heif_chroma chroma = heif_chroma_undefined;
   heif_colorspace colourspace = heif_colorspace_undefined;
@@ -215,24 +237,37 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
               chroma);
 
   for (Box_uncC::Component component : uncC->get_components()) {
-    heif_channel channel;
-    if (map_uncompressed_component_to_channel(cmpd, component, &channel)) {
-      if (img->has_channel(channel)) {
-        return Error{heif_error_Unsupported_feature,
-                     heif_suberror_Unspecified,
-                     "Cannot generate image with several similar heif_channels."};
-      }
+    if (component.component_index >= components.size()) {
+      return Error{
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Component index out of range."
+      };
+    }
 
-      if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
-        if (auto err = img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth,
-                                      limits)) {
-          return err;
-        }
+    auto component_type = components[component.component_index].component_type;
+
+    if ((component_type == heif_uncompressed_component_type::component_type_Cb) ||
+        (component_type == heif_uncompressed_component_type::component_type_Cr)) {
+      Result<uint32_t> result = img->add_component((width / chroma_h_subsampling(chroma)),
+                                                   (height / chroma_v_subsampling(chroma)),
+                                                   component_type,
+                                                   unc_component_format_to_datatype(component.component_format),
+                                                   component.component_bit_depth,
+                                                   limits);
+      if (result.is_error()) {
+        return result.error();
       }
-      else {
-        if (auto err = img->add_plane(channel, width, height, component.component_bit_depth, limits)) {
-          return err;
-        }
+    }
+    else {
+      Result<uint32_t> result = img->add_component(width,
+                                                   height,
+                                                   component_type,
+                                                   unc_component_format_to_datatype(component.component_format),
+                                                   component.component_bit_depth,
+                                                   limits);
+      if (result.is_error()) {
+        return result.error();
       }
     }
   }
