@@ -496,7 +496,13 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
     }
   }
   else {
-    // TODO: error, unsupported JPEG colorspace
+    jpeg_destroy_decompress(&cinfo);
+    free(iccBuffer);
+    fclose(infile);
+    err = {heif_error_Unsupported_feature,
+           heif_suberror_Unsupported_color_conversion,
+           "Unsupported JPEG color space"};
+    return err;
   }
 
   if (embeddedIccFlag && iccLen > 0) {
