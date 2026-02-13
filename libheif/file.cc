@@ -176,10 +176,8 @@ void HeifFile::init_for_image()
   m_iloc_box = std::make_shared<Box_iloc>();
   m_iinf_box = std::make_shared<Box_iinf>();
   m_iprp_box = std::make_shared<Box_iprp>();
-  m_pitm_box = std::make_shared<Box_pitm>();
 
   m_meta_box->append_child_box(m_hdlr_box);
-  m_meta_box->append_child_box(m_pitm_box);
   m_meta_box->append_child_box(m_iloc_box);
   m_meta_box->append_child_box(m_iinf_box);
   m_meta_box->append_child_box(m_iprp_box);
