@@ -699,28 +699,28 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
   if (filetype == PNG) {
     heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
     if (err.code != heif_error_Ok) {
-      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      std::cerr << "Can not load TIFF input image: " << err.message << '\n';
       exit(1);
     }
   }
   else if (filetype == Y4M) {
     heif_error err = loadY4M(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
-      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      std::cerr << "Can not load TIFF input image: " << err.message << '\n';
       exit(1);
     }
   }
   else if (filetype == TIFF) {
     heif_error err = loadTIFF(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
-      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      std::cerr << "Can not load TIFF input image: " << err.message << '\n';
       exit(1);
     }
   }
   else {
     heif_error err = loadJPEG(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
-      std::cerr << "Can not load JPEG input_image: " << err.message << '\n';
+      std::cerr << "Can not load JPEG input image: " << err.message << '\n';
       exit(1);
     }
   }
