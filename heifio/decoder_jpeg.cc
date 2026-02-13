@@ -495,6 +495,52 @@ heif_error loadJPEG(const char *filename, InputImage *input_image)
       }
     }
   }
+  else if (cinfo.jpeg_color_space == JCS_CMYK || cinfo.jpeg_color_space == JCS_YCCK) {
+    // libjpeg converts YCCK to CMYK internally when out_color_space is JCS_CMYK
+    cinfo.out_color_space = JCS_CMYK;
+
+    jpeg_start_decompress(&cinfo);
+
+    JSAMPARRAY buffer;
+    buffer = (*cinfo.mem->alloc_sarray)
+        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * 4, 1);
+
+    // create interleaved RGB destination image
+
+    err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                            heif_colorspace_RGB,
+                            heif_chroma_interleaved_RGB,
+                            &image);
+    if (err.code) { goto cleanup; }
+
+    err = heif_image_add_plane(image, heif_channel_interleaved, cinfo.output_width, cinfo.output_height, 8);
+    if (err.code) { goto cleanup; }
+
+    size_t rgb_stride;
+    uint8_t* pRGB = heif_image_get_plane2(image, heif_channel_interleaved, &rgb_stride);
+
+    while (cinfo.output_scanline < cinfo.output_height) {
+      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+      JOCTET* bufp = buffer[0];
+      size_t y = cinfo.output_scanline - 1;
+      uint8_t* row = pRGB + y * rgb_stride;
+
+      for (unsigned int x = 0; x < cinfo.output_width; x++) {
+        uint8_t C = bufp[0];
+        uint8_t M = bufp[1];
+        uint8_t Y = bufp[2];
+        uint8_t K = bufp[3];
+        bufp += 4;
+
+        // CMYK to RGB — JPEG CMYK uses inverted values (255 = no ink)
+        row[0] = (uint8_t)(C * K / 255);
+        row[1] = (uint8_t)(M * K / 255);
+        row[2] = (uint8_t)(Y * K / 255);
+        row += 3;
+      }
+    }
+  }
   else {
     jpeg_destroy_decompress(&cinfo);
     free(iccBuffer);
