@@ -402,6 +402,7 @@ to update the gdk-pixbuf loader database.
 * [GDAL](https://gdal.org/drivers/raster/heif.html)
 * [OpenImageIO](https://sites.google.com/site/openimageio/)
 * [XnView](https://www.xnview.com)
+* [heif-converter-image](https://github.com/MaestroError/heif-converter-image) (Docker & CLI)
 
 ## Packaging status
 
