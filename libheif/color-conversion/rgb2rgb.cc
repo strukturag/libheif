@@ -81,9 +81,8 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
     return Error::InternalError;
   }
 
-  if (has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) != 8) {
-    return Error::InternalError;
-  }
+  // Check if alpha channel is valid. If not, just ignore it.
+  has_alpha = has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) == 8;
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -207,16 +206,11 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   bool input_has_alpha = input->has_channel(heif_channel_Alpha);
   bool output_has_alpha = input_has_alpha || target_state.has_alpha;
 
-  if (input_has_alpha) {
-    if (input->get_bits_per_pixel(heif_channel_Alpha) <= 8) {
-      return Error::InternalError;
-    }
+  // Check if alpha channel is valid. If not, just ignore it.
+  input_has_alpha = input_has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) > 8 &&
+                    input->get_width(heif_channel_Alpha) == input->get_width(heif_channel_G) &&
+                    input->get_height(heif_channel_Alpha) == input->get_height(heif_channel_G);
 
-    if (input->get_width(heif_channel_Alpha) != input->get_width(heif_channel_G) ||
-        input->get_height(heif_channel_Alpha) != input->get_height(heif_channel_G)) {
-      return Error::InternalError;
-    }
-  }
   int bpp = input->get_bits_per_pixel(heif_channel_R);
   if (bpp <= 0) return Error::InternalError;
 
@@ -346,9 +340,8 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
   bool input_has_alpha = input->has_channel(heif_channel_Alpha);
   bool output_has_alpha = input_has_alpha || target_state.has_alpha;
 
-  if (input_has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) != 8) {
-    return Error::InternalError;
-  }
+  // Check if alpha channel is valid. If not, just ignore it.
+  input_has_alpha = input_has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) == 8;
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
