@@ -4,6 +4,7 @@
   MIT License
 
   Copyright (c) 2024 Joachim Bauch <bauch@struktur.de>
+  Copyright (c) 2026 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +30,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 extern "C" {
 #include <tiff.h>
