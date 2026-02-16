@@ -336,6 +336,42 @@ bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const 
 }
 
 
+Error check_hard_limits(const std::shared_ptr<const Box_uncC>& uncC)
+{
+  const auto& components =uncC->get_components();
+
+  for (const auto& component : components) {
+    switch (component.component_format) {
+      case heif_uncompressed_component_format::component_format_signed:
+      case heif_uncompressed_component_format::component_format_unsigned:
+        if (component.component_bit_depth > 64) {
+          return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Maximum supported integer bit-depth is 64 bits."};
+        }
+        break;
+
+      case heif_uncompressed_component_format::component_format_float:
+        if (component.component_bit_depth != 32 &&
+            component.component_bit_depth != 64) {
+          return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Only 32 bit and 64 bit floats are supported."};
+        }
+        break;
+
+      case heif_uncompressed_component_format::component_format_complex:
+        if (component.component_bit_depth != 32 &&
+            component.component_bit_depth != 64) {
+          return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Only 2x32 bit and 2x64 bit complex values are supported."};
+        }
+        break;
+
+      default:
+        return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Unknown component format."};
+    }
+  }
+
+  return {};
+}
+
+
 Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
     uint32_t width, uint32_t height,
     const std::shared_ptr<const Box_cmpd>& cmpd,
@@ -379,6 +415,11 @@ Result<std::shared_ptr<HeifPixelImage>> unc_decoder::decode_full_image(
   assert(ispe);
   uint32_t width = ispe->get_width();
   uint32_t height = ispe->get_height();
+
+  Error global_limit_error = check_hard_limits(uncC);
+  if (global_limit_error) {
+    return {global_limit_error};
+  }
 
   Result<std::shared_ptr<HeifPixelImage>> createImgResult = UncompressedImageCodec::create_image(cmpd, uncC, width, height, limits);
   if (!createImgResult) {
