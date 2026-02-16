@@ -1270,7 +1270,7 @@ Error Box_ftyp::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint64_t n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
 
-  if (n_minor_brands > limits->max_number_of_file_brands) {
+  if (limits->max_number_of_file_brands && n_minor_brands > limits->max_number_of_file_brands) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,
