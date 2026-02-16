@@ -52,6 +52,7 @@ public:
 
   heif_error readTile(uint32_t tx, uint32_t ty, heif_image** out_image);
   void readExif(InputImage* input_image);
+  void printGeoInfo(const char* filename) const;
 
 private:
   TiledTiffReader() = default;

@@ -26,6 +26,7 @@
 */
 
 #include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -36,6 +37,13 @@ extern "C" {
 #include <tiff.h>
 #include <tiffio.h>
 }
+
+#if HAVE_GEOTIFF
+#include <geotiff/geotiff.h>
+#include <geotiff/geotiffio.h>
+#include <geotiff/geo_normalize.h>
+#include <geotiff/xtiffio.h>
+#endif
 
 #include "decoder_tiff.h"
 
@@ -766,5 +774,68 @@ void TiledTiffReader::readExif(InputImage* input_image)
   if (tags) {
     tags->Encode(&(input_image->exif));
   }
+}
+
+
+void TiledTiffReader::printGeoInfo(const char* filename) const
+{
+#if HAVE_GEOTIFF
+  TIFF* tif = XTIFFOpen(filename, "r");
+  if (!tif) {
+    return;
+  }
+
+  GTIF* gtif = GTIFNew(tif);
+  if (!gtif) {
+    XTIFFClose(tif);
+    return;
+  }
+
+  // Get EPSG code
+  unsigned short epsg = 0;
+  GTIFKeyGetSHORT(gtif, ProjectedCSTypeGeoKey, &epsg, 0, 1);
+
+  // Get CRS citation string
+  char citation[256] = {};
+  GTIFKeyGetASCII(gtif, GTCitationGeoKey, citation, sizeof(citation));
+  if (citation[0] == '\0') {
+    GTIFKeyGetASCII(gtif, GeogCitationGeoKey, citation, sizeof(citation));
+  }
+
+  if (epsg > 0 || citation[0] != '\0') {
+    std::cout << "GeoTIFF: ";
+    if (epsg > 0) {
+      std::cout << "EPSG:" << epsg;
+    }
+    if (citation[0] != '\0') {
+      if (epsg > 0) {
+        std::cout << " (" << citation << ")";
+      }
+      else {
+        std::cout << citation;
+      }
+    }
+    std::cout << "\n";
+  }
+
+  // Get pixel scale
+  uint16_t scale_count = 0;
+  double* scale = nullptr;
+  if (TIFFGetField(tif, TIFFTAG_GEOPIXELSCALE, &scale_count, &scale) && scale_count >= 2) {
+    std::cout << std::fixed << std::setprecision(3)
+              << "  pixel scale: " << scale[0] << " x " << scale[1] << "\n";
+  }
+
+  // Get tiepoint (origin)
+  uint16_t tp_count = 0;
+  double* tiepoints = nullptr;
+  if (TIFFGetField(tif, TIFFTAG_GEOTIEPOINTS, &tp_count, &tiepoints) && tp_count >= 6) {
+    std::cout << std::fixed << std::setprecision(3)
+              << "  origin: (" << tiepoints[3] << ", " << tiepoints[4] << ")\n";
+  }
+
+  GTIFFree(gtif);
+  XTIFFClose(tif);
+#endif
 }
 

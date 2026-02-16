@@ -1893,6 +1893,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
         }
 
         if (tiff_reader) {
+          tiff_reader->printGeoInfo(input_filename.c_str());
           auto tiff_gen = std::make_shared<input_tiles_generator_tiff>(std::move(tiff_reader));
 
           // Read tile (0,0) as representative for nclx profile
