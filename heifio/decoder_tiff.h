@@ -31,6 +31,7 @@
 #include "libheif/heif.h"
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 LIBHEIF_API
 heif_error loadTIFF(const char *filename, InputImage *input_image);
@@ -38,6 +39,14 @@ heif_error loadTIFF(const char *filename, InputImage *input_image);
 class LIBHEIF_API TiledTiffReader {
 public:
   ~TiledTiffReader();
+
+  struct OverviewInfo {
+    uint32_t dir_index;
+    uint32_t image_width;
+    uint32_t image_height;
+    uint32_t tile_width;
+    uint32_t tile_height;
+  };
 
   // Returns a reader if the file is a tiled TIFF. If the TIFF is not tiled,
   // returns nullptr with heif_error_Ok (caller should fall back to loadTIFF).
@@ -49,6 +58,9 @@ public:
   uint32_t tileHeight() const { return m_tile_height; }
   uint32_t nColumns() const { return m_n_columns; }
   uint32_t nRows() const { return m_n_rows; }
+
+  const std::vector<OverviewInfo>& overviews() const { return m_overviews; }
+  bool setDirectory(uint32_t dir_index);
 
   heif_error readTile(uint32_t tx, uint32_t ty, heif_image** out_image);
   void readExif(InputImage* input_image);
@@ -67,6 +79,8 @@ private:
   uint16_t m_bits_per_sample = 0;
   uint16_t m_planar_config = 0;
   bool m_has_alpha = false;
+
+  std::vector<OverviewInfo> m_overviews;
 };
 
 #endif // LIBHEIF_DECODER_TIFF_H

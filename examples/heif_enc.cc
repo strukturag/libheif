@@ -1041,7 +1041,7 @@ private:
 class input_tiles_generator_tiff : public input_tiles_generator
 {
 public:
-  input_tiles_generator_tiff(std::unique_ptr<TiledTiffReader> reader)
+  input_tiles_generator_tiff(std::shared_ptr<TiledTiffReader> reader)
     : m_reader(std::move(reader))
   {
   }
@@ -1072,7 +1072,7 @@ public:
   void readExif(InputImage* input_image) { m_reader->readExif(input_image); }
 
 private:
-  std::unique_ptr<TiledTiffReader> m_reader;
+  std::shared_ptr<TiledTiffReader> m_reader;
 };
 #endif
 
@@ -1873,6 +1873,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     InputImage input_image;
     heif_image_tiling tiling{};
     std::shared_ptr<input_tiles_generator> tile_generator;
+    std::shared_ptr<TiledTiffReader> tiff_reader_for_pyramid;
 
 #if HAVE_LIBTIFF
     // Auto-detect tiled TIFFs when not using explicit tiling options
@@ -1894,7 +1895,8 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
         if (tiff_reader) {
           tiff_reader->printGeoInfo(input_filename.c_str());
-          auto tiff_gen = std::make_shared<input_tiles_generator_tiff>(std::move(tiff_reader));
+          auto shared_tiff_reader = std::shared_ptr<TiledTiffReader>(std::move(tiff_reader));
+          auto tiff_gen = std::make_shared<input_tiles_generator_tiff>(shared_tiff_reader);
 
           // Read tile (0,0) as representative for nclx profile
           input_image = tiff_gen->get_image(0, 0, output_bit_depth);
@@ -1910,6 +1912,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
           tiling.number_of_extra_dimensions = 0;
 
           tile_generator = tiff_gen;
+          tiff_reader_for_pyramid = shared_tiff_reader;
         }
       }
     }
@@ -2020,6 +2023,52 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     }
 
     encoded_image_ids.push_back(heif_image_handle_get_item_id(handle));
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES && HAVE_LIBTIFF
+    // Auto-encode TIFF pyramid overviews
+    if (tiff_reader_for_pyramid && !tiff_reader_for_pyramid->overviews().empty()) {
+      heif_item_id fullres_id = heif_image_handle_get_item_id(handle);
+      std::vector<heif_item_id> pyramid_ids;
+      pyramid_ids.push_back(fullres_id);
+
+      for (const auto& ov : tiff_reader_for_pyramid->overviews()) {
+        if (!tiff_reader_for_pyramid->setDirectory(ov.dir_index)) {
+          std::cerr << "Warning: could not switch to TIFF overview directory " << ov.dir_index << "\n";
+          continue;
+        }
+
+        auto ov_gen = std::make_shared<input_tiles_generator_tiff>(tiff_reader_for_pyramid);
+
+        heif_image_tiling ov_tiling{};
+        ov_tiling.version = 1;
+        ov_tiling.num_columns = ov_gen->nColumns();
+        ov_tiling.num_rows = ov_gen->nRows();
+        ov_tiling.tile_width = ov_gen->tileWidth();
+        ov_tiling.tile_height = ov_gen->tileHeight();
+        ov_tiling.image_width = ov_gen->imageWidth();
+        ov_tiling.image_height = ov_gen->imageHeight();
+        ov_tiling.number_of_extra_dimensions = 0;
+
+        heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling);
+        if (ov_handle) {
+          pyramid_ids.push_back(heif_image_handle_get_item_id(ov_handle));
+          heif_image_handle_release(ov_handle);
+        }
+      }
+
+      // Restore directory 0 for any subsequent use
+      tiff_reader_for_pyramid->setDirectory(0);
+
+      if (pyramid_ids.size() > 1) {
+        error = heif_context_add_pyramid_entity_group(context, pyramid_ids.data(), pyramid_ids.size(), nullptr);
+        if (error.code) {
+          std::cerr << "Cannot create pyramid entity group: " << error.message << "\n";
+          return 5;
+        }
+        std::cout << "Created pyramid entity group with " << pyramid_ids.size() << " layers\n";
+      }
+    }
+#endif
 
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
