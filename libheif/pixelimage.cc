@@ -253,6 +253,14 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes(bool g
     properties.push_back(itai);
   }
 
+  // --- write GIMI content ID property
+
+  if (has_gimi_sample_content_id()) {
+    auto gimi = std::make_shared<Box_gimi_content_id>();
+    gimi->set_content_id(get_gimi_sample_content_id());
+    properties.push_back(gimi);
+  }
+
   if (generate_colr_boxes) {
     // --- colr (nclx)
 

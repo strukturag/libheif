@@ -40,6 +40,8 @@
 #include <filesystem>
 #include <regex>
 #include <optional>
+#include <map>
+#include <tuple>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -118,6 +120,9 @@ bool use_video_handler = false;
 std::string option_mime_item_type;
 std::string option_mime_item_file;
 std::string option_mime_item_name;
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+std::string option_turtle_file;
+#endif
 
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
 int sequence_keyframe_distance_min = 0;
@@ -192,6 +197,76 @@ const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 const int OPTION_USE_HEVC_COMPRESSION = 1037;
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+const int OPTION_TURTLE = 1038;
+#endif
+
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+struct TurtleContentIDs {
+  std::string image_content_id;
+  // key: {layer, tx, ty}
+  std::map<std::tuple<int, int, int>, std::string> tile_content_ids;
+};
+
+
+enum class TurtlePendingType {
+  none,
+  image,
+  tile
+};
+
+
+TurtleContentIDs parse_turtle_content_ids(const std::string& filename)
+{
+  TurtleContentIDs result;
+
+  std::ifstream file(filename);
+  if (!file) {
+    std::cerr << "Warning: could not open turtle file: " << filename << "\n";
+    return result;
+  }
+
+  std::string line;
+  TurtlePendingType pending_type = TurtlePendingType::none;
+  int pending_layer = 0, pending_tx = 0, pending_ty = 0;
+
+  while (std::getline(file, line)) {
+    // trim leading whitespace
+    size_t start = line.find_first_not_of(" \t");
+    if (start == std::string::npos) {
+      continue; // empty line
+    }
+    line = line.substr(start);
+
+    if (line.rfind("# image", 0) == 0) {
+      pending_type = TurtlePendingType::image;
+    }
+    else if (line.rfind("# tile ", 0) == 0) {
+      if (sscanf(line.c_str(), "# tile %d %d %d", &pending_layer, &pending_tx, &pending_ty) == 3) {
+        pending_type = TurtlePendingType::tile;
+      }
+    }
+    else if (pending_type != TurtlePendingType::none && line[0] == '<') {
+      // extract URI between < and >
+      auto close = line.find('>');
+      if (close != std::string::npos) {
+        std::string uri = line.substr(1, close - 1);
+        if (pending_type == TurtlePendingType::image) {
+          result.image_content_id = uri;
+        }
+        else if (pending_type == TurtlePendingType::tile) {
+          result.tile_content_ids[{pending_layer, pending_tx, pending_ty}] = uri;
+        }
+      }
+      pending_type = TurtlePendingType::none;
+    }
+  }
+
+  return result;
+}
+#endif
+
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -254,6 +329,7 @@ static option long_options[] = {
     {(char* const) "add-mime-item",               required_argument,       nullptr, OPTION_ADD_MIME_ITEM},
     {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
     {(char* const) "mime-item-name",              required_argument,       nullptr, OPTION_MIME_ITEM_NAME},
+    {(char* const) "turtle",                      required_argument,       nullptr, OPTION_TURTLE},
 #endif
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
@@ -315,6 +391,7 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
+            << "      --turtle FILENAME          attach Turtle (RDF) file and assign GIMI content IDs to tiles (experimental)\n"
 #endif
             << "\n"
             << "codecs:\n"
@@ -1081,7 +1158,9 @@ private:
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
                                 const std::shared_ptr<input_tiles_generator>& tile_generator,
-                                const heif_image_tiling& tiling)
+                                const heif_image_tiling& tiling,
+                                [[maybe_unused]] const std::map<std::tuple<int,int,int>, std::string>* tile_content_ids = nullptr,
+                                [[maybe_unused]] int layer_index = 0)
 {
   heif_image_handle* tiled_image = nullptr;
 
@@ -1172,6 +1251,15 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       std::cout << "encoding tile " << ty+1 << " " << tx+1
                 << " (of " << tile_generator->nRows() << "x" << tile_generator->nColumns() << ")  \r";
       std::cout.flush();
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+      if (tile_content_ids) {
+        auto it = tile_content_ids->find({layer_index, static_cast<int>(tx), static_cast<int>(ty)});
+        if (it != tile_content_ids->end()) {
+          heif_image_set_gimi_sample_content_id(input_image.image.get(), it->second.c_str());
+        }
+      }
+#endif
 
       error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
                                           input_image.image.get(),
@@ -1590,6 +1678,11 @@ int main(int argc, char** argv)
       case OPTION_MIME_ITEM_NAME:
         option_mime_item_name = optarg;
         break;
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+      case OPTION_TURTLE:
+        option_turtle_file = optarg;
+        break;
+#endif
       case OPTION_METADATA_COMPRESSION: {
         bool success = set_metadata_compression_method(optarg);
         if (!success) {
@@ -1989,8 +2082,20 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
     heif_image_handle* handle;
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    TurtleContentIDs turtle_ids;
+    if (!option_turtle_file.empty()) {
+      turtle_ids = parse_turtle_content_ids(option_turtle_file);
+    }
+#endif
+
     if (tile_generator) {
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+      handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling,
+                            option_turtle_file.empty() ? nullptr : &turtle_ids.tile_content_ids, 0);
+#else
       handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling);
+#endif
     }
     else {
       error = heif_context_encode_image(context,
@@ -2018,6 +2123,12 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_image_handle_set_pixel_aspect_ratio(handle, pasp->h, pasp->v);
     }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    if (!option_turtle_file.empty() && !turtle_ids.image_content_id.empty()) {
+      heif_image_handle_set_gimi_content_id(handle, turtle_ids.image_content_id.c_str());
+    }
+#endif
+
     if (is_primary_image) {
       heif_context_set_primary_image(context, handle);
     }
@@ -2031,6 +2142,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       std::vector<heif_item_id> pyramid_ids;
       pyramid_ids.push_back(fullres_id);
 
+      int ov_layer_index = 1;
       for (const auto& ov : tiff_reader_for_pyramid->overviews()) {
         if (!tiff_reader_for_pyramid->setDirectory(ov.dir_index)) {
           std::cerr << "Warning: could not switch to TIFF overview directory " << ov.dir_index << "\n";
@@ -2049,11 +2161,14 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
         ov_tiling.image_height = ov_gen->imageHeight();
         ov_tiling.number_of_extra_dimensions = 0;
 
-        heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling);
+        heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling,
+                                                    option_turtle_file.empty() ? nullptr : &turtle_ids.tile_content_ids,
+                                                    ov_layer_index);
         if (ov_handle) {
           pyramid_ids.push_back(heif_image_handle_get_item_id(ov_handle));
           heif_image_handle_release(ov_handle);
         }
+        ov_layer_index++;
       }
 
       // Restore directory 0 for any subsequent use
@@ -2204,6 +2319,34 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_item_set_item_name(context, itemId, option_mime_item_name.c_str());
     }
   }
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  // --- attach Turtle (RDF) file as MIME item
+
+  if (!option_turtle_file.empty()) {
+    std::ifstream istr(option_turtle_file.c_str(), std::ios::binary | std::ios::ate);
+    if (!istr) {
+      std::cerr << "Failed to open turtle file: '" << option_turtle_file << "'\n";
+      return 5;
+    }
+
+    std::streamsize size = istr.tellg();
+    if (size < 0) {
+      std::cerr << "Querying size of turtle file '" << option_turtle_file << "' failed.\n";
+      return 5;
+    }
+
+    std::vector<uint8_t> buffer(size);
+    istr.seekg(0, std::ios::beg);
+    istr.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    heif_item_id itemId;
+    heif_context_add_mime_item(context, "text/turtle",
+                               heif_metadata_compression_off,
+                               buffer.data(), (int)buffer.size(),
+                               &itemId);
+  }
+#endif
 
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
