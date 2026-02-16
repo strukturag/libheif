@@ -122,6 +122,9 @@ heif_context* heif_image_handle_get_context(const heif_image_handle* handle);
 LIBHEIF_API
 const char* heif_image_handle_get_gimi_content_id(const heif_image_handle* handle);
 
+LIBHEIF_API
+void heif_image_handle_set_gimi_content_id(heif_image_handle* handle, const char* content_id);
+
 #ifdef __cplusplus
 }
 #endif
