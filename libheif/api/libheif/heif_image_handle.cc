@@ -20,6 +20,7 @@
 
 #include "heif_image_handle.h"
 #include "api_structs.h"
+#include "box.h"
 #include <climits>
 #include <string>
 
@@ -174,4 +175,13 @@ const char* heif_image_handle_get_gimi_content_id(const heif_image_handle* handl
   char* idstring = new char[id.size() + 1];
   strcpy(idstring, id.c_str());
   return idstring;
+}
+
+
+void heif_image_handle_set_gimi_content_id(heif_image_handle* handle, const char* content_id)
+{
+  auto gimi_box = std::make_shared<Box_gimi_content_id>();
+  gimi_box->set_content_id(content_id);
+  handle->context->add_property(handle->image->get_id(), gimi_box, false);
+  handle->image->set_gimi_sample_content_id(content_id);
 }
