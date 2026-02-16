@@ -897,12 +897,84 @@ std::unique_ptr<TiledTiffReader> TiledTiffReader::open(const char* filename, hei
   reader->m_n_columns = (reader->m_image_width + reader->m_tile_width - 1) / reader->m_tile_width;
   reader->m_n_rows = (reader->m_image_height + reader->m_tile_height - 1) / reader->m_tile_height;
 
+  // Detect overview directories (reduced-resolution images)
+  tdir_t n_dirs = TIFFNumberOfDirectories(tif);
+  for (uint16_t d = 1; d < n_dirs; d++) {
+    if (!TIFFSetDirectory(tif, d)) {
+      continue;
+    }
+
+    uint32_t subfiletype = 0;
+    TIFFGetField(tif, TIFFTAG_SUBFILETYPE, &subfiletype);
+    if (!(subfiletype & FILETYPE_REDUCEDIMAGE)) {
+      continue;
+    }
+
+    if (!TIFFIsTiled(tif)) {
+      continue;
+    }
+
+    uint16_t spp, bps_ov, config_ov;
+    bool hasAlpha_ov;
+    heif_error valErr = validateTiffFormat(tif, spp, bps_ov, config_ov, hasAlpha_ov);
+    if (valErr.code != heif_error_Ok) {
+      continue;
+    }
+
+    uint32_t ov_width, ov_height, ov_tw, ov_th;
+    if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &ov_width) ||
+        !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &ov_height)) {
+      continue;
+    }
+    if (!TIFFGetField(tif, TIFFTAG_TILEWIDTH, &ov_tw) ||
+        !TIFFGetField(tif, TIFFTAG_TILELENGTH, &ov_th)) {
+      continue;
+    }
+
+    reader->m_overviews.push_back({d, ov_width, ov_height, ov_tw, ov_th});
+  }
+
+  // Switch back to directory 0
+  TIFFSetDirectory(tif, 0);
+
   *out_err = heif_error_ok;
   return reader;
 }
 
 
 TiledTiffReader::~TiledTiffReader() = default;
+
+
+bool TiledTiffReader::setDirectory(uint32_t dir_index)
+{
+  TIFF* tif = static_cast<TIFF*>(m_tif.get());
+
+  if (!TIFFSetDirectory(tif, static_cast<uint16_t>(dir_index))) {
+    return false;
+  }
+
+  if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &m_image_width) ||
+      !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &m_image_height)) {
+    return false;
+  }
+
+  if (!TIFFGetField(tif, TIFFTAG_TILEWIDTH, &m_tile_width) ||
+      !TIFFGetField(tif, TIFFTAG_TILELENGTH, &m_tile_height)) {
+    return false;
+  }
+
+  uint16_t bps;
+  heif_error err = validateTiffFormat(tif, m_samples_per_pixel, bps, m_planar_config, m_has_alpha);
+  if (err.code != heif_error_Ok) {
+    return false;
+  }
+  m_bits_per_sample = bps;
+
+  m_n_columns = (m_image_width + m_tile_width - 1) / m_tile_width;
+  m_n_rows = (m_image_height + m_tile_height - 1) / m_tile_height;
+
+  return true;
+}
 
 
 heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_depth, heif_image** out_image)
