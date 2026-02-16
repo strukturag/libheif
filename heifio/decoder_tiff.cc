@@ -399,80 +399,215 @@ static void suppress_warnings(const char* module, const char* fmt, va_list ap) {
 }
 
 
-heif_error loadTIFF(const char* filename, InputImage *input_image) {
-  TIFFSetWarningHandler(suppress_warnings);
-
-  std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
-  if (!tifPtr) {
-    struct heif_error err = {
-      .code = heif_error_Invalid_input,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Cannot open TIFF ile"};
-    return err;
-  }
-
-  TIFF* tif = tifPtr.get();
-  if (TIFFIsTiled(tif)) {
-    struct heif_error err = {
-      .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Tiled TIFF images are not supported yet"};
-    return err;
-  }
-
-  uint16_t shortv, samplesPerPixel, bps, config, format;
+static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint16_t& bps, uint16_t& config, bool& hasAlpha)
+{
+  uint16_t shortv;
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &shortv) && shortv == PHOTOMETRIC_PALETTE) {
-    struct heif_error err = {
-      .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Palette TIFF images are not supported yet"};
-    return err;
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Palette TIFF images are not supported yet"};
   }
 
   TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &config);
   TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
   if (samplesPerPixel != 1 && samplesPerPixel != 3 && samplesPerPixel != 4) {
-    struct heif_error err = {
-      .code = heif_error_Invalid_input,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Only 1, 3 and 4 samples per pixel are supported."};
-    return err;
+    return {heif_error_Invalid_input, heif_suberror_Unspecified,
+            "Only 1, 3 and 4 samples per pixel are supported."};
+  }
+
+  // Determine whether the 4th sample is true alpha or an unrelated extra sample
+  hasAlpha = false;
+  if (samplesPerPixel == 4) {
+    uint16_t extraCount = 0;
+    uint16_t* extraTypes = nullptr;
+    if (TIFFGetField(tif, TIFFTAG_EXTRASAMPLES, &extraCount, &extraTypes) && extraCount > 0) {
+      hasAlpha = (extraTypes[0] == EXTRASAMPLE_ASSOCALPHA || extraTypes[0] == EXTRASAMPLE_UNASSALPHA);
+    }
+    else {
+      // No EXTRASAMPLES tag with 4 spp — assume RGBA for backward compatibility
+      hasAlpha = true;
+    }
   }
 
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
-  if (bps != 8) {    
-    struct heif_error err = {
-      .code = heif_error_Invalid_input,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Only 8 bits per sample are supported."};
-    return err;
+  if (bps != 8) {
+    return {heif_error_Invalid_input, heif_suberror_Unspecified,
+            "Only 8 bits per sample are supported."};
   }
 
+  uint16_t format;
   if (TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &format) && format != SAMPLEFORMAT_UINT) {
-    struct heif_error err = {
-      .code = heif_error_Invalid_input,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Only UINT sample format is supported."};
-    return err;
+    return {heif_error_Invalid_input, heif_suberror_Unspecified,
+            "Only UINT sample format is supported."};
   }
 
-  struct heif_error err;
+  return heif_error_ok;
+}
+
+
+static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height,
+                                  uint32_t tile_width, uint32_t tile_height,
+                                  uint16_t samplesPerPixel, bool hasAlpha, heif_image** out_image)
+{
+  uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
+  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
+                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
+                       : heif_chroma_interleaved_RGB;
+  heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
+
+  heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, out_image);
+  if (err.code != heif_error_Ok) return err;
+
+  heif_image_add_plane(*out_image, channel, (int)width, (int)height, outSpp * 8);
+
+  size_t out_stride;
+  uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
+
+  tmsize_t tile_buf_size = TIFFTileSize(tif);
+  std::vector<uint8_t> tile_buf(tile_buf_size);
+
+  uint32_t n_cols = (width + tile_width - 1) / tile_width;
+  uint32_t n_rows = (height + tile_height - 1) / tile_height;
+
+  for (uint32_t ty = 0; ty < n_rows; ty++) {
+    for (uint32_t tx = 0; tx < n_cols; tx++) {
+      tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * tile_width, ty * tile_height, 0, 0),
+                                          tile_buf.data(), tile_buf_size);
+      if (read < 0) {
+        heif_image_release(*out_image);
+        *out_image = nullptr;
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+      }
+
+      uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
+      uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
+
+      for (uint32_t row = 0; row < actual_h; row++) {
+        uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp;
+        uint8_t* src = tile_buf.data() + row * tile_width * samplesPerPixel;
+        if (outSpp == samplesPerPixel) {
+          memcpy(dst, src, actual_w * outSpp);
+        }
+        else {
+          // Strip extra sample (RGBX -> RGB)
+          for (uint32_t x = 0; x < actual_w; x++) {
+            memcpy(dst + x * outSpp, src + x * samplesPerPixel, outSpp);
+          }
+        }
+      }
+    }
+  }
+
+  return heif_error_ok;
+}
+
+
+static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
+                                    uint32_t tile_width, uint32_t tile_height,
+                                    uint16_t samplesPerPixel, bool hasAlpha, heif_image** out_image)
+{
+  uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
+  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
+                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
+                       : heif_chroma_interleaved_RGB;
+  heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
+
+  heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, out_image);
+  if (err.code != heif_error_Ok) return err;
+
+  heif_image_add_plane(*out_image, channel, (int)width, (int)height, outSpp * 8);
+
+  size_t out_stride;
+  uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
+
+  tmsize_t tile_buf_size = TIFFTileSize(tif);
+  std::vector<uint8_t> tile_buf(tile_buf_size);
+
+  uint32_t n_cols = (width + tile_width - 1) / tile_width;
+  uint32_t n_rows = (height + tile_height - 1) / tile_height;
+
+  // Only interleave the first outSpp planes (skip the extra sample plane if !hasAlpha)
+  for (uint16_t s = 0; s < outSpp; s++) {
+    for (uint32_t ty = 0; ty < n_rows; ty++) {
+      for (uint32_t tx = 0; tx < n_cols; tx++) {
+        tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * tile_width, ty * tile_height, 0, s),
+                                            tile_buf.data(), tile_buf_size);
+        if (read < 0) {
+          heif_image_release(*out_image);
+          *out_image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+        }
+
+        uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
+        uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
+
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp + s;
+          uint8_t* src = tile_buf.data() + row * tile_width;
+          for (uint32_t x = 0; x < actual_w; x++) {
+            dst[x * outSpp] = src[x];
+          }
+        }
+      }
+    }
+  }
+
+  return heif_error_ok;
+}
+
+
+heif_error loadTIFF(const char* filename, InputImage *input_image) {
+  TIFFSetWarningHandler(suppress_warnings);
+
+  std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
+  if (!tifPtr) {
+    return {heif_error_Invalid_input, heif_suberror_Unspecified, "Cannot open TIFF file"};
+  }
+
+  TIFF* tif = tifPtr.get();
+
+  uint16_t samplesPerPixel, bps, config;
+  bool hasAlpha;
+  heif_error err = validateTiffFormat(tif, samplesPerPixel, bps, config, hasAlpha);
+  if (err.code != heif_error_Ok) return err;
+
   struct heif_image* image = nullptr;
 
-  switch (config) {
-    case PLANARCONFIG_CONTIG:
-      err = readPixelInterleave(tif, samplesPerPixel, &image);
-      break;
-    case PLANARCONFIG_SEPARATE:
-      err = readBandInterleave(tif, samplesPerPixel, &image);
-      break;
-    default:
-      struct heif_error err = {
-        .code = heif_error_Invalid_input,
-        .subcode = heif_suberror_Unspecified,
-        .message = "Unsupported planar configuration"};
-      return err;
+  if (TIFFIsTiled(tif)) {
+    uint32_t width, height, tile_width, tile_height;
+    err = getImageWidthAndHeight(tif, width, height);
+    if (err.code != heif_error_Ok) return err;
+
+    if (!TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tile_width) ||
+        !TIFFGetField(tif, TIFFTAG_TILELENGTH, &tile_height)) {
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Cannot read TIFF tile dimensions"};
+    }
+
+    switch (config) {
+      case PLANARCONFIG_CONTIG:
+        err = readTiledContiguous(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, &image);
+        break;
+      case PLANARCONFIG_SEPARATE:
+        err = readTiledSeparate(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, &image);
+        break;
+      default:
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
+    }
   }
+  else {
+    switch (config) {
+      case PLANARCONFIG_CONTIG:
+        err = readPixelInterleave(tif, samplesPerPixel, &image);
+        break;
+      case PLANARCONFIG_SEPARATE:
+        err = readBandInterleave(tif, samplesPerPixel, &image);
+        break;
+      default:
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
+    }
+  }
+
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -488,5 +623,146 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
     tags->Encode(&(input_image->exif));
   }
   return heif_error_ok;
+}
+
+
+// --- TiledTiffReader ---
+
+void TiledTiffReader::TiffCloser::operator()(void* tif) const {
+  if (tif) {
+    TIFFClose(static_cast<TIFF*>(tif));
+  }
+}
+
+
+std::unique_ptr<TiledTiffReader> TiledTiffReader::open(const char* filename, heif_error* out_err)
+{
+  TIFFSetWarningHandler(suppress_warnings);
+
+  TIFF* tif = TIFFOpen(filename, "r");
+  if (!tif) {
+    *out_err = {heif_error_Invalid_input, heif_suberror_Unspecified, "Cannot open TIFF file"};
+    return nullptr;
+  }
+
+  if (!TIFFIsTiled(tif)) {
+    TIFFClose(tif);
+    *out_err = heif_error_ok;
+    return nullptr;
+  }
+
+  auto reader = std::unique_ptr<TiledTiffReader>(new TiledTiffReader());
+  reader->m_tif.reset(tif);
+
+  uint16_t bps;
+  heif_error err = validateTiffFormat(tif, reader->m_samples_per_pixel, bps, reader->m_planar_config, reader->m_has_alpha);
+  if (err.code != heif_error_Ok) {
+    *out_err = err;
+    return nullptr;
+  }
+  reader->m_bits_per_sample = bps;
+
+  if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &reader->m_image_width) ||
+      !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &reader->m_image_height)) {
+    *out_err = {heif_error_Invalid_input, heif_suberror_Unspecified, "Cannot read TIFF image dimensions"};
+    return nullptr;
+  }
+
+  if (!TIFFGetField(tif, TIFFTAG_TILEWIDTH, &reader->m_tile_width) ||
+      !TIFFGetField(tif, TIFFTAG_TILELENGTH, &reader->m_tile_height)) {
+    *out_err = {heif_error_Invalid_input, heif_suberror_Unspecified, "Cannot read TIFF tile dimensions"};
+    return nullptr;
+  }
+
+  reader->m_n_columns = (reader->m_image_width + reader->m_tile_width - 1) / reader->m_tile_width;
+  reader->m_n_rows = (reader->m_image_height + reader->m_tile_height - 1) / reader->m_tile_height;
+
+  *out_err = heif_error_ok;
+  return reader;
+}
+
+
+TiledTiffReader::~TiledTiffReader() = default;
+
+
+heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, heif_image** out_image)
+{
+  TIFF* tif = static_cast<TIFF*>(m_tif.get());
+
+  uint32_t actual_w = std::min(m_tile_width, m_image_width - tx * m_tile_width);
+  uint32_t actual_h = std::min(m_tile_height, m_image_height - ty * m_tile_height);
+
+  uint16_t outSpp = (m_samples_per_pixel == 4 && !m_has_alpha) ? 3 : m_samples_per_pixel;
+  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
+                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
+                       : heif_chroma_interleaved_RGB;
+  heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
+
+  heif_error err = heif_image_create((int)actual_w, (int)actual_h, colorspace, chroma, out_image);
+  if (err.code != heif_error_Ok) return err;
+
+  heif_image_add_plane(*out_image, channel, (int)actual_w, (int)actual_h, outSpp * 8);
+
+  size_t out_stride;
+  uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
+
+  tmsize_t tile_buf_size = TIFFTileSize(tif);
+  std::vector<uint8_t> tile_buf(tile_buf_size);
+
+  if (m_planar_config == PLANARCONFIG_CONTIG) {
+    tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * m_tile_width, ty * m_tile_height, 0, 0),
+                                        tile_buf.data(), tile_buf_size);
+    if (read < 0) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+    }
+
+    for (uint32_t row = 0; row < actual_h; row++) {
+      uint8_t* dst = out_plane + row * out_stride;
+      uint8_t* src = tile_buf.data() + row * m_tile_width * m_samples_per_pixel;
+      if (outSpp == m_samples_per_pixel) {
+        memcpy(dst, src, actual_w * outSpp);
+      }
+      else {
+        for (uint32_t x = 0; x < actual_w; x++) {
+          memcpy(dst + x * outSpp, src + x * m_samples_per_pixel, outSpp);
+        }
+      }
+    }
+  }
+  else {
+    // PLANARCONFIG_SEPARATE: only read the first outSpp planes
+    for (uint16_t s = 0; s < outSpp; s++) {
+      tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * m_tile_width, ty * m_tile_height, 0, s),
+                                          tile_buf.data(), tile_buf_size);
+      if (read < 0) {
+        heif_image_release(*out_image);
+        *out_image = nullptr;
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+      }
+
+      for (uint32_t row = 0; row < actual_h; row++) {
+        uint8_t* dst = out_plane + row * out_stride + s;
+        uint8_t* src = tile_buf.data() + row * m_tile_width;
+        for (uint32_t x = 0; x < actual_w; x++) {
+          dst[x * outSpp] = src[x];
+        }
+      }
+    }
+  }
+
+  return heif_error_ok;
+}
+
+
+void TiledTiffReader::readExif(InputImage* input_image)
+{
+  TIFF* tif = static_cast<TIFF*>(m_tif.get());
+  std::unique_ptr<ExifTags> tags = ExifTags::Parse(tif);
+  if (tags) {
+    tags->Encode(&(input_image->exif));
+  }
 }
 

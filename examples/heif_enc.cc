@@ -1037,6 +1037,46 @@ private:
 };
 
 
+#if HAVE_LIBTIFF
+class input_tiles_generator_tiff : public input_tiles_generator
+{
+public:
+  input_tiles_generator_tiff(std::unique_ptr<TiledTiffReader> reader)
+    : m_reader(std::move(reader))
+  {
+  }
+
+  uint32_t nColumns() const override { return m_reader->nColumns(); }
+  uint32_t nRows() const override { return m_reader->nRows(); }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int /*output_bit_depth*/) override
+  {
+    heif_image* tile_image = nullptr;
+    heif_error err = m_reader->readTile(tx, ty, &tile_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Error reading TIFF tile " << tx << "," << ty << ": " << err.message << "\n";
+      exit(1);
+    }
+
+    InputImage input;
+    input.image = std::shared_ptr<heif_image>(tile_image,
+                                               [](heif_image* img) { heif_image_release(img); });
+    return input;
+  }
+
+  uint32_t imageWidth() const { return m_reader->imageWidth(); }
+  uint32_t imageHeight() const { return m_reader->imageHeight(); }
+  uint32_t tileWidth() const { return m_reader->tileWidth(); }
+  uint32_t tileHeight() const { return m_reader->tileHeight(); }
+
+  void readExif(InputImage* input_image) { m_reader->readExif(input_image); }
+
+private:
+  std::unique_ptr<TiledTiffReader> m_reader;
+};
+#endif
+
+
 // TODO: we have to attach the input image Exif and XMP to the tiled image
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
@@ -1830,12 +1870,57 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
   for (std::string input_filename : args) {
 
-    InputImage input_image = load_image(input_filename, output_bit_depth);
+    InputImage input_image;
+    heif_image_tiling tiling{};
+    std::shared_ptr<input_tiles_generator> tile_generator;
+
+#if HAVE_LIBTIFF
+    // Auto-detect tiled TIFFs when not using explicit tiling options
+    if (!use_tiling && cut_tiles == 0) {
+      std::string suffix;
+      auto suffix_pos = input_filename.find_last_of('.');
+      if (suffix_pos != std::string::npos) {
+        suffix = input_filename.substr(suffix_pos + 1);
+        std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
+      }
+
+      if (suffix == "tif" || suffix == "tiff") {
+        heif_error tiff_err;
+        auto tiff_reader = TiledTiffReader::open(input_filename.c_str(), &tiff_err);
+        if (tiff_err.code != heif_error_Ok) {
+          std::cerr << "Error opening TIFF: " << tiff_err.message << "\n";
+          return 1;
+        }
+
+        if (tiff_reader) {
+          auto tiff_gen = std::make_shared<input_tiles_generator_tiff>(std::move(tiff_reader));
+
+          // Read tile (0,0) as representative for nclx profile
+          input_image = tiff_gen->get_image(0, 0, output_bit_depth);
+          tiff_gen->readExif(&input_image);
+
+          tiling.version = 1;
+          tiling.num_columns = tiff_gen->nColumns();
+          tiling.num_rows = tiff_gen->nRows();
+          tiling.tile_width = tiff_gen->tileWidth();
+          tiling.tile_height = tiff_gen->tileHeight();
+          tiling.image_width = tiff_gen->imageWidth();
+          tiling.image_height = tiff_gen->imageHeight();
+          tiling.number_of_extra_dimensions = 0;
+
+          tile_generator = tiff_gen;
+        }
+      }
+    }
+#endif
+
+    // If no tiled TIFF was detected, load the image normally
+    if (!input_image.image) {
+      input_image = load_image(input_filename, output_bit_depth);
+    }
 
     std::shared_ptr<heif_image> image = input_image.image;
 
-    heif_image_tiling tiling{};
-    std::shared_ptr<input_tiles_generator> tile_generator;
     if (use_tiling) {
       tile_generator = determine_input_images_tiling(input_filename, tiled_input_x_y);
       if (tile_generator) {
@@ -1900,7 +1985,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
     heif_image_handle* handle;
 
-    if (use_tiling || cut_tiles > 0) {
+    if (tile_generator) {
       handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling);
     }
     else {
