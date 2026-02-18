@@ -2244,7 +2244,8 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
 
   std::ifstream istr(vmt_metadata_file.c_str());
 
-  std::regex pattern(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?)");
+  std::regex pattern_cue(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?.*)");
+  std::regex pattern_note(R"(^\s*(NOTE).*)");
 
   static std::vector<uint8_t> prev_metadata;
   static std::optional<uint32_t> prev_ts;
@@ -2254,7 +2255,17 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
   {
     std::smatch match;
 
-    if (!std::regex_match(line, match, pattern)) {
+    if (std::regex_match(line, match, pattern_note)) {
+      while (std::getline(istr, line)) {
+        if (line.empty()) {
+          break;
+        }
+      }
+
+      continue;
+    }
+
+    if (!std::regex_match(line, match, pattern_cue)) {
       continue;
     }
 
