@@ -122,6 +122,7 @@ std::string option_mime_item_file;
 std::string option_mime_item_name;
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 std::string option_turtle_file;
+bool option_embed_turtle = false;
 #endif
 
 enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
@@ -199,6 +200,7 @@ const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 const int OPTION_USE_HEVC_COMPRESSION = 1037;
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 const int OPTION_TURTLE = 1038;
+const int OPTION_EMBED_TURTLE = 1039;
 #endif
 
 
@@ -330,6 +332,7 @@ static option long_options[] = {
     {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
     {(char* const) "mime-item-name",              required_argument,       nullptr, OPTION_MIME_ITEM_NAME},
     {(char* const) "turtle",                      required_argument,       nullptr, OPTION_TURTLE},
+    {(char* const) "embed-turtle",               no_argument,             nullptr, OPTION_EMBED_TURTLE},
 #endif
     {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
     {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
@@ -391,7 +394,8 @@ void show_help(const char* argv0)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
-            << "      --turtle FILENAME          attach Turtle (RDF) file and assign GIMI content IDs to tiles (experimental)\n"
+            << "      --turtle FILENAME          read Turtle (RDF) file and assign GIMI content IDs to tiles (experimental)\n"
+            << "      --embed-turtle             also embed the Turtle file as metadata item in the HEIF (experimental)\n"
 #endif
             << "\n"
             << "codecs:\n"
@@ -1682,6 +1686,9 @@ int main(int argc, char** argv)
       case OPTION_TURTLE:
         option_turtle_file = optarg;
         break;
+      case OPTION_EMBED_TURTLE:
+        option_embed_turtle = true;
+        break;
 #endif
       case OPTION_METADATA_COMPRESSION: {
         bool success = set_metadata_compression_method(optarg);
@@ -2323,7 +2330,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   // --- attach Turtle (RDF) file as MIME item
 
-  if (!option_turtle_file.empty()) {
+  if (option_embed_turtle && !option_turtle_file.empty()) {
     std::ifstream istr(option_turtle_file.c_str(), std::ios::binary | std::ios::ate);
     if (!istr) {
       std::cerr << "Failed to open turtle file: '" << option_turtle_file << "'\n";
