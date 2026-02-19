@@ -357,8 +357,8 @@ Error check_hard_limits(const std::shared_ptr<const Box_uncC>& uncC)
         break;
 
       case heif_uncompressed_component_format::component_format_complex:
-        if (component.component_bit_depth != 32 &&
-            component.component_bit_depth != 64) {
+        if (component.component_bit_depth != 64 &&
+            component.component_bit_depth != 128) {
           return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Only 2x32 bit and 2x64 bit complex values are supported."};
         }
         break;
