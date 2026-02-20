@@ -319,8 +319,6 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_encoder_rgb_bytealign_pixel_interleave.h
             codecs/uncompressed/unc_encoder_component_interleave.cc
             codecs/uncompressed/unc_encoder_component_interleave.h
-            codecs/uncompressed/unc_encoder_bytealign_component_interleave.cc
-            codecs/uncompressed/unc_encoder_bytealign_component_interleave.h
             codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.cc
             codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.h)
 endif ()

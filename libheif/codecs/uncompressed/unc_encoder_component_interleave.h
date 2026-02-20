@@ -43,7 +43,9 @@ private:
     uint32_t component_idx;
     heif_channel channel;
     heif_uncompressed_component_type component_type;
+    heif_uncompressed_component_format component_format;
     uint8_t bpp;
+    bool byte_aligned;
   };
 
   std::vector<channel_component> m_components;
