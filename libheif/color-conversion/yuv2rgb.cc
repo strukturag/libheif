@@ -621,6 +621,13 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
 
   int bpp = input->get_bits_per_pixel(heif_channel_Y);
   bool has_alpha = input->has_channel(heif_channel_Alpha);
+  bool want_alpha = has_alpha || target_state.has_alpha;
+
+  // Check if alpha channel is valid. If not, just ignore it.
+  has_alpha = has_alpha &&
+              input->get_bits_per_pixel(heif_channel_Alpha) == bpp &&
+              input->get_width(heif_channel_Alpha) == input->get_width(heif_channel_Y) &&
+              input->get_height(heif_channel_Alpha) == input->get_height(heif_channel_Y);
 
   int le = (target_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
             target_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) ? 1 : 0;
@@ -628,30 +635,13 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   auto outimg = std::make_shared<HeifPixelImage>();
   outimg->create(width, height, heif_colorspace_RGB, target_state.chroma);
 
-  int bytesPerPixel = has_alpha ? 8 : 6;
+  int bytesPerPixel = want_alpha ? 8 : 6;
 
   if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, bpp, limits)) {
     return err;
   }
 
-  if (has_alpha) {
-    if (input->get_width(heif_channel_Alpha) != width ||
-        input->get_height(heif_channel_Alpha) != height) {
-      return Error{
-        heif_error_Unsupported_feature,
-        heif_suberror_Unspecified,
-        "Color conversion cannot handle alpha images with sizes differing from the main image size."
-      };
-    }
-
-    if (input->get_bits_per_pixel(heif_channel_Alpha) != bpp) {
-      return Error{
-        heif_error_Unsupported_feature,
-        heif_suberror_Unspecified,
-        "Color conversion cannot handle alpha images with bits-per-pixel differing from the main image."
-      };
-    }
-
+  if (want_alpha) {
     if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, bpp, limits)) {
       return err;
     }
@@ -686,6 +676,8 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
 
   float limited_range_offset = static_cast<float>(16 << (bpp - 8));
 
+  auto alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
+
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
 
@@ -711,9 +703,10 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
       out_p[y * out_p_stride + bytesPerPixel * x + 3 - le] = (uint8_t) (g & 0xff);
       out_p[y * out_p_stride + bytesPerPixel * x + 5 - le] = (uint8_t) (b & 0xff);
 
-      if (has_alpha) {
-        out_p[y * out_p_stride + 8 * x + 6 + le] = (uint8_t) (in_a[y * in_a_stride / 2 + x] >> 8);
-        out_p[y * out_p_stride + 8 * x + 7 - le] = (uint8_t) (in_a[y * in_a_stride / 2 + x] & 0xff);
+      if (want_alpha) {
+        uint16_t a = has_alpha ? in_a[y * in_a_stride / 2 + x] : alpha_max;
+        out_p[y * out_p_stride + 8 * x + 6 + le] = (uint8_t) (a >> 8);
+        out_p[y * out_p_stride + 8 * x + 7 - le] = (uint8_t) (a & 0xff);
       }
     }
   }
