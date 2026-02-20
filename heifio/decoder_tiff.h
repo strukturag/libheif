@@ -34,7 +34,7 @@
 #include <vector>
 
 LIBHEIF_API
-heif_error loadTIFF(const char *filename, InputImage *input_image);
+heif_error loadTIFF(const char *filename, int output_bit_depth, InputImage *input_image);
 
 class LIBHEIF_API TiledTiffReader {
 public:
@@ -62,7 +62,9 @@ public:
   const std::vector<OverviewInfo>& overviews() const { return m_overviews; }
   bool setDirectory(uint32_t dir_index);
 
-  heif_error readTile(uint32_t tx, uint32_t ty, heif_image** out_image);
+  uint16_t bitsPerSample() const { return m_bits_per_sample; }
+
+  heif_error readTile(uint32_t tx, uint32_t ty, int output_bit_depth, heif_image** out_image);
   void readExif(InputImage* input_image);
   void printGeoInfo(const char* filename) const;
 

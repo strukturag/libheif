@@ -266,6 +266,22 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
+static heif_chroma get_heif_chroma(uint16_t outSpp, int output_bit_depth)
+{
+  if (outSpp == 1) {
+    return heif_chroma_monochrome;
+  }
+  if (output_bit_depth > 8) {
+#if IS_BIG_ENDIAN
+    return (outSpp == 4) ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE;
+#else
+    return (outSpp == 4) ? heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE;
+#endif
+  }
+  return (outSpp == 4) ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB;
+}
+
+
 heif_error getImageWidthAndHeight(TIFF *tif, uint32_t &width, uint32_t &height)
 {
   if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width) ||
@@ -280,7 +296,7 @@ heif_error getImageWidthAndHeight(TIFF *tif, uint32_t &width, uint32_t &height)
   return heif_error_ok;
 }
 
-heif_error readMono(TIFF *tif, heif_image **image)
+heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **image)
 {
   uint32_t width, height;
   heif_error err = getImageWidthAndHeight(tif, width, height);
@@ -291,109 +307,242 @@ heif_error readMono(TIFF *tif, heif_image **image)
   if (err.code != heif_error_Ok) {
     return err;
   }
-  heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, 8);
 
-  size_t y_stride;
-  uint8_t *py = heif_image_get_plane2(*image, heif_channel_Y, &y_stride);
-  for (uint32_t row = 0; row < height; row++)
-  {
-    TIFFReadScanline(tif, py, row, 0);
-    py += y_stride;
-  }
-  return heif_error_ok;
-}
+  if (bps <= 8) {
+    heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, 8);
 
-heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
-{
-  uint32_t width, height;
-  heif_error err = getImageWidthAndHeight(tif, width, height);
-  if (err.code != heif_error_Ok) {
-    return err;
-  }
-  heif_chroma chroma = heif_chroma_interleaved_RGB;
-  if (samplesPerPixel == 4) {
-    chroma = heif_chroma_interleaved_RGBA;
-  }
-
-  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
-  if (err.code != heif_error_Ok)
-  {
-    return err;
-  }
-  heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
-
-  size_t y_stride;
-  uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
-
-  tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
-  for (uint32_t row = 0; row < height; row++)
-  {
-    TIFFReadScanline(tif, buf, row, 0);
-    memcpy(py, buf, width * samplesPerPixel);
-    py += y_stride;
-  }
-  _TIFFfree(buf);
-  return heif_error_ok;
-}
-
-heif_error readPixelInterleave(TIFF *tif,  uint16_t samplesPerPixel, heif_image **image)
-{
-  if (samplesPerPixel == 1) {
-    return readMono(tif, image);
-  } else {
-    return readPixelInterleaveRGB(tif, samplesPerPixel, image);
-  }
-}
-
-heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
-{
-  uint32_t width, height;
-  heif_error err = getImageWidthAndHeight(tif, width, height);
-  if (err.code != heif_error_Ok) {
-    return err;
-  }
-  if (samplesPerPixel == 3) {
-    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
-  } else {
-    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
-  }
-  if (err.code != heif_error_Ok) {
-    return err;
-  }
-  heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
-
-  size_t y_stride;
-  uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
-
-  uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
-  for (uint16_t i = 0; i < samplesPerPixel; i++)
-  {
-    uint8_t *dest = py + i;
-    for (uint32_t row = 0; row < height; row++)
-    {
-      TIFFReadScanline(tif, buf, row, i);
-      for (uint32_t x = 0; x < width; x++, dest += samplesPerPixel)
-      {
-        *dest = buf[x];
-      }
-      dest += (y_stride - width * samplesPerPixel);
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, heif_channel_Y, &y_stride);
+    for (uint32_t row = 0; row < height; row++) {
+      TIFFReadScanline(tif, py, row, 0);
+      py += y_stride;
     }
   }
-  _TIFFfree(buf);
+  else {
+    heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, output_bit_depth);
+
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, heif_channel_Y, &y_stride);
+    int bdShift = 16 - output_bit_depth;
+    tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+
+    if (output_bit_depth <= 8) {
+      for (uint32_t row = 0; row < height; row++) {
+        TIFFReadScanline(tif, buf, row, 0);
+        uint16_t* src = static_cast<uint16_t*>(buf);
+        uint8_t* dst = py + row * y_stride;
+        for (uint32_t x = 0; x < width; x++) {
+          dst[x] = static_cast<uint8_t>(src[x] >> 8);
+        }
+      }
+    }
+    else {
+      for (uint32_t row = 0; row < height; row++) {
+        TIFFReadScanline(tif, buf, row, 0);
+        uint16_t* src = static_cast<uint16_t*>(buf);
+        uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
+        for (uint32_t x = 0; x < width; x++) {
+          dst[x] = static_cast<uint16_t>(src[x] >> bdShift);
+        }
+      }
+    }
+    _TIFFfree(buf);
+  }
+  return heif_error_ok;
+}
+
+heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasAlpha, uint16_t bps, int output_bit_depth, heif_image **image)
+{
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
+
+  if (bps <= 8) {
+    heif_chroma chroma = get_heif_chroma(outSpp, 8);
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+    heif_channel channel = heif_channel_interleaved;
+    heif_image_add_plane(*image, channel, (int)width, (int)height, outSpp * 8);
+
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
+    tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+    for (uint32_t row = 0; row < height; row++) {
+      TIFFReadScanline(tif, buf, row, 0);
+      uint8_t* src = static_cast<uint8_t*>(buf);
+      if (outSpp == samplesPerPixel) {
+        memcpy(py, src, width * outSpp);
+      }
+      else {
+        for (uint32_t x = 0; x < width; x++) {
+          memcpy(py + x * outSpp, src + x * samplesPerPixel, outSpp);
+        }
+      }
+      py += y_stride;
+    }
+    _TIFFfree(buf);
+  }
+  else {
+    heif_chroma chroma = get_heif_chroma(outSpp, output_bit_depth);
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+    heif_channel channel = heif_channel_interleaved;
+    int planeBitDepth = (output_bit_depth <= 8) ? outSpp * 8 : output_bit_depth;
+    heif_image_add_plane(*image, channel, (int)width, (int)height, planeBitDepth);
+
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
+    int bdShift = 16 - output_bit_depth;
+    tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+
+    if (output_bit_depth <= 8) {
+      for (uint32_t row = 0; row < height; row++) {
+        TIFFReadScanline(tif, buf, row, 0);
+        uint16_t* src = static_cast<uint16_t*>(buf);
+        uint8_t* dst = py + row * y_stride;
+        if (outSpp == samplesPerPixel) {
+          for (uint32_t x = 0; x < width * outSpp; x++) {
+            dst[x] = static_cast<uint8_t>(src[x] >> 8);
+          }
+        }
+        else {
+          for (uint32_t x = 0; x < width; x++) {
+            for (uint16_t c = 0; c < outSpp; c++) {
+              dst[x * outSpp + c] = static_cast<uint8_t>(src[x * samplesPerPixel + c] >> 8);
+            }
+          }
+        }
+      }
+    }
+    else {
+      for (uint32_t row = 0; row < height; row++) {
+        TIFFReadScanline(tif, buf, row, 0);
+        uint16_t* src = static_cast<uint16_t*>(buf);
+        uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
+        if (outSpp == samplesPerPixel) {
+          for (uint32_t x = 0; x < width * outSpp; x++) {
+            dst[x] = static_cast<uint16_t>(src[x] >> bdShift);
+          }
+        }
+        else {
+          for (uint32_t x = 0; x < width; x++) {
+            for (uint16_t c = 0; c < outSpp; c++) {
+              dst[x * outSpp + c] = static_cast<uint16_t>(src[x * samplesPerPixel + c] >> bdShift);
+            }
+          }
+        }
+      }
+    }
+    _TIFFfree(buf);
+  }
+  return heif_error_ok;
+}
+
+heif_error readPixelInterleave(TIFF *tif, uint16_t samplesPerPixel, bool hasAlpha, uint16_t bps, int output_bit_depth, heif_image **image)
+{
+  if (samplesPerPixel == 1) {
+    return readMono(tif, bps, output_bit_depth, image);
+  } else {
+    return readPixelInterleaveRGB(tif, samplesPerPixel, hasAlpha, bps, output_bit_depth, image);
+  }
+}
+
+heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasAlpha, uint16_t bps, int output_bit_depth, heif_image **image)
+{
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
+
+  if (bps <= 8) {
+    heif_chroma chroma = get_heif_chroma(outSpp, 8);
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+    heif_channel channel = heif_channel_interleaved;
+    heif_image_add_plane(*image, channel, (int)width, (int)height, outSpp * 8);
+
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
+
+    uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
+    for (uint16_t i = 0; i < outSpp; i++) {
+      uint8_t *dest = py + i;
+      for (uint32_t row = 0; row < height; row++) {
+        TIFFReadScanline(tif, buf, row, i);
+        for (uint32_t x = 0; x < width; x++, dest += outSpp) {
+          *dest = buf[x];
+        }
+        dest += (y_stride - width * outSpp);
+      }
+    }
+    _TIFFfree(buf);
+  }
+  else {
+    heif_chroma chroma = get_heif_chroma(outSpp, output_bit_depth);
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+    heif_channel channel = heif_channel_interleaved;
+    int planeBitDepth = (output_bit_depth <= 8) ? outSpp * 8 : output_bit_depth;
+    heif_image_add_plane(*image, channel, (int)width, (int)height, planeBitDepth);
+
+    size_t y_stride;
+    uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
+    int bdShift = 16 - output_bit_depth;
+    uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
+
+    if (output_bit_depth <= 8) {
+      for (uint16_t i = 0; i < outSpp; i++) {
+        for (uint32_t row = 0; row < height; row++) {
+          TIFFReadScanline(tif, buf, row, i);
+          uint16_t* src = reinterpret_cast<uint16_t*>(buf);
+          uint8_t* dst = py + row * y_stride + i;
+          for (uint32_t x = 0; x < width; x++) {
+            dst[x * outSpp] = static_cast<uint8_t>(src[x] >> 8);
+          }
+        }
+      }
+    }
+    else {
+      for (uint16_t i = 0; i < outSpp; i++) {
+        for (uint32_t row = 0; row < height; row++) {
+          TIFFReadScanline(tif, buf, row, i);
+          uint16_t* src = reinterpret_cast<uint16_t*>(buf);
+          uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
+          for (uint32_t x = 0; x < width; x++) {
+            dst[x * outSpp + i] = static_cast<uint16_t>(src[x] >> bdShift);
+          }
+        }
+      }
+    }
+    _TIFFfree(buf);
+  }
   return heif_error_ok;
 }
 
 
-heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
+heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, bool hasAlpha, uint16_t bps, int output_bit_depth, heif_image **image)
 {
   if (samplesPerPixel == 1) {
-    return readMono(tif, image);
+    return readMono(tif, bps, output_bit_depth, image);
   } else if (samplesPerPixel == 3) {
-    return readBandInterleaveRGB(tif, samplesPerPixel, image);
+    return readBandInterleaveRGB(tif, samplesPerPixel, hasAlpha, bps, output_bit_depth, image);
   } else if (samplesPerPixel == 4) {
-    return readBandInterleaveRGB(tif,  samplesPerPixel, image);
+    return readBandInterleaveRGB(tif, samplesPerPixel, hasAlpha, bps, output_bit_depth, image);
   } else {
     struct heif_error err = {
       .code = heif_error_Unsupported_feature,
@@ -433,15 +582,15 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
       hasAlpha = (extraTypes[0] == EXTRASAMPLE_ASSOCALPHA || extraTypes[0] == EXTRASAMPLE_UNASSALPHA);
     }
     else {
-      // No EXTRASAMPLES tag with 4 spp — assume RGBA for backward compatibility
-      hasAlpha = true;
+      // No EXTRASAMPLES tag with 4 spp — assume the extra sample is not alpha
+      hasAlpha = false;
     }
   }
 
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
-  if (bps != 8) {
+  if (bps != 8 && bps != 16) {
     return {heif_error_Invalid_input, heif_suberror_Unspecified,
-            "Only 8 bits per sample are supported."};
+            "Only 8 and 16 bits per sample are supported."};
   }
 
   uint16_t format;
@@ -456,19 +605,20 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
 
 static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height,
                                   uint32_t tile_width, uint32_t tile_height,
-                                  uint16_t samplesPerPixel, bool hasAlpha, heif_image** out_image)
+                                  uint16_t samplesPerPixel, bool hasAlpha,
+                                  uint16_t bps, int output_bit_depth, heif_image** out_image)
 {
   uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
-  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
-                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
-                       : heif_chroma_interleaved_RGB;
+  int effectiveBitDepth = (bps <= 8) ? 8 : output_bit_depth;
+  heif_chroma chroma = get_heif_chroma(outSpp, effectiveBitDepth);
   heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
   heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
 
   heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, out_image);
   if (err.code != heif_error_Ok) return err;
 
-  heif_image_add_plane(*out_image, channel, (int)width, (int)height, outSpp * 8);
+  int planeBitDepth = (effectiveBitDepth <= 8) ? outSpp * 8 : effectiveBitDepth;
+  heif_image_add_plane(*out_image, channel, (int)width, (int)height, planeBitDepth);
 
   size_t out_stride;
   uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
@@ -492,16 +642,60 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
       uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
       uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
 
-      for (uint32_t row = 0; row < actual_h; row++) {
-        uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp;
-        uint8_t* src = tile_buf.data() + row * tile_width * samplesPerPixel;
-        if (outSpp == samplesPerPixel) {
-          memcpy(dst, src, actual_w * outSpp);
+      if (bps <= 8) {
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp;
+          uint8_t* src = tile_buf.data() + row * tile_width * samplesPerPixel;
+          if (outSpp == samplesPerPixel) {
+            memcpy(dst, src, actual_w * outSpp);
+          }
+          else {
+            for (uint32_t x = 0; x < actual_w; x++) {
+              memcpy(dst + x * outSpp, src + x * samplesPerPixel, outSpp);
+            }
+          }
         }
-        else {
-          // Strip extra sample (RGBX -> RGB)
-          for (uint32_t x = 0; x < actual_w; x++) {
-            memcpy(dst + x * outSpp, src + x * samplesPerPixel, outSpp);
+      }
+      else if (output_bit_depth <= 8) {
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp;
+          uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * tile_width * samplesPerPixel * 2);
+          if (outSpp == samplesPerPixel) {
+            for (uint32_t x = 0; x < actual_w * outSpp; x++) {
+              dst[x] = static_cast<uint8_t>(src[x] >> 8);
+            }
+          }
+          else {
+            for (uint32_t x = 0; x < actual_w; x++) {
+              for (uint16_t c = 0; c < outSpp; c++) {
+                dst[x * outSpp + c] = static_cast<uint8_t>(src[x * samplesPerPixel + c] >> 8);
+              }
+            }
+          }
+        }
+      }
+      else {
+        int bdShift = 16 - output_bit_depth;
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint16_t* dst = reinterpret_cast<uint16_t*>(out_plane + (ty * tile_height + row) * out_stride
+                                                      + tx * tile_width * outSpp * 2);
+          uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * tile_width * samplesPerPixel * 2);
+          if (outSpp == samplesPerPixel) {
+            if (bdShift == 0) {
+              memcpy(dst, src, actual_w * outSpp * 2);
+            }
+            else {
+              for (uint32_t x = 0; x < actual_w * outSpp; x++) {
+                dst[x] = static_cast<uint16_t>(src[x] >> bdShift);
+              }
+            }
+          }
+          else {
+            for (uint32_t x = 0; x < actual_w; x++) {
+              for (uint16_t c = 0; c < outSpp; c++) {
+                dst[x * outSpp + c] = static_cast<uint16_t>(src[x * samplesPerPixel + c] >> bdShift);
+              }
+            }
           }
         }
       }
@@ -514,19 +708,20 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
 
 static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
                                     uint32_t tile_width, uint32_t tile_height,
-                                    uint16_t samplesPerPixel, bool hasAlpha, heif_image** out_image)
+                                    uint16_t samplesPerPixel, bool hasAlpha,
+                                    uint16_t bps, int output_bit_depth, heif_image** out_image)
 {
   uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
-  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
-                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
-                       : heif_chroma_interleaved_RGB;
+  int effectiveBitDepth = (bps <= 8) ? 8 : output_bit_depth;
+  heif_chroma chroma = get_heif_chroma(outSpp, effectiveBitDepth);
   heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
   heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
 
   heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, out_image);
   if (err.code != heif_error_Ok) return err;
 
-  heif_image_add_plane(*out_image, channel, (int)width, (int)height, outSpp * 8);
+  int planeBitDepth = (effectiveBitDepth <= 8) ? outSpp * 8 : effectiveBitDepth;
+  heif_image_add_plane(*out_image, channel, (int)width, (int)height, planeBitDepth);
 
   size_t out_stride;
   uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
@@ -537,7 +732,6 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
   uint32_t n_cols = (width + tile_width - 1) / tile_width;
   uint32_t n_rows = (height + tile_height - 1) / tile_height;
 
-  // Only interleave the first outSpp planes (skip the extra sample plane if !hasAlpha)
   for (uint16_t s = 0; s < outSpp; s++) {
     for (uint32_t ty = 0; ty < n_rows; ty++) {
       for (uint32_t tx = 0; tx < n_cols; tx++) {
@@ -552,11 +746,32 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
         uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
         uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
 
-        for (uint32_t row = 0; row < actual_h; row++) {
-          uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp + s;
-          uint8_t* src = tile_buf.data() + row * tile_width;
-          for (uint32_t x = 0; x < actual_w; x++) {
-            dst[x * outSpp] = src[x];
+        if (bps <= 8) {
+          for (uint32_t row = 0; row < actual_h; row++) {
+            uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp + s;
+            uint8_t* src = tile_buf.data() + row * tile_width;
+            for (uint32_t x = 0; x < actual_w; x++) {
+              dst[x * outSpp] = src[x];
+            }
+          }
+        }
+        else if (output_bit_depth <= 8) {
+          for (uint32_t row = 0; row < actual_h; row++) {
+            uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride + tx * tile_width * outSpp + s;
+            uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * tile_width * 2);
+            for (uint32_t x = 0; x < actual_w; x++) {
+              dst[x * outSpp] = static_cast<uint8_t>(src[x] >> 8);
+            }
+          }
+        }
+        else {
+          int bdShift = 16 - output_bit_depth;
+          for (uint32_t row = 0; row < actual_h; row++) {
+            uint16_t* dst = reinterpret_cast<uint16_t*>(out_plane + (ty * tile_height + row) * out_stride) + tx * tile_width * outSpp + s;
+            uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * tile_width * 2);
+            for (uint32_t x = 0; x < actual_w; x++) {
+              dst[x * outSpp] = static_cast<uint16_t>(src[x] >> bdShift);
+            }
           }
         }
       }
@@ -567,7 +782,7 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
 }
 
 
-heif_error loadTIFF(const char* filename, InputImage *input_image) {
+heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *input_image) {
   TIFFSetWarningHandler(suppress_warnings);
 
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
@@ -581,6 +796,9 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
   bool hasAlpha;
   heif_error err = validateTiffFormat(tif, samplesPerPixel, bps, config, hasAlpha);
   if (err.code != heif_error_Ok) return err;
+
+  // For 8-bit source, always produce 8-bit output (ignore output_bit_depth).
+  int effectiveOutputBitDepth = (bps <= 8) ? 8 : output_bit_depth;
 
   struct heif_image* image = nullptr;
 
@@ -596,10 +814,10 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
 
     switch (config) {
       case PLANARCONFIG_CONTIG:
-        err = readTiledContiguous(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, &image);
+        err = readTiledContiguous(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
         break;
       case PLANARCONFIG_SEPARATE:
-        err = readTiledSeparate(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, &image);
+        err = readTiledSeparate(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
         break;
       default:
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
@@ -608,10 +826,10 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
   else {
     switch (config) {
       case PLANARCONFIG_CONTIG:
-        err = readPixelInterleave(tif, samplesPerPixel, &image);
+        err = readPixelInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
         break;
       case PLANARCONFIG_SEPARATE:
-        err = readBandInterleave(tif, samplesPerPixel, &image);
+        err = readBandInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
         break;
       default:
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
@@ -767,24 +985,24 @@ bool TiledTiffReader::setDirectory(uint32_t dir_index)
 }
 
 
-heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, heif_image** out_image)
+heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_depth, heif_image** out_image)
 {
   TIFF* tif = static_cast<TIFF*>(m_tif.get());
 
   uint32_t actual_w = std::min(m_tile_width, m_image_width - tx * m_tile_width);
   uint32_t actual_h = std::min(m_tile_height, m_image_height - ty * m_tile_height);
 
+  int effectiveBitDepth = (m_bits_per_sample <= 8) ? 8 : output_bit_depth;
   uint16_t outSpp = (m_samples_per_pixel == 4 && !m_has_alpha) ? 3 : m_samples_per_pixel;
-  heif_chroma chroma = (outSpp == 1) ? heif_chroma_monochrome
-                       : (outSpp == 4) ? heif_chroma_interleaved_RGBA
-                       : heif_chroma_interleaved_RGB;
+  heif_chroma chroma = get_heif_chroma(outSpp, effectiveBitDepth);
   heif_colorspace colorspace = (outSpp == 1) ? heif_colorspace_monochrome : heif_colorspace_RGB;
   heif_channel channel = (outSpp == 1) ? heif_channel_Y : heif_channel_interleaved;
 
   heif_error err = heif_image_create((int)actual_w, (int)actual_h, colorspace, chroma, out_image);
   if (err.code != heif_error_Ok) return err;
 
-  heif_image_add_plane(*out_image, channel, (int)actual_w, (int)actual_h, outSpp * 8);
+  int planeBitDepth = (effectiveBitDepth <= 8) ? outSpp * 8 : effectiveBitDepth;
+  heif_image_add_plane(*out_image, channel, (int)actual_w, (int)actual_h, planeBitDepth);
 
   size_t out_stride;
   uint8_t* out_plane = heif_image_get_plane2(*out_image, channel, &out_stride);
@@ -801,21 +1019,65 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, heif_image** out_
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
     }
 
-    for (uint32_t row = 0; row < actual_h; row++) {
-      uint8_t* dst = out_plane + row * out_stride;
-      uint8_t* src = tile_buf.data() + row * m_tile_width * m_samples_per_pixel;
-      if (outSpp == m_samples_per_pixel) {
-        memcpy(dst, src, actual_w * outSpp);
+    if (m_bits_per_sample <= 8) {
+      for (uint32_t row = 0; row < actual_h; row++) {
+        uint8_t* dst = out_plane + row * out_stride;
+        uint8_t* src = tile_buf.data() + row * m_tile_width * m_samples_per_pixel;
+        if (outSpp == m_samples_per_pixel) {
+          memcpy(dst, src, actual_w * outSpp);
+        }
+        else {
+          for (uint32_t x = 0; x < actual_w; x++) {
+            memcpy(dst + x * outSpp, src + x * m_samples_per_pixel, outSpp);
+          }
+        }
       }
-      else {
-        for (uint32_t x = 0; x < actual_w; x++) {
-          memcpy(dst + x * outSpp, src + x * m_samples_per_pixel, outSpp);
+    }
+    else if (output_bit_depth <= 8) {
+      for (uint32_t row = 0; row < actual_h; row++) {
+        uint8_t* dst = out_plane + row * out_stride;
+        uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * m_tile_width * m_samples_per_pixel * 2);
+        if (outSpp == m_samples_per_pixel) {
+          for (uint32_t x = 0; x < actual_w * outSpp; x++) {
+            dst[x] = static_cast<uint8_t>(src[x] >> 8);
+          }
+        }
+        else {
+          for (uint32_t x = 0; x < actual_w; x++) {
+            for (uint16_t c = 0; c < outSpp; c++) {
+              dst[x * outSpp + c] = static_cast<uint8_t>(src[x * m_samples_per_pixel + c] >> 8);
+            }
+          }
+        }
+      }
+    }
+    else {
+      int bdShift = 16 - output_bit_depth;
+      for (uint32_t row = 0; row < actual_h; row++) {
+        uint16_t* dst = reinterpret_cast<uint16_t*>(out_plane + row * out_stride);
+        uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * m_tile_width * m_samples_per_pixel * 2);
+        if (outSpp == m_samples_per_pixel) {
+          if (bdShift == 0) {
+            memcpy(dst, src, actual_w * outSpp * 2);
+          }
+          else {
+            for (uint32_t x = 0; x < actual_w * outSpp; x++) {
+              dst[x] = static_cast<uint16_t>(src[x] >> bdShift);
+            }
+          }
+        }
+        else {
+          for (uint32_t x = 0; x < actual_w; x++) {
+            for (uint16_t c = 0; c < outSpp; c++) {
+              dst[x * outSpp + c] = static_cast<uint16_t>(src[x * m_samples_per_pixel + c] >> bdShift);
+            }
+          }
         }
       }
     }
   }
   else {
-    // PLANARCONFIG_SEPARATE: only read the first outSpp planes
+    // PLANARCONFIG_SEPARATE
     for (uint16_t s = 0; s < outSpp; s++) {
       tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * m_tile_width, ty * m_tile_height, 0, s),
                                           tile_buf.data(), tile_buf_size);
@@ -825,11 +1087,32 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, heif_image** out_
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
       }
 
-      for (uint32_t row = 0; row < actual_h; row++) {
-        uint8_t* dst = out_plane + row * out_stride + s;
-        uint8_t* src = tile_buf.data() + row * m_tile_width;
-        for (uint32_t x = 0; x < actual_w; x++) {
-          dst[x * outSpp] = src[x];
+      if (m_bits_per_sample <= 8) {
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + row * out_stride + s;
+          uint8_t* src = tile_buf.data() + row * m_tile_width;
+          for (uint32_t x = 0; x < actual_w; x++) {
+            dst[x * outSpp] = src[x];
+          }
+        }
+      }
+      else if (output_bit_depth <= 8) {
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + row * out_stride + s;
+          uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * m_tile_width * 2);
+          for (uint32_t x = 0; x < actual_w; x++) {
+            dst[x * outSpp] = static_cast<uint8_t>(src[x] >> 8);
+          }
+        }
+      }
+      else {
+        int bdShift = 16 - output_bit_depth;
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint16_t* dst = reinterpret_cast<uint16_t*>(out_plane + row * out_stride) + s;
+          uint16_t* src = reinterpret_cast<uint16_t*>(tile_buf.data() + row * m_tile_width * 2);
+          for (uint32_t x = 0; x < actual_w; x++) {
+            dst[x * outSpp] = static_cast<uint16_t>(src[x] >> bdShift);
+          }
         }
       }
     }
