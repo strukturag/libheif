@@ -711,7 +711,7 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
     }
   }
   else if (filetype == TIFF) {
-    heif_error err = loadTIFF(input_filename.c_str(), &input_image);
+    heif_error err = loadTIFF(input_filename.c_str(), output_bit_depth, &input_image);
     if (err.code != heif_error_Ok) {
       std::cerr << "Can not load TIFF input image: " << err.message << '\n';
       exit(1);
@@ -1049,10 +1049,10 @@ public:
   uint32_t nColumns() const override { return m_reader->nColumns(); }
   uint32_t nRows() const override { return m_reader->nRows(); }
 
-  InputImage get_image(uint32_t tx, uint32_t ty, int /*output_bit_depth*/) override
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
   {
     heif_image* tile_image = nullptr;
-    heif_error err = m_reader->readTile(tx, ty, &tile_image);
+    heif_error err = m_reader->readTile(tx, ty, output_bit_depth, &tile_image);
     if (err.code != heif_error_Ok) {
       std::cerr << "Error reading TIFF tile " << tx << "," << ty << ": " << err.message << "\n";
       exit(1);
