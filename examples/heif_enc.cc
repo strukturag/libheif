@@ -2190,6 +2190,83 @@ static std::vector<uint8_t> hex_to_binary(const std::string& line)
 }
 
 
+// Convert base64 data to raw binary.
+static std::vector<uint8_t> decode_base64(const std::string& line)
+{
+  const std::string base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::vector<uint8_t> data;
+
+  size_t len = line.size();
+  if (len % 4 != 0) {
+    len = int(len / 4) * 4;
+  }
+
+  for (size_t i = 0; i < len; i += 4) {
+    uint8_t buf[4];
+    for (uint8_t j = 0; j < 4; j++) {
+      size_t k = base64.find(line[i + j]);
+      buf[j] = (uint8_t)(k == std::string::npos ? base64.size() : k);
+    }
+
+    data.push_back((uint8_t)(buf[0] << 2) + (buf[1] >> 4));
+
+    if (line[i + 2] != '=') {
+      data.push_back((uint8_t)((buf[1] & 0x0f) << 4) + (buf[2] >> 2));
+    }
+
+    if (line[i + 3] != '=') {
+      data.push_back((uint8_t)((buf[2] & 0x03) << 6) + buf[3]);
+    }
+  }
+
+  return data;
+}
+
+
+// Parse metadata from WebVMT sync commmands
+static std::vector<uint8_t> parse_vmt_sync_data(const std::string& content)
+{
+  std::vector<uint8_t> data;
+
+  std::regex pattern_sync(R"(\s*\{\s*\"sync\"\s*:\s*\{(.*?)\}\s*\}\s*)");
+  const std::sregex_token_iterator ti_end;
+
+  for (std::sregex_token_iterator ti(content.begin(), content.end(), pattern_sync, 1); ti != ti_end; ++ti)
+  {
+    std::string sync = *ti;
+    std::regex pattern_type(R"(.*\"type\"\s*:\s*\"(.*?)\".*)");
+    std::regex pattern_data(R"(.*\"data\"\s*:\s*\"(.*?)\".*)");
+    std::smatch match;
+
+    if (std::regex_match(sync, match, pattern_type)) {
+      std::string type = match[1];
+
+      std::regex pattern_hex(R"(.*\.hex$)");
+      std::regex pattern_b64(R"(.*\.base64$)");
+
+      std::string textData;
+      if (std::regex_match(sync, match, pattern_data)) {
+        textData = match[1];
+      }
+
+      if (std::regex_match(type, match, pattern_hex)) {
+        std::vector<uint8_t> binaryData = hex_to_binary(textData);
+        data.insert(data.end(), binaryData.begin(), binaryData.end());
+      }
+      else if (std::regex_match(type, match, pattern_b64)) {
+        std::vector<uint8_t> binaryData = decode_base64(textData);
+        data.insert(data.end(), binaryData.begin(), binaryData.end());
+      }
+      else {
+        data.insert(data.end(), textData.data(), textData.data() + textData.length());
+      }
+    }
+  }
+
+  return data;
+}
+
+
 uint32_t parse_vmt_timestamp(const std::string& vmt_time)
 {
   std::regex pattern(R"(-?((\d*):)?(\d\d):(\d\d)(\.(\d*))?)");
@@ -2244,7 +2321,8 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
 
   std::ifstream istr(vmt_metadata_file.c_str());
 
-  std::regex pattern(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?)");
+  std::regex pattern_cue(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?.*)");
+  std::regex pattern_note(R"(^\s*(NOTE).*)");
 
   static std::vector<uint8_t> prev_metadata;
   static std::optional<uint32_t> prev_ts;
@@ -2254,7 +2332,17 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
   {
     std::smatch match;
 
-    if (!std::regex_match(line, match, pattern)) {
+    if (std::regex_match(line, match, pattern_note)) {
+      while (std::getline(istr, line)) {
+        if (line.empty()) {
+          break;
+        }
+      }
+
+      continue;
+    }
+
+    if (!std::regex_match(line, match, pattern_cue)) {
       continue;
     }
 
@@ -2287,6 +2375,8 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
       }
 
       concat.push_back(0);
+      std::string content(concat.begin(), concat.end());
+      concat = parse_vmt_sync_data(content);
     }
 
     if (ts != BAD_VMT_TIMESTAMP) {
@@ -2300,14 +2390,14 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
         concat.insert(concat.begin(), prev_metadata.begin(), prev_metadata.end());
       }
       else {
-        std::cerr << "Bad VMT timestamp order: " << cue_start << "\n";
+        std::cerr << "Bad WebVMT timestamp order: " << cue_start << "\n";
       }
 
       prev_ts = ts;
       prev_metadata = concat;
     }
     else {
-      std::cerr << "Bad VMT timestamp: " << cue_start << "\n";
+      std::cerr << "Bad WebVMT timestamp: " << cue_start << "\n";
     }
   }
 
