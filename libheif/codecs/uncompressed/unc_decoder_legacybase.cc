@@ -58,9 +58,11 @@ void unc_decoder_legacybase::ensureChannelList(std::shared_ptr<HeifPixelImage>& 
 
 void unc_decoder_legacybase::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
 {
+  uint32_t idx = 0;
   for (Box_uncC::Component component : m_uncC->get_components()) {
-    ChannelListEntry entry = buildChannelListEntry(component, img);
+    ChannelListEntry entry = buildChannelListEntry(idx, component, img);
     channelList.push_back(entry);
+    idx++;
   }
 }
 
@@ -134,12 +136,13 @@ void unc_decoder_legacybase::processComponentTileRow(ChannelListEntry& entry, Un
 }
 
 
-unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelListEntry(Box_uncC::Component component,
+unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelListEntry(uint32_t component_idx,
+                                                                                        Box_uncC::Component component,
                                                                                         std::shared_ptr<HeifPixelImage>& img)
 {
   ChannelListEntry entry;
   entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, component, &(entry.channel));
-  entry.dst_plane = img->get_plane(entry.channel, &(entry.dst_plane_stride));
+  entry.dst_plane = img->get_component(component_idx, &(entry.dst_plane_stride));
   entry.tile_width = m_tile_width;
   entry.tile_height = m_tile_height;
   entry.other_chroma_dst_plane_stride = 0; // will be overwritten below if used

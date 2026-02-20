@@ -388,6 +388,11 @@ TEST_CASE("Multi-mono uint16")
   test_multi_mono<uint16_t>(heif_channel_datatype_unsigned_integer, 16, "multi_mono_uint16.heif");
 }
 
+TEST_CASE("Multi-mono uint12")
+{
+  test_multi_mono<uint16_t>(heif_channel_datatype_unsigned_integer, 12, "multi_mono_uint12.heif");
+}
+
 TEST_CASE("Multi-mono uint32")
 {
   test_multi_mono<uint32_t>(heif_channel_datatype_unsigned_integer, 32, "multi_mono_uint32.heif");

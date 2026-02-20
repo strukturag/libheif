@@ -40,14 +40,13 @@ public:
 private:
   struct channel_component
   {
+    uint32_t component_idx;
     heif_channel channel;
     heif_uncompressed_component_type component_type;
     uint8_t bpp;
   };
 
   std::vector<channel_component> m_components;
-
-  void add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel);
 };
 
 

@@ -198,7 +198,7 @@ protected:
 
 private:
   void buildChannelList(std::shared_ptr<HeifPixelImage>& img);
-  ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
+  ChannelListEntry buildChannelListEntry(uint32_t component_idx, Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
 };
 
 #endif
