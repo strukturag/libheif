@@ -30,6 +30,7 @@
 #include <iostream>
 #include <memory>
 #include "decoder_png.h"
+#include "common_utils.h"
 #include "exif.h"
 
 extern "C" {
@@ -75,6 +76,19 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 #endif
   uint8_t* profile_data = nullptr;
   png_uint_32 profile_length = 5;
+#ifdef PNG_cICP_SUPPORTED
+  uint8_t color_primaries, transfer_characteristics, matrix_coefficients, video_full_range;
+  bool has_cICP = false;
+#endif
+#ifdef PNG_cLLI_SUPPORTED
+  uint32_t maximum_content_light_level_scaled_by_10000, maximum_frame_average_light_level_scaled_by_10000;
+  bool has_cLL = false;
+#endif
+#ifdef PNG_mDCV_SUPPORTED
+  png_fixed_point white_point_x, white_point_y, display_primaries_x[3], display_primaries_y[3];
+  png_uint_32 max_display_mastering_luminance, min_display_mastering_luminance;
+  bool has_mDCV = false;
+#endif
 
   /* Create and initialize the png_struct with the desired error handler
    * functions.  If you want to use the default stderr and longjump method,
@@ -180,6 +194,38 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
    * update the palette for you (ie you selected such a transform above).
    */
   png_read_update_info(png_ptr, info_ptr);
+
+  /* PNGv3 header */
+#ifdef PNG_cLLI_SUPPORTED
+  /* Set content light level
+  */
+  if (png_get_cLLI_fixed(png_ptr, info_ptr, &maximum_content_light_level_scaled_by_10000, &maximum_frame_average_light_level_scaled_by_10000) == PNG_INFO_cLLI)
+  {
+    has_cLL = true;
+  }
+  else {
+    has_cLL = false;
+  }
+#endif
+#ifdef PNG_cICP_SUPPORTED
+  if (png_get_cICP(png_ptr, info_ptr, &color_primaries, &transfer_characteristics, &matrix_coefficients, &video_full_range) == PNG_INFO_cICP)
+  {
+    has_cICP = true;
+  }
+  else {
+    has_cICP = false;
+  }
+#endif
+#ifdef PNG_mDCV_SUPPORTED
+  if (png_get_mDCV_fixed(png_ptr, info_ptr, &white_point_x, &white_point_y,
+    &display_primaries_x[0], &display_primaries_y[0], &display_primaries_x[1], &display_primaries_y[1], &display_primaries_x[2], &display_primaries_y[2],
+    &max_display_mastering_luminance, &min_display_mastering_luminance) == PNG_INFO_cICP) {
+    has_mDCV = true;
+  }
+  else {
+    has_mDCV = false;
+  }
+#endif
 
   /* Allocate the memory to hold the image using the fields of info_ptr. */
 
@@ -419,6 +465,65 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
       }
     }
     else {
+      // band > 2, output_bit_depth > 8
+#ifdef PNG_cICP_SUPPORTED
+      if (has_cICP) {
+        heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+        if (nclx) {
+          heif_nclx_color_profile_set_color_primaries(nclx, color_primaries);
+          heif_nclx_color_profile_set_transfer_characteristics(nclx, transfer_characteristics);
+          switch (color_primaries) {
+          case heif_color_primaries_ITU_R_BT_709_5:
+          default:
+            matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5;
+            break;
+          case heif_color_primaries_ITU_R_BT_470_6_System_B_G:
+            matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
+            break;
+          case heif_color_primaries_ITU_R_BT_601_6:
+            matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+            break;
+          case heif_color_primaries_SMPTE_240M:
+            matrix_coefficients = heif_matrix_coefficients_SMPTE_240M;
+            break;
+          case heif_color_primaries_ITU_R_BT_2020_2_and_2100_0:
+            matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance;
+            break;
+          }
+          heif_nclx_color_profile_set_matrix_coefficients(nclx, matrix_coefficients);
+          nclx->full_range_flag = true;
+          heif_image_set_nclx_color_profile(image, nclx);
+          heif_nclx_color_profile_free(nclx);
+        }
+      }
+#endif
+
+#ifdef PNG_cLLI_SUPPORTED
+      if (has_cLL) {
+        heif_content_light_level clli;
+        clli.max_content_light_level = clip_int_u16(maximum_content_light_level_scaled_by_10000 / 10000, 10000);
+        clli.max_pic_average_light_level = clip_int_u16(maximum_frame_average_light_level_scaled_by_10000 / 10000, 10000);
+        heif_image_set_content_light_level(image, &clli);
+      }
+#endif
+
+#ifdef PNG_mDCV_SUPPORTED
+      if (has_mDCV) {
+        heif_mastering_display_colour_volume mdcv;
+        mdcv.white_point_x = clip_int_u16(white_point_x, 37000);
+        mdcv.white_point_y = clip_int_u16(white_point_y, 42000);
+        mdcv.display_primaries_x[0] = clip_int_u16(display_primaries_x[0], 37000);
+        mdcv.display_primaries_x[1] = clip_int_u16(display_primaries_x[1], 37000);
+        mdcv.display_primaries_x[2] = clip_int_u16(display_primaries_x[2], 37000);
+        mdcv.display_primaries_y[0] = clip_int_u16(display_primaries_y[0], 42000);
+        mdcv.display_primaries_y[1] = clip_int_u16(display_primaries_y[1], 42000);
+        mdcv.display_primaries_y[2] = clip_int_u16(display_primaries_y[2], 42000);
+        mdcv.max_display_mastering_luminance = max_display_mastering_luminance;
+        mdcv.min_display_mastering_luminance = min_display_mastering_luminance;
+        heif_image_set_mastering_display_colour_volume(image, &mdcv);
+      }
+#endif
+
       for (uint32_t y = 0; y < height; y++) {
         uint8_t* p = row_pointers[y];
 
