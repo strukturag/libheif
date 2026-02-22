@@ -484,6 +484,10 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 
     out->set_sample_duration(in->get_sample_duration());
 
+#if HEIF_WITH_OMAF
+    out->set_image_projection(in->get_image_projection());
+#endif
+
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {
       out->add_warning(warning);

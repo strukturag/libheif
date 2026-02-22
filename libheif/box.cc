@@ -884,6 +884,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_sdtp>();
       break;
 
+#if HEIF_WITH_OMAF
+    // OMAF
+    case fourcc("prfr"):
+      box = std::make_shared<Box_prfr>();
+      break;
+#endif
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;

@@ -26,6 +26,9 @@
 #include "error.h"
 #include "nclx.h"
 #include <libheif/heif_experimental.h>
+#if HEIF_WITH_OMAF
+#include "omaf_boxes.h"
+#endif
 #include "security_limits.h"
 
 #include <vector>
@@ -177,6 +180,20 @@ public:
 
   std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
 
+#if HEIF_WITH_OMAF
+  bool has_image_projection() const {
+    return (m_image_projection != heif_image_projection::flat);
+  }
+
+  const heif_image_projection get_image_projection() const {
+    return m_image_projection;
+  }
+
+  virtual void set_image_projection(const heif_image_projection projection) {
+    m_image_projection = projection;
+  }
+#endif
+
 private:
   bool m_premultiplied_alpha = false;
   nclx_profile m_color_profile_nclx = nclx_profile::undefined();
@@ -191,6 +208,10 @@ private:
 
   std::optional<std::string> m_gimi_sample_content_id;
 
+#if HEIF_WITH_OMAF
+  heif_image_projection m_image_projection = heif_image_projection::flat;
+#endif
+
 protected:
   std::shared_ptr<Box_clli> get_clli_box() const;
 
@@ -201,6 +222,10 @@ protected:
   std::shared_ptr<Box_colr> get_colr_box_nclx() const;
 
   std::shared_ptr<Box_colr> get_colr_box_icc() const;
+
+#if HEIF_WITH_OMAF
+  std::shared_ptr<Box_prfr> get_prfr_box() const;
+#endif
 };
 
 

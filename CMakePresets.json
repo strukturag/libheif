@@ -25,6 +25,7 @@
         "WITH_DAV1D" : "ON",
         "WITH_DAV1D_PLUGIN" : "OFF",
         "ENABLE_EXPERIMENTAL_MINI_FORMAT" : "ON",
+        "HEIF_WITH_OMAF" : "ON",
         "WITH_LIBDE265" : "ON",
         "WITH_LIBDE265_PLUGIN" : "OFF",
         "WITH_RAV1E" : "ON",
@@ -75,6 +76,7 @@
         "BUILD_SHARED_LIBS": "ON",
         "BUILD_TESTING" : "OFF",
         "ENABLE_EXPERIMENTAL_FEATURES" : "OFF",
+        "HEIF_WITH_OMAF" : "ON",
         "CMAKE_COMPILE_WARNING_AS_ERROR" : "OFF",
 
         "ENABLE_PLUGIN_LOADING" : "ON",
@@ -131,6 +133,7 @@
         "BUILD_SHARED_LIBS": "ON",
         "BUILD_TESTING" : "OFF",
         "ENABLE_EXPERIMENTAL_FEATURES" : "OFF",
+        "HEIF_WITH_OMAF" : "ON",
         "CMAKE_COMPILE_WARNING_AS_ERROR" : "OFF",
 
         "ENABLE_PLUGIN_LOADING" : "OFF",

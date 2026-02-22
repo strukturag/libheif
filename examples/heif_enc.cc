@@ -126,6 +126,10 @@ int sequence_max_frames = 0; // 0 -> no maximum
 std::string option_gimi_track_id;
 std::string option_sai_data_file;
 
+#if HEIF_WITH_OMAF
+int option_image_projection;
+heif_image_projection image_projection = heif_image_projection::flat;
+#endif
 
 enum heif_output_nclx_color_profile_preset
 {
@@ -192,6 +196,9 @@ const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 const int OPTION_USE_HEVC_COMPRESSION = 1037;
+#if HEIF_WITH_OMAF
+const int OPTION_SET_IMAGE_PROJECTION = 1038;
+#endif
 
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -260,6 +267,9 @@ static option long_options[] = {
     {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
     {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
     {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
+#if HEIF_WITH_OMAF
+    {(char* const) "image-projection",            required_argument,       nullptr, OPTION_SET_IMAGE_PROJECTION},
+#endif
     {0, 0,                                                           0,  0}
 };
 
@@ -392,6 +402,10 @@ void show_help(const char* argv0)
             << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
             << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
             << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
+#endif
+#if HEIF_WITH_OMAF
+            << "omnidirectional imagery:\n"
+            << "      --image-projection proj    set the image projection (0 = equirectangular, 1 = cube map)\n"
 #endif
             ;
 }
@@ -1605,6 +1619,19 @@ int main(int argc, char** argv)
       case OPTION_SEQUENCES_SAI_DATA_FILE:
         option_sai_data_file = optarg;
         break;
+#if HEIF_WITH_OMAF
+      case OPTION_SET_IMAGE_PROJECTION:
+        option_image_projection = atoi(optarg);
+        if (option_image_projection == 0) {
+          image_projection = heif_image_projection::equirectangular;
+        } else if (option_image_projection == 1) {
+          image_projection = heif_image_projection::cube_map;
+        } else {
+          std::cerr << "image projection must be 0 or 1\n";
+          return 5;
+        }
+        break;
+#endif
     }
   }
 
@@ -2018,6 +2045,12 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (pasp) {
       heif_image_handle_set_pixel_aspect_ratio(handle, pasp->h, pasp->v);
     }
+
+#if HEIF_WITH_OMAF
+    if (image_projection != heif_image_projection::flat) {
+      heif_image_handle_set_image_projection(handle, image_projection);
+    }
+#endif
 
     if (is_primary_image) {
       heif_context_set_primary_image(context, handle);

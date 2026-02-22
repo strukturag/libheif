@@ -330,6 +330,13 @@ if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
             mini.cc)
 endif ()
 
+if (HEIF_WITH_OMAF)
+    target_compile_definitions(heif PUBLIC HEIF_WITH_OMAF=1)
+    target_sources(heif PRIVATE
+            omaf_boxes.h
+            omaf_boxes.cc)
+endif ()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config

@@ -778,6 +778,28 @@ int main(int argc, char** argv)
       properties_shown = true;
     }
 
+#if HEIF_WITH_OMAF
+    // --- OMAF
+
+    if (heif_image_handle_has_image_projection(handle)) {
+      heif_image_projection projection = heif_image_handle_get_image_projection(handle);
+      std::cout << "  image projection: ";
+      switch (projection)
+      {
+      case heif_image_projection::equirectangular:
+        std::cout << "equirectangular";
+        break;
+      case heif_image_projection::cube_map:
+        std::cout << "cube map";
+      default:
+        std::cout << "(unknown)";
+        break;
+      }
+      std::cout << "\n";
+      properties_shown = true;
+    }
+#endif
+
     if (!properties_shown) {
       std::cout << "none\n";
     }
