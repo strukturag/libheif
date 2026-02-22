@@ -212,6 +212,19 @@ std::shared_ptr<Box_colr> ImageExtraData::get_colr_box_icc() const
   return colr;
 }
 
+#if HEIF_WITH_OMAF
+std::shared_ptr<Box_prfr> ImageExtraData::get_prfr_box() const
+{
+  if (!has_image_projection()) {
+    return {};
+  }
+
+  auto prfr = std::make_shared<Box_prfr>();
+  prfr->set_image_projection(get_image_projection());
+
+  return prfr;
+}
+#endif
 
 std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes(bool generate_colr_boxes) const
 {
@@ -266,6 +279,14 @@ std::vector<std::shared_ptr<Box>> ImageExtraData::generate_property_boxes(bool g
       properties.push_back(get_colr_box_icc());
     }
   }
+
+#if HEIF_WITH_OMAF
+  if (has_image_projection()) {
+    auto prfr = std::make_shared<Box_prfr>();
+    prfr->set_image_projection(get_image_projection());
+    properties.push_back(prfr);
+  }
+#endif
 
   return properties;
 }
@@ -1790,6 +1811,10 @@ void HeifPixelImage::forward_all_metadata_from(const std::shared_ptr<const HeifP
   // TODO: TAI timestamp and contentID (once we merge that branch)
 
   // TODO: should we also forward the warnings? It might be better to do that in ImageItem_Grid.
+
+#if HEIF_WITH_OMAF
+  set_image_projection(src_image->get_image_projection());
+#endif
 }
 
 
