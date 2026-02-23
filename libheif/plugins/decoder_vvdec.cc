@@ -44,6 +44,7 @@ struct vvdec_decoder
   std::vector<std::vector<uint8_t>> nalus;
 };
 
+static const char kEmptyString[] = "";
 static const char kSuccess[] = "Success";
 
 static const int VVDEC_PLUGIN_PRIORITY = 100;
@@ -146,11 +147,27 @@ struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, siz
 
   const auto* data = (const uint8_t*) frame_data;
 
+  if (frame_size < 4) {
+    return {
+      heif_error_Decoder_plugin_error,
+      heif_suberror_End_of_data,
+      kEmptyString
+    };
+  }
+
   for (;;) {
     uint32_t size = ((((uint32_t) data[0]) << 24) |
                      (((uint32_t) data[1]) << 16) |
                      (((uint32_t) data[2]) << 8) |
                      (data[3]));
+
+    if (frame_size < 4 + size) {
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        kEmptyString
+      };
+    }
 
     data += 4;
 
