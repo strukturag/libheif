@@ -23,6 +23,7 @@
 #include "box.h"
 #include <climits>
 #include <string>
+#include <memory>
 
 
 void heif_image_handle_release(const heif_image_handle* handle)

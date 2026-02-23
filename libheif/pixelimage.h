@@ -239,9 +239,21 @@ public:
 
   uint32_t get_height(heif_channel channel) const;
 
+  uint32_t get_width(uint32_t component_idx) const;
+
+  uint32_t get_height(uint32_t component_idx) const;
+
   bool has_odd_width() const { return !!(m_width & 1); }
 
   bool has_odd_height() const { return !!(m_height & 1); }
+
+  // TODO: currently only defined for colorspace RGB, YCbCr, Monochrome
+  //uint32_t get_primary_width() const;
+
+  // TODO: currently only defined for colorspace RGB, YCbCr, Monochrome
+  //uint32_t get_primary_height() const;
+
+  uint32_t get_primary_component() const;
 
   heif_chroma get_chroma_format() const { return m_chroma; }
 

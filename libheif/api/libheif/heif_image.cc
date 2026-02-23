@@ -68,33 +68,15 @@ int heif_image_get_height(const heif_image* img, heif_channel channel)
 
 int heif_image_get_primary_width(const heif_image* img)
 {
-  if (img->image->get_colorspace() == heif_colorspace_RGB) {
-    if (img->image->get_chroma_format() == heif_chroma_444) {
-      return uint32_to_int(img->image->get_width(heif_channel_G));
-    }
-    else {
-      return uint32_to_int(img->image->get_width(heif_channel_interleaved));
-    }
-  }
-  else {
-    return uint32_to_int(img->image->get_width(heif_channel_Y));
-  }
+  uint32_t primary_component = img->image->get_primary_component();
+  return uint32_to_int(img->image->get_width(primary_component));
 }
 
 
 int heif_image_get_primary_height(const heif_image* img)
 {
-  if (img->image->get_colorspace() == heif_colorspace_RGB) {
-    if (img->image->get_chroma_format() == heif_chroma_444) {
-      return uint32_to_int(img->image->get_height(heif_channel_G));
-    }
-    else {
-      return uint32_to_int(img->image->get_height(heif_channel_interleaved));
-    }
-  }
-  else {
-    return uint32_to_int(img->image->get_height(heif_channel_Y));
-  }
+  uint32_t primary_component = img->image->get_primary_component();
+  return uint32_to_int(img->image->get_height(primary_component));
 }
 
 

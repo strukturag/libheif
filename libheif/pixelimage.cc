@@ -724,6 +724,91 @@ uint32_t HeifPixelImage::get_height(enum heif_channel channel) const
 }
 
 
+uint32_t HeifPixelImage::get_width(uint32_t component_idx) const
+{
+  if (component_idx >= m_planes.size()) {
+    return 0;
+  }
+
+  return m_planes[component_idx].m_width;
+}
+
+
+uint32_t HeifPixelImage::get_height(uint32_t component_idx) const
+{
+  if (component_idx >= m_planes.size()) {
+    return 0;
+  }
+
+  return m_planes[component_idx].m_height;
+}
+
+
+uint32_t HeifPixelImage::get_primary_component() const
+{
+  // first pass: search for color channel
+
+  for (uint32_t idx=0; idx<m_planes.size(); idx++) {
+    if (m_planes[idx].m_channel == heif_channel_interleaved) {
+      return idx;
+    }
+
+    switch (m_planes[idx].m_component_type) {
+      case component_type_Y:
+      case component_type_monochrome:
+      case component_type_red:
+      case component_type_green:
+      case component_type_blue:
+      case component_type_cyan:
+      case component_type_magenta:
+      case component_type_yellow:
+      case component_type_key_black:
+      case component_type_filter_array:
+      case component_type_palette:
+        return idx;
+
+      default:
+        ; // NOP
+    }
+  }
+
+  // second pass: allow anything
+
+  return 0;
+}
+#if 0
+uint32_t HeifPixelImage::get_primary_width() const
+{
+  if (m_colorspace == heif_colorspace_RGB) {
+    if (m_chroma == heif_chroma_444) {
+      return get_width(heif_channel_G);
+    }
+    else {
+      return get_width(heif_channel_interleaved);
+    }
+  }
+  else {
+    return get_width(heif_channel_Y);
+  }
+}
+
+
+uint32_t HeifPixelImage::get_primary_height() const
+{
+  if (m_colorspace == heif_colorspace_RGB) {
+    if (m_chroma == heif_chroma_444) {
+      return get_height(heif_channel_G);
+    }
+    else {
+      return get_height(heif_channel_interleaved);
+    }
+  }
+  else {
+    return get_height(heif_channel_Y);
+  }
+}
+#endif
+
 std::set<heif_channel> HeifPixelImage::get_channel_set() const
 {
   std::set<heif_channel> channels;

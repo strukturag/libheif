@@ -191,7 +191,12 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     return false;
   }
 
-  if (!(uncC->get_block_size() == 0 || uncC->get_block_size() == uncC->get_pixel_size())) {
+  if (uncC->get_pixel_size() == 0) {
+    return false;
+  }
+
+  // Block size must be either 0 or equal to the pixel_size.
+  if (uncC->get_block_size() != 0 && uncC->get_block_size() != uncC->get_pixel_size()) {
     return false;
   }
 

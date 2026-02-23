@@ -43,10 +43,10 @@
 unc_decoder::unc_decoder(uint32_t width, uint32_t height,
                          const std::shared_ptr<const Box_cmpd>& cmpd,
                          const std::shared_ptr<const Box_uncC>& uncC)
-    : m_width(width),
-      m_height(height),
-      m_cmpd(cmpd),
-      m_uncC(uncC)
+  : m_width(width),
+    m_height(height),
+    m_cmpd(cmpd),
+    m_uncC(uncC)
 {
   m_tile_height = m_height / m_uncC->get_number_of_tile_rows();
   m_tile_width = m_width / m_uncC->get_number_of_tile_columns();
@@ -97,11 +97,11 @@ Error unc_decoder::fetch_tile_data(const DataExtent& dataExtent,
 
 
 const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
-                                                                 const UncompressedImageCodec::unci_properties& properties,
-                                                                 std::vector<uint8_t>* data,
-                                                                 uint64_t range_start_offset, uint64_t range_size,
-                                                                 uint32_t tile_idx,
-                                                                 const Box_iloc::Item* item) const
+                                                                const UncompressedImageCodec::unci_properties& properties,
+                                                                std::vector<uint8_t>* data,
+                                                                uint64_t range_start_offset, uint64_t range_size,
+                                                                uint32_t tile_idx,
+                                                                const Box_iloc::Item* item) const
 {
   // --- get codec configuration
 
@@ -123,15 +123,17 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
   if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
     const auto& units = icef_box->get_units();
     if (tile_idx >= units.size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "no icef-box entry for tile index"};
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "no icef-box entry for tile index"
+      };
     }
 
     const auto unit = units[tile_idx];
 
     // get data needed for one tile
-    Result<std::vector<uint8_t>> readingResult = dataExtent.read_data(unit.unit_offset, unit.unit_size);
+    Result<std::vector<uint8_t> > readingResult = dataExtent.read_data(unit.unit_offset, unit.unit_size);
     if (!readingResult) {
       return readingResult.error();
     }
@@ -178,9 +180,11 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     }
 
     if (range_start_offset + range_size > data->size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Data range out of existing range"};
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Data range out of existing range"
+      };
     }
 
     // cut out the range that we actually need
@@ -205,9 +209,11 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     *data = std::move(*dataResult);
 
     if (range_start_offset + range_size > data->size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Data range out of existing range"};
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Data range out of existing range"
+      };
     }
 
     // cut out the range that we actually need
@@ -219,7 +225,7 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
 }
 
 
-Result<std::vector<uint8_t>> unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
+Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
                                                               std::vector<uint8_t> compressed_data) const
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
@@ -227,10 +233,10 @@ Result<std::vector<uint8_t>> unc_decoder::do_decompress_data(std::shared_ptr<con
     return decompress_brotli(compressed_data);
 #else
     std::stringstream sstr;
-  sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
-  return Error(heif_error_Unsupported_feature,
-               heif_suberror_Unsupported_generic_compression_method,
-               sstr.str());
+    sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
 #endif
   }
   else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
@@ -338,7 +344,7 @@ bool unc_decoder_factory::check_common_requirements(const std::shared_ptr<const 
 
 Error check_hard_limits(const std::shared_ptr<const Box_uncC>& uncC)
 {
-  const auto& components =uncC->get_components();
+  const auto& components = uncC->get_components();
 
   for (const auto& component : components) {
     switch (component.component_format) {
@@ -368,14 +374,34 @@ Error check_hard_limits(const std::shared_ptr<const Box_uncC>& uncC)
     }
   }
 
+  if (uncC->get_interleave_type() != 1 &&
+      uncC->get_interleave_type() != 5 &&
+      uncC->get_pixel_size() != 0) {
+        return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "uncC pixel_size must be 0 for interleave_types other than 1 or 5."};
+  }
+
+  if (uncC->get_interleave_type() == interleave_mode_pixel &&
+      uncC->get_pixel_size() != 0) {
+    uint32_t total_pixel_bits = 0;
+    for (const auto& component : uncC->get_components()) {
+      total_pixel_bits += component.component_bit_depth;
+    }
+
+    // TODO: we do not consider padding or block sizes yet
+    uint32_t PixelBytes = (total_pixel_bits + 7)/8;
+    if (PixelBytes > uncC->get_pixel_size()) {
+      return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "uncC pixel_size smaller than sum of component sizes."};
+    }
+  }
+
   return {};
 }
 
 
-Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
-    uint32_t width, uint32_t height,
-    const std::shared_ptr<const Box_cmpd>& cmpd,
-    const std::shared_ptr<const Box_uncC>& uncC)
+Result<std::unique_ptr<unc_decoder> > unc_decoder_factory::get_unc_decoder(
+  uint32_t width, uint32_t height,
+  const std::shared_ptr<const Box_cmpd>& cmpd,
+  const std::shared_ptr<const Box_uncC>& uncC)
 {
   static unc_decoder_factory_component_interleave dec_component;
   static unc_decoder_factory_bytealign_component_interleave dec_bytealign_component;
@@ -403,10 +429,10 @@ Result<std::unique_ptr<unc_decoder>> unc_decoder_factory::get_unc_decoder(
 
 // --- decode orchestration ---
 
-Result<std::shared_ptr<HeifPixelImage>> unc_decoder::decode_full_image(
-    const UncompressedImageCodec::unci_properties& properties,
-    const DataExtent& extent,
-    const heif_security_limits* limits)
+Result<std::shared_ptr<HeifPixelImage> > unc_decoder::decode_full_image(
+  const UncompressedImageCodec::unci_properties& properties,
+  const DataExtent& extent,
+  const heif_security_limits* limits)
 {
   const std::shared_ptr<const Box_ispe>& ispe = properties.ispe;
   const std::shared_ptr<const Box_cmpd>& cmpd = properties.cmpd;
@@ -421,7 +447,7 @@ Result<std::shared_ptr<HeifPixelImage>> unc_decoder::decode_full_image(
     return {global_limit_error};
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = UncompressedImageCodec::create_image(cmpd, uncC, width, height, limits);
+  Result<std::shared_ptr<HeifPixelImage> > createImgResult = UncompressedImageCodec::create_image(cmpd, uncC, width, height, limits);
   if (!createImgResult) {
     return createImgResult.error();
   }

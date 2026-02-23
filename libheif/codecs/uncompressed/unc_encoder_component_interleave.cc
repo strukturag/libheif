@@ -27,82 +27,72 @@
 
 
 bool unc_encoder_factory_component_interleave::can_encode(const std::shared_ptr<const HeifPixelImage>& image,
-                                                   const heif_encoding_options& options) const
+                                                          const heif_encoding_options& options) const
 {
   if (image->has_channel(heif_channel_interleaved)) {
     return false;
   }
 
-  // Check if any component has non-byte-aligned bpp
-  for (auto channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr,
-                        heif_channel_R, heif_channel_G, heif_channel_B,
-                        heif_channel_Alpha, heif_channel_filter_array,
-                        heif_channel_depth, heif_channel_disparity}) {
-    if (image->has_channel(channel)) {
-      int bpp = image->get_bits_per_pixel(channel);
-      if (bpp % 8 != 0) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return true;
 }
 
 
 std::unique_ptr<const unc_encoder> unc_encoder_factory_component_interleave::create(const std::shared_ptr<const HeifPixelImage>& image,
-                                                                              const heif_encoding_options& options) const
+                                                                                    const heif_encoding_options& options) const
 {
   return std::make_unique<unc_encoder_component_interleave>(image, options);
 }
 
 
-void unc_encoder_component_interleave::add_channel_if_exists(const std::shared_ptr<const HeifPixelImage>& image, heif_channel channel)
-{
-  if (image->has_channel(channel)) {
-    uint8_t bpp = image->get_bits_per_pixel(channel);
-    m_components.push_back({channel, heif_channel_to_component_type(channel), bpp});
-  }
-}
-
-
 unc_encoder_component_interleave::unc_encoder_component_interleave(const std::shared_ptr<const HeifPixelImage>& image,
-                                                     const heif_encoding_options& options)
+                                                                   const heif_encoding_options& options)
 {
-  // Special case for heif_channel_Y:
-  // - if this is a YCbCr image, use component_type_Y,
-  // - otherwise, use component_type_monochrome
+  bool is_nonvisual = (image->get_colorspace() == heif_colorspace_nonvisual);
+  uint32_t num_components = image->get_number_of_components();
 
-  if (image->has_channel(heif_channel_Y)) {
-    uint8_t bpp = image->get_bits_per_pixel(heif_channel_Y);
-    if (image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr)) {
-      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_Y, bpp});
+  for (uint32_t idx = 0; idx < num_components; idx++) {
+    heif_uncompressed_component_type comp_type;
+    heif_channel ch = heif_channel_Y; // default for nonvisual
+
+    if (is_nonvisual) {
+      comp_type = static_cast<heif_uncompressed_component_type>(image->get_component_type(idx));
     }
     else {
-      m_components.push_back({heif_channel_Y, heif_uncompressed_component_type::component_type_monochrome, bpp});
+      ch = image->get_component_channel(idx);
+      if (ch == heif_channel_Y && !image->has_channel(heif_channel_Cb)) {
+        comp_type = component_type_monochrome;
+      }
+      else {
+        comp_type = heif_channel_to_component_type(ch);
+      }
     }
+
+    uint8_t bpp = image->get_component_bits_per_pixel(idx);
+    auto comp_format = to_unc_component_format(image->get_component_datatype(idx));
+    bool aligned = (bpp % 8 == 0);
+
+    m_components.push_back({idx, ch, comp_type, comp_format, bpp, aligned});
   }
 
-  add_channel_if_exists(image, heif_channel_Cb);
-  add_channel_if_exists(image, heif_channel_Cr);
-  add_channel_if_exists(image, heif_channel_R);
-  add_channel_if_exists(image, heif_channel_G);
-  add_channel_if_exists(image, heif_channel_B);
-  add_channel_if_exists(image, heif_channel_Alpha);
-  add_channel_if_exists(image, heif_channel_filter_array);
-  add_channel_if_exists(image, heif_channel_depth);
-  add_channel_if_exists(image, heif_channel_disparity);
+  // Build cmpd/uncC boxes
+  bool little_endian = false;
 
-
-  uint16_t index = 0;
+  uint16_t box_index = 0;
   for (const auto& comp : m_components) {
     m_cmpd->add_component({comp.component_type});
-    m_uncC->add_component({index, comp.bpp, component_format_unsigned, 0});
-    index++;
+
+    uint8_t component_align_size = 0;
+
+    if (comp.byte_aligned && comp.bpp > 8) {
+      little_endian = true;
+    }
+
+    m_uncC->add_component({box_index, comp.bpp, comp.component_format, component_align_size});
+    box_index++;
   }
 
   m_uncC->set_interleave_type(interleave_mode_component);
-  m_uncC->set_components_little_endian(false);
+  m_uncC->set_components_little_endian(little_endian);
   m_uncC->set_block_size(0);
 
   if (image->get_chroma_format() == heif_chroma_420) {
@@ -135,7 +125,13 @@ uint64_t unc_encoder_component_interleave::compute_tile_data_size_bytes(uint32_t
       }
     }
 
-    uint64_t row_bytes = (static_cast<uint64_t>(plane_width) * comp.bpp + 7) / 8;
+    uint64_t row_bytes;
+    if (comp.byte_aligned) {
+      row_bytes = static_cast<uint64_t>(plane_width) * ((comp.bpp + 7) / 8);
+    }
+    else {
+      row_bytes = (static_cast<uint64_t>(plane_width) * comp.bpp + 7) / 8;
+    }
     total += row_bytes * plane_height;
   }
   return total;
@@ -146,48 +142,64 @@ std::vector<uint8_t> unc_encoder_component_interleave::encode_tile(const std::sh
 {
   uint64_t total_size = compute_tile_data_size_bytes(src_image->get_width(), src_image->get_height());
   std::vector<uint8_t> data;
-  data.reserve(total_size);
+  data.resize(total_size);
+
+  uint64_t out_pos = 0;
 
   for (const auto& comp : m_components) {
-    uint32_t plane_width = src_image->get_width(comp.channel);
-    uint32_t plane_height = src_image->get_height(comp.channel);
+    uint32_t plane_width = src_image->get_component_width(comp.component_idx);
+    uint32_t plane_height = src_image->get_component_height(comp.component_idx);
     uint8_t bpp = comp.bpp;
 
     size_t src_stride;
-    const uint8_t* src_data = src_image->get_plane(comp.channel, &src_stride);
+    const uint8_t* src_data = src_image->get_component(comp.component_idx, &src_stride);
 
-    for (uint32_t y = 0; y < plane_height; y++) {
-      const uint8_t* row = src_data + src_stride * y;
+    if (comp.byte_aligned) {
+      // Byte-aligned path: memcpy per row
+      int bytes_per_pixel = (bpp + 7) / 8;
 
-      uint64_t accumulator = 0;
-      int accumulated_bits = 0;
-
-      for (uint32_t x = 0; x < plane_width; x++) {
-        uint32_t sample;
-
-        if (bpp <= 8) {
-          sample = row[x];
-        }
-        else if (bpp <= 16) {
-          sample = reinterpret_cast<const uint16_t*>(row)[x];
-        }
-        else {
-          sample = reinterpret_cast<const uint32_t*>(row)[x];
-        }
-
-        accumulator = (accumulator << bpp) | sample;
-        accumulated_bits += bpp;
-
-        while (accumulated_bits >= 8) {
-          accumulated_bits -= 8;
-          data.push_back(static_cast<uint8_t>(accumulator >> accumulated_bits));
-          accumulator &= (uint64_t{1} << accumulated_bits) - 1;
-        }
+      for (uint32_t y = 0; y < plane_height; y++) {
+        memcpy(data.data() + out_pos,
+               src_data + src_stride * y,
+               plane_width * bytes_per_pixel);
+        out_pos += plane_width * bytes_per_pixel;
       }
+    }
+    else {
+      // Bit-packed path: bit accumulator with row-end flush
+      for (uint32_t y = 0; y < plane_height; y++) {
+        const uint8_t* row = src_data + src_stride * y;
 
-      // Flush partial byte at row end (pad with zeros in LSBs)
-      if (accumulated_bits > 0) {
-        data.push_back(static_cast<uint8_t>(accumulator << (8 - accumulated_bits)));
+        uint64_t accumulator = 0;
+        int accumulated_bits = 0;
+
+        for (uint32_t x = 0; x < plane_width; x++) {
+          uint32_t sample;
+
+          if (bpp <= 8) {
+            sample = row[x];
+          }
+          else if (bpp <= 16) {
+            sample = reinterpret_cast<const uint16_t*>(row)[x];
+          }
+          else {
+            sample = reinterpret_cast<const uint32_t*>(row)[x];
+          }
+
+          accumulator = (accumulator << bpp) | sample;
+          accumulated_bits += bpp;
+
+          while (accumulated_bits >= 8) {
+            accumulated_bits -= 8;
+            data[out_pos++] = static_cast<uint8_t>(accumulator >> accumulated_bits);
+            accumulator &= (uint64_t{1} << accumulated_bits) - 1;
+          }
+        }
+
+        // Flush partial byte at row end (pad with zeros in LSBs)
+        if (accumulated_bits > 0) {
+          data[out_pos++] = static_cast<uint8_t>(accumulator << (8 - accumulated_bits));
+        }
       }
     }
   }

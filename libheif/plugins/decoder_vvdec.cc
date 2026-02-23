@@ -55,6 +55,7 @@ struct vvdec_decoder
   std::string error_message;
 };
 
+static const char kEmptyString[] = "";
 static const char kSuccess[] = "Success";
 
 static const int VVDEC_PLUGIN_PRIORITY = 100;
@@ -179,8 +180,24 @@ heif_error vvdec_push_data2(void* decoder_raw, const void* frame_data, size_t fr
 
   const auto* data = (const uint8_t*) frame_data;
 
+  if (frame_size < 4) {
+    return {
+      heif_error_Decoder_plugin_error,
+      heif_suberror_End_of_data,
+      kEmptyString
+    };
+  }
+
   for (;;) {
     uint32_t size = four_bytes_to_uint32(data[0], data[1], data[2], data[3]);
+
+    if (frame_size < 4 + size) {
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_End_of_data,
+        kEmptyString
+      };
+    }
 
     data += 4;
 

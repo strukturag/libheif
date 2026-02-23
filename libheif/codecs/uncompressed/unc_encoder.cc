@@ -26,7 +26,6 @@
 #include "pixelimage.h"
 #include "unc_boxes.h"
 #include "unc_encoder_component_interleave.h"
-#include "unc_encoder_bytealign_component_interleave.h"
 #include "unc_encoder_rgb_block_pixel_interleave.h"
 #include "unc_encoder_rgb_pixel_interleave.h"
 #include "unc_encoder_rgb_bytealign_pixel_interleave.h"
@@ -89,14 +88,12 @@ Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder
   static unc_encoder_factory_rgb_block_pixel_interleave enc_rgb_block_pixel_interleave;
   static unc_encoder_factory_rgb_bytealign_pixel_interleave enc_rgb_bytealign_pixel_interleave;
   static unc_encoder_factory_component_interleave enc_component_interleave;
-  static unc_encoder_factory_bytealign_component_interleave enc_bytealign_component_interleave;
 
   static const unc_encoder_factory* encoders[]{
     &enc_rgb_pixel_interleave,
     &enc_rgb_block_pixel_interleave,
     &enc_rgb_bytealign_pixel_interleave,
-    &enc_component_interleave,
-    &enc_bytealign_component_interleave
+    &enc_component_interleave
   };
 
   for (const unc_encoder_factory* enc : encoders) {
