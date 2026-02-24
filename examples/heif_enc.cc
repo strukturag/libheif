@@ -2187,6 +2187,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (!option_turtle_file.empty() && !turtle_ids.image_content_id.empty()) {
       heif_image_handle_set_gimi_content_id(handle, turtle_ids.image_content_id.c_str());
+    }
 #endif
       
 #if HEIF_WITH_OMAF
