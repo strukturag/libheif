@@ -119,24 +119,13 @@ rm -f "$DEPS_PATH/lib/"*.so.*
 cd "$SRC/libheif"
 mkdir build
 cd build
-cmake .. --preset=fuzzing \
+PKG_CONFIG="pkg-config --static" PKG_CONFIG_PATH="$DEPS_PATH/lib/pkgconfig" cmake .. --preset=fuzzing \
 	-DFUZZING_COMPILE_OPTIONS="" \
 	-DFUZZING_LINKER_OPTIONS="$LIB_FUZZING_ENGINE" \
 	-DFUZZING_C_COMPILER="$CC" -DFUZZING_CXX_COMPILER="$CXX" \
 	-DWITH_DEFLATE_HEADER_COMPRESSION=OFF
 
 make -j"$(nproc)"
-
-#./autogen.sh
-#PKG_CONFIG="pkg-config --static" PKG_CONFIG_PATH="$DEPS_PATH/lib/pkgconfig" ./configure \
-#	--disable-shared \
-#	--enable-static \
-#	--disable-examples \
-#	--disable-go \
-#	--enable-libfuzzer="$LIB_FUZZING_ENGINE" \
-#	CPPFLAGS="-I$DEPS_PATH/include"
-#make clean
-#make -j"$(nproc)""
 
 cp fuzzing/*_fuzzer "$OUT"
 cp ../fuzzing/data/dictionary.txt "$OUT/box-fuzzer.dict"
