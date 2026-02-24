@@ -2760,6 +2760,11 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
     heif_nclx_color_profile_free(nclx);
   }
 
+  if (!track) {
+    std::cerr << "No input files could be encoded into sequence track\n";
+    return 5;
+  }
+
   std::cout << "\n";
 
   heif_error error = heif_track_encode_end_of_sequence(track, encoder);

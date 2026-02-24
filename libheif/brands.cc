@@ -143,7 +143,7 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
 
   if (ctx->has_sequence()) {
     compatible_brands.push_back(heif_brand2_msf1);
-    compatible_brands.push_back(heif_brand2_iso8);
+    compatible_brands.push_back(heif_brand2_isom);
 
     auto track_result = ctx->get_track(0);
     assert(track_result);

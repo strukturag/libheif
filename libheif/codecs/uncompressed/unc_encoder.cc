@@ -152,6 +152,7 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
   // --- generate configuration property boxes
 
   auto uncC = this->get_uncC();
+  uncC->derive_box_version();
 
   Encoder::CodedImageData codedImageData;
   codedImageData.properties.push_back(uncC);
