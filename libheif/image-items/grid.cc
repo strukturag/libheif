@@ -580,7 +580,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
     return error;
   }
 
-  return tile_item->decode_compressed_image(options, true, tx, ty, processed_ids);
+  return tile_item->decode_compressed_image(options, false, 0, 0, processed_ids);
 }
 
 
