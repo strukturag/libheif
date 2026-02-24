@@ -250,6 +250,15 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_avci   heif_fourcc('a','v','c','i')
 #define heif_brand2_avcs   heif_fourcc('a','v','c','s')
 
+/**
+ * Unified ID namespace (`unif`) brand.
+ *
+ * All IDs (item, track, entity group) share a single global namespace.
+ *
+ * See ISO/IEC 14496-12.
+ */
+#define heif_brand2_unif   heif_fourcc('u','n','i','f')
+
 #define heif_brand2_iso8   heif_fourcc('i','s','o','8')
 #define heif_brand2_isom   heif_fourcc('i','s','o','m')
 #define heif_brand2_mp41   heif_fourcc('m','p','4','1')

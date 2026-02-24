@@ -116,6 +116,7 @@ bool force_enc_jpeg2000 = false;
 bool force_enc_htj2k = false;
 bool use_tiling = false;
 bool encode_sequence = false;
+bool option_unif = false;
 bool use_video_handler = false;
 std::string option_mime_item_type;
 std::string option_mime_item_file;
@@ -132,6 +133,10 @@ int sequence_max_frames = 0; // 0 -> no maximum
 std::string option_gimi_track_id;
 std::string option_sai_data_file;
 
+#if HEIF_WITH_OMAF
+std::optional<heif_omaf_image_projection> omaf_image_projection;
+#endif
+std::vector<heif_brand2> additional_compatible_brands;
 
 enum heif_output_nclx_color_profile_preset
 {
@@ -198,9 +203,15 @@ const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 const int OPTION_USE_HEVC_COMPRESSION = 1037;
+#if HEIF_WITH_OMAF
+const int OPTION_SET_OMAF_IMAGE_PROJECTION = 1038;
+#endif
+const int OPTION_ADD_COMPATIBLE_BRAND = 1039;
+const int OPTION_UNIF = 1040;
+
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
-const int OPTION_TURTLE = 1038;
-const int OPTION_EMBED_TURTLE = 1039;
+const int OPTION_TURTLE = 2000;
+const int OPTION_EMBED_TURTLE = 2001;
 #endif
 
 
@@ -339,6 +350,11 @@ static option long_options[] = {
     {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
     {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
     {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
+#if HEIF_WITH_OMAF
+    {(char* const) "omaf-image-projection",       required_argument,       nullptr, OPTION_SET_OMAF_IMAGE_PROJECTION},
+#endif
+    {(char* const) "add-compatible-brand",        required_argument,       nullptr, OPTION_ADD_COMPATIBLE_BRAND},
+    {(char* const) "unif",                      no_argument,             nullptr, OPTION_UNIF},
     {0, 0,                                                           0,  0}
 };
 
@@ -387,16 +403,18 @@ void show_help(const char* argv0)
   }
   std::cerr << "}.\n"
 #endif
-            << "  -C, --chroma-downsampling ALGO force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
-            << "                                 (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
-            << "      --benchmark                measure encoding time, PSNR, and output file size\n"
-            << "      --pitm-description TEXT    set user description for primary image (experimental)\n"
+            << "  -C, --chroma-downsampling ALGO    force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
+            << "                                    (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
+            << "      --benchmark                   measure encoding time, PSNR, and output file size\n"
+            << "      --pitm-description TEXT       set user description for primary image (experimental)\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
             << "      --turtle FILENAME          read Turtle (RDF) file and assign GIMI content IDs to tiles (experimental)\n"
             << "      --embed-turtle             also embed the Turtle file as metadata item in the HEIF (experimental)\n"
 #endif
+            << "      --add-compatible-brand BRAND  add a compatible brand to the output file (4 characters)\n"
+            << "      --unif                        use unified ID namespace (adds 'unif' compatible brand)\n"
             << "\n"
             << "codecs:\n"
             << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
@@ -473,6 +491,10 @@ void show_help(const char* argv0)
             << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
             << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
             << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
+#endif
+#if HEIF_WITH_OMAF
+            << "omnidirectional imagery:\n"
+            << "      --omaf-image-projection PROJ    set the image projection (equirectangular, cube-map)\n"
 #endif
             ;
 }
@@ -1705,6 +1727,28 @@ int main(int argc, char** argv)
       case OPTION_SEQUENCES_SAI_DATA_FILE:
         option_sai_data_file = optarg;
         break;
+#if HEIF_WITH_OMAF
+      case OPTION_SET_OMAF_IMAGE_PROJECTION:
+        if (strcmp(optarg, "equirectangular") == 0) {
+          omaf_image_projection = heif_omaf_image_projection_equirectangular;
+        } else if (strcmp(optarg, "cube-map") == 0) {
+          omaf_image_projection = heif_omaf_image_projection_cube_map;
+        } else {
+          std::cerr << "image projection must be 'equirectangular' or 'cube-map'\n";
+          return 5;
+        }
+        break;
+#endif
+      case OPTION_ADD_COMPATIBLE_BRAND:
+        if (strlen(optarg) != 4) {
+          std::cerr << "Brand must be exactly 4 characters\n";
+          return 5;
+        }
+        additional_compatible_brands.push_back(heif_fourcc_to_brand(optarg));
+        break;
+      case OPTION_UNIF:
+        option_unif = true;
+        break;
     }
   }
 
@@ -1806,6 +1850,10 @@ int main(int argc, char** argv)
   if (!context) {
     std::cerr << "Could not create context object\n";
     return 1;
+  }
+
+  if (option_unif) {
+    heif_context_set_unif(context.get(), 1);
   }
 
 
@@ -1948,6 +1996,10 @@ int main(int argc, char** argv)
 
 
   // --- write HEIF file
+
+  for (heif_brand2 brand : additional_compatible_brands) {
+    heif_context_add_compatible_brand(context.get(), brand);
+  }
 
   heif_error error = heif_context_write_to_file(context.get(), output_filename.c_str());
   if (error.code) {
@@ -2131,9 +2183,15 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_image_handle_set_pixel_aspect_ratio(handle, pasp->h, pasp->v);
     }
 
+
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     if (!option_turtle_file.empty() && !turtle_ids.image_content_id.empty()) {
       heif_image_handle_set_gimi_content_id(handle, turtle_ids.image_content_id.c_str());
+#endif
+      
+#if HEIF_WITH_OMAF
+    if (omaf_image_projection) {
+      heif_image_handle_set_omaf_image_projection(handle, *omaf_image_projection);
     }
 #endif
 

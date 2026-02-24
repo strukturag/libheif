@@ -22,6 +22,7 @@
 #define LIBHEIF_FILE_H
 
 #include "box.h"
+#include "id_creator.h"
 #include "nclx.h"
 #include "image-items/avif.h"
 #include "image-items/hevc.h"
@@ -183,11 +184,15 @@ public:
 
   // --- writing ---
 
-  heif_item_id get_unused_item_id() const;
+  IDCreator& get_id_creator() { return m_id_creator; }
 
-  heif_item_id add_new_image(uint32_t item_type);
+  const IDCreator& get_id_creator() const { return m_id_creator; }
 
-  std::shared_ptr<Box_infe> add_new_infe_box(uint32_t item_type);
+  Result<heif_item_id> get_unused_item_id();
+
+  Result<heif_item_id> add_new_image(uint32_t item_type);
+
+  Result<std::shared_ptr<Box_infe>> add_new_infe_box(uint32_t item_type);
 
   void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 
@@ -285,6 +290,7 @@ private:
   std::shared_ptr<Box_mvhd> m_mvhd_box;
 
   const heif_security_limits* m_limits = nullptr;
+  IDCreator m_id_creator;
 
   Error parse_heif_file();
 

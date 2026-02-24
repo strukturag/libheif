@@ -165,6 +165,12 @@ std::vector<heif_brand2> compute_compatible_brands(const HeifContext* ctx, heif_
     }
   }
 
+  // --- "unif" brand
+
+  if (ctx->get_unif()) {
+    compatible_brands.push_back(heif_brand2_unif);
+  }
+
   return compatible_brands;
 }
 

@@ -81,6 +81,13 @@ if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
     add_libheif_test(mini_decode)
 endif()
 
+if (HEIF_WITH_OMAF)
+    if (NOT WITH_REDUCED_VISIBILITY)
+        add_libheif_test(omaf_boxes)
+    endif()
+    add_libheif_test(omaf)
+endif()
+
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
     add_libheif_test(uncompressed_decode_mono)

@@ -524,15 +524,10 @@ Track::Track(HeifContext* ctx, uint32_t track_id, const TrackOptions* options, u
   // --- find next free track ID
 
   if (track_id == 0) {
-    track_id = 1; // minimum track ID
-
-    for (const auto& track : m_moov->get_child_boxes<Box_trak>()) {
-      auto tkhd = track->get_child_box<Box_tkhd>();
-
-      if (tkhd->get_track_id() >= track_id) {
-        track_id = tkhd->get_track_id() + 1;
-      }
-    }
+    auto idResult = ctx->get_id_creator().get_new_id(IDCreator::Namespace::track);
+    // Track constructor cannot return errors; assert on overflow (extremely unlikely).
+    assert(idResult);
+    track_id = *idResult;
 
     auto mvhd = m_moov->get_child_box<Box_mvhd>();
     mvhd->set_next_track_id(track_id + 1);

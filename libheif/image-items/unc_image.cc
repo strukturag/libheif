@@ -128,7 +128,11 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   auto file = ctx->get_heif_file();
 
-  heif_item_id unci_id = ctx->get_heif_file()->add_new_image(fourcc("unci"));
+  auto unci_id_result = ctx->get_heif_file()->add_new_image(fourcc("unci"));
+  if (!unci_id_result) {
+    return unci_id_result.error();
+  }
+  heif_item_id unci_id = *unci_id_result;
   auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
   unci_image->set_resolution(parameters->image_width, parameters->image_height);
   unci_image->m_unc_encoder = std::move(*uncEncoder);

@@ -12,4 +12,4 @@ Requires.private: @REQUIRES_PRIVATE@
 Libs: -L${libdir} -lheif
 Libs.private: @LIBS_PRIVATE@
 Cflags: -I${includedir}
-Cflags.private: -DLIBHEIF_STATIC_BUILD
+Cflags.private: -DLIBHEIF_STATIC_BUILD -DHEIF_WITH_OMAF=@WITH_OMAF@

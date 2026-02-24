@@ -88,6 +88,12 @@ public:
   std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
 
+  void set_unif(bool flag);
+
+  bool get_unif() const;
+
+  IDCreator& get_id_creator();
+
   // === image items ===
 
   std::vector<std::shared_ptr<ImageItem>> get_top_level_images(bool return_error_images);
@@ -176,7 +182,7 @@ public:
     m_region_items.push_back(std::move(region_item));
   }
 
-  std::shared_ptr<RegionItem> add_region_item(uint32_t reference_width, uint32_t reference_height);
+  Result<std::shared_ptr<RegionItem>> add_region_item(uint32_t reference_width, uint32_t reference_height);
 
   std::shared_ptr<RegionItem> get_region_item(heif_item_id id) const
   {
@@ -222,7 +228,7 @@ public:
     m_text_items.push_back(std::move(text_item));
   }
 
-  std::shared_ptr<TextItem> add_text_item(const char* content_type, const char* text);
+  Result<std::shared_ptr<TextItem>> add_text_item(const char* content_type, const char* text);
 
   std::shared_ptr<TextItem> get_text_item(heif_item_id id) const
   {

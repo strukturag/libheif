@@ -775,6 +775,12 @@ void heif_context_add_compatible_brand(heif_context* ctx,
 }
 
 
+void heif_context_set_unif(heif_context* ctx, int flag)
+{
+  ctx->context->set_unif(flag != 0);
+}
+
+
 // === DEPRECATED ===
 
 // DEPRECATED: typo in function name

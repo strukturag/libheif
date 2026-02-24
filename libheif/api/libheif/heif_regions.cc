@@ -512,7 +512,11 @@ heif_error heif_image_handle_add_region_item(heif_image_handle* image_handle,
                                              uint32_t reference_width, uint32_t reference_height,
                                              heif_region_item** out_region_item)
 {
-  std::shared_ptr<RegionItem> regionItem = image_handle->context->add_region_item(reference_width, reference_height);
+  auto regionItemResult = image_handle->context->add_region_item(reference_width, reference_height);
+  if (!regionItemResult) {
+    return regionItemResult.error_struct(image_handle->context.get());
+  }
+  std::shared_ptr<RegionItem> regionItem = *regionItemResult;
   image_handle->image->add_region_item_id(regionItem->item_id);
 
   if (out_region_item) {

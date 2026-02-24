@@ -445,7 +445,11 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
 
   // Create IOVL Item
 
-  heif_item_id iovl_id = file->add_new_image(fourcc("iovl"));
+  auto iovl_id_result = file->add_new_image(fourcc("iovl"));
+  if (!iovl_id_result) {
+    return iovl_id_result.error();
+  }
+  heif_item_id iovl_id = *iovl_id_result;
   std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(ctx, iovl_id);
   ctx->insert_image_item(iovl_id, iovl_image);
   const int construction_method = 1; // 0=mdat 1=idat

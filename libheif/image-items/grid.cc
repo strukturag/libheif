@@ -711,7 +711,11 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
   // Create Grid Item
 
   std::shared_ptr<HeifFile> file = ctx->get_heif_file();
-  heif_item_id grid_id = file->add_new_image(fourcc("grid"));
+  auto grid_id_result = file->add_new_image(fourcc("grid"));
+  if (!grid_id_result) {
+    return grid_id_result.error();
+  }
+  heif_item_id grid_id = *grid_id_result;
   grid_image = std::make_shared<ImageItem_Grid>(ctx, grid_id);
   grid_image->set_encoding_options(encoding_options);
   grid_image->set_grid_spec(grid);
@@ -842,7 +846,11 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   // Create Grid Item
 
-  heif_item_id grid_id = file->add_new_image(fourcc("grid"));
+  auto grid_id_result = file->add_new_image(fourcc("grid"));
+  if (!grid_id_result) {
+    return grid_id_result.error();
+  }
+  heif_item_id grid_id = *grid_id_result;
   griditem = std::make_shared<ImageItem_Grid>(ctx, grid_id);
   ctx->insert_image_item(grid_id, griditem);
   const int construction_method = 1; // 0=mdat 1=idat

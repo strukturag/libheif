@@ -167,6 +167,24 @@ void HeifContext::set_security_limits(const heif_security_limits* limits)
 }
 
 
+void HeifContext::set_unif(bool flag)
+{
+  m_heif_file->get_id_creator().set_unif(flag);
+}
+
+
+bool HeifContext::get_unif() const
+{
+  return m_heif_file->get_id_creator().get_unif();
+}
+
+
+IDCreator& HeifContext::get_id_creator()
+{
+  return m_heif_file->get_id_creator();
+}
+
+
 Error HeifContext::read(const std::shared_ptr<StreamReader>& reader)
 {
   m_heif_file = std::make_shared<HeifFile>();
@@ -273,9 +291,13 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
-std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
+Result<std::shared_ptr<RegionItem>> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
-  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("rgan"));
+  auto boxResult = m_heif_file->add_new_infe_box(fourcc("rgan"));
+  if (!boxResult) {
+    return boxResult.error();
+  }
+  auto box = *boxResult;
   box->set_hidden_item(true);
 
   auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
@@ -690,6 +712,13 @@ Error HeifContext::interpret_heif_file_images()
     if (auto box_gimi_content_id = image->get_property<Box_gimi_content_id>()) {
       image->set_gimi_sample_content_id(box_gimi_content_id->get_content_id());
     }
+
+#if HEIF_WITH_OMAF
+    // add image projection information
+    if (auto prfr = image->get_property<Box_prfr>()) {
+      image->set_omaf_image_projection(prfr->get_omaf_image_projection());
+    }
+#endif
   }
 
 
@@ -1695,7 +1724,11 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto metadata_infe_box = m_heif_file->add_new_infe_box(item_type);
+  auto infe_result = m_heif_file->add_new_infe_box(item_type);
+  if (!infe_result) {
+    return infe_result.error();
+  }
+  auto metadata_infe_box = *infe_result;
   metadata_infe_box->set_hidden_item(true);
   if (content_type != nullptr) {
     metadata_infe_box->set_content_type(content_type);
@@ -1849,7 +1882,11 @@ Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_
     ids.push_back(layer_item->get_id());
   }
 
-  heif_item_id group_id = m_heif_file->get_unused_item_id();
+  auto groupIdResult = m_heif_file->get_id_creator().get_new_id(IDCreator::Namespace::entity_group);
+  if (!groupIdResult) {
+    return groupIdResult.error();
+  }
+  heif_item_id group_id = *groupIdResult;
 
   pymd->set_group_id(group_id);
   pymd->set_layers((uint16_t)tile_w, (uint16_t)tile_h, layers, ids);
@@ -2063,9 +2100,13 @@ Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequ
   return trak;
 }
 
-std::shared_ptr<TextItem> HeifContext::add_text_item(const char* content_type, const char* text)
+Result<std::shared_ptr<TextItem>> HeifContext::add_text_item(const char* content_type, const char* text)
 {
-  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("mime"));
+  auto boxResult = m_heif_file->add_new_infe_box(fourcc("mime"));
+  if (!boxResult) {
+    return boxResult.error();
+  }
+  auto box = *boxResult;
   box->set_hidden_item(true);
   box->set_content_type(std::string(content_type));
   auto textItem = std::make_shared<TextItem>(box->get_item_ID(), text);

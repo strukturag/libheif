@@ -387,7 +387,11 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   Encoder::CodedImageData& codedImage = *codingResult;
 
-  auto infe_box = ctx->get_heif_file()->add_new_infe_box(get_infe_type());
+  auto infe_result = ctx->get_heif_file()->add_new_infe_box(get_infe_type());
+  if (!infe_result) {
+    return infe_result.error();
+  }
+  auto infe_box = *infe_result;
   heif_item_id image_id = infe_box->get_item_ID();
   set_id(image_id);
 
@@ -680,6 +684,14 @@ void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_
   add_property(get_colr_box_icc(), false);
 }
 
+#if HEIF_WITH_OMAF
+void ImageItem::set_omaf_image_projection(heif_omaf_image_projection projection)
+{
+  ImageExtraData::set_omaf_image_projection(projection);
+  add_property(get_prfr_box(), true);
+}
+#endif
+
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
@@ -910,7 +922,16 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     if (gimi_content_id) {
       img->set_gimi_sample_content_id(gimi_content_id->get_content_id());
     }
+
+#if HEIF_WITH_OMAF
+    // Image projection (OMAF)
+    auto prfr = get_property<Box_prfr>();
+    if (prfr) {
+      img->set_omaf_image_projection(prfr->get_omaf_image_projection());
+    }
+#endif
   }
+
 
   return img;
 }

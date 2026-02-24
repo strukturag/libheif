@@ -364,6 +364,19 @@ LIBHEIF_API
 void heif_context_add_compatible_brand(heif_context* ctx,
                                        heif_brand2 compatible_brand);
 
+/**
+ * Enable the unified ID namespace ('unif' brand).
+ *
+ * When enabled, item IDs, track IDs, and entity group IDs share a single
+ * global counter so no ID value is reused across categories. The 'unif'
+ * compatible brand is automatically added to the output file.
+ *
+ * @param ctx the encoding context
+ * @param flag non-zero to enable, zero to disable
+ */
+LIBHEIF_API
+void heif_context_set_unif(heif_context* ctx, int flag);
+
 // --- deprecated functions ---
 
 // DEPRECATED, typo in function name
