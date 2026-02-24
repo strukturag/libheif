@@ -1342,7 +1342,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 
   // --- check that the decoded image has the claimed size (only check if transformations are applied)
 
-  if (!options.ignore_transformations) {
+  if (!options.ignore_transformations && !decode_only_tile) {
     uint32_t primary_component = img->get_primary_component();
 
     if (imgitem->get_width() != img->get_width(primary_component) ||

@@ -1254,21 +1254,12 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
   std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
             << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
 
-  int tile_width = 0, tile_height = 0;
+  int tile_width = tiling.tile_width;
+  int tile_height = tiling.tile_height;
 
   for (uint32_t ty = 0; ty < tile_generator->nRows(); ty++)
     for (uint32_t tx = 0; tx < tile_generator->nColumns(); tx++) {
       InputImage input_image = tile_generator->get_image(tx,ty, output_bit_depth);
-
-      if (tile_width == 0) {
-        tile_width = heif_image_get_primary_width(input_image.image.get());
-        tile_height = heif_image_get_primary_height(input_image.image.get());
-
-        if (tile_width <= 0 || tile_height <= 0) {
-          std::cerr << "Could not read input image size correctly\n";
-          return nullptr;
-        }
-      }
 
       heif_error error;
       error = heif_image_extend_to_size_fill_with_zero(input_image.image.get(), tile_width, tile_height);
