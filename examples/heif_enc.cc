@@ -2150,10 +2150,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       std::vector<heif_item_id> pyramid_ids;
       pyramid_ids.push_back(fullres_id);
 
-<<<<<<< HEAD
       int ov_layer_index = 1;
-=======
->>>>>>> master
       for (const auto& ov : tiff_reader_for_pyramid->overviews()) {
         if (!tiff_reader_for_pyramid->setDirectory(ov.dir_index)) {
           std::cerr << "Warning: could not switch to TIFF overview directory " << ov.dir_index << "\n";
@@ -2172,21 +2169,14 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
         ov_tiling.image_height = ov_gen->imageHeight();
         ov_tiling.number_of_extra_dimensions = 0;
 
-<<<<<<< HEAD
         heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling,
                                                     option_turtle_file.empty() ? nullptr : &turtle_ids.tile_content_ids,
                                                     ov_layer_index);
-=======
-        heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling);
->>>>>>> master
         if (ov_handle) {
           pyramid_ids.push_back(heif_image_handle_get_item_id(ov_handle));
           heif_image_handle_release(ov_handle);
         }
-<<<<<<< HEAD
         ov_layer_index++;
-=======
->>>>>>> master
       }
 
       // Restore directory 0 for any subsequent use
