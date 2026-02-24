@@ -31,7 +31,7 @@ Result<uint32_t> IDCreator::get_new_id(Namespace ns)
     return m_next_id_global++;
   }
 
-  uint32_t* counter;
+  uint32_t* counter = nullptr;
   switch (ns) {
     case Namespace::item:
       counter = &m_next_id_item;
