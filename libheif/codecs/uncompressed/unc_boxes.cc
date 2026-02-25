@@ -979,7 +979,7 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
       PatternComponent component{};
       component.component_index = range.read32();
       component.component_gain = range.read_float32();
-      m_components[i] = component;
+      m_components[i * m_pattern_width + j] = component;
     }
   }
 
