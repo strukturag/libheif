@@ -157,6 +157,11 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   }
 
 
+  // Add cpat property if Bayer pattern is set
+  if (unci_image->m_unc_encoder->get_cpat()) {
+    unci_image->add_property(unci_image->m_unc_encoder->get_cpat(), true);
+  }
+
   // Add `ispe` property
 
   auto ispe = std::make_shared<Box_ispe>();

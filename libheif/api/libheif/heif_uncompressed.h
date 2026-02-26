@@ -34,6 +34,124 @@ extern "C" {
  *        See heif_metadata_compression for more information.
  */
 
+// --- ISO 23001-17 component types (Table 1)
+
+typedef enum heif_uncompressed_component_type
+{
+  heif_uncompressed_component_type_monochrome = 0,
+  heif_uncompressed_component_type_Y = 1,
+  heif_uncompressed_component_type_Cb = 2,
+  heif_uncompressed_component_type_Cr = 3,
+  heif_uncompressed_component_type_red = 4,
+  heif_uncompressed_component_type_green = 5,
+  heif_uncompressed_component_type_blue = 6,
+  heif_uncompressed_component_type_alpha = 7,
+  heif_uncompressed_component_type_depth = 8,
+  heif_uncompressed_component_type_disparity = 9,
+  heif_uncompressed_component_type_palette = 10,
+  heif_uncompressed_component_type_filter_array = 11,
+  heif_uncompressed_component_type_padded = 12,
+  heif_uncompressed_component_type_cyan = 13,
+  heif_uncompressed_component_type_magenta = 14,
+  heif_uncompressed_component_type_yellow = 15,
+  heif_uncompressed_component_type_key_black = 16
+} heif_uncompressed_component_type;
+
+
+// --- Bayer / filter array pattern
+
+typedef struct heif_bayer_pattern_pixel
+{
+  uint16_t component_type;  // one of heif_uncompressed_component_type values
+  float component_gain;
+} heif_bayer_pattern_pixel;
+
+// Set a Bayer / filter array pattern on an image.
+// The pattern is a 2D array of component types with dimensions pattern_width x pattern_height.
+// The number of entries in patternPixels must be pattern_width * pattern_height.
+// The component_type values correspond to the ISO 23001-17 component types
+// (e.g. heif_uncompressed_component_type_red=4, heif_uncompressed_component_type_green=5, heif_uncompressed_component_type_blue=6).
+// The encoder resolves these component types to cmpd indices when writing the cpat box.
+LIBHEIF_API
+heif_error heif_image_set_bayer_pattern(heif_image*,
+                                        uint16_t pattern_width,
+                                        uint16_t pattern_height,
+                                        const heif_bayer_pattern_pixel* patternPixels);
+
+// Returns whether the image has a Bayer / filter array pattern.
+// If the image has a pattern, out_pattern_width and out_pattern_height are set.
+// Either output pointer may be NULL if the caller does not need that value.
+LIBHEIF_API
+int heif_image_has_bayer_pattern(const heif_image*,
+                                 uint16_t* out_pattern_width,
+                                 uint16_t* out_pattern_height);
+
+// Get the Bayer / filter array pattern pixels.
+// The caller must provide an array large enough for pattern_width * pattern_height entries
+// (use heif_image_has_bayer_pattern() to query the dimensions first).
+// Returns heif_error_Ok on success, or an error if no pattern is set.
+LIBHEIF_API
+heif_error heif_image_get_bayer_pattern(const heif_image*,
+                                        heif_bayer_pattern_pixel* out_patternPixels);
+
+// --- Polarization pattern (ISO 23001-17, Section 6.1.5)
+
+// Special float value indicating "no polarization filter" at a pattern position.
+// On the wire this is the IEEE 754 bit pattern 0xFFFFFFFF (a signaling NaN).
+// Test with heif_polarization_angle_is_no_filter() below, or with isnan()/std::isnan().
+
+// Returns a float with the 0xFFFFFFFF bit pattern (NaN) representing "no polarization filter".
+LIBHEIF_API
+float heif_polarization_angle_no_filter(void);
+
+// Returns non-zero if the given angle has the "no filter" bit pattern (0xFFFFFFFF).
+LIBHEIF_API
+int heif_polarization_angle_is_no_filter(float angle);
+
+// Add a polarization pattern to an image.
+// component_indices: array of component indices this pattern applies to (may be NULL if num_component_indices == 0,
+//                    meaning the pattern applies to all components).
+// polarization_angles: array of pattern_width * pattern_height float values.
+//                      Each is an angle in degrees [0.0, 360.0), or heif_polarization_angle_no_filter() for "no filter".
+// Multiple patterns can be added (one per distinct component group).
+LIBHEIF_API
+heif_error heif_image_add_polarization_pattern(heif_image*,
+                                               uint32_t num_component_indices,
+                                               const uint32_t* component_indices,
+                                               uint16_t pattern_width,
+                                               uint16_t pattern_height,
+                                               const float* polarization_angles);
+
+// Returns the number of polarization patterns on this image (0 if none).
+LIBHEIF_API
+int heif_image_get_number_of_polarization_patterns(const heif_image*);
+
+// Get the sizes/dimensions of a polarization pattern (to allocate arrays for the data query).
+LIBHEIF_API
+heif_error heif_image_get_polarization_pattern_info(const heif_image*,
+                                                    int pattern_index,
+                                                    uint32_t* out_num_component_indices,
+                                                    uint16_t* out_pattern_width,
+                                                    uint16_t* out_pattern_height);
+
+// Get the actual data of a polarization pattern.
+// Caller must provide pre-allocated arrays:
+//   out_component_indices: num_component_indices entries (may be NULL if num_component_indices == 0)
+//   out_polarization_angles: pattern_width * pattern_height entries
+LIBHEIF_API
+heif_error heif_image_get_polarization_pattern_data(const heif_image*,
+                                                    int pattern_index,
+                                                    uint32_t* out_component_indices,
+                                                    float* out_polarization_angles);
+
+// Find the polarization pattern index that applies to a given component index.
+// Returns the pattern index (>= 0), or -1 if no pattern matches.
+// A pattern with an empty component list (component_count == 0) matches all components.
+LIBHEIF_API
+int heif_image_get_polarization_pattern_index_for_component(const heif_image*,
+                                                            uint32_t component_index);
+
+
 // --- 'unci' images
 
 // This is similar to heif_metadata_compression. We should try to keep the integers compatible, but each enum will just

@@ -102,11 +102,12 @@ const (
 type Colorspace C.enum_heif_colorspace
 
 const (
-	ColorspaceUndefined  = C.heif_colorspace_undefined
-	ColorspaceYCbCr      = C.heif_colorspace_YCbCr
-	ColorspaceRGB        = C.heif_colorspace_RGB
-	ColorspaceMonochrome = C.heif_colorspace_monochrome
-	ColorspaceNonvisual  = C.heif_colorspace_nonvisual
+	ColorspaceUndefined   = C.heif_colorspace_undefined
+	ColorspaceYCbCr       = C.heif_colorspace_YCbCr
+	ColorspaceRGB         = C.heif_colorspace_RGB
+	ColorspaceMonochrome  = C.heif_colorspace_monochrome
+	ColorspaceFilterArray = C.heif_colorspace_filter_array
+	ColorspaceNonvisual   = C.heif_colorspace_nonvisual
 )
 
 type Channel C.enum_heif_channel

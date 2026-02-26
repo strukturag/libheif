@@ -158,7 +158,7 @@ bool Track_Visual::has_alpha_channel() const
     if (sampleEntry) {
       if (auto box_uncv = std::dynamic_pointer_cast<const Box_uncv>(sampleEntry)) {
         if (auto cmpd = box_uncv->get_child_box<const Box_cmpd>()) {
-          if (cmpd->has_component(component_type_alpha)) {
+          if (cmpd->has_component(heif_uncompressed_component_type_alpha)) {
             return true;
           }
         }

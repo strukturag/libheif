@@ -26,6 +26,7 @@
 #include "error.h"
 #include "nclx.h"
 #include <libheif/heif_experimental.h>
+#include <libheif/heif_uncompressed.h>
 #if HEIF_WITH_OMAF
 #include "omaf_boxes.h"
 #endif
@@ -34,10 +35,27 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <cassert>
 #include <string>
+
+struct BayerPattern
+{
+  uint16_t pattern_width = 0;
+  uint16_t pattern_height = 0;
+  std::vector<heif_bayer_pattern_pixel> pixels;
+};
+
+struct PolarizationPattern
+{
+  std::vector<uint32_t> component_indices;  // empty = applies to all components
+  uint16_t pattern_width = 0;
+  uint16_t pattern_height = 0;
+  std::vector<float> polarization_angles;   // pattern_width * pattern_height entries
+                                            // 0xFFFFFFFF bit-pattern (NaN) = no polarization filter
+};
 
 heif_chroma chroma_from_subsampling(int h, int v);
 
@@ -180,6 +198,27 @@ public:
 
   std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
 
+
+  // --- bayer pattern
+
+  bool has_bayer_pattern() const { return m_bayer_pattern.has_value(); }
+
+  const BayerPattern& get_bayer_pattern() const { assert(has_bayer_pattern()); return *m_bayer_pattern; }
+
+  virtual void set_bayer_pattern(const BayerPattern& pattern) { m_bayer_pattern = pattern; }
+
+
+  // --- polarization pattern
+
+  bool has_polarization_patterns() const { return !m_polarization_patterns.empty(); }
+
+  const std::vector<PolarizationPattern>& get_polarization_patterns() const { return m_polarization_patterns; }
+
+  virtual void set_polarization_patterns(const std::vector<PolarizationPattern>& p) { m_polarization_patterns = p; }
+
+  virtual void add_polarization_pattern(const PolarizationPattern& p) { m_polarization_patterns.push_back(p); }
+
+
 #if HEIF_WITH_OMAF
   bool has_omaf_image_projection() const {
     return (m_omaf_image_projection != heif_omaf_image_projection_flat);
@@ -207,6 +246,10 @@ private:
   heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
 
   std::optional<std::string> m_gimi_sample_content_id;
+
+  std::optional<BayerPattern> m_bayer_pattern;
+
+  std::vector<PolarizationPattern> m_polarization_patterns;
 
 #if HEIF_WITH_OMAF
   heif_omaf_image_projection m_omaf_image_projection = heif_omaf_image_projection::heif_omaf_image_projection_flat;

@@ -75,7 +75,9 @@ typedef enum heif_colorspace
   heif_colorspace_monochrome = 2,
 
   // Indicates that this image has no visual channels.
-  heif_colorspace_nonvisual = 3
+  heif_colorspace_nonvisual = 3,
+
+  heif_colorspace_filter_array = 4
 } heif_colorspace;
 
 typedef enum heif_channel

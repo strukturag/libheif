@@ -568,6 +568,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_colorspace_YCbCr", heif_colorspace_YCbCr)
     .value("heif_colorspace_RGB", heif_colorspace_RGB)
     .value("heif_colorspace_monochrome", heif_colorspace_monochrome)
+    .value("heif_colorspace_filter_array", heif_colorspace_filter_array)
     .value("heif_colorspace_nonvisual", heif_colorspace_nonvisual);
     emscripten::enum_<heif_channel>("heif_channel")
     .value("heif_channel_Y", heif_channel_Y)

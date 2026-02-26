@@ -24,6 +24,7 @@
 
 #include "box.h"
 #include "bitstream.h"
+#include "pixelimage.h"
 #include "unc_types.h"
 #include "sequences/seq_boxes.h"
 
@@ -354,21 +355,13 @@ public:
     set_short_type(fourcc("cpat"));
   }
 
-  struct PatternComponent
-  {
-    uint32_t component_index;
-    float component_gain;
-  };
+  uint16_t get_pattern_width() const { return m_pattern.pattern_width; }
 
-  uint16_t get_pattern_width() const
-  {
-    return m_pattern_width;
-  }
+  uint16_t get_pattern_height() const { return m_pattern.pattern_height; }
 
-  uint16_t get_pattern_height() const
-  {
-    return m_pattern_height;
-  }
+  const BayerPattern& get_pattern() const { return m_pattern; }
+
+  void set_pattern(const BayerPattern& pattern) { m_pattern = pattern; }
 
   std::string dump(Indent&) const override;
 
@@ -377,9 +370,36 @@ public:
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
-  uint16_t m_pattern_width = 0;
-  uint16_t m_pattern_height = 0;
-  std::vector<PatternComponent> m_components;
+  BayerPattern m_pattern;
+};
+
+
+/**
+ * Polarization pattern definition box (splz).
+ *
+ * Describes the polarization filter array pattern on an image sensor.
+ * Multiple splz boxes can exist (one per set of components with
+ * different polarization filters).
+ *
+ * This is from ISO/IEC 23001-17 Section 6.1.5.
+ */
+class Box_splz : public FullBox
+{
+public:
+  Box_splz() { set_short_type(fourcc("splz")); }
+
+  const PolarizationPattern& get_pattern() const { return m_pattern; }
+
+  void set_pattern(const PolarizationPattern& pattern) { m_pattern = pattern; }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+  PolarizationPattern m_pattern;
 };
 
 

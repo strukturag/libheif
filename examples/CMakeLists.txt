@@ -75,6 +75,14 @@ if (WITH_HEADER_COMPRESSION)
 endif ()
 
 
+if (BUILD_DEVELOPMENT_TOOLS AND PNG_FOUND)
+    add_executable(heif-gen-bayer
+            heif_gen_bayer.cc)
+    target_link_libraries(heif-gen-bayer PRIVATE heif heifio)
+    target_include_directories(heif-gen-bayer PRIVATE ${libheif_SOURCE_DIR})
+endif()
+
+
 if (WITH_EXAMPLE_HEIF_THUMB AND PNG_FOUND)
     add_executable(heif-thumbnailer ${getopt_sources}
             heif_thumbnailer.cc

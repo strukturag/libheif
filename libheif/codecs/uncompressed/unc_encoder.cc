@@ -35,22 +35,22 @@
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
 {
   switch (channel) {
-    case heif_channel_Y: return heif_uncompressed_component_type::component_type_Y;
-    case heif_channel_Cb: return heif_uncompressed_component_type::component_type_Cb;
-    case heif_channel_Cr: return heif_uncompressed_component_type::component_type_Cr;
-    case heif_channel_R: return heif_uncompressed_component_type::component_type_red;
-    case heif_channel_G: return heif_uncompressed_component_type::component_type_green;
-    case heif_channel_B: return heif_uncompressed_component_type::component_type_blue;
-    case heif_channel_Alpha: return heif_uncompressed_component_type::component_type_alpha;
+    case heif_channel_Y: return heif_uncompressed_component_type_Y;
+    case heif_channel_Cb: return heif_uncompressed_component_type_Cb;
+    case heif_channel_Cr: return heif_uncompressed_component_type_Cr;
+    case heif_channel_R: return heif_uncompressed_component_type_red;
+    case heif_channel_G: return heif_uncompressed_component_type_green;
+    case heif_channel_B: return heif_uncompressed_component_type_blue;
+    case heif_channel_Alpha: return heif_uncompressed_component_type_alpha;
     case heif_channel_interleaved: assert(false);
       break;
-    case heif_channel_filter_array: return heif_uncompressed_component_type::component_type_filter_array;
-    case heif_channel_depth: return heif_uncompressed_component_type::component_type_depth;
-    case heif_channel_disparity: return heif_uncompressed_component_type::component_type_disparity;
-    case heif_channel_unknown: return heif_uncompressed_component_type::component_type_padded;
+    case heif_channel_filter_array: return heif_uncompressed_component_type_filter_array;
+    case heif_channel_depth: return heif_uncompressed_component_type_depth;
+    case heif_channel_disparity: return heif_uncompressed_component_type_disparity;
+    case heif_channel_unknown: return heif_uncompressed_component_type_padded;
   }
 
-  return heif_uncompressed_component_type::component_type_padded;
+  return heif_uncompressed_component_type_padded;
 }
 
 
@@ -158,6 +158,14 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
   codedImageData.properties.push_back(uncC);
   if (!uncC->is_minimized()) {
     codedImageData.properties.push_back(this->get_cmpd());
+  }
+
+  if (m_cpat) {
+    codedImageData.properties.push_back(m_cpat);
+  }
+
+  for (const auto& splz : m_splz) {
+    codedImageData.properties.push_back(splz);
   }
 
 

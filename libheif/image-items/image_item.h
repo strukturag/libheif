@@ -111,6 +111,18 @@ public:
     return nullptr;
   }
 
+  template<class BoxType>
+  std::vector<std::shared_ptr<const BoxType>> get_all_properties() const
+  {
+    std::vector<std::shared_ptr<const BoxType>> result;
+    for (auto& property : m_properties) {
+      if (auto box = std::dynamic_pointer_cast<const BoxType>(property)) {
+        result.push_back(box);
+      }
+    }
+    return result;
+  }
+
   heif_property_id add_property(std::shared_ptr<Box> property, bool essential);
 
   heif_property_id add_property_without_deduplication(std::shared_ptr<Box> property, bool essential);

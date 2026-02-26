@@ -58,14 +58,14 @@ std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_bytealign_pixel_inter
 unc_encoder_rgb_bytealign_pixel_interleave::unc_encoder_rgb_bytealign_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                        const heif_encoding_options& options)
 {
-  m_cmpd->add_component({component_type_red});
-  m_cmpd->add_component({component_type_green});
-  m_cmpd->add_component({component_type_blue});
+  m_cmpd->add_component({heif_uncompressed_component_type_red});
+  m_cmpd->add_component({heif_uncompressed_component_type_green});
+  m_cmpd->add_component({heif_uncompressed_component_type_blue});
 
   bool save_alpha = image->has_alpha();
 
   if (save_alpha) {
-    m_cmpd->add_component({component_type_alpha});
+    m_cmpd->add_component({heif_uncompressed_component_type_alpha});
   }
 
   m_bytes_per_pixel = save_alpha ? 8 : 6;

@@ -21,11 +21,237 @@
 #include "heif_uncompressed.h"
 #include "context.h"
 #include "api_structs.h"
+#include "pixelimage.h"
 #include "image-items/unc_image.h"
 
 #include <array>
+#include <cstring>
 #include <memory>
 #include <algorithm>
+
+
+heif_error heif_image_set_bayer_pattern(heif_image* image,
+                                        uint16_t pattern_width,
+                                        uint16_t pattern_height,
+                                        const struct heif_bayer_pattern_pixel* patternPixels)
+{
+  if (image == nullptr || patternPixels == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  if (pattern_width == 0 || pattern_height == 0) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Bayer pattern dimensions must be non-zero."};
+  }
+
+  BayerPattern pattern;
+  pattern.pattern_width = pattern_width;
+  pattern.pattern_height = pattern_height;
+
+  size_t num_pixels = size_t{pattern_width} * pattern_height;
+  pattern.pixels.assign(patternPixels, patternPixels + num_pixels);
+
+  image->image->set_bayer_pattern(pattern);
+
+  return heif_error_success;
+}
+
+
+int heif_image_has_bayer_pattern(const heif_image* image,
+                                 uint16_t* out_pattern_width,
+                                 uint16_t* out_pattern_height)
+{
+  if (image == nullptr || !image->image->has_bayer_pattern()) {
+    if (out_pattern_width) {
+      *out_pattern_width = 0;
+    }
+    if (out_pattern_height) {
+      *out_pattern_height = 0;
+    }
+    return 0;
+  }
+
+  const BayerPattern& pattern = image->image->get_bayer_pattern();
+
+  if (out_pattern_width) {
+    *out_pattern_width = pattern.pattern_width;
+  }
+  if (out_pattern_height) {
+    *out_pattern_height = pattern.pattern_height;
+  }
+
+  return 1;
+}
+
+
+heif_error heif_image_get_bayer_pattern(const heif_image* image,
+                                        struct heif_bayer_pattern_pixel* out_patternPixels)
+{
+  if (image == nullptr || out_patternPixels == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  if (!image->image->has_bayer_pattern()) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Image does not have a Bayer pattern."};
+  }
+
+  const BayerPattern& pattern = image->image->get_bayer_pattern();
+  size_t num_pixels = size_t{pattern.pattern_width} * pattern.pattern_height;
+  std::copy(pattern.pixels.begin(), pattern.pixels.begin() + num_pixels, out_patternPixels);
+
+  return heif_error_success;
+}
+
+
+float heif_polarization_angle_no_filter()
+{
+  uint32_t bits = 0xFFFFFFFF;
+  float f;
+  memcpy(&f, &bits, sizeof(f));
+  return f;
+}
+
+
+int heif_polarization_angle_is_no_filter(float angle)
+{
+  uint32_t bits;
+  memcpy(&bits, &angle, sizeof(bits));
+  return bits == 0xFFFFFFFF;
+}
+
+
+heif_error heif_image_add_polarization_pattern(heif_image* image,
+                                               uint32_t num_component_indices,
+                                               const uint32_t* component_indices,
+                                               uint16_t pattern_width,
+                                               uint16_t pattern_height,
+                                               const float* polarization_angles)
+{
+  if (image == nullptr || polarization_angles == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  if (num_component_indices > 0 && component_indices == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  if (pattern_width == 0 || pattern_height == 0) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Polarization pattern dimensions must be non-zero."};
+  }
+
+  PolarizationPattern pattern;
+  pattern.component_indices.assign(component_indices, component_indices + num_component_indices);
+  pattern.pattern_width = pattern_width;
+  pattern.pattern_height = pattern_height;
+
+  size_t num_pixels = size_t{pattern_width} * pattern_height;
+  pattern.polarization_angles.assign(polarization_angles, polarization_angles + num_pixels);
+
+  image->image->add_polarization_pattern(pattern);
+
+  return heif_error_success;
+}
+
+
+int heif_image_get_number_of_polarization_patterns(const heif_image* image)
+{
+  if (image == nullptr) {
+    return 0;
+  }
+
+  return static_cast<int>(image->image->get_polarization_patterns().size());
+}
+
+
+heif_error heif_image_get_polarization_pattern_info(const heif_image* image,
+                                                    int pattern_index,
+                                                    uint32_t* out_num_component_indices,
+                                                    uint16_t* out_pattern_width,
+                                                    uint16_t* out_pattern_height)
+{
+  if (image == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  const auto& patterns = image->image->get_polarization_patterns();
+  if (pattern_index < 0 || static_cast<size_t>(pattern_index) >= patterns.size()) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Polarization pattern index out of range."};
+  }
+
+  const auto& p = patterns[pattern_index];
+  if (out_num_component_indices) {
+    *out_num_component_indices = static_cast<uint32_t>(p.component_indices.size());
+  }
+  if (out_pattern_width) {
+    *out_pattern_width = p.pattern_width;
+  }
+  if (out_pattern_height) {
+    *out_pattern_height = p.pattern_height;
+  }
+
+  return heif_error_success;
+}
+
+
+heif_error heif_image_get_polarization_pattern_data(const heif_image* image,
+                                                    int pattern_index,
+                                                    uint32_t* out_component_indices,
+                                                    float* out_polarization_angles)
+{
+  if (image == nullptr || out_polarization_angles == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  const auto& patterns = image->image->get_polarization_patterns();
+  if (pattern_index < 0 || static_cast<size_t>(pattern_index) >= patterns.size()) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Polarization pattern index out of range."};
+  }
+
+  const auto& p = patterns[pattern_index];
+
+  if (out_component_indices && !p.component_indices.empty()) {
+    std::copy(p.component_indices.begin(), p.component_indices.end(), out_component_indices);
+  }
+
+  size_t num_pixels = size_t{p.pattern_width} * p.pattern_height;
+  std::copy(p.polarization_angles.begin(), p.polarization_angles.begin() + num_pixels, out_polarization_angles);
+
+  return heif_error_success;
+}
+
+
+int heif_image_get_polarization_pattern_index_for_component(const heif_image* image,
+                                                            uint32_t component_index)
+{
+  if (image == nullptr) {
+    return -1;
+  }
+
+  const auto& patterns = image->image->get_polarization_patterns();
+  for (size_t i = 0; i < patterns.size(); i++) {
+    const auto& p = patterns[i];
+    if (p.component_indices.empty()) {
+      // Empty component list means pattern applies to all components.
+      return static_cast<int>(i);
+    }
+    for (uint32_t idx : p.component_indices) {
+      if (idx == component_index) {
+        return static_cast<int>(i);
+      }
+    }
+  }
+
+  return -1;
+}
 
 
 heif_unci_image_parameters* heif_unci_image_parameters_alloc()

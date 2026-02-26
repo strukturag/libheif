@@ -58,9 +58,9 @@ std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_block_pixel_interleav
 unc_encoder_rgb_block_pixel_interleave::unc_encoder_rgb_block_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                                                              const heif_encoding_options& options)
 {
-  m_cmpd->add_component({component_type_red});
-  m_cmpd->add_component({component_type_green});
-  m_cmpd->add_component({component_type_blue});
+  m_cmpd->add_component({heif_uncompressed_component_type_red});
+  m_cmpd->add_component({heif_uncompressed_component_type_green});
+  m_cmpd->add_component({heif_uncompressed_component_type_blue});
 
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 

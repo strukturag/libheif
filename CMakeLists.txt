@@ -550,6 +550,8 @@ option(WITH_EXAMPLE_HEIF_THUMB "Build heif-thumbnailer tool" ON)
 option(WITH_EXAMPLE_HEIF_VIEW "Build heif-view tool" ON)
 option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
+option(BUILD_DEVELOPMENT_TOOLS "Build development tools (heif-gen-bayer, etc.)" OFF)
+
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
 option(WITH_HEADER_COMPRESSION OFF)

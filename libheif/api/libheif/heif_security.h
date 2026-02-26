@@ -45,6 +45,7 @@ typedef struct heif_security_limits
   // in 1.5 GB memory need for YUV-4:2:0 or 4 GB for RGB32.
   uint64_t max_image_size_pixels;
   uint64_t max_number_of_tiles;
+  // Also used for polarization pattern (splz) size limit.
   uint32_t max_bayer_pattern_pixels;
   uint32_t max_items;
 

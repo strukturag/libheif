@@ -39,6 +39,7 @@
 #include "alpha.h"
 #include "hdr_sdr.h"
 #include "chroma_sampling.h"
+#include "bayer_bilinear.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 
@@ -66,6 +67,9 @@ std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
       break;
     case heif_colorspace_undefined:
       ostr << "undefined";
+      break;
+    case heif_colorspace_filter_array:
+      ostr << "filter_array";
       break;
     default:
       assert(false);
@@ -230,6 +234,7 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_RGB_to_RRGGBBaa_BE>());
   ops.emplace_back(std::make_shared<Op_mono_to_YCbCr420>());
   ops.emplace_back(std::make_shared<Op_mono_to_RGB24_32>());
+  ops.emplace_back(std::make_shared<Op_bayer_bilinear_to_RGB24_32>());
   ops.emplace_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
   ops.emplace_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
   ops.emplace_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
@@ -452,41 +457,12 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
       out = *outResult;
     }
 
-    // --- pass the color profiles to the new image
+    // copy metadata over to new image
+    out->forward_all_metadata_from(in);
 
+    // overwrite color profile nclx from color conversion
     out->set_color_profile_nclx(step.output_state.nclx);
-    out->set_color_profile_icc(in->get_color_profile_icc());
 
-    out->set_premultiplied_alpha(in->is_premultiplied_alpha());
-
-    // pass through HDR information
-    if (in->has_clli()) {
-      out->set_clli(in->get_clli());
-    }
-
-    if (in->has_mdcv()) {
-      out->set_mdcv(in->get_mdcv());
-    }
-
-    if (in->has_nonsquare_pixel_ratio()) {
-      uint32_t h, v;
-      in->get_pixel_ratio(&h, &v);
-      out->set_pixel_ratio(h, v);
-    }
-
-    if (in->has_gimi_sample_content_id()) {
-      out->set_gimi_sample_content_id(in->get_gimi_sample_content_id());
-    }
-
-    if (auto* tai = in->get_tai_timestamp()) {
-      out->set_tai_timestamp(tai);
-    }
-
-    out->set_sample_duration(in->get_sample_duration());
-
-#if HEIF_WITH_OMAF
-    out->set_omaf_image_projection(in->get_omaf_image_projection());
-#endif
 
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {

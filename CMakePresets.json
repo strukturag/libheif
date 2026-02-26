@@ -65,7 +65,8 @@
         "WITH_LIBSHARPYUV" : "ON",
         "WITH_GEOTIFF" : "ON",
         "WITH_EXAMPLES": "ON",
-        "WITH_FUZZERS": "OFF"
+        "WITH_FUZZERS": "OFF",
+        "BUILD_DEVELOPMENT_TOOLS": "ON"
       }
     },
     {

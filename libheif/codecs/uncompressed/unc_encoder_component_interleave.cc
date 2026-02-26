@@ -21,6 +21,8 @@
 #include "unc_encoder_component_interleave.h"
 
 #include <cstring>
+#include <map>
+#include <set>
 
 #include "pixelimage.h"
 #include "unc_boxes.h"
@@ -60,7 +62,7 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
     else {
       ch = image->get_component_channel(idx);
       if (ch == heif_channel_Y && !image->has_channel(heif_channel_Cb)) {
-        comp_type = component_type_monochrome;
+        comp_type = heif_uncompressed_component_type_monochrome;
       }
       else {
         comp_type = heif_channel_to_component_type(ch);
@@ -79,7 +81,7 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
 
   uint16_t box_index = 0;
   for (const auto& comp : m_components) {
-    m_cmpd->add_component({comp.component_type});
+    m_cmpd->add_component({static_cast<uint16_t>(comp.component_type)});
 
     uint8_t component_align_size = 0;
 
@@ -103,6 +105,51 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
   }
   else {
     m_uncC->set_sampling_type(sampling_mode_no_subsampling);
+  }
+
+  // --- Bayer pattern: add reference components to cmpd and generate cpat box
+
+  if (image->has_bayer_pattern()) {
+    const BayerPattern& bayer = image->get_bayer_pattern();
+
+    // Collect unique component types from the pattern (in order of first appearance)
+    std::vector<uint16_t> unique_types;
+    std::set<uint16_t> seen;
+    for (const auto& pixel : bayer.pixels) {
+      if (seen.insert(pixel.component_type).second) {
+        unique_types.push_back(pixel.component_type);
+      }
+    }
+
+    // Add reference components to cmpd (these have no uncC entries).
+    // box_index is already at the next available index after data components.
+    std::map<uint16_t, uint16_t> type_to_cmpd_index;
+    for (uint16_t type : unique_types) {
+      type_to_cmpd_index[type] = box_index;
+      m_cmpd->add_component({type});
+      box_index++;
+    }
+
+    // Build cpat box with resolved cmpd indices
+    BayerPattern cpat_pattern;
+    cpat_pattern.pattern_width = bayer.pattern_width;
+    cpat_pattern.pattern_height = bayer.pattern_height;
+    cpat_pattern.pixels.resize(bayer.pixels.size());
+    for (size_t i = 0; i < bayer.pixels.size(); i++) {
+      cpat_pattern.pixels[i].component_type = type_to_cmpd_index[bayer.pixels[i].component_type];
+      cpat_pattern.pixels[i].component_gain = bayer.pixels[i].component_gain;
+    }
+
+    m_cpat = std::make_shared<Box_cpat>();
+    m_cpat->set_pattern(cpat_pattern);
+  }
+
+  if (image->has_polarization_patterns()) {
+    for (const auto& pol : image->get_polarization_patterns()) {
+      auto splz = std::make_shared<Box_splz>();
+      splz->set_pattern(pol);
+      m_splz.push_back(splz);
+    }
   }
 }
 

@@ -65,14 +65,14 @@ int Decoder_uncompressed::get_luma_bits_per_pixel() const
     }
     auto component_type = m_cmpd->get_components()[component_index].component_type;
     switch (component_type) {
-      case component_type_monochrome:
-      case component_type_red:
-      case component_type_green:
-      case component_type_blue:
-      case component_type_filter_array:
+      case heif_uncompressed_component_type_monochrome:
+      case heif_uncompressed_component_type_red:
+      case heif_uncompressed_component_type_green:
+      case heif_uncompressed_component_type_blue:
+      case heif_uncompressed_component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int) component.component_bit_depth);
         break;
-      case component_type_Y:
+      case heif_uncompressed_component_type_Y:
         luma_bits = std::max(luma_bits, (int) component.component_bit_depth);
         break;
         // TODO: there are other things we'll need to handle eventually, like palette.
@@ -109,15 +109,15 @@ int Decoder_uncompressed::get_chroma_bits_per_pixel() const
     }
     auto component_type = m_cmpd->get_components()[component_index].component_type;
     switch (component_type) {
-      case component_type_monochrome:
-      case component_type_red:
-      case component_type_green:
-      case component_type_blue:
-      case component_type_filter_array:
+      case heif_uncompressed_component_type_monochrome:
+      case heif_uncompressed_component_type_red:
+      case heif_uncompressed_component_type_green:
+      case heif_uncompressed_component_type_blue:
+      case heif_uncompressed_component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int) component.component_bit_depth);
         break;
-      case component_type_Cb:
-      case component_type_Cr:
+      case heif_uncompressed_component_type_Cb:
+      case heif_uncompressed_component_type_Cr:
         chroma_bits = std::max(chroma_bits, (int) component.component_bit_depth);
         break;
         // TODO: there are other things we'll need to handle eventually, like palette.

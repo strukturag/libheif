@@ -172,6 +172,8 @@ set(libheif_sources
         color-conversion/alpha.h
         color-conversion/chroma_sampling.cc
         color-conversion/chroma_sampling.h
+        color-conversion/bayer_bilinear.cc
+        color-conversion/bayer_bilinear.h
         sequences/seq_boxes.h
         sequences/seq_boxes.cc
         sequences/chunk.h
