@@ -74,6 +74,10 @@ if (WITH_HEADER_COMPRESSION)
     target_compile_definitions(heif-enc PRIVATE WITH_HEADER_COMPRESSION=1)
 endif ()
 
+if (ENABLE_EXPERIMENTAL_FEATURES)
+    target_sources(heif-enc PRIVATE vmt.cc vmt.h)
+endif ()
+
 
 if (BUILD_DEVELOPMENT_TOOLS AND PNG_FOUND)
     add_executable(heif-gen-bayer
