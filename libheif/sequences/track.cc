@@ -405,6 +405,14 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     previous_sample_description_index = sampleToChunk.sample_description_index;
   }
 
+  if (current_sample_idx != m_stsz->num_samples()) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of samples covered by 'stsc' does not match 'stsz'/'stts'."
+    };
+  }
+
   // --- read sample auxiliary information boxes
 
   std::vector<std::shared_ptr<Box_saiz> > saiz_boxes = stbl->get_child_boxes<Box_saiz>();
