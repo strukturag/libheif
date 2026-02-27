@@ -786,10 +786,59 @@ int main(int argc, char** argv)
     if (num_cmpd_components > 0) {
       int num_content_ids = heif_image_handle_has_gimi_component_content_ids(handle);
 
+      auto get_component_type_name = [](uint16_t type) -> const char* {
+        switch (type) {
+          case 0: return "monochrome";
+          case 1: return "Y";
+          case 2: return "Cb";
+          case 3: return "Cr";
+          case 4: return "red";
+          case 5: return "green";
+          case 6: return "blue";
+          case 7: return "alpha";
+          case 8: return "depth";
+          case 9: return "disparity";
+          case 10: return "palette";
+          case 11: return "filter_array";
+          case 12: return "padded";
+          case 13: return "cyan";
+          case 14: return "magenta";
+          case 15: return "yellow";
+          case 16: return "key_black";
+          default: return nullptr;
+        }
+      };
+
+      // Find the maximum display width of the "type_name (N)" column.
+      size_t max_type_width = 0;
+      for (uint32_t i = 0; i < num_cmpd_components; i++) {
+        uint16_t type = heif_image_handle_get_cmpd_component_type(handle, i);
+        const char* name = get_component_type_name(type);
+        std::ostringstream tmp;
+        if (name) {
+          tmp << name << " (" << type << ")";
+        }
+        else {
+          tmp << type;
+        }
+        max_type_width = std::max(max_type_width, tmp.str().size());
+      }
+
       std::cout << "  components:\n";
       for (uint32_t i = 0; i < num_cmpd_components; i++) {
         uint16_t type = heif_image_handle_get_cmpd_component_type(handle, i);
-        std::cout << "    [" << i << "] type: " << type;
+        const char* type_name = get_component_type_name(type);
+
+        std::ostringstream type_str;
+        if (type_name) {
+          type_str << type_name << " (" << type << ")";
+        }
+        else {
+          type_str << type;
+        }
+
+        std::cout << "    [" << i << "] type: "
+                  << std::left << std::setw(static_cast<int>(max_type_width)) << type_str.str();
 
         const char* uri = heif_image_handle_get_cmpd_component_type_uri(handle, i);
         if (uri) {
