@@ -37,6 +37,10 @@
 #include "plugin_registry.h"
 #include "security_limits.h"
 
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed/unc_boxes.h"
+#endif
+
 #include <limits>
 #include <cassert>
 #include <cstring>
@@ -557,6 +561,11 @@ ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
   std::vector<std::shared_ptr<Box_colr> > colr_boxes;
 
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    // No color profile for non-visual images (e.g. elevation data)
+    if (image->get_colorspace() == heif_colorspace_nonvisual) {
+      return colr_boxes;
+    }
+
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
       auto colr = std::make_shared<Box_colr>();
@@ -925,6 +934,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     if (gimi_content_id) {
       img->set_gimi_sample_content_id(gimi_content_id->get_content_id());
     }
+
+#if WITH_UNCOMPRESSED_CODEC
+    // GIMI component content IDs
+
+    auto gimi_comp_ids = get_property<Box_gimi_component_content_ids>();
+    if (gimi_comp_ids) {
+      img->set_component_content_ids(gimi_comp_ids->get_content_ids());
+    }
+#endif
 
 #if HEIF_WITH_OMAF
     // Image projection (OMAF)

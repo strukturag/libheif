@@ -46,6 +46,7 @@ extern "C" {
 #endif
 
 #include "decoder_tiff.h"
+#include "libheif/heif_uncompressed.h"
 
 static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
@@ -553,12 +554,57 @@ heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, bool hasAlpha
 }
 
 
+#if WITH_UNCOMPRESSED_CODEC
+static heif_error readMonoFloat(TIFF* tif, heif_image** image)
+{
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  err = heif_image_create((int)width, (int)height, heif_colorspace_nonvisual, heif_chroma_undefined, image);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  uint32_t component_idx;
+  err = heif_image_add_component(*image, (int)width, (int)height,
+                                 heif_uncompressed_component_type_monochrome,
+                                 heif_channel_datatype_floating_point, 32, &component_idx);
+  if (err.code != heif_error_Ok) {
+    heif_image_release(*image);
+    *image = nullptr;
+    return err;
+  }
+
+  size_t stride;
+  float* plane = heif_image_get_component_float32(*image, component_idx, &stride);
+  if (!plane) {
+    heif_image_release(*image);
+    *image = nullptr;
+    return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get float plane"};
+  }
+
+  tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+  for (uint32_t row = 0; row < height; row++) {
+    TIFFReadScanline(tif, buf, row, 0);
+    memcpy(reinterpret_cast<uint8_t*>(plane) + row * stride, buf, width * sizeof(float));
+  }
+  _TIFFfree(buf);
+
+  return heif_error_ok;
+}
+#endif
+
+
 static void suppress_warnings(const char* module, const char* fmt, va_list ap) {
   // Do nothing
 }
 
 
-static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint16_t& bps, uint16_t& config, bool& hasAlpha)
+static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint16_t& bps,
+                                     uint16_t& config, bool& hasAlpha, uint16_t& sampleFormat)
 {
   uint16_t shortv;
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &shortv) && shortv == PHOTOMETRIC_PALETTE) {
@@ -588,15 +634,30 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
   }
 
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
-  if (bps != 8 && bps != 16) {
-    return {heif_error_Invalid_input, heif_suberror_Unspecified,
-            "Only 8 and 16 bits per sample are supported."};
+
+  if (!TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sampleFormat)) {
+    sampleFormat = SAMPLEFORMAT_UINT;
   }
 
-  uint16_t format;
-  if (TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &format) && format != SAMPLEFORMAT_UINT) {
-    return {heif_error_Invalid_input, heif_suberror_Unspecified,
-            "Only UINT sample format is supported."};
+  if (sampleFormat == SAMPLEFORMAT_IEEEFP) {
+    if (bps != 32) {
+      return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+              "Only 32-bit floating point TIFF is supported."};
+    }
+    if (samplesPerPixel != 1) {
+      return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+              "Only monochrome floating point TIFF is supported."};
+    }
+  }
+  else if (sampleFormat == SAMPLEFORMAT_UINT) {
+    if (bps != 8 && bps != 16) {
+      return {heif_error_Invalid_input, heif_suberror_Unspecified,
+              "Only 8 and 16 bits per sample are supported."};
+    }
+  }
+  else {
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Unsupported TIFF sample format."};
   }
 
   return heif_error_ok;
@@ -606,8 +667,69 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
 static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height,
                                   uint32_t tile_width, uint32_t tile_height,
                                   uint16_t samplesPerPixel, bool hasAlpha,
-                                  uint16_t bps, int output_bit_depth, heif_image** out_image)
+                                  uint16_t bps, int output_bit_depth,
+                                  uint16_t sampleFormat, heif_image** out_image)
 {
+  bool isFloat = (sampleFormat == SAMPLEFORMAT_IEEEFP);
+
+  if (isFloat) {
+#if WITH_UNCOMPRESSED_CODEC
+    heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_nonvisual, heif_chroma_undefined, out_image);
+    if (err.code != heif_error_Ok) return err;
+
+    uint32_t component_idx;
+    err = heif_image_add_component(*out_image, (int)width, (int)height,
+                                   heif_uncompressed_component_type_monochrome,
+                                   heif_channel_datatype_floating_point, 32, &component_idx);
+    if (err.code != heif_error_Ok) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return err;
+    }
+
+    size_t out_stride;
+    float* out_plane = heif_image_get_component_float32(*out_image, component_idx, &out_stride);
+    if (!out_plane) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get float plane"};
+    }
+
+    tmsize_t tile_buf_size = TIFFTileSize(tif);
+    std::vector<uint8_t> tile_buf(tile_buf_size);
+
+    uint32_t n_cols = (width + tile_width - 1) / tile_width;
+    uint32_t n_rows = (height + tile_height - 1) / tile_height;
+
+    for (uint32_t ty = 0; ty < n_rows; ty++) {
+      for (uint32_t tx = 0; tx < n_cols; tx++) {
+        tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * tile_width, ty * tile_height, 0, 0),
+                                            tile_buf.data(), tile_buf_size);
+        if (read < 0) {
+          heif_image_release(*out_image);
+          *out_image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+        }
+
+        uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
+        uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
+
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = reinterpret_cast<uint8_t*>(out_plane) + (ty * tile_height + row) * out_stride
+                         + tx * tile_width * sizeof(float);
+          float* src = reinterpret_cast<float*>(tile_buf.data() + row * tile_width * sizeof(float));
+          memcpy(dst, src, actual_w * sizeof(float));
+        }
+      }
+    }
+
+    return heif_error_ok;
+#else
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+  }
+
   uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
   int effectiveBitDepth = (bps <= 8) ? 8 : output_bit_depth;
   heif_chroma chroma = get_heif_chroma(outSpp, effectiveBitDepth);
@@ -709,8 +831,21 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
 static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
                                     uint32_t tile_width, uint32_t tile_height,
                                     uint16_t samplesPerPixel, bool hasAlpha,
-                                    uint16_t bps, int output_bit_depth, heif_image** out_image)
+                                    uint16_t bps, int output_bit_depth,
+                                    uint16_t sampleFormat, heif_image** out_image)
 {
+  // For mono float, separate layout is the same as contiguous (1 sample)
+  if (sampleFormat == SAMPLEFORMAT_IEEEFP) {
+#if WITH_UNCOMPRESSED_CODEC
+    return readTiledContiguous(tif, width, height, tile_width, tile_height,
+                               samplesPerPixel, hasAlpha, bps, output_bit_depth,
+                               sampleFormat, out_image);
+#else
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+  }
+
   uint16_t outSpp = (samplesPerPixel == 4 && !hasAlpha) ? 3 : samplesPerPixel;
   int effectiveBitDepth = (bps <= 8) ? 8 : output_bit_depth;
   heif_chroma chroma = get_heif_chroma(outSpp, effectiveBitDepth);
@@ -792,13 +927,15 @@ heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *inpu
 
   TIFF* tif = tifPtr.get();
 
-  uint16_t samplesPerPixel, bps, config;
+  uint16_t samplesPerPixel, bps, config, sampleFormat;
   bool hasAlpha;
-  heif_error err = validateTiffFormat(tif, samplesPerPixel, bps, config, hasAlpha);
+  heif_error err = validateTiffFormat(tif, samplesPerPixel, bps, config, hasAlpha, sampleFormat);
   if (err.code != heif_error_Ok) return err;
 
+  bool isFloat = (sampleFormat == SAMPLEFORMAT_IEEEFP);
+
   // For 8-bit source, always produce 8-bit output (ignore output_bit_depth).
-  int effectiveOutputBitDepth = (bps <= 8) ? 8 : output_bit_depth;
+  int effectiveOutputBitDepth = isFloat ? 32 : ((bps <= 8) ? 8 : output_bit_depth);
 
   struct heif_image* image = nullptr;
 
@@ -814,25 +951,35 @@ heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *inpu
 
     switch (config) {
       case PLANARCONFIG_CONTIG:
-        err = readTiledContiguous(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
+        err = readTiledContiguous(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, sampleFormat, &image);
         break;
       case PLANARCONFIG_SEPARATE:
-        err = readTiledSeparate(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
+        err = readTiledSeparate(tif, width, height, tile_width, tile_height, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, sampleFormat, &image);
         break;
       default:
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
     }
   }
   else {
-    switch (config) {
-      case PLANARCONFIG_CONTIG:
-        err = readPixelInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
-        break;
-      case PLANARCONFIG_SEPARATE:
-        err = readBandInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
-        break;
-      default:
-        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
+    if (isFloat) {
+#if WITH_UNCOMPRESSED_CODEC
+      err = readMonoFloat(tif, &image);
+#else
+      return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+              "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+    }
+    else {
+      switch (config) {
+        case PLANARCONFIG_CONTIG:
+          err = readPixelInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
+          break;
+        case PLANARCONFIG_SEPARATE:
+          err = readBandInterleave(tif, samplesPerPixel, hasAlpha, bps, effectiveOutputBitDepth, &image);
+          break;
+        default:
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Unsupported planar configuration"};
+      }
     }
   }
 
@@ -883,7 +1030,7 @@ std::unique_ptr<TiledTiffReader> TiledTiffReader::open(const char* filename, hei
   reader->m_tif.reset(tif);
 
   uint16_t bps;
-  heif_error err = validateTiffFormat(tif, reader->m_samples_per_pixel, bps, reader->m_planar_config, reader->m_has_alpha);
+  heif_error err = validateTiffFormat(tif, reader->m_samples_per_pixel, bps, reader->m_planar_config, reader->m_has_alpha, reader->m_sample_format);
   if (err.code != heif_error_Ok) {
     *out_err = err;
     return nullptr;
@@ -922,9 +1069,9 @@ std::unique_ptr<TiledTiffReader> TiledTiffReader::open(const char* filename, hei
       continue;
     }
 
-    uint16_t spp, bps_ov, config_ov;
+    uint16_t spp, bps_ov, config_ov, sampleFormat_ov;
     bool hasAlpha_ov;
-    heif_error valErr = validateTiffFormat(tif, spp, bps_ov, config_ov, hasAlpha_ov);
+    heif_error valErr = validateTiffFormat(tif, spp, bps_ov, config_ov, hasAlpha_ov, sampleFormat_ov);
     if (valErr.code != heif_error_Ok) {
       continue;
     }
@@ -972,7 +1119,7 @@ bool TiledTiffReader::setDirectory(uint32_t dir_index)
   }
 
   uint16_t bps;
-  heif_error err = validateTiffFormat(tif, m_samples_per_pixel, bps, m_planar_config, m_has_alpha);
+  heif_error err = validateTiffFormat(tif, m_samples_per_pixel, bps, m_planar_config, m_has_alpha, m_sample_format);
   if (err.code != heif_error_Ok) {
     return false;
   }
@@ -991,6 +1138,53 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
 
   uint32_t actual_w = std::min(m_tile_width, m_image_width - tx * m_tile_width);
   uint32_t actual_h = std::min(m_tile_height, m_image_height - ty * m_tile_height);
+
+  if (m_sample_format == SAMPLEFORMAT_IEEEFP) {
+#if WITH_UNCOMPRESSED_CODEC
+    heif_error err = heif_image_create((int)actual_w, (int)actual_h, heif_colorspace_nonvisual, heif_chroma_undefined, out_image);
+    if (err.code != heif_error_Ok) return err;
+
+    uint32_t component_idx;
+    err = heif_image_add_component(*out_image, (int)actual_w, (int)actual_h,
+                                   heif_uncompressed_component_type_monochrome,
+                                   heif_channel_datatype_floating_point, 32, &component_idx);
+    if (err.code != heif_error_Ok) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return err;
+    }
+
+    size_t out_stride;
+    float* out_plane = heif_image_get_component_float32(*out_image, component_idx, &out_stride);
+    if (!out_plane) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get float plane"};
+    }
+
+    tmsize_t tile_buf_size = TIFFTileSize(tif);
+    std::vector<uint8_t> tile_buf(tile_buf_size);
+
+    tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * m_tile_width, ty * m_tile_height, 0, 0),
+                                        tile_buf.data(), tile_buf_size);
+    if (read < 0) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+    }
+
+    for (uint32_t row = 0; row < actual_h; row++) {
+      uint8_t* dst = reinterpret_cast<uint8_t*>(out_plane) + row * out_stride;
+      float* src = reinterpret_cast<float*>(tile_buf.data() + row * m_tile_width * sizeof(float));
+      memcpy(dst, src, actual_w * sizeof(float));
+    }
+
+    return heif_error_ok;
+#else
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+  }
 
   int effectiveBitDepth = (m_bits_per_sample <= 8) ? 8 : output_bit_depth;
   uint16_t outSpp = (m_samples_per_pixel == 4 && !m_has_alpha) ? 3 : m_samples_per_pixel;

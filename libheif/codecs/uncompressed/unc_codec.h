@@ -65,6 +65,9 @@ public:
     std::shared_ptr<const Box_icef> icef;
     std::shared_ptr<const Box_cpat> cpat;
     std::vector<std::shared_ptr<const Box_splz>> splz;
+    std::vector<std::shared_ptr<const Box_sbpm>> sbpm;
+    std::vector<std::shared_ptr<const Box_snuc>> snuc;
+    std::shared_ptr<const Box_cloc> cloc;
 
     void fill_from_image_item(const std::shared_ptr<const ImageItem>&);
   };

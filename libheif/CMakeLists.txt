@@ -25,6 +25,7 @@ set(libheif_headers
         api/libheif/heif_context.h
         api/libheif/heif_tiling.h
         api/libheif/heif_uncompressed.h
+        api/libheif/heif_uncompressed_types.h
         api/libheif/heif_text.h
         api/libheif/heif_cxx.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
@@ -55,6 +56,7 @@ set(libheif_sources
         logging.h
         logging.cc
         compression.h
+        compression.cc
         compression_brotli.cc
         compression_zlib.cc
         common_utils.cc

@@ -63,6 +63,7 @@ public:
   bool setDirectory(uint32_t dir_index);
 
   uint16_t bitsPerSample() const { return m_bits_per_sample; }
+  uint16_t sampleFormat() const { return m_sample_format; }
 
   heif_error readTile(uint32_t tx, uint32_t ty, int output_bit_depth, heif_image** out_image);
   void readExif(InputImage* input_image);
@@ -80,6 +81,7 @@ private:
   uint16_t m_samples_per_pixel = 0;
   uint16_t m_bits_per_sample = 0;
   uint16_t m_planar_config = 0;
+  uint16_t m_sample_format = 1; // SAMPLEFORMAT_UINT
   bool m_has_alpha = false;
 
   std::vector<OverviewInfo> m_overviews;

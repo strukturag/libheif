@@ -69,6 +69,10 @@ typedef struct heif_security_limits
 
   uint32_t max_sequence_frames;
   uint32_t max_number_of_file_brands;
+
+  // --- version 4
+
+  uint32_t max_bad_pixels;
 } heif_security_limits;
 
 

@@ -1954,6 +1954,7 @@ int main(int argc, char** argv)
     options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
   }
 
+  options->unci_compression = unci_compression;
 
   // --- if no output filename was given, synthesize one from the first input image filename
 

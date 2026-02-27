@@ -977,7 +977,7 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   for (size_t i = 0; i < num_pixels; i++) {
     heif_bayer_pattern_pixel pixel{};
-    pixel.component_type = static_cast<uint16_t>(range.read32());
+    pixel.component_index = static_cast<uint16_t>(range.read32());
     pixel.component_gain = range.read_float32();
     m_pattern.pixels[i] = pixel;
   }
@@ -995,7 +995,7 @@ std::string Box_cpat::dump(Indent& indent) const
   sstr << indent << "pattern_height: " << get_pattern_height() << "\n";
 
   for (const auto& pixel : m_pattern.pixels) {
-    sstr << indent << "component index: " << pixel.component_type << ", gain: " << pixel.component_gain << "\n";
+    sstr << indent << "component index: " << pixel.component_index << ", gain: " << pixel.component_gain << "\n";
   }
   return sstr.str();
 }
@@ -1015,7 +1015,7 @@ Error Box_cpat::write(StreamWriter& writer) const
   writer.write16(m_pattern.pattern_height);
 
   for (const auto& pixel : m_pattern.pixels) {
-    writer.write32(pixel.component_type);
+    writer.write32(pixel.component_index);
     writer.write_float32(pixel.component_gain);
   }
 
@@ -1121,4 +1121,342 @@ Error Box_splz::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+
+Error Box_sbpm::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("sbpm");
+  }
+
+  uint32_t component_count = range.read32();
+
+  if (limits->max_components && component_count > limits->max_components) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "sbpm component_count exceeds security limit."};
+  }
+
+  m_map.component_indices.resize(component_count);
+  for (uint32_t i = 0; i < component_count; i++) {
+    m_map.component_indices[i] = range.read32();
+  }
+
+  uint8_t flags = range.read8();
+  m_map.correction_applied = !!(flags & 0x80);
+
+  uint32_t num_bad_rows = range.read32();
+  uint32_t num_bad_cols = range.read32();
+  uint32_t num_bad_pixels = range.read32();
+
+  // Security check: limit total number of entries
+  uint64_t total_entries = static_cast<uint64_t>(num_bad_rows) + num_bad_cols + num_bad_pixels;
+  if (limits->max_bad_pixels && total_entries > limits->max_bad_pixels) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "sbpm total bad pixel entries exceed security limit."};
+  }
+
+  m_map.bad_rows.resize(num_bad_rows);
+  for (uint32_t i = 0; i < num_bad_rows; i++) {
+    m_map.bad_rows[i] = range.read32();
+  }
+
+  m_map.bad_columns.resize(num_bad_cols);
+  for (uint32_t i = 0; i < num_bad_cols; i++) {
+    m_map.bad_columns[i] = range.read32();
+  }
+
+  m_map.bad_pixels.resize(num_bad_pixels);
+  for (uint32_t i = 0; i < num_bad_pixels; i++) {
+    m_map.bad_pixels[i].row = range.read32();
+    m_map.bad_pixels[i].column = range.read32();
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_sbpm::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << FullBox::dump(indent);
+
+  sstr << indent << "component_count: " << m_map.component_indices.size() << "\n";
+  for (size_t i = 0; i < m_map.component_indices.size(); i++) {
+    sstr << indent << "  component_index[" << i << "]: " << m_map.component_indices[i] << "\n";
+  }
+
+  sstr << indent << "correction_applied: " << m_map.correction_applied << "\n";
+
+  sstr << indent << "num_bad_rows: " << m_map.bad_rows.size() << "\n";
+  for (size_t i = 0; i < m_map.bad_rows.size(); i++) {
+    sstr << indent << "  bad_row[" << i << "]: " << m_map.bad_rows[i] << "\n";
+  }
+
+  sstr << indent << "num_bad_columns: " << m_map.bad_columns.size() << "\n";
+  for (size_t i = 0; i < m_map.bad_columns.size(); i++) {
+    sstr << indent << "  bad_column[" << i << "]: " << m_map.bad_columns[i] << "\n";
+  }
+
+  sstr << indent << "num_bad_pixels: " << m_map.bad_pixels.size() << "\n";
+  for (size_t i = 0; i < m_map.bad_pixels.size(); i++) {
+    sstr << indent << "  bad_pixel[" << i << "]: row=" << m_map.bad_pixels[i].row
+         << ", column=" << m_map.bad_pixels[i].column << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_sbpm::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_map.component_indices.size()));
+  for (uint32_t idx : m_map.component_indices) {
+    writer.write32(idx);
+  }
+
+  uint8_t flags = m_map.correction_applied ? 0x80 : 0;
+  writer.write8(flags);
+
+  writer.write32(static_cast<uint32_t>(m_map.bad_rows.size()));
+  writer.write32(static_cast<uint32_t>(m_map.bad_columns.size()));
+  writer.write32(static_cast<uint32_t>(m_map.bad_pixels.size()));
+
+  for (uint32_t row : m_map.bad_rows) {
+    writer.write32(row);
+  }
+
+  for (uint32_t col : m_map.bad_columns) {
+    writer.write32(col);
+  }
+
+  for (const auto& pixel : m_map.bad_pixels) {
+    writer.write32(pixel.row);
+    writer.write32(pixel.column);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_snuc::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("snuc");
+  }
+
+  uint32_t component_count = range.read32();
+
+  if (limits->max_components && component_count > limits->max_components) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "snuc component_count exceeds security limit."};
+  }
+
+  m_nuc.component_indices.resize(component_count);
+  for (uint32_t i = 0; i < component_count; i++) {
+    m_nuc.component_indices[i] = range.read32();
+  }
+
+  uint8_t flags = range.read8();
+  m_nuc.nuc_is_applied = !!(flags & 0x80);
+
+  m_nuc.image_width = range.read32();
+  m_nuc.image_height = range.read32();
+
+  uint64_t num_pixels = static_cast<uint64_t>(m_nuc.image_width) * m_nuc.image_height;
+
+  if (limits->max_image_size_pixels && num_pixels > limits->max_image_size_pixels) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "snuc image dimensions exceed security limit."};
+  }
+
+  m_nuc.nuc_gains.resize(num_pixels);
+  for (uint64_t i = 0; i < num_pixels; i++) {
+    m_nuc.nuc_gains[i] = range.read_float32();
+  }
+
+  m_nuc.nuc_offsets.resize(num_pixels);
+  for (uint64_t i = 0; i < num_pixels; i++) {
+    m_nuc.nuc_offsets[i] = range.read_float32();
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_snuc::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << FullBox::dump(indent);
+
+  sstr << indent << "component_count: " << m_nuc.component_indices.size() << "\n";
+  for (size_t i = 0; i < m_nuc.component_indices.size(); i++) {
+    sstr << indent << "  component_index[" << i << "]: " << m_nuc.component_indices[i] << "\n";
+  }
+
+  sstr << indent << "nuc_is_applied: " << m_nuc.nuc_is_applied << "\n";
+  sstr << indent << "image_width: " << m_nuc.image_width << "\n";
+  sstr << indent << "image_height: " << m_nuc.image_height << "\n";
+
+  uint64_t num_pixels = static_cast<uint64_t>(m_nuc.image_width) * m_nuc.image_height;
+  sstr << indent << "nuc_gains: " << num_pixels << " values\n";
+  sstr << indent << "nuc_offsets: " << num_pixels << " values\n";
+
+  return sstr.str();
+}
+
+
+Error Box_snuc::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_nuc.component_indices.size()));
+  for (uint32_t idx : m_nuc.component_indices) {
+    writer.write32(idx);
+  }
+
+  uint8_t flags = m_nuc.nuc_is_applied ? 0x80 : 0;
+  writer.write8(flags);
+
+  writer.write32(m_nuc.image_width);
+  writer.write32(m_nuc.image_height);
+
+  for (float gain : m_nuc.nuc_gains) {
+    writer.write_float32(gain);
+  }
+
+  for (float offset : m_nuc.nuc_offsets) {
+    writer.write_float32(offset);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_cloc::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("cloc");
+  }
+
+  m_chroma_location = range.read8();
+
+  if (m_chroma_location > 6) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_parameter_value,
+            "cloc chroma_location value out of range (must be 0-6)."};
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_cloc::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << FullBox::dump(indent);
+
+  static const char* location_names[] = {
+    "h=0,   v=0.5",   // 0
+    "h=0.5, v=0.5",   // 1
+    "h=0,   v=0",     // 2
+    "h=0.5, v=0",     // 3
+    "h=0,   v=1",     // 4
+    "h=0.5, v=1",     // 5
+    "Cr:0,0 / Cb:1,0" // 6
+  };
+
+  sstr << indent << "chroma_location: " << static_cast<int>(m_chroma_location);
+  if (m_chroma_location <= 6) {
+    sstr << " (" << location_names[m_chroma_location] << ")";
+  }
+  sstr << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_cloc::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write8(m_chroma_location);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_gimi_component_content_ids::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  uint32_t number_of_components = range.read32();
+
+  if (limits->max_components && number_of_components > limits->max_components) {
+    std::stringstream sstr;
+    sstr << "GIMI component content IDs box contains " << number_of_components
+         << " components, but security limit is set to " << limits->max_components << " components";
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  for (uint32_t i = 0; i < number_of_components; i++) {
+    if (range.eof()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              "Not enough data for all component content IDs"};
+    }
+    m_content_ids.push_back(range.read_string());
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_gimi_component_content_ids::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_content_ids.size()));
+
+  for (const auto& id : m_content_ids) {
+    writer.write(id);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_gimi_component_content_ids::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  for (size_t i = 0; i < m_content_ids.size(); i++) {
+    sstr << indent << "[" << i << "] content ID: " << m_content_ids[i] << "\n";
+  }
+
+  return sstr.str();
 }

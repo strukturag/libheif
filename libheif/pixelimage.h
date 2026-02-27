@@ -57,6 +57,26 @@ struct PolarizationPattern
                                             // 0xFFFFFFFF bit-pattern (NaN) = no polarization filter
 };
 
+struct SensorBadPixelsMap
+{
+  std::vector<uint32_t> component_indices;  // empty = applies to all components
+  bool correction_applied = false;
+  std::vector<uint32_t> bad_rows;
+  std::vector<uint32_t> bad_columns;
+  struct BadPixel { uint32_t row; uint32_t column; };
+  std::vector<BadPixel> bad_pixels;
+};
+
+struct SensorNonUniformityCorrection
+{
+  std::vector<uint32_t> component_indices;  // empty = applies to all components
+  bool nuc_is_applied = false;
+  uint32_t image_width = 0;
+  uint32_t image_height = 0;
+  std::vector<float> nuc_gains;    // image_width * image_height entries
+  std::vector<float> nuc_offsets;  // image_width * image_height entries
+};
+
 heif_chroma chroma_from_subsampling(int h, int v);
 
 uint32_t chroma_width(uint32_t w, heif_chroma chroma);
@@ -77,21 +97,6 @@ bool is_integer_multiple_of_chroma_size(uint32_t width,
 
 // Returns the list of valid heif_chroma values for a given colorspace.
 std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
-
-// TODO: move to public API when used
-enum heif_chroma420_sample_position {
-  // values 0-5 according to ISO 23091-2 / ITU-T H.273
-  heif_chroma420_sample_position_00_05 = 0,
-  heif_chroma420_sample_position_05_05 = 1,
-  heif_chroma420_sample_position_00_00 = 2,
-  heif_chroma420_sample_position_05_00 = 3,
-  heif_chroma420_sample_position_00_10 = 4,
-  heif_chroma420_sample_position_05_10 = 5,
-
-  // values 6 according to ISO 23001-17
-  heif_chroma420_sample_position_00_00_01_00 = 6
-};
-
 
 class ImageExtraData
 {
@@ -199,6 +204,13 @@ public:
   std::string get_gimi_sample_content_id() const { assert(has_gimi_sample_content_id()); return *m_gimi_sample_content_id; }
 
 
+  void set_component_content_ids(const std::vector<std::string>& ids) { m_component_content_ids = ids; }
+
+  bool has_component_content_ids() const { return !m_component_content_ids.empty(); }
+
+  const std::vector<std::string>& get_component_content_ids() const { return m_component_content_ids; }
+
+
   // --- bayer pattern
 
   bool has_bayer_pattern() const { return m_bayer_pattern.has_value(); }
@@ -217,6 +229,37 @@ public:
   virtual void set_polarization_patterns(const std::vector<PolarizationPattern>& p) { m_polarization_patterns = p; }
 
   virtual void add_polarization_pattern(const PolarizationPattern& p) { m_polarization_patterns.push_back(p); }
+
+
+  // --- sensor bad pixels map
+
+  bool has_sensor_bad_pixels_maps() const { return !m_sensor_bad_pixels_maps.empty(); }
+
+  const std::vector<SensorBadPixelsMap>& get_sensor_bad_pixels_maps() const { return m_sensor_bad_pixels_maps; }
+
+  virtual void set_sensor_bad_pixels_maps(const std::vector<SensorBadPixelsMap>& m) { m_sensor_bad_pixels_maps = m; }
+
+  virtual void add_sensor_bad_pixels_map(const SensorBadPixelsMap& m) { m_sensor_bad_pixels_maps.push_back(m); }
+
+
+  // --- sensor non-uniformity correction
+
+  bool has_sensor_nuc() const { return !m_sensor_nuc.empty(); }
+
+  const std::vector<SensorNonUniformityCorrection>& get_sensor_nuc() const { return m_sensor_nuc; }
+
+  virtual void set_sensor_nuc(const std::vector<SensorNonUniformityCorrection>& n) { m_sensor_nuc = n; }
+
+  virtual void add_sensor_nuc(const SensorNonUniformityCorrection& n) { m_sensor_nuc.push_back(n); }
+
+
+  // --- chroma sample location (ISO 23001-17, Section 6.1.4)
+
+  bool has_chroma_location() const { return m_chroma_location.has_value(); }
+
+  uint8_t get_chroma_location() const { return m_chroma_location.value_or(0); }
+
+  virtual void set_chroma_location(uint8_t loc) { m_chroma_location = loc; }
 
 
 #if HEIF_WITH_OMAF
@@ -247,9 +290,17 @@ private:
 
   std::optional<std::string> m_gimi_sample_content_id;
 
+  std::vector<std::string> m_component_content_ids;
+
   std::optional<BayerPattern> m_bayer_pattern;
 
   std::vector<PolarizationPattern> m_polarization_patterns;
+
+  std::vector<SensorBadPixelsMap> m_sensor_bad_pixels_maps;
+
+  std::vector<SensorNonUniformityCorrection> m_sensor_nuc;
+
+  std::optional<uint8_t> m_chroma_location;
 
 #if HEIF_WITH_OMAF
   heif_omaf_image_projection m_omaf_image_projection = heif_omaf_image_projection::heif_omaf_image_projection_flat;
@@ -374,7 +425,9 @@ public:
 
   // --- index-based component access (for ISO 23001-17 multi-component images)
 
-  uint32_t get_number_of_components() const { return static_cast<uint32_t>(m_planes.size()); }
+  uint32_t get_number_of_used_components() const { return static_cast<uint32_t>(m_planes.size()); }
+
+  uint32_t get_total_number_of_cmpd_components() const { return static_cast<uint32_t>(m_cmpd_component_types.size()); }
 
   heif_channel get_component_channel(uint32_t component_idx) const;
 
@@ -384,12 +437,27 @@ public:
   uint8_t get_component_storage_bits_per_pixel(uint32_t component_idx) const;
   heif_channel_datatype get_component_datatype(uint32_t component_idx) const;
 
+  // Look up the component type from the cmpd table. Works for any cmpd index,
+  // even those that have no image plane (e.g. bayer reference components).
   uint16_t get_component_type(uint32_t component_idx) const;
 
+  // Encoder path: auto-generates component_index by appending to cmpd table.
   Result<uint32_t> add_component(uint32_t width, uint32_t height,
                                  uint16_t component_type,
                                  heif_channel_datatype datatype, int bit_depth,
                                  const heif_security_limits* limits);
+
+  // Decoder path: uses a pre-populated cmpd table to look up the component type.
+  Result<uint32_t> add_component_for_index(uint32_t component_index,
+                                            uint32_t width, uint32_t height,
+                                            heif_channel_datatype datatype, int bit_depth,
+                                            const heif_security_limits* limits);
+
+  // Populate the cmpd component types table (decoder path).
+  void set_cmpd_component_types(std::vector<uint16_t> types) { m_cmpd_component_types = std::move(types); }
+
+  // Returns the sorted list of component_indices of all planes that have pixel data.
+  std::vector<uint32_t> get_used_component_indices() const;
 
   uint8_t* get_component(uint32_t component_idx, size_t* out_stride);
   const uint8_t* get_component(uint32_t component_idx, size_t* out_stride) const;
@@ -397,16 +465,16 @@ public:
   template <typename T>
   T* get_component_data(uint32_t component_idx, size_t* out_stride)
   {
-    if (component_idx >= m_planes.size()) {
+    auto* comp = find_component_by_index(component_idx);
+    if (!comp) {
       if (out_stride) *out_stride = 0;
       return nullptr;
     }
 
-    auto& comp = m_planes[component_idx];
     if (out_stride) {
-      *out_stride = comp.stride / sizeof(T);
+      *out_stride = comp->stride / sizeof(T);
     }
-    return static_cast<T*>(comp.mem);
+    return static_cast<T*>(comp->mem);
   }
 
   template <typename T>
@@ -477,7 +545,7 @@ private:
   struct ImageComponent
   {
     heif_channel m_channel = heif_channel_Y;
-    uint16_t m_component_type = 0;  // ISO 23001-17 component type (0 = monochrome)
+    uint32_t m_component_index = 0;  // index into the cmpd component definition table
 
     // limits=nullptr disables the limits
     Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
@@ -519,12 +587,16 @@ private:
   ImageComponent* find_component_for_channel(heif_channel channel);
   const ImageComponent* find_component_for_channel(heif_channel channel) const;
 
+  ImageComponent* find_component_by_index(uint32_t component_index);
+  const ImageComponent* find_component_by_index(uint32_t component_index) const;
+
   uint32_t m_width = 0;
   uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
 
   std::vector<ImageComponent> m_planes;
+  std::vector<uint16_t> m_cmpd_component_types;  // indexed by cmpd index
   MemoryHandle m_memory_handle;
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame

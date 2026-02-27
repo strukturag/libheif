@@ -86,7 +86,7 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
 
     comp[i].use = true; // map_uncompressed_component_to_channel(m_cmpd, c, &channel);
     if (comp[i].use) {
-      comp[i].dst_plane = img->get_component(i, &comp[i].dst_plane_stride);
+      comp[i].dst_plane = img->get_component(c.component_index, &comp[i].dst_plane_stride);
     }
     else {
       comp[i].dst_plane = nullptr;

@@ -122,7 +122,8 @@ Op_bayer_bilinear_to_RGB24_32::convert_colorspace(const std::shared_ptr<const He
   // Build a lookup table: for each pattern position, which RGB channel (0=R,1=G,2=B) does it provide?
   std::vector<int> pattern_channel(pw * ph);
   for (int i = 0; i < pw * ph; i++) {
-    pattern_channel[i] = component_type_to_rgb_index(pattern.pixels[i].component_type);
+    uint16_t comp_type = input->get_component_type(pattern.pixels[i].component_index);
+    pattern_channel[i] = component_type_to_rgb_index(comp_type);
     if (pattern_channel[i] < 0) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,

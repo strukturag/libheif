@@ -28,9 +28,17 @@
 #include <memory>
 #include <vector>
 #include "codecs/decoder.h"
+#include <utility>
 
 class Box_uncC;
 class Box_cmpd;
+class Box_cpat;
+class Box_cmpC;
+class Box_icef;
+class Box_splz;
+class Box_sbpm;
+class Box_snuc;
+class Box_cloc;
 
 
 class Decoder_uncompressed : public Decoder
@@ -39,6 +47,14 @@ public:
   explicit Decoder_uncompressed(std::shared_ptr<Box_uncC> uncC,
                                 std::shared_ptr<Box_cmpd> cmpd,
                                 std::shared_ptr<const Box_ispe> ispe);
+
+  void set_cpat(std::shared_ptr<const Box_cpat> cpat) { m_cpat = std::move(cpat); }
+  void set_cmpC(std::shared_ptr<const Box_cmpC> cmpC) { m_cmpC = std::move(cmpC); }
+  void set_icef(std::shared_ptr<const Box_icef> icef) { m_icef = std::move(icef); }
+  void set_cloc(std::shared_ptr<const Box_cloc> cloc) { m_cloc = std::move(cloc); }
+  void set_splz(std::vector<std::shared_ptr<Box_splz>> splz) { m_splz.assign(splz.begin(), splz.end()); }
+  void set_sbpm(std::vector<std::shared_ptr<Box_sbpm>> sbpm) { m_sbpm.assign(sbpm.begin(), sbpm.end()); }
+  void set_snuc(std::vector<std::shared_ptr<Box_snuc>> snuc) { m_snuc.assign(snuc.begin(), snuc.end()); }
 
   heif_compression_format get_compression_format() const override { return heif_compression_uncompressed; }
 
@@ -76,6 +92,13 @@ private:
   std::shared_ptr<const Box_uncC> m_uncC;
   std::shared_ptr<const Box_cmpd> m_cmpd;
   std::shared_ptr<const Box_ispe> m_ispe;
+  std::shared_ptr<const Box_cpat> m_cpat;
+  std::shared_ptr<const Box_cmpC> m_cmpC;
+  std::shared_ptr<const Box_icef> m_icef;
+  std::vector<std::shared_ptr<const Box_splz>> m_splz;
+  std::vector<std::shared_ptr<const Box_sbpm>> m_sbpm;
+  std::vector<std::shared_ptr<const Box_snuc>> m_snuc;
+  std::shared_ptr<const Box_cloc> m_cloc;
 
   std::shared_ptr<HeifPixelImage> m_decoded_image;
   uintptr_t m_decoded_image_user_data;

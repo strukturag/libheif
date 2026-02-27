@@ -33,6 +33,7 @@ extern "C" {
 #include <libheif/heif_context.h>
 #include <libheif/heif_brands.h>
 #include <libheif/heif_color.h>
+#include <libheif/heif_uncompressed_types.h>
 
 
 // ----- encoder -----
@@ -307,6 +308,12 @@ typedef struct heif_encoding_options
 
   // Set this to true to use compressed form of uncC where possible.
   uint8_t prefer_uncC_short_form;
+
+  // version 8 options
+
+  // Set this to enable compression for 'unci' images encoded through heif_context_encode_image().
+  // Default: heif_unci_compression_off
+  heif_unci_compression unci_compression;
 
   // TODO: we should add a flag to force MIAF compatible outputs. E.g. this will put restrictions on grid tile sizes and
   //       might add a clap box when the grid output size does not match the color subsampling factors.

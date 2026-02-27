@@ -159,15 +159,16 @@ TEST_CASE( "image datatype through public API" )
   heif_error error = heif_image_create(3,2,heif_colorspace_nonvisual, heif_chroma_undefined, &image);
   REQUIRE(!error.code);
 
-  heif_image_add_channel(image, heif_channel_Y, 3,2, heif_channel_datatype_unsigned_integer, 32);
+  uint32_t comp_idx;
+  error = heif_image_add_component(image, 3, 2, 0, heif_channel_datatype_unsigned_integer, 32, &comp_idx);
+  REQUIRE(!error.code);
 
   size_t stride;
-  uint32_t* data = heif_image_get_channel_uint32(image, heif_channel_Y, &stride);
+  uint32_t* data = heif_image_get_component_uint32(image, comp_idx, &stride);
   REQUIRE(data != nullptr);
 
   REQUIRE(stride >= 3);
-  REQUIRE(heif_image_get_datatype(image, heif_channel_Y) == heif_channel_datatype_unsigned_integer);
-  REQUIRE(heif_image_get_bits_per_pixel_range(image, heif_channel_Y) == 32);
+  REQUIRE(heif_image_get_component_bits_per_pixel(image, comp_idx) == 32);
 
   data[stride*0 + 0] = 0xFFFFFFFFu;
   data[stride*0 + 1] = 0;

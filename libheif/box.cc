@@ -676,6 +676,18 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_splz>();
       break;
 
+    case fourcc("sbpm"):
+      box = std::make_shared<Box_sbpm>();
+      break;
+
+    case fourcc("snuc"):
+      box = std::make_shared<Box_snuc>();
+      break;
+
+    case fourcc("cloc"):
+      box = std::make_shared<Box_cloc>();
+      break;
+
     case fourcc("uncv"):
       box = std::make_shared<Box_uncv>();
       break;
@@ -761,6 +773,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x26, 0x1e, 0xf3, 0x74, 0x1d, 0x97, 0x5b, 0xba, 0xac, 0xbd, 0x9d, 0x2c, 0x8e, 0xa7, 0x35, 0x22}) {
         box = std::make_shared<Box_gimi_content_id>();
       }
+#if WITH_UNCOMPRESSED_CODEC
+      else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x9d, 0xb9, 0xdd, 0x6e, 0x37, 0x3c, 0x5a, 0x4e, 0x81, 0x10, 0x21, 0xfc, 0x83, 0xa9, 0x11, 0xfd}) {
+        box = std::make_shared<Box_gimi_component_content_ids>();
+      }
+#endif
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
       }
@@ -5165,4 +5182,3 @@ std::string Box_gimi_content_id::dump(Indent& indent) const
 
   return sstr.str();
 }
-

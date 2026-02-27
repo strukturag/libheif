@@ -4,6 +4,7 @@
   MIT License
 
   Copyright (c) 2023 Brad Hards <bradh@frogmouth.net>
+  Copyright (c) 2026 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -643,4 +644,278 @@ TEST_CASE("icef_bad_version") {
     REQUIRE(error.error_code == heif_error_Unsupported_feature);
     REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
     REQUIRE(error.message == std::string("icef box data version 1 is not implemented yet"));
+}
+
+
+TEST_CASE("cloc")
+{
+  // Construct and set field
+  auto cloc = std::make_shared<Box_cloc>();
+  cloc->set_chroma_location(2);
+  REQUIRE(cloc->get_chroma_location() == 2);
+
+  // Write
+  StreamWriter writer;
+  Error err = cloc->write(writer);
+  REQUIRE(err.error_code == heif_error_Ok);
+  const std::vector<uint8_t> bytes = writer.get_data();
+
+  // FullBox header (12 bytes) + 1 byte payload = 13 bytes
+  std::vector<uint8_t> expected = {
+    0x00, 0x00, 0x00, 0x0D, 'c', 'l', 'o', 'c',
+    0x00, 0x00, 0x00, 0x00,
+    0x02
+  };
+  REQUIRE(bytes == expected);
+
+  // Parse back
+  auto reader = std::make_shared<StreamReader_memory>(bytes.data(), bytes.size(), false);
+  BitstreamRange range(reader, bytes.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error == Error::Ok);
+  REQUIRE(range.error() == 0);
+
+  REQUIRE(box->get_short_type() == fourcc("cloc"));
+  auto parsed = std::dynamic_pointer_cast<Box_cloc>(box);
+  REQUIRE(parsed != nullptr);
+  REQUIRE(parsed->get_chroma_location() == 2);
+
+  // Dump
+  Indent indent;
+  std::string dump_output = parsed->dump(indent);
+  REQUIRE(dump_output == "Box: cloc -----\nsize: 13   (header size: 12)\nversion: 0\nflags: 0\nchroma_location: 2 (h=0,   v=0)\n");
+}
+
+
+TEST_CASE("cloc_bad_version")
+{
+  std::vector<uint8_t> byteArray = {
+    0x00, 0x00, 0x00, 0x0D, 'c', 'l', 'o', 'c',
+    0x01, 0x00, 0x00, 0x00,
+    0x02
+  };
+
+  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(), byteArray.size(), false);
+  BitstreamRange range(reader, byteArray.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error.error_code == heif_error_Unsupported_feature);
+  REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
+  REQUIRE(error.message == std::string("cloc box data version 1 is not implemented yet"));
+}
+
+
+TEST_CASE("cloc_out_of_range")
+{
+  std::vector<uint8_t> byteArray = {
+    0x00, 0x00, 0x00, 0x0D, 'c', 'l', 'o', 'c',
+    0x00, 0x00, 0x00, 0x00,
+    0x07
+  };
+
+  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(), byteArray.size(), false);
+  BitstreamRange range(reader, byteArray.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error.error_code == heif_error_Invalid_input);
+  REQUIRE(error.sub_error_code == heif_suberror_Invalid_parameter_value);
+}
+
+
+TEST_CASE("splz")
+{
+  // Construct: 2 component indices, 2x1 pattern, angles 45.0 and 90.0
+  auto splz = std::make_shared<Box_splz>();
+  PolarizationPattern pattern;
+  pattern.component_indices = {0, 1};
+  pattern.pattern_width = 2;
+  pattern.pattern_height = 1;
+  pattern.polarization_angles = {45.0f, 90.0f};
+  splz->set_pattern(pattern);
+
+  // Write
+  StreamWriter writer;
+  Error err = splz->write(writer);
+  REQUIRE(err.error_code == heif_error_Ok);
+  const std::vector<uint8_t> bytes = writer.get_data();
+
+  // FullBox header (12) + 4 (count) + 8 (2×index) + 4 (w+h) + 8 (2×float) = 36
+  std::vector<uint8_t> expected = {
+    0x00, 0x00, 0x00, 0x24, 's', 'p', 'l', 'z',
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x02,  // component_count = 2
+    0x00, 0x00, 0x00, 0x00,  // index[0] = 0
+    0x00, 0x00, 0x00, 0x01,  // index[1] = 1
+    0x00, 0x02,              // pattern_width = 2
+    0x00, 0x01,              // pattern_height = 1
+    0x42, 0x34, 0x00, 0x00,  // 45.0f
+    0x42, 0xB4, 0x00, 0x00   // 90.0f
+  };
+  REQUIRE(bytes == expected);
+
+  // Parse back
+  auto reader = std::make_shared<StreamReader_memory>(bytes.data(), bytes.size(), false);
+  BitstreamRange range(reader, bytes.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error == Error::Ok);
+  REQUIRE(range.error() == 0);
+
+  REQUIRE(box->get_short_type() == fourcc("splz"));
+  auto parsed = std::dynamic_pointer_cast<Box_splz>(box);
+  REQUIRE(parsed != nullptr);
+
+  const auto& p = parsed->get_pattern();
+  REQUIRE(p.component_indices.size() == 2);
+  REQUIRE(p.component_indices[0] == 0);
+  REQUIRE(p.component_indices[1] == 1);
+  REQUIRE(p.pattern_width == 2);
+  REQUIRE(p.pattern_height == 1);
+  REQUIRE(p.polarization_angles.size() == 2);
+  REQUIRE(p.polarization_angles[0] == 45.0f);
+  REQUIRE(p.polarization_angles[1] == 90.0f);
+
+  // Dump
+  Indent indent;
+  std::string dump_output = parsed->dump(indent);
+  REQUIRE(dump_output == "Box: splz -----\n"
+                         "size: 36   (header size: 12)\n"
+                         "version: 0\n"
+                         "flags: 0\n"
+                         "component_count: 2\n"
+                         "  component_index[0]: 0\n"
+                         "  component_index[1]: 1\n"
+                         "pattern_width: 2\n"
+                         "pattern_height: 1\n"
+                         "  [0,0]: 45 degrees\n"
+                         "  [1,0]: 90 degrees\n");
+}
+
+
+TEST_CASE("splz_bad_version")
+{
+  std::vector<uint8_t> byteArray = {
+    0x00, 0x00, 0x00, 0x24, 's', 'p', 'l', 'z',
+    0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x02,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x02,
+    0x00, 0x01,
+    0x42, 0x34, 0x00, 0x00,
+    0x42, 0xB4, 0x00, 0x00
+  };
+
+  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(), byteArray.size(), false);
+  BitstreamRange range(reader, byteArray.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error.error_code == heif_error_Unsupported_feature);
+  REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
+  REQUIRE(error.message == std::string("splz box data version 1 is not implemented yet"));
+}
+
+
+TEST_CASE("snuc")
+{
+  // Construct: 1 component index, nuc_is_applied=true, 2x1 image, 2 gains + 2 offsets
+  auto snuc = std::make_shared<Box_snuc>();
+  SensorNonUniformityCorrection nuc;
+  nuc.component_indices = {0};
+  nuc.nuc_is_applied = true;
+  nuc.image_width = 2;
+  nuc.image_height = 1;
+  nuc.nuc_gains = {1.0f, 2.0f};
+  nuc.nuc_offsets = {0.0f, 3.0f};
+  snuc->set_nuc(nuc);
+
+  // Write
+  StreamWriter writer;
+  Error err = snuc->write(writer);
+  REQUIRE(err.error_code == heif_error_Ok);
+  const std::vector<uint8_t> bytes = writer.get_data();
+
+  // FullBox header (12) + 4 (count) + 4 (index) + 1 (flags) + 4 (width) + 4 (height)
+  // + 8 (2×gain) + 8 (2×offset) = 45
+  std::vector<uint8_t> expected = {
+    0x00, 0x00, 0x00, 0x2D, 's', 'n', 'u', 'c',
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01,  // component_count = 1
+    0x00, 0x00, 0x00, 0x00,  // index[0] = 0
+    0x80,                    // flags: nuc_is_applied = true
+    0x00, 0x00, 0x00, 0x02,  // image_width = 2
+    0x00, 0x00, 0x00, 0x01,  // image_height = 1
+    0x3F, 0x80, 0x00, 0x00,  // gain[0] = 1.0f
+    0x40, 0x00, 0x00, 0x00,  // gain[1] = 2.0f
+    0x00, 0x00, 0x00, 0x00,  // offset[0] = 0.0f
+    0x40, 0x40, 0x00, 0x00   // offset[1] = 3.0f
+  };
+  REQUIRE(bytes == expected);
+
+  // Parse back
+  auto reader = std::make_shared<StreamReader_memory>(bytes.data(), bytes.size(), false);
+  BitstreamRange range(reader, bytes.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error == Error::Ok);
+  REQUIRE(range.error() == 0);
+
+  REQUIRE(box->get_short_type() == fourcc("snuc"));
+  auto parsed = std::dynamic_pointer_cast<Box_snuc>(box);
+  REQUIRE(parsed != nullptr);
+
+  const auto& n = parsed->get_nuc();
+  REQUIRE(n.component_indices.size() == 1);
+  REQUIRE(n.component_indices[0] == 0);
+  REQUIRE(n.nuc_is_applied == true);
+  REQUIRE(n.image_width == 2);
+  REQUIRE(n.image_height == 1);
+  REQUIRE(n.nuc_gains.size() == 2);
+  REQUIRE(n.nuc_gains[0] == 1.0f);
+  REQUIRE(n.nuc_gains[1] == 2.0f);
+  REQUIRE(n.nuc_offsets.size() == 2);
+  REQUIRE(n.nuc_offsets[0] == 0.0f);
+  REQUIRE(n.nuc_offsets[1] == 3.0f);
+
+  // Dump
+  Indent indent;
+  std::string dump_output = parsed->dump(indent);
+  REQUIRE(dump_output == "Box: snuc -----\n"
+                         "size: 45   (header size: 12)\n"
+                         "version: 0\n"
+                         "flags: 0\n"
+                         "component_count: 1\n"
+                         "  component_index[0]: 0\n"
+                         "nuc_is_applied: 1\n"
+                         "image_width: 2\n"
+                         "image_height: 1\n"
+                         "nuc_gains: 2 values\n"
+                         "nuc_offsets: 2 values\n");
+}
+
+
+TEST_CASE("snuc_bad_version")
+{
+  std::vector<uint8_t> byteArray = {
+    0x00, 0x00, 0x00, 0x2D, 's', 'n', 'u', 'c',
+    0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00,
+    0x80,
+    0x00, 0x00, 0x00, 0x02,
+    0x00, 0x00, 0x00, 0x01,
+    0x3F, 0x80, 0x00, 0x00,
+    0x40, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x40, 0x40, 0x00, 0x00
+  };
+
+  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(), byteArray.size(), false);
+  BitstreamRange range(reader, byteArray.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
+  REQUIRE(error.error_code == heif_error_Unsupported_feature);
+  REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
+  REQUIRE(error.message == std::string("snuc box data version 1 is not implemented yet"));
 }

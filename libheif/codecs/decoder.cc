@@ -196,7 +196,15 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
       auto ispe = std::make_shared<Box_ispe>();
       ispe->set_size(sample_description_box->get_VisualSampleEntry_const().width,
                      sample_description_box->get_VisualSampleEntry_const().height);
-      return std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
+      auto decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
+      decoder->set_cpat(sample_description_box->get_child_box<Box_cpat>());
+      decoder->set_cmpC(sample_description_box->get_child_box<Box_cmpC>());
+      decoder->set_icef(sample_description_box->get_child_box<Box_icef>());
+      decoder->set_cloc(sample_description_box->get_child_box<Box_cloc>());
+      decoder->set_splz(sample_description_box->get_child_boxes<Box_splz>());
+      decoder->set_sbpm(sample_description_box->get_child_boxes<Box_sbpm>());
+      decoder->set_snuc(sample_description_box->get_child_boxes<Box_snuc>());
+      return decoder;
     }
 #endif
 

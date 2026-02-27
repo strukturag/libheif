@@ -30,6 +30,7 @@
 #include "unc_encoder_rgb_pixel_interleave.h"
 #include "unc_encoder_rgb_bytealign_pixel_interleave.h"
 #include "libheif/heif_uncompressed.h"
+#include "compression.h"
 
 
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel)
@@ -168,6 +169,18 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
     codedImageData.properties.push_back(splz);
   }
 
+  for (const auto& sbpm : m_sbpm) {
+    codedImageData.properties.push_back(sbpm);
+  }
+
+  for (const auto& snuc : m_snuc) {
+    codedImageData.properties.push_back(snuc);
+  }
+
+  if (m_cloc) {
+    codedImageData.properties.push_back(m_cloc);
+  }
+
 
   // --- encode image
 
@@ -176,7 +189,37 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
     return codedBitstreamResult.error();
   }
 
-  codedImageData.bitstream = *codedBitstreamResult;
+  // --- optionally compress
+
+  heif_unci_compression compression = (in_options.version >= 8) ? in_options.unci_compression : heif_unci_compression_off;
+
+  if (compression != heif_unci_compression_off) {
+    uint32_t compr_fourcc = unci_compression_to_fourcc(compression);
+
+    auto compressed = compress_unci_fourcc(compr_fourcc,
+                                            codedBitstreamResult->data(),
+                                            codedBitstreamResult->size());
+    if (!compressed) {
+      return compressed.error();
+    }
+
+    auto cmpC = std::make_shared<Box_cmpC>();
+    cmpC->set_compression_type(compr_fourcc);
+    cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
+    codedImageData.properties.push_back(cmpC);
+
+    auto icef = std::make_shared<Box_icef>();
+    Box_icef::CompressedUnitInfo info;
+    info.unit_offset = 0;
+    info.unit_size = compressed->size();
+    icef->add_component(info);
+    codedImageData.properties.push_back(icef);
+
+    codedImageData.bitstream = std::move(*compressed);
+  }
+  else {
+    codedImageData.bitstream = std::move(*codedBitstreamResult);
+  }
 
   return codedImageData;
 }

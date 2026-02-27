@@ -68,6 +68,9 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_uncompressed::get_sample_de
       case fourcc("icef"):
       case fourcc("cpat"):
       case fourcc("splz"):
+      case fourcc("sbpm"):
+      case fourcc("snuc"):
+      case fourcc("cloc"):
         uncv->append_child_box(prop);
       break;
     }

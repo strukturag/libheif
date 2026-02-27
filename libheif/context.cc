@@ -152,6 +152,10 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
     dst->max_sequence_frames = src->max_sequence_frames;
     dst->max_number_of_file_brands = src->max_number_of_file_brands;
   }
+
+  if (src->version >= 4) {
+    dst->max_bad_pixels = src->max_bad_pixels;
+  }
 }
 
 

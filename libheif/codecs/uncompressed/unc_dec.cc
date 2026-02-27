@@ -181,6 +181,13 @@ Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif
   properties.uncC = m_uncC;
   properties.cmpd = m_cmpd;
   properties.ispe = m_ispe;
+  properties.cpat = m_cpat;
+  properties.cmpC = m_cmpC;
+  properties.icef = m_icef;
+  properties.splz = m_splz;
+  properties.sbpm = m_sbpm;
+  properties.snuc = m_snuc;
+  properties.cloc = m_cloc;
 
   auto decodeResult = UncompressedImageCodec::decode_uncompressed_image(properties,
                                                           get_data_extent(),

@@ -25,7 +25,7 @@
 
 
 heif_security_limits global_security_limits{
-    .version = 3,
+    .version = 4,
 
     // --- version 1
 
@@ -54,12 +54,13 @@ heif_security_limits global_security_limits{
     // --- version 3
 
     .max_sequence_frames = 18'000'000,  // 100 hours at 50 fps
-    .max_number_of_file_brands = 1000
+    .max_number_of_file_brands = 1000,
+    .max_bad_pixels = 1000
 };
 
 
 heif_security_limits disabled_security_limits{
-    .version = 3
+    .version = 4
 };
 
 

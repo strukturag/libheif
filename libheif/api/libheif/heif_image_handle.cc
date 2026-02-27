@@ -21,7 +21,11 @@
 #include "heif_image_handle.h"
 #include "api_structs.h"
 #include "box.h"
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed/unc_boxes.h"
+#endif
 #include <climits>
+#include <cstring>
 #include <string>
 #include <memory>
 
@@ -185,4 +189,109 @@ void heif_image_handle_set_gimi_content_id(heif_image_handle* handle, const char
   gimi_box->set_content_id(content_id);
   handle->context->add_property(handle->image->get_id(), gimi_box, false);
   handle->image->set_gimi_sample_content_id(content_id);
+}
+
+
+uint32_t heif_image_handle_get_number_of_cmpd_components(const heif_image_handle* handle)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle) {
+    return 0;
+  }
+  auto cmpd = handle->image->get_property<Box_cmpd>();
+  if (!cmpd) {
+    return 0;
+  }
+  return static_cast<uint32_t>(cmpd->get_components().size());
+#else
+  return 0;
+#endif
+}
+
+
+uint16_t heif_image_handle_get_cmpd_component_type(const heif_image_handle* handle, uint32_t component_idx)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle) {
+    return 0;
+  }
+  auto cmpd = handle->image->get_property<Box_cmpd>();
+  if (!cmpd) {
+    return 0;
+  }
+  const auto& components = cmpd->get_components();
+  if (component_idx >= components.size()) {
+    return 0;
+  }
+  return components[component_idx].component_type;
+#else
+  return 0;
+#endif
+}
+
+
+const char* heif_image_handle_get_cmpd_component_type_uri(const heif_image_handle* handle, uint32_t component_idx)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle) {
+    return nullptr;
+  }
+  auto cmpd = handle->image->get_property<Box_cmpd>();
+  if (!cmpd) {
+    return nullptr;
+  }
+  const auto& components = cmpd->get_components();
+  if (component_idx >= components.size()) {
+    return nullptr;
+  }
+  const auto& uri = components[component_idx].component_type_uri;
+  if (uri.empty()) {
+    return nullptr;
+  }
+  char* uristring = new char[uri.size() + 1];
+  strcpy(uristring, uri.c_str());
+  return uristring;
+#else
+  return nullptr;
+#endif
+}
+
+
+int heif_image_handle_has_gimi_component_content_ids(const heif_image_handle* handle)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle) {
+    return 0;
+  }
+  auto box = handle->image->get_property<Box_gimi_component_content_ids>();
+  if (!box) {
+    return 0;
+  }
+  return static_cast<int>(box->get_content_ids().size());
+#else
+  return 0;
+#endif
+}
+
+
+const char* heif_image_handle_get_gimi_component_content_id(const heif_image_handle* handle, uint32_t component_idx)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle) {
+    return nullptr;
+  }
+  auto box = handle->image->get_property<Box_gimi_component_content_ids>();
+  if (!box) {
+    return nullptr;
+  }
+  const auto& ids = box->get_content_ids();
+  if (component_idx >= ids.size()) {
+    return nullptr;
+  }
+  char* idstring = new char[ids[component_idx].size() + 1];
+  strcpy(idstring, ids[component_idx].c_str());
+  return idstring;
+#else
+  return nullptr;
+#endif
 }

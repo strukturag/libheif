@@ -44,6 +44,8 @@
 #include <libheif/heif_experimental.h>
 #include "libheif/heif_sequences.h"
 #include <libheif/heif_text.h>
+#include <libheif/heif_image_handle.h>
+#include <libheif/heif_uncompressed.h>
 
 #include <fstream>
 #include <iostream>
@@ -775,6 +777,36 @@ int main(int argc, char** argv)
     if (id) {
       std::cout << "  GIMI content ID: " << id << "\n";
       heif_string_release(id);
+      properties_shown = true;
+    }
+
+    // --- cmpd components
+
+    uint32_t num_cmpd_components = heif_image_handle_get_number_of_cmpd_components(handle);
+    if (num_cmpd_components > 0) {
+      int num_content_ids = heif_image_handle_has_gimi_component_content_ids(handle);
+
+      std::cout << "  components:\n";
+      for (uint32_t i = 0; i < num_cmpd_components; i++) {
+        uint16_t type = heif_image_handle_get_cmpd_component_type(handle, i);
+        std::cout << "    [" << i << "] type: " << type;
+
+        const char* uri = heif_image_handle_get_cmpd_component_type_uri(handle, i);
+        if (uri) {
+          std::cout << " (uri: " << uri << ")";
+          heif_string_release(uri);
+        }
+
+        if (num_content_ids > 0) {
+          const char* content_id = heif_image_handle_get_gimi_component_content_id(handle, i);
+          if (content_id) {
+            std::cout << "  content ID: " << content_id;
+            heif_string_release(content_id);
+          }
+        }
+
+        std::cout << "\n";
+      }
       properties_shown = true;
     }
 

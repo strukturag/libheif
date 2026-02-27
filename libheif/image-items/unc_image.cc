@@ -170,30 +170,13 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   unci_image->add_property(ispe, true);
 
   if (parameters->compression != heif_unci_compression_off) {
-    auto icef = std::make_shared<Box_icef>();
     auto cmpC = std::make_shared<Box_cmpC>();
+    cmpC->set_compression_type(unci_compression_to_fourcc(parameters->compression));
     cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
 
-    if (false) {
-    }
-#if HAVE_ZLIB
-    else if (parameters->compression == heif_unci_compression_deflate) {
-      cmpC->set_compression_type(fourcc("defl"));
-    }
-    else if (parameters->compression == heif_unci_compression_zlib) {
-      cmpC->set_compression_type(fourcc("zlib"));
-    }
-#endif
-#if HAVE_BROTLI
-    else if (parameters->compression == heif_unci_compression_brotli) {
-      cmpC->set_compression_type(fourcc("brot"));
-    }
-#endif
-    else {
-      assert(false);
-    }
-
     unci_image->add_property(cmpC, true);
+
+    auto icef = std::make_shared<Box_icef>();
     unci_image->add_property_without_deduplication(icef, true); // icef is empty. A normal add_property() would lead to a wrong deduplication.
   }
 
@@ -262,38 +245,22 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
   }
   else {
-    std::vector<uint8_t> compressed_data;
-    const std::vector<uint8_t>& raw_data = std::move(*codedBitstreamResult);
-    (void)raw_data;
+    const std::vector<uint8_t>& raw_data = *codedBitstreamResult;
 
-    uint32_t compr = cmpC->get_compression_type();
-    switch (compr) {
-#if HAVE_ZLIB
-      case fourcc("defl"):
-        compressed_data = compress_deflate(raw_data.data(), raw_data.size());
-        break;
-      case fourcc("zlib"):
-        compressed_data = compress_zlib(raw_data.data(), raw_data.size());
-        break;
-#endif
-#if HAVE_BROTLI
-      case fourcc("brot"):
-        compressed_data = compress_brotli(raw_data.data(), raw_data.size());
-        break;
-#endif
-      default:
-        assert(false);
-        break;
+    auto compressed = compress_unci_fourcc(cmpC->get_compression_type(),
+                                            raw_data.data(), raw_data.size());
+    if (!compressed) {
+      return compressed.error();
     }
 
-    get_file()->append_iloc_data(get_id(), compressed_data, 0);
+    get_file()->append_iloc_data(get_id(), *compressed, 0);
 
     Box_icef::CompressedUnitInfo unit_info;
     unit_info.unit_offset = m_next_tile_write_pos;
-    unit_info.unit_size = compressed_data.size();
+    unit_info.unit_size = compressed->size();
     icef->set_component(tile_idx, unit_info);
 
-    m_next_tile_write_pos += compressed_data.size();
+    m_next_tile_write_pos += compressed->size();
   }
 
   return Error::Ok;

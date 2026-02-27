@@ -570,7 +570,7 @@ int heif_encoder_has_default(heif_encoder* encoder,
 
 static void set_default_encoding_options(heif_encoding_options& options)
 {
-  options.version = 7;
+  options.version = 8;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = false;
@@ -585,6 +585,8 @@ static void set_default_encoding_options(heif_encoding_options& options)
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
 
   options.prefer_uncC_short_form = true;
+
+  options.unci_compression = heif_unci_compression_off;
 }
 
 
@@ -607,6 +609,9 @@ void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_
   int min_version = std::min(dst->version, src->version);
 
   switch (min_version) {
+    case 8:
+      dst->unci_compression = src->unci_compression;
+      [[fallthrough]];
     case 7:
       dst->prefer_uncC_short_form = src->prefer_uncC_short_form;
       [[fallthrough]];

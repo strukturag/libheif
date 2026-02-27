@@ -33,6 +33,9 @@ class Box_uncC;
 class Box_cmpd;
 class Box_cpat;
 class Box_splz;
+class Box_sbpm;
+class Box_snuc;
+class Box_cloc;
 class HeifPixelImage;
 
 heif_uncompressed_component_type heif_channel_to_component_type(heif_channel channel);
@@ -51,6 +54,9 @@ public:
   std::shared_ptr<Box_uncC> get_uncC() const { return m_uncC; }
   std::shared_ptr<Box_cpat> get_cpat() const { return m_cpat; }
   std::vector<std::shared_ptr<Box_splz>> get_splz() const { return m_splz; }
+  std::vector<std::shared_ptr<Box_sbpm>> get_sbpm() const { return m_sbpm; }
+  std::vector<std::shared_ptr<Box_snuc>> get_snuc() const { return m_snuc; }
+  std::shared_ptr<Box_cloc> get_cloc() const { return m_cloc; }
 
 
   virtual uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const = 0;
@@ -68,6 +74,9 @@ protected:
   std::shared_ptr<Box_uncC> m_uncC;
   std::shared_ptr<Box_cpat> m_cpat;
   std::vector<std::shared_ptr<Box_splz>> m_splz;
+  std::vector<std::shared_ptr<Box_sbpm>> m_sbpm;
+  std::vector<std::shared_ptr<Box_snuc>> m_snuc;
+  std::shared_ptr<Box_cloc> m_cloc;
 };
 
 

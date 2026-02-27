@@ -58,11 +58,9 @@ void unc_decoder_legacybase::ensureChannelList(std::shared_ptr<HeifPixelImage>& 
 
 void unc_decoder_legacybase::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
 {
-  uint32_t idx = 0;
   for (Box_uncC::Component component : m_uncC->get_components()) {
-    ChannelListEntry entry = buildChannelListEntry(idx, component, img);
+    ChannelListEntry entry = buildChannelListEntry(component.component_index, component, img);
     channelList.push_back(entry);
-    idx++;
   }
 }
 

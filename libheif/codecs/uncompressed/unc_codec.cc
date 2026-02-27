@@ -36,6 +36,7 @@
 #include <map>
 #include <sstream>
 #include "security_limits.h"
+#include <utility>
 
 
 Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
@@ -204,6 +205,16 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
               colourspace,
               chroma);
 
+  // Populate the cmpd table on the image so add_component_for_index() can look up types.
+  {
+    std::vector<uint16_t> cmpd_types;
+    cmpd_types.reserve(components.size());
+    for (const auto& c : components) {
+      cmpd_types.push_back(c.component_type);
+    }
+    img->set_cmpd_component_types(std::move(cmpd_types));
+  }
+
   for (Box_uncC::Component component : uncC->get_components()) {
     if (component.component_index >= components.size()) {
       return Error{
@@ -217,23 +228,23 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
 
     if ((component_type == heif_uncompressed_component_type_Cb) ||
         (component_type == heif_uncompressed_component_type_Cr)) {
-      Result<uint32_t> result = img->add_component((width / chroma_h_subsampling(chroma)),
-                                                   (height / chroma_v_subsampling(chroma)),
-                                                   component_type,
-                                                   unc_component_format_to_datatype(component.component_format),
-                                                   component.component_bit_depth,
-                                                   limits);
+      Result<uint32_t> result = img->add_component_for_index(component.component_index,
+                                                              (width / chroma_h_subsampling(chroma)),
+                                                              (height / chroma_v_subsampling(chroma)),
+                                                              unc_component_format_to_datatype(component.component_format),
+                                                              component.component_bit_depth,
+                                                              limits);
       if (result.is_error()) {
         return result.error();
       }
     }
     else {
-      Result<uint32_t> result = img->add_component(width,
-                                                   height,
-                                                   component_type,
-                                                   unc_component_format_to_datatype(component.component_format),
-                                                   component.component_bit_depth,
-                                                   limits);
+      Result<uint32_t> result = img->add_component_for_index(component.component_index,
+                                                              width,
+                                                              height,
+                                                              unc_component_format_to_datatype(component.component_format),
+                                                              component.component_bit_depth,
+                                                              limits);
       if (result.is_error()) {
         return result.error();
       }
@@ -448,6 +459,9 @@ void UncompressedImageCodec::unci_properties::fill_from_image_item(const std::sh
   icef = image->get_property<Box_icef>();
   cpat = image->get_property<Box_cpat>();
   splz = image->get_all_properties<Box_splz>();
+  sbpm = image->get_all_properties<Box_sbpm>();
+  snuc = image->get_all_properties<Box_snuc>();
+  cloc = image->get_property<Box_cloc>();
 }
 
 
