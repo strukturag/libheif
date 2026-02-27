@@ -388,24 +388,15 @@ LIBHEIF_API
 heif_complex64* heif_image_get_component_complex64(heif_image*, uint32_t component_idx, size_t* out_stride);
 
 
-// --- GIMI component content IDs
+// --- GIMI component content IDs (set before encoding)
 
-// Returns non-zero (the number of content IDs) if component content IDs are set, 0 otherwise.
-LIBHEIF_API
-int heif_image_has_component_content_ids(const heif_image*);
-
-// Get a component content ID by cmpd component index.
-// Returns NULL if no content IDs are set or if the index is out of range.
-// The returned string must be freed with heif_string_release().
-LIBHEIF_API
-const char* heif_image_get_component_content_id(const heif_image*, uint32_t component_idx);
-
-// Set a component content ID for a single cmpd component.
+// Set a GIMI component content ID for a single cmpd component.
 // If the internal array is too small, it will be resized (new entries default to empty strings).
+// These are written into an ItemComponentContentIDProperty box during encoding.
 LIBHEIF_API
-heif_error heif_image_set_component_content_id(heif_image*,
-                                               uint32_t component_idx,
-                                               const char* content_id);
+void heif_image_set_gimi_component_content_id(heif_image*,
+                                              uint32_t component_idx,
+                                              const char* content_id);
 
 #ifdef __cplusplus
 }

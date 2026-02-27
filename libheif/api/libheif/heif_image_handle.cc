@@ -192,13 +192,32 @@ void heif_image_handle_set_gimi_content_id(heif_image_handle* handle, const char
 }
 
 
+#if WITH_UNCOMPRESSED_CODEC
+static std::shared_ptr<Box_cmpd> get_effective_cmpd(const heif_image_handle* handle)
+{
+  // Try explicit cmpd property first.
+  auto cmpd = handle->image->get_property<Box_cmpd>();
+  if (cmpd) {
+    return cmpd;
+  }
+
+  // For profile-based uncC (version 1), the cmpd is synthesized inside the uncC box.
+  auto uncC = handle->image->get_property<Box_uncC>();
+  if (uncC) {
+    fill_uncC_and_cmpd_from_profile(uncC, cmpd);
+  }
+  return cmpd;
+}
+#endif
+
+
 uint32_t heif_image_handle_get_number_of_cmpd_components(const heif_image_handle* handle)
 {
 #if WITH_UNCOMPRESSED_CODEC
   if (!handle) {
     return 0;
   }
-  auto cmpd = handle->image->get_property<Box_cmpd>();
+  auto cmpd = get_effective_cmpd(handle);
   if (!cmpd) {
     return 0;
   }
@@ -215,7 +234,7 @@ uint16_t heif_image_handle_get_cmpd_component_type(const heif_image_handle* hand
   if (!handle) {
     return 0;
   }
-  auto cmpd = handle->image->get_property<Box_cmpd>();
+  auto cmpd = get_effective_cmpd(handle);
   if (!cmpd) {
     return 0;
   }
@@ -236,7 +255,7 @@ const char* heif_image_handle_get_cmpd_component_type_uri(const heif_image_handl
   if (!handle) {
     return nullptr;
   }
-  auto cmpd = handle->image->get_property<Box_cmpd>();
+  auto cmpd = get_effective_cmpd(handle);
   if (!cmpd) {
     return nullptr;
   }
@@ -293,5 +312,36 @@ const char* heif_image_handle_get_gimi_component_content_id(const heif_image_han
   return idstring;
 #else
   return nullptr;
+#endif
+}
+
+
+void heif_image_handle_set_gimi_component_content_id(heif_image_handle* handle,
+                                                     uint32_t component_idx,
+                                                     const char* content_id)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  if (!handle || !content_id) {
+    return;
+  }
+
+  auto box = handle->image->get_property<Box_gimi_component_content_ids>();
+  if (!box) {
+    // Create a new box and add it as property.
+    auto new_box = std::make_shared<Box_gimi_component_content_ids>();
+    std::vector<std::string> ids(component_idx + 1);
+    ids[component_idx] = content_id;
+    new_box->set_content_ids(ids);
+    handle->context->add_property(handle->image->get_id(), new_box, false);
+  }
+  else {
+    // Mutate the existing box in-place.
+    auto ids = box->get_content_ids();
+    if (component_idx >= ids.size()) {
+      ids.resize(component_idx + 1);
+    }
+    ids[component_idx] = content_id;
+    box->set_content_ids(ids);
+  }
 #endif
 }

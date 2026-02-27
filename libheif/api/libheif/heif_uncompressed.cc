@@ -763,40 +763,12 @@ heif_image_get_component_X(complex32, heif_complex32)
 heif_image_get_component_X(complex64, heif_complex64)
 
 
-// --- GIMI component content IDs
-
-int heif_image_has_component_content_ids(const heif_image* image)
-{
-  if (!image || !image->image) {
-    return 0;
-  }
-  return static_cast<int>(image->image->get_component_content_ids().size());
-}
-
-
-const char* heif_image_get_component_content_id(const heif_image* image, uint32_t component_idx)
-{
-  if (!image || !image->image || !image->image->has_component_content_ids()) {
-    return nullptr;
-  }
-
-  const auto& ids = image->image->get_component_content_ids();
-  if (component_idx >= ids.size()) {
-    return nullptr;
-  }
-
-  char* idstring = new char[ids[component_idx].size() + 1];
-  strcpy(idstring, ids[component_idx].c_str());
-  return idstring;
-}
-
-
-heif_error heif_image_set_component_content_id(heif_image* image,
-                                               uint32_t component_idx,
-                                               const char* content_id)
+void heif_image_set_gimi_component_content_id(heif_image* image,
+                                              uint32_t component_idx,
+                                              const char* content_id)
 {
   if (!image || !image->image || !content_id) {
-    return heif_error_null_pointer_argument;
+    return;
   }
 
   auto ids = image->image->get_component_content_ids();
@@ -805,8 +777,6 @@ heif_error heif_image_set_component_content_id(heif_image* image,
   }
   ids[component_idx] = content_id;
   image->image->set_component_content_ids(ids);
-
-  return heif_error_success;
 }
 
 

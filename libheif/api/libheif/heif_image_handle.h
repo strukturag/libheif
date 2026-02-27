@@ -156,6 +156,14 @@ int heif_image_handle_has_gimi_component_content_ids(const heif_image_handle*);
 LIBHEIF_API
 const char* heif_image_handle_get_gimi_component_content_id(const heif_image_handle*, uint32_t component_idx);
 
+// Set a GIMI component content ID for a single component.
+// If an ItemComponentContentIDProperty does not yet exist, one will be created.
+// The content IDs array is resized as needed (new entries default to empty).
+LIBHEIF_API
+void heif_image_handle_set_gimi_component_content_id(heif_image_handle*,
+                                                     uint32_t component_idx,
+                                                     const char* content_id);
+
 #ifdef __cplusplus
 }
 #endif

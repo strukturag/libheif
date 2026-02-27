@@ -1981,10 +1981,6 @@ void HeifPixelImage::forward_all_metadata_from(const std::shared_ptr<const HeifP
     set_gimi_sample_content_id(src_image->get_gimi_sample_content_id());
   }
 
-  if (src_image->has_component_content_ids()) {
-    set_component_content_ids(src_image->get_component_content_ids());
-  }
-
   if (auto* tai = src_image->get_tai_timestamp()) {
     set_tai_timestamp(tai);
   }
