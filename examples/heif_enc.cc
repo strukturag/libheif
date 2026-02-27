@@ -42,6 +42,7 @@
 #include <optional>
 #include <map>
 #include <tuple>
+#include <random>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -122,6 +123,7 @@ bool use_tiling = false;
 bool encode_sequence = false;
 bool option_unif = false;
 bool use_video_handler = false;
+bool option_component_content_ids = false;
 std::string option_mime_item_type;
 std::string option_mime_item_file;
 std::string option_mime_item_name;
@@ -212,11 +214,41 @@ const int OPTION_SET_OMAF_IMAGE_PROJECTION = 1038;
 #endif
 const int OPTION_ADD_COMPATIBLE_BRAND = 1039;
 const int OPTION_UNIF = 1040;
+const int OPTION_COMPONENT_CONTENT_IDS = 1041;
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 const int OPTION_TURTLE = 2000;
 const int OPTION_EMBED_TURTLE = 2001;
 #endif
+
+
+static std::string generate_random_uuid_urn()
+{
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<uint32_t> dist(0, 0xFFFFFFFF);
+
+  uint32_t data[4];
+  for (auto& d : data) {
+    d = dist(gen);
+  }
+
+  auto* bytes = reinterpret_cast<uint8_t*>(data);
+
+  // Set version 4 (random) and variant 1 (RFC 4122)
+  bytes[6] = (bytes[6] & 0x0F) | 0x40;
+  bytes[8] = (bytes[8] & 0x3F) | 0x80;
+
+  char buf[64];
+  snprintf(buf, sizeof(buf),
+           "urn:uuid:%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+           bytes[0], bytes[1], bytes[2], bytes[3],
+           bytes[4], bytes[5],
+           bytes[6], bytes[7],
+           bytes[8], bytes[9],
+           bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
+  return buf;
+}
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -310,6 +342,7 @@ static option long_options[] = {
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
     {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
+    {(char* const) "component-content-ids",       no_argument,       nullptr, OPTION_COMPONENT_CONTENT_IDS},
 #endif
     {(char* const) "color-profile",               required_argument, 0,                     OPTION_COLOR_PROFILE_PRESET},
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
@@ -1532,6 +1565,9 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_COMPONENT_CONTENT_IDS:
+        option_component_content_ids = true;
+        break;
       case 'C':
         chroma_downsampling = optarg;
         if (chroma_downsampling != "nn" &&
@@ -2191,6 +2227,14 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       heif_image_handle_set_omaf_image_projection(handle, *omaf_image_projection);
     }
 #endif
+
+    if (option_component_content_ids && force_enc_uncompressed) {
+      uint32_t num_components = heif_image_handle_get_number_of_cmpd_components(handle);
+      for (uint32_t i = 0; i < num_components; i++) {
+        std::string uuid = generate_random_uuid_urn();
+        heif_image_handle_set_gimi_component_content_id(handle, i, uuid.c_str());
+      }
+    }
 
     if (is_primary_image) {
       heif_context_set_primary_image(context, handle);
