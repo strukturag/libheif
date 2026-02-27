@@ -82,6 +82,8 @@ public:
 
   void new_empty_file();
 
+  void init_for_meta_item();
+
   void init_for_image();
 
   void init_for_sequence();
@@ -96,7 +98,7 @@ public:
 
   int get_num_images() const { return static_cast<int>(m_infe_boxes.size()); }
 
-  heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
+  heif_item_id get_primary_image_ID() const { return m_pitm_box ? m_pitm_box->get_item_ID() : 0; }
 
   size_t get_number_of_items() const { return m_infe_boxes.size(); }
 
@@ -193,6 +195,8 @@ public:
   Result<heif_item_id> add_new_image(uint32_t item_type);
 
   Result<std::shared_ptr<Box_infe>> add_new_infe_box(uint32_t item_type);
+
+  Result<std::shared_ptr<Box_infe>> add_new_meta_infe_box(uint32_t item_type);
 
   void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 

@@ -163,39 +163,59 @@ void HeifFile::new_empty_file()
 }
 
 
-void HeifFile::init_for_image()
+void HeifFile::init_for_meta_item()
 {
-  if (m_meta_box) {
-    return;
+  if (!m_meta_box) {
+    m_meta_box = std::make_shared<Box_meta>();
+    m_top_level_boxes.push_back(m_meta_box);
   }
 
-  m_hdlr_box = std::make_shared<Box_hdlr>();
-  m_meta_box = std::make_shared<Box_meta>();
-  m_ipco_box = std::make_shared<Box_ipco>();
-  m_ipma_box = std::make_shared<Box_ipma>();
-  m_iloc_box = std::make_shared<Box_iloc>();
-  m_iinf_box = std::make_shared<Box_iinf>();
-  m_iprp_box = std::make_shared<Box_iprp>();
-  m_pitm_box = std::make_shared<Box_pitm>();
+  if (!m_hdlr_box) {
+    m_hdlr_box = std::make_shared<Box_hdlr>();
+    m_hdlr_box->set_handler_type(fourcc("null"));
+    m_meta_box->append_child_box(m_hdlr_box);
+  }
 
-  m_meta_box->append_child_box(m_hdlr_box);
-  m_meta_box->append_child_box(m_pitm_box);
-  m_meta_box->append_child_box(m_iloc_box);
-  m_meta_box->append_child_box(m_iinf_box);
-  m_meta_box->append_child_box(m_iprp_box);
+  if (!m_iloc_box) {
+    m_iloc_box = std::make_shared<Box_iloc>();
+    m_meta_box->append_child_box(m_iloc_box);
+  }
 
-  m_iprp_box->append_child_box(m_ipco_box);
-  m_iprp_box->append_child_box(m_ipma_box);
+  if (!m_iinf_box) {
+    m_iinf_box = std::make_shared<Box_iinf>();
+    m_meta_box->append_child_box(m_iinf_box);
+  }
+}
 
-  m_infe_boxes.clear();
 
-  m_top_level_boxes.push_back(m_meta_box);
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
-  // TODO: do not create 'mini' box as we cannot write them yet.
-  //       if we include it in the top_level_boxes, it will be written into every file.
-  //m_mini_box = std::make_shared<Box_mini>();
-  //m_top_level_boxes.push_back(m_mini_box);
-#endif
+void HeifFile::init_for_image()
+{
+  init_for_meta_item();
+
+  // Upgrade handler from "null" to "pict" if needed
+  if (m_hdlr_box->get_handler_type() == fourcc("null")) {
+    m_hdlr_box->set_handler_type(fourcc("pict"));
+  }
+
+  if (!m_pitm_box) {
+    m_pitm_box = std::make_shared<Box_pitm>();
+    m_meta_box->append_child_box(m_pitm_box);
+  }
+
+  if (!m_iprp_box) {
+    m_iprp_box = std::make_shared<Box_iprp>();
+    m_meta_box->append_child_box(m_iprp_box);
+  }
+
+  if (!m_ipco_box) {
+    m_ipco_box = std::make_shared<Box_ipco>();
+    m_iprp_box->append_child_box(m_ipco_box);
+  }
+
+  if (!m_ipma_box) {
+    m_ipma_box = std::make_shared<Box_ipma>();
+    m_iprp_box->append_child_box(m_ipma_box);
+  }
 }
 
 
@@ -890,6 +910,28 @@ Result<std::shared_ptr<Box_infe>> HeifFile::add_new_infe_box(uint32_t item_type)
 }
 
 
+Result<std::shared_ptr<Box_infe>> HeifFile::add_new_meta_infe_box(uint32_t item_type)
+{
+  init_for_meta_item();
+
+  auto idResult = get_unused_item_id();
+  if (!idResult) {
+    return idResult.error();
+  }
+  heif_item_id id = *idResult;
+
+  auto infe = std::make_shared<Box_infe>();
+  infe->set_item_ID(id);
+  infe->set_hidden_item(false);
+  infe->set_item_type_4cc(item_type);
+
+  m_infe_boxes[id] = infe;
+  m_iinf_box->append_child_box(infe);
+
+  return infe;
+}
+
+
 void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential)
 {
   auto ispe = std::make_shared<Box_ispe>();
@@ -1013,7 +1055,7 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_result = add_new_infe_box(fourcc("mime"));
+  auto infe_result = add_new_meta_infe_box(fourcc("mime"));
   if (!infe_result) {
     return infe_result.error();
   }
@@ -1033,7 +1075,7 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_result = add_new_infe_box(fourcc("mime"));
+  auto infe_result = add_new_meta_infe_box(fourcc("mime"));
   if (!infe_result) {
     return infe_result.error();
   }
@@ -1053,7 +1095,7 @@ Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uin
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_result = add_new_infe_box(fourcc("uri "));
+  auto infe_result = add_new_meta_infe_box(fourcc("uri "));
   if (!infe_result) {
     return infe_result.error();
   }

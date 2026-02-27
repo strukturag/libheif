@@ -553,7 +553,7 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
-  if (entry_count > limits->max_sequence_frames) {
+  if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,
@@ -688,7 +688,7 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
-  if (entry_count > limits->max_sequence_frames) {
+  if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,
@@ -863,7 +863,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   uint32_t entry_count = range.read32();
 
   // Note: test against maximum number of frames (upper limit) since we have no limit on maximum number of chunks
-  if (entry_count > limits->max_sequence_frames) {
+  if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
     return {
       heif_error_Invalid_input,
       heif_suberror_Unspecified,
@@ -891,7 +891,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
       "'sample_description_index' in 'stsc' must not be 0."};
     }
 
-    if (entry.samples_per_chunk > limits->max_sequence_frames) {
+    if (limits->max_sequence_frames > 0 && entry.samples_per_chunk > limits->max_sequence_frames) {
       return {
         heif_error_Invalid_input,
         heif_suberror_Unspecified,
@@ -1062,7 +1062,7 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   if (m_fixed_sample_size == 0) {
     // check required memory
 
-    if (m_sample_count > limits->max_sequence_frames) {
+    if (limits->max_sequence_frames > 0 && m_sample_count > limits->max_sequence_frames) {
       return {
         heif_error_Memory_allocation_error,
         heif_suberror_Security_limit_exceeded,
@@ -1940,7 +1940,7 @@ Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_default_sample_info_size = range.read8();
   m_num_samples = range.read32();
 
-  if (limits && m_num_samples > limits->max_sequence_frames) {
+  if (limits && limits->max_sequence_frames > 0 && m_num_samples > limits->max_sequence_frames) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,
@@ -2093,7 +2093,7 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // We have no explicit maximum on the number of chunks.
   // Use the maximum number of frames as an upper limit.
-  if (limits && num_chunks > limits->max_sequence_frames) {
+  if (limits && limits->max_sequence_frames > 0 && num_chunks > limits->max_sequence_frames) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,

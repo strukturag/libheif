@@ -28,6 +28,7 @@
 #include <cstring>
 #include <string>
 #include <memory>
+#include <vector>
 
 
 void heif_image_handle_release(const heif_image_handle* handle)
