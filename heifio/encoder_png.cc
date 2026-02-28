@@ -149,6 +149,19 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
       }
       free(profile_data);
     }
+
+#ifdef PNG_cICP_SUPPORTED
+    if (heif_image_handle_get_color_profile_type(handle) == heif_color_profile_type_nclx) {
+      heif_color_profile_nclx* nclx = nullptr;
+      heif_image_handle_get_nclx_color_profile(handle, &nclx);
+      if (nclx) {
+        // Setting matrix coefficients to 0 (RGB) and full range flag to 1 (full range)
+        // because data is converted into RGB specified by PngEncoder::colorspace (heif_colorspace_RGB)
+        png_set_cICP(png_ptr, info_ptr, nclx->color_primaries, nclx->transfer_characteristics, 0, 1);
+        heif_nclx_color_profile_free(nclx);
+      }
+    }
+#endif
   }
 
   // --- write EXIF metadata
@@ -204,6 +217,29 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
       xmp_text.itxt_length = text_length;
       png_set_text(png_ptr, info_ptr, &xmp_text, 1);
     }
+  }
+#endif
+
+#ifdef PNG_cLLI_SUPPORTED
+  if (heif_image_has_content_light_level(image)) {
+    heif_content_light_level cll;
+    heif_image_get_content_light_level(image, &cll);
+    png_set_cLLI_fixed(png_ptr, info_ptr, cll.max_content_light_level * 10000, cll.max_pic_average_light_level * 10000);
+  }
+#endif
+
+#ifdef PNG_mDCV_SUPPORTED
+  if (heif_image_has_mastering_display_colour_volume(image)) {
+    heif_mastering_display_colour_volume mdcv;
+    heif_image_get_mastering_display_colour_volume(image, &mdcv);
+    // The fixed point precision of PNG MDCV values are the same as HEIF (XY coordinates: 0.00002, luminance: 0.0001)
+    png_set_mDCV_fixed(png_ptr, info_ptr,
+      mdcv.white_point_x, mdcv.white_point_y,
+      mdcv.display_primaries_x[0], mdcv.display_primaries_y[0],
+      mdcv.display_primaries_x[1], mdcv.display_primaries_y[1],
+      mdcv.display_primaries_x[2], mdcv.display_primaries_y[2],
+      mdcv.max_display_mastering_luminance,
+      mdcv.min_display_mastering_luminance);
   }
 #endif
 
