@@ -255,7 +255,9 @@ std::shared_ptr<Box_prfr> ImageExtraData::get_prfr_box() const
   }
 
   auto prfr = std::make_shared<Box_prfr>();
-  prfr->set_image_projection(get_omaf_image_projection());
+  if (prfr->set_image_projection(get_omaf_image_projection())) {
+    return {};
+  }
 
   return prfr;
 }

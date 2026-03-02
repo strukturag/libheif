@@ -1034,6 +1034,12 @@ Error Box_splz::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t component_count = range.read32();
+  if (limits->max_components && component_count > limits->max_components) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "Number of components in splz box exceeds the security limits."};
+  }
+
   m_pattern.component_indices.resize(component_count);
   for (uint32_t i = 0; i < component_count; i++) {
     m_pattern.component_indices[i] = range.read32();

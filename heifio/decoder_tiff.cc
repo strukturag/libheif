@@ -595,6 +595,55 @@ static heif_error readMonoFloat(TIFF* tif, heif_image** image)
 
   return heif_error_ok;
 }
+
+
+static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
+{
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  err = heif_image_create((int)width, (int)height, heif_colorspace_nonvisual, heif_chroma_undefined, image);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+  uint32_t component_idx;
+  err = heif_image_add_component(*image, (int)width, (int)height,
+                                 heif_uncompressed_component_type_monochrome,
+                                 heif_channel_datatype_signed_integer, bps, &component_idx);
+  if (err.code != heif_error_Ok) {
+    heif_image_release(*image);
+    *image = nullptr;
+    return err;
+  }
+
+  size_t stride;
+  uint8_t* plane;
+  if (bps == 8) {
+    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*image, component_idx, &stride));
+  }
+  else {
+    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*image, component_idx, &stride));
+  }
+  if (!plane) {
+    heif_image_release(*image);
+    *image = nullptr;
+    return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get signed int plane"};
+  }
+
+  int bytesPerSample = bps / 8;
+  tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+  for (uint32_t row = 0; row < height; row++) {
+    TIFFReadScanline(tif, buf, row, 0);
+    memcpy(plane + row * stride, buf, width * bytesPerSample);
+  }
+  _TIFFfree(buf);
+
+  return heif_error_ok;
+}
 #endif
 
 
@@ -647,6 +696,16 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
     if (samplesPerPixel != 1) {
       return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
               "Only monochrome floating point TIFF is supported."};
+    }
+  }
+  else if (sampleFormat == SAMPLEFORMAT_INT) {
+    if (bps != 8 && bps != 16) {
+      return {heif_error_Invalid_input, heif_suberror_Unspecified,
+              "Only 8 and 16 bits per sample are supported for signed integer TIFF."};
+    }
+    if (samplesPerPixel != 1) {
+      return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+              "Only monochrome signed integer TIFF is supported."};
     }
   }
   else if (sampleFormat == SAMPLEFORMAT_UINT) {
@@ -727,6 +786,73 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
 #else
     return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
             "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+  }
+
+  bool isSignedInt = (sampleFormat == SAMPLEFORMAT_INT);
+
+  if (isSignedInt) {
+#if WITH_UNCOMPRESSED_CODEC
+    heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_nonvisual, heif_chroma_undefined, out_image);
+    if (err.code != heif_error_Ok) return err;
+
+    uint32_t component_idx;
+    err = heif_image_add_component(*out_image, (int)width, (int)height,
+                                   heif_uncompressed_component_type_monochrome,
+                                   heif_channel_datatype_signed_integer, bps, &component_idx);
+    if (err.code != heif_error_Ok) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return err;
+    }
+
+    size_t out_stride;
+    uint8_t* out_plane;
+    if (bps == 8) {
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &out_stride));
+    }
+    else {
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &out_stride));
+    }
+    if (!out_plane) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get signed int plane"};
+    }
+
+    int bytesPerSample = bps / 8;
+    tmsize_t tile_buf_size = TIFFTileSize(tif);
+    std::vector<uint8_t> tile_buf(tile_buf_size);
+
+    uint32_t n_cols = (width + tile_width - 1) / tile_width;
+    uint32_t n_rows = (height + tile_height - 1) / tile_height;
+
+    for (uint32_t ty = 0; ty < n_rows; ty++) {
+      for (uint32_t tx = 0; tx < n_cols; tx++) {
+        tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * tile_width, ty * tile_height, 0, 0),
+                                            tile_buf.data(), tile_buf_size);
+        if (read < 0) {
+          heif_image_release(*out_image);
+          *out_image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+        }
+
+        uint32_t actual_w = std::min(tile_width, width - tx * tile_width);
+        uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
+
+        for (uint32_t row = 0; row < actual_h; row++) {
+          uint8_t* dst = out_plane + (ty * tile_height + row) * out_stride
+                         + tx * tile_width * bytesPerSample;
+          uint8_t* src = tile_buf.data() + row * tile_width * bytesPerSample;
+          memcpy(dst, src, actual_w * bytesPerSample);
+        }
+      }
+    }
+
+    return heif_error_ok;
+#else
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Signed integer TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
 #endif
   }
 
@@ -834,15 +960,15 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
                                     uint16_t bps, int output_bit_depth,
                                     uint16_t sampleFormat, heif_image** out_image)
 {
-  // For mono float, separate layout is the same as contiguous (1 sample)
-  if (sampleFormat == SAMPLEFORMAT_IEEEFP) {
+  // For mono float/signed int, separate layout is the same as contiguous (1 sample)
+  if (sampleFormat == SAMPLEFORMAT_IEEEFP || sampleFormat == SAMPLEFORMAT_INT) {
 #if WITH_UNCOMPRESSED_CODEC
     return readTiledContiguous(tif, width, height, tile_width, tile_height,
                                samplesPerPixel, hasAlpha, bps, output_bit_depth,
                                sampleFormat, out_image);
 #else
     return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
-            "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+            "Float/signed integer TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
 #endif
   }
 
@@ -933,9 +1059,11 @@ heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *inpu
   if (err.code != heif_error_Ok) return err;
 
   bool isFloat = (sampleFormat == SAMPLEFORMAT_IEEEFP);
+  bool isSignedInt = (sampleFormat == SAMPLEFORMAT_INT);
 
   // For 8-bit source, always produce 8-bit output (ignore output_bit_depth).
-  int effectiveOutputBitDepth = isFloat ? 32 : ((bps <= 8) ? 8 : output_bit_depth);
+  // For float, use 32-bit. For signed int, preserve original bit depth.
+  int effectiveOutputBitDepth = isFloat ? 32 : (isSignedInt ? bps : ((bps <= 8) ? 8 : output_bit_depth));
 
   struct heif_image* image = nullptr;
 
@@ -967,6 +1095,14 @@ heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *inpu
 #else
       return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
               "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+    }
+    else if (isSignedInt) {
+#if WITH_UNCOMPRESSED_CODEC
+      err = readMonoSignedInt(tif, bps, &image);
+#else
+      return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+              "Signed integer TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
 #endif
     }
     else {
@@ -1183,6 +1319,60 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
 #else
     return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
             "Floating point TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
+#endif
+  }
+
+  if (m_sample_format == SAMPLEFORMAT_INT) {
+#if WITH_UNCOMPRESSED_CODEC
+    heif_error err = heif_image_create((int)actual_w, (int)actual_h, heif_colorspace_nonvisual, heif_chroma_undefined, out_image);
+    if (err.code != heif_error_Ok) return err;
+
+    uint32_t component_idx;
+    err = heif_image_add_component(*out_image, (int)actual_w, (int)actual_h,
+                                   heif_uncompressed_component_type_monochrome,
+                                   heif_channel_datatype_signed_integer, m_bits_per_sample, &component_idx);
+    if (err.code != heif_error_Ok) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return err;
+    }
+
+    size_t out_stride;
+    uint8_t* out_plane;
+    if (m_bits_per_sample == 8) {
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &out_stride));
+    }
+    else {
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &out_stride));
+    }
+    if (!out_plane) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Memory_allocation_error, heif_suberror_Unspecified, "Failed to get signed int plane"};
+    }
+
+    int bytesPerSample = m_bits_per_sample / 8;
+    tmsize_t tile_buf_size = TIFFTileSize(tif);
+    std::vector<uint8_t> tile_buf(tile_buf_size);
+
+    tmsize_t read = TIFFReadEncodedTile(tif, TIFFComputeTile(tif, tx * m_tile_width, ty * m_tile_height, 0, 0),
+                                        tile_buf.data(), tile_buf_size);
+    if (read < 0) {
+      heif_image_release(*out_image);
+      *out_image = nullptr;
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF tile"};
+    }
+
+    for (uint32_t row = 0; row < actual_h; row++) {
+      uint8_t* dst = out_plane + row * out_stride;
+      uint8_t* src = tile_buf.data() + row * m_tile_width * bytesPerSample;
+      memcpy(dst, src, actual_w * bytesPerSample);
+    }
+
+    return heif_error_ok;
+#else
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Signed integer TIFF requires uncompressed codec support (WITH_UNCOMPRESSED_CODEC)."};
 #endif
   }
 

@@ -52,7 +52,7 @@ TEST_CASE("prfr") {
   std::string dumpResult = box->dump(indent);
   REQUIRE(dumpResult == "Box: prfr ----- (Projection Format)\n"
                         "size: 13   (header size: 12)\n"
-                        "projection_type: 1\n");
+                        "projection_type: cube-map\n");
 
   StreamWriter writer;
   Error err = prfr->write(writer);

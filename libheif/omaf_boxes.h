@@ -54,7 +54,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  heif_omaf_image_projection m_projection;
+  heif_omaf_image_projection m_projection = heif_omaf_image_projection_equirectangular;
 };
 
 #endif

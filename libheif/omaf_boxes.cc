@@ -53,7 +53,18 @@ std::string Box_prfr::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "projection_type: " << m_projection << "\n";
+  sstr << indent << "projection_type: ";
+  switch (m_projection) {
+    case heif_omaf_image_projection_equirectangular:
+      sstr << "equirectangular\n";
+      break;
+    case heif_omaf_image_projection_cube_map:
+      sstr << "cube-map\n";
+      break;
+    default:
+      sstr << "unknown (" << m_projection << ")\n";
+      break;
+  }
   return sstr.str();
 }
 
