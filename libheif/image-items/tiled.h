@@ -29,6 +29,7 @@
 #include <memory>
 #include <utility>
 #include "libheif/heif_experimental.h"
+#include "libheif/heif_encoding.h"
 #include <set>
 
 
@@ -146,6 +147,8 @@ public:
 
   ImageItem_Tiled(HeifContext* ctx);
 
+  ~ImageItem_Tiled() override;
+
   uint32_t get_infe_type() const override { return fourcc("tili"); }
 
   // TODO: nclx depends on contained format
@@ -153,8 +156,15 @@ public:
 
   heif_compression_format get_compression_format() const override;
 
+  void set_encoding_options(const heif_encoding_options* options) {
+    heif_encoding_options_copy(m_encoding_options, options);
+  }
+
+  const heif_encoding_options* get_encoding_options() const { return m_encoding_options; }
+
   static Result<std::shared_ptr<ImageItem_Tiled>> add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters,
-                                                                     const heif_encoder* encoder);
+                                                                     const heif_encoder* encoder,
+                                                                     const heif_encoding_options* encoding_options);
 
   Error add_image_tile(uint32_t tile_x, uint32_t tile_y,
                        const std::shared_ptr<HeifPixelImage>& image,
@@ -203,6 +213,7 @@ public:
 private:
   TiledHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
+  heif_encoding_options* m_encoding_options = nullptr;
 
   uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB
   bool m_preload_offset_table = false;
