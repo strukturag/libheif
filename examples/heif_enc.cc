@@ -2090,6 +2090,34 @@ int add_mime_item(heif_context* context)
     }
   }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  // --- attach Turtle (RDF) file as MIME item
+
+  if (option_embed_turtle && !option_turtle_file.empty()) {
+    std::ifstream istr(option_turtle_file.c_str(), std::ios::binary | std::ios::ate);
+    if (!istr) {
+      std::cerr << "Failed to open turtle file: '" << option_turtle_file << "'\n";
+      return 5;
+    }
+
+    std::streamsize size = istr.tellg();
+    if (size < 0) {
+      std::cerr << "Querying size of turtle file '" << option_turtle_file << "' failed.\n";
+      return 5;
+    }
+
+    std::vector<uint8_t> buffer(size);
+    istr.seekg(0, std::ios::beg);
+    istr.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    heif_item_id itemId;
+    heif_context_add_mime_item(context, "text/turtle",
+                               heif_metadata_compression_off,
+                               buffer.data(), (int)buffer.size(),
+                               &itemId);
+  }
+#endif
+
   return 0;
 }
 
