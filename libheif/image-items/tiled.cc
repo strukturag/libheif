@@ -484,12 +484,20 @@ std::string TiledHeader::dump() const
 ImageItem_Tiled::ImageItem_Tiled(HeifContext* ctx)
         : ImageItem(ctx)
 {
+  m_encoding_options = heif_encoding_options_alloc();
 }
 
 
 ImageItem_Tiled::ImageItem_Tiled(HeifContext* ctx, heif_item_id id)
         : ImageItem(ctx, id)
 {
+  m_encoding_options = heif_encoding_options_alloc();
+}
+
+
+ImageItem_Tiled::~ImageItem_Tiled()
+{
+  heif_encoding_options_free(m_encoding_options);
 }
 
 
@@ -591,7 +599,8 @@ Error ImageItem_Tiled::initialize_decoder()
 
 Result<std::shared_ptr<ImageItem_Tiled>>
 ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters,
-                                    const heif_encoder* encoder)
+                                    const heif_encoder* encoder,
+                                    const heif_encoding_options* encoding_options)
 {
   auto max_tild_tiles = ctx->get_security_limits()->max_number_of_tiles;
   if (max_tild_tiles && number_of_tiles(*parameters) > max_tild_tiles) {
@@ -613,6 +622,10 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   auto tild_image = std::make_shared<ImageItem_Tiled>(ctx, tild_id);
   tild_image->set_resolution(parameters->image_width, parameters->image_height);
   ctx->insert_image_item(tild_id, tild_image);
+
+  if (encoding_options) {
+    tild_image->set_encoding_options(encoding_options);
+  }
 
   // Create tilC box
 
@@ -669,7 +682,7 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 {
   auto item = ImageItem::alloc_for_compression_format(get_context(), encoder->plugin->compression_format);
 
-  heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
+  const heif_encoding_options* options = get_encoding_options();
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult;
   colorConversionResult = item->get_encoder()->convert_colorspace_for_encoding(image, encoder,
@@ -677,14 +690,12 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                                                                &options->color_conversion_options,
                                                                                get_context()->get_security_limits());
   if (!colorConversionResult) {
-    heif_encoding_options_free(options);
     return colorConversionResult.error();
   }
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = *colorConversionResult;
 
-  Result<Encoder::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
-  heif_encoding_options_free(options);
+  Result<Encoder::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal);
 
   if (!encodeResult) {
     return encodeResult.error();

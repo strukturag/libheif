@@ -346,7 +346,7 @@ void heif_pyramid_layer_info_release(heif_pyramid_layer_info* infos)
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 heif_error heif_context_add_tiled_image(heif_context* ctx,
                                         const heif_tiled_image_parameters* parameters,
-                                        const heif_encoding_options* options, // TODO: do we need this?
+                                        const heif_encoding_options* options,
                                         const heif_encoder* encoder,
                                         heif_image_handle** out_grid_image_handle)
 {
@@ -355,7 +355,7 @@ heif_error heif_context_add_tiled_image(heif_context* ctx,
   }
 
   Result<std::shared_ptr<ImageItem_Tiled> > gridImageResult;
-  gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
+  gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder, options);
 
   if (!gridImageResult) {
     return gridImageResult.error_struct(ctx->context.get());

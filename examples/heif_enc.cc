@@ -81,7 +81,7 @@ int cut_tiles = 0;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
 std::string tiling_method = "grid";
-heif_unci_compression unci_compression = heif_unci_compression_brotli;
+heif_unci_compression unci_compression = heif_unci_compression_zlib;
 int add_pyramid_group = 0;
 
 uint16_t nclx_colour_primaries = 1;
