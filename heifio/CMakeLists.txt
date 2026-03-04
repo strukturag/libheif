@@ -3,6 +3,8 @@ include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${li
 
 add_library(heifio STATIC
         decoder.h
+        decoder_raw.cc
+        decoder_raw.h
         decoder_y4m.cc
         decoder_y4m.h
         encoder.h
