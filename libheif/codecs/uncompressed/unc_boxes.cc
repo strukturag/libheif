@@ -1289,6 +1289,11 @@ Error Box_snuc::parse(BitstreamRange& range, const heif_security_limits* limits)
             "snuc image dimensions exceed security limit."};
   }
 
+  Error err = m_memory_handle.alloc(2 * sizeof(float) * num_pixels, limits, "snuc box");
+  if (err) {
+    return err;
+  }
+
   m_nuc.nuc_gains.resize(num_pixels);
   for (uint64_t i = 0; i < num_pixels; i++) {
     m_nuc.nuc_gains[i] = range.read_float32();

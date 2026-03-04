@@ -51,6 +51,7 @@
 #include "heifio/decoder_jpeg.h"
 #include "heifio/decoder_png.h"
 #include "heifio/decoder_tiff.h"
+#include "heifio/decoder_raw.h"
 #include "heifio/decoder_y4m.h"
 
 #include "benchmark.h"
@@ -159,6 +160,9 @@ heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_
 
 std::string property_pitm_description;
 
+RawImageParameters raw_input_params;
+bool force_raw_input = false;
+
 // for benchmarking
 
 #if !defined(_MSC_VER)
@@ -214,12 +218,19 @@ const int OPTION_SET_OMAF_IMAGE_PROJECTION = 1038;
 #endif
 const int OPTION_ADD_COMPATIBLE_BRAND = 1039;
 const int OPTION_UNIF = 1040;
-const int OPTION_COMPONENT_CONTENT_IDS = 1041;
+const int OPTION_RAW_WIDTH = 1041;
+const int OPTION_RAW_HEIGHT = 1042;
+const int OPTION_RAW_TYPE = 1043;
+const int OPTION_RAW_ENDIAN = 1044;
+const int OPTION_RAW = 1045;
+
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 const int OPTION_TURTLE = 2000;
 const int OPTION_EMBED_TURTLE = 2001;
 #endif
+
+const int OPTION_COMPONENT_CONTENT_IDS = 2002;
 
 
 static std::string generate_random_uuid_urn()
@@ -316,7 +327,6 @@ TurtleContentIDs parse_turtle_content_ids(const std::string& filename)
 }
 #endif
 
-
 static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
     {(char* const) "version",                 no_argument,       0,              'v'},
@@ -392,6 +402,11 @@ static option long_options[] = {
 #endif
     {(char* const) "add-compatible-brand",        required_argument,       nullptr, OPTION_ADD_COMPATIBLE_BRAND},
     {(char* const) "unif",                      no_argument,             nullptr, OPTION_UNIF},
+    {(char* const) "raw",                    no_argument,             nullptr, OPTION_RAW},
+    {(char* const) "raw-width",               required_argument,       nullptr, OPTION_RAW_WIDTH},
+    {(char* const) "raw-height",              required_argument,       nullptr, OPTION_RAW_HEIGHT},
+    {(char* const) "raw-type",                required_argument,       nullptr, OPTION_RAW_TYPE},
+    {(char* const) "raw-endian",              required_argument,       nullptr, OPTION_RAW_ENDIAN},
     {0, 0,                                                           0,  0}
 };
 
@@ -470,6 +485,13 @@ void show_help(const char* argv0)
             << "      --plugin-directory DIR     load all codec plugins in the directory\n"
             << "  -P, --params                   show all encoder parameters and exit, input file not required or used.\n"
             << "  -p NAME=VALUE                  set encoder parameter\n"
+            << "\n"
+            << "raw input:\n"
+            << "      --raw                      force raw pixel data input (for files without .raw/.img suffix)\n"
+            << "      --raw-width #              width of raw input image (computed from file size if omitted)\n"
+            << "      --raw-height #             height of raw input image (computed from file size if omitted)\n"
+            << "      --raw-type TYPE            pixel data type: uint8, sint8, uint16, sint16, uint32, sint32, float32, float64\n"
+            << "      --raw-endian ENDIAN        byte order of input data: little (default), big\n"
             << "\n"
             << "color profile:\n"
             << "      --color-profile NAME       use a color profile preset for the output. Valid values are:\n"
@@ -824,7 +846,7 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 
   enum
   {
-    PNG, JPEG, Y4M, TIFF
+    PNG, JPEG, Y4M, TIFF, RAW
   } filetype = JPEG;
   if (suffix == "png") {
     filetype = PNG;
@@ -834,6 +856,13 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
   }
   else if (suffix == "tif" || suffix == "tiff") {
     filetype = TIFF;
+  }
+  else if (suffix == "raw" || suffix == "img") {
+    filetype = RAW;
+  }
+
+  if (force_raw_input) {
+    filetype = RAW;
   }
 
   if (filetype == PNG) {
@@ -859,6 +888,13 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
     }
   }
 #endif
+  else if (filetype == RAW) {
+    heif_error err = loadRAW(input_filename.c_str(), raw_input_params, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load raw input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
   else {
     heif_error err = loadJPEG(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
@@ -1780,6 +1816,24 @@ int main(int argc, char** argv)
         break;
       case OPTION_UNIF:
         option_unif = true;
+        break;
+      case OPTION_RAW:
+        force_raw_input = true;
+        break;
+      case OPTION_RAW_WIDTH:
+        raw_input_params.width = atoi(optarg);
+        break;
+      case OPTION_RAW_HEIGHT:
+        raw_input_params.height = atoi(optarg);
+        break;
+      case OPTION_RAW_TYPE:
+        if (!parse_raw_pixel_type(optarg, &raw_input_params.datatype, &raw_input_params.bit_depth)) {
+          std::cerr << "Unknown raw pixel type: " << optarg << "\n";
+          exit(5);
+        }
+        break;
+      case OPTION_RAW_ENDIAN:
+        raw_input_params.big_endian = (std::string(optarg) == "big");
         break;
     }
   }
