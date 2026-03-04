@@ -2017,50 +2017,24 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
 
   create(w, h, colorspace, chroma);
 
-  switch (colorspace) {
-    case heif_colorspace_monochrome:
-      if (auto err = add_plane(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y), limits)) {
-        return err;
-      }
-      break;
-    case heif_colorspace_YCbCr:
-      if (auto err = add_plane(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y), limits)) {
-        return err;
-      }
-      if (auto err = add_plane(heif_channel_Cb, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cb), limits)) {
-        return err;
-      }
-      if (auto err = add_plane(heif_channel_Cr, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cr), limits)) {
-        return err;
-      }
-      break;
-    case heif_colorspace_RGB:
-      if (chroma == heif_chroma_444) {
-        if (auto err = add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R), limits)) {
-          return err;
-        }
-        if (auto err = add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G), limits)) {
-          return err;
-        }
-        if (auto err = add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B), limits)) {
-          return err;
-        }
-      }
-      else {
-        if (auto err = add_plane(heif_channel_interleaved, w, h, source->get_bits_per_pixel(heif_channel_interleaved), limits)) {
-          return err;
-        }
-      }
-      break;
-    default:
-      assert(false);
-      break;
-  }
+  // Copy the cmpd component type table (needed for nonvisual/component images)
+  m_cmpd_component_types = source->m_cmpd_component_types;
 
-  if (source->has_channel(heif_channel_Alpha)) {
-      if (auto err = add_plane(heif_channel_Alpha, w, h, source->get_bits_per_pixel(heif_channel_Alpha), limits)) {
-        return err;
-      }
+  for (const auto& src_plane : source->m_planes) {
+    // TODO: do we also support images where some planes (e.g. the alpha-plane) have a different size than the main image?
+    //       We could do this by scaling all planes proportionally. This would also handle chroma channels implicitly.
+    uint32_t plane_w = channel_width(w, chroma, src_plane.m_channel);
+    uint32_t plane_h = channel_height(h, chroma, src_plane.m_channel);
+
+    ImageComponent plane;
+    plane.m_channel = src_plane.m_channel;
+    plane.m_component_index = src_plane.m_component_index;
+    if (auto err = plane.alloc(plane_w, plane_h, src_plane.m_datatype, src_plane.m_bit_depth,
+                               src_plane.m_num_interleaved_components, limits, m_memory_handle)) {
+      return err;
+    }
+
+    m_planes.push_back(plane);
   }
 
   return Error::Ok;
