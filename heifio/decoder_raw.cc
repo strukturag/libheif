@@ -32,6 +32,7 @@
 #include <cstring>
 #include <vector>
 #include <memory>
+#include <utility>
 
 static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
