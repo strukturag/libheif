@@ -151,7 +151,15 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
       auto uncC = item->get_property<Box_uncC>();
       auto cmpd = item->get_property<Box_cmpd>();
       auto ispe = item->get_property<Box_ispe>();
-      return std::make_shared<Decoder_uncompressed>(uncC,cmpd,ispe);
+      auto decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
+      decoder->set_cpat(item->get_property<Box_cpat>());
+      decoder->set_cmpC(item->get_property<Box_cmpC>());
+      decoder->set_icef(item->get_property<Box_icef>());
+      decoder->set_cloc(item->get_property<Box_cloc>());
+      decoder->set_splz(item->get_all_properties<Box_splz>());
+      decoder->set_sbpm(item->get_all_properties<Box_sbpm>());
+      decoder->set_snuc(item->get_all_properties<Box_snuc>());
+      return decoder;
     }
 #endif
     case fourcc("mski"): {
