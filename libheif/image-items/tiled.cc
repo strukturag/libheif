@@ -24,6 +24,7 @@
 #include <algorithm>
 #include "security_limits.h"
 #include "codecs/hevc_dec.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #include "api_structs.h"
 
 
@@ -553,7 +554,24 @@ Error ImageItem_Tiled::initialize_decoder()
       return propertiesResult.error();
     }
 
-    m_tile_item->set_properties(*propertiesResult);
+    // Filter out per-tile boxes incompatible with tili's shared template
+    auto props = *propertiesResult;
+    for (const auto& box : props) {
+      if (box->get_short_type() == fourcc("icef")) {
+        auto icef = std::dynamic_pointer_cast<Box_icef>(box);
+        if (icef && icef->get_units().size() > 1) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_Unspecified,
+                  "icef box with multiple units is incompatible with tili shared tile template."};
+        }
+      }
+    }
+    std::erase_if(props, [](const std::shared_ptr<Box>& box) {
+      uint32_t type = box->get_short_type();
+      return type == fourcc("icef") || type == fourcc("sbpm") || type == fourcc("snuc");
+    });
+
+    m_tile_item->set_properties(props);
   }
   else {
     // --- This is the new method
@@ -561,6 +579,22 @@ Error ImageItem_Tiled::initialize_decoder()
     // Synthesize an ispe box if there was none in the file
 
     auto tile_properties = tilC_box->get_all_child_boxes();
+
+    // Filter out per-tile boxes incompatible with tili's shared template
+    for (const auto& box : tile_properties) {
+      if (box->get_short_type() == fourcc("icef")) {
+        auto icef = std::dynamic_pointer_cast<Box_icef>(box);
+        if (icef && icef->get_units().size() > 1) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_Unspecified,
+                  "icef box with multiple units is incompatible with tili shared tile template."};
+        }
+      }
+    }
+    std::erase_if(tile_properties, [](const std::shared_ptr<Box>& box) {
+      uint32_t type = box->get_short_type();
+      return type == fourcc("icef") || type == fourcc("sbpm") || type == fourcc("snuc");
+    });
 
     bool have_ispe = false;
     for (const auto& property : tile_properties) {
@@ -732,6 +766,24 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
     if (propertyBox->get_short_type() == fourcc("ispe")) {
       continue;
+    }
+
+    // icef/sbpm/snuc contain per-tile data incompatible with tili's shared tile template
+    uint32_t ptype = propertyBox->get_short_type();
+    if (ptype == fourcc("icef")) {
+      auto icef = std::dynamic_pointer_cast<Box_icef>(propertyBox);
+      if (icef && icef->get_units().size() > 1) {
+        return {heif_error_Usage_error,
+                heif_suberror_Unspecified,
+                "icef box with multiple units is incompatible with tili shared tile template."};
+      }
+      // Single-unit icef can be safely skipped
+      continue;
+    }
+    if (ptype == fourcc("sbpm") || ptype == fourcc("snuc")) {
+      return {heif_error_Usage_error,
+              heif_suberror_Unspecified,
+              "Cannot store per-tile property (" + fourcc_to_string(ptype) + ") in tili shared tile template."};
     }
 
     // skip properties that exist already
