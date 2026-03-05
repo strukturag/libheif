@@ -71,23 +71,18 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
   std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
   std::shared_ptr<Box_mskC> mskC = image->get_property<Box_mskC>();
 
-  uint32_t width = 0;
-  uint32_t height = 0;
-
-  if (ispe) {
-    width = ispe->get_width();
-    height = ispe->get_height();
-
-    Error error = check_for_valid_image_size(context->get_security_limits(), width, height);
-    if (error) {
-      return error;
-    }
-  }
-
   if (!ispe || !mskC) {
     return Error(heif_error_Unsupported_feature,
                   heif_suberror_Unsupported_data_version,
                   "Missing required box for mask codec");
+  }
+
+  uint32_t width = ispe->get_width();
+  uint32_t height = ispe->get_height();
+
+  Error error = check_for_valid_image_size(context->get_security_limits(), width, height);
+  if (error) {
+    return error;
   }
 
   if ((mskC->get_bits_per_pixel() != 8) && (mskC->get_bits_per_pixel() != 16))
@@ -97,7 +92,9 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
                  "Unsupported bit depth for mask item");
   }
 
-  if (data.size() < width * height) {
+  uint32_t bytes_per_pixel = (mskC->get_bits_per_pixel() + 7) / 8;
+
+  if (data.size() / (static_cast<size_t>(width) * bytes_per_pixel) < height) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Mask image data is too short"};
@@ -113,14 +110,14 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
 
   size_t stride;
   uint8_t* dst = img->get_plane(heif_channel_Y, &stride);
-  if (((uint32_t)stride) == width) {
-    memcpy(dst, data.data(), data.size());
+  if (stride == static_cast<size_t>(width) * bytes_per_pixel) {
+    memcpy(dst, data.data(), static_cast<size_t>(width) * bytes_per_pixel * height);
   }
   else
   {
-    for (uint32_t i = 0; i < height; i++)
+    for (size_t i = 0; i < height; i++)
     {
-      memcpy(dst + i * stride, data.data() + i * width, width);
+      memcpy(dst + i * stride, data.data() + i * width * bytes_per_pixel, width * bytes_per_pixel);
     }
   }
   return Error::Ok;
