@@ -76,7 +76,7 @@ static bool readTIFF(TIFF* tif, void* dest, size_t size) {
 }
 
 static bool readTIFFUint16(TIFF* tif, uint16_t* dest) {
-  if (!readTIFF(tif, &dest, 2)) {
+  if (!readTIFF(tif, dest, 2)) {
     return false;
   }
 
@@ -87,7 +87,7 @@ static bool readTIFFUint16(TIFF* tif, uint16_t* dest) {
 }
 
 static bool readTIFFUint32(TIFF* tif, uint32_t* dest) {
-  if (!readTIFF(tif, &dest, 4)) {
+  if (!readTIFF(tif, dest, 4)) {
     return false;
   }
 
