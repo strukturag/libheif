@@ -307,7 +307,11 @@ heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **
     size_t y_stride;
     uint8_t *py = heif_image_get_plane2(*image, heif_channel_Y, &y_stride);
     for (uint32_t row = 0; row < height; row++) {
-      TIFFReadScanline(tif, py, row, 0);
+      if (TIFFReadScanline(tif, py, row, 0) < 0) {
+        heif_image_release(*image);
+        *image = nullptr;
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+      }
       py += y_stride;
     }
   }
@@ -321,7 +325,12 @@ heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **
 
     if (output_bit_depth <= 8) {
       for (uint32_t row = 0; row < height; row++) {
-        TIFFReadScanline(tif, buf, row, 0);
+        if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+          _TIFFfree(buf);
+          heif_image_release(*image);
+          *image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+        }
         uint16_t* src = static_cast<uint16_t*>(buf);
         uint8_t* dst = py + row * y_stride;
         for (uint32_t x = 0; x < width; x++) {
@@ -331,7 +340,12 @@ heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **
     }
     else {
       for (uint32_t row = 0; row < height; row++) {
-        TIFFReadScanline(tif, buf, row, 0);
+        if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+          _TIFFfree(buf);
+          heif_image_release(*image);
+          *image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+        }
         uint16_t* src = static_cast<uint16_t*>(buf);
         uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
         for (uint32_t x = 0; x < width; x++) {
@@ -367,7 +381,12 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasA
     uint8_t *py = heif_image_get_plane2(*image, channel, &y_stride);
     tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
     for (uint32_t row = 0; row < height; row++) {
-      TIFFReadScanline(tif, buf, row, 0);
+      if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+        _TIFFfree(buf);
+        heif_image_release(*image);
+        *image = nullptr;
+        return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+      }
       uint8_t* src = static_cast<uint8_t*>(buf);
       if (outSpp == samplesPerPixel) {
         memcpy(py, src, width * outSpp);
@@ -398,7 +417,12 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasA
 
     if (output_bit_depth <= 8) {
       for (uint32_t row = 0; row < height; row++) {
-        TIFFReadScanline(tif, buf, row, 0);
+        if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+          _TIFFfree(buf);
+          heif_image_release(*image);
+          *image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+        }
         uint16_t* src = static_cast<uint16_t*>(buf);
         uint8_t* dst = py + row * y_stride;
         if (outSpp == samplesPerPixel) {
@@ -417,7 +441,12 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasA
     }
     else {
       for (uint32_t row = 0; row < height; row++) {
-        TIFFReadScanline(tif, buf, row, 0);
+        if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+          _TIFFfree(buf);
+          heif_image_release(*image);
+          *image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+        }
         uint16_t* src = static_cast<uint16_t*>(buf);
         uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
         if (outSpp == samplesPerPixel) {
@@ -474,7 +503,12 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasAl
     for (uint16_t i = 0; i < outSpp; i++) {
       uint8_t *dest = py + i;
       for (uint32_t row = 0; row < height; row++) {
-        TIFFReadScanline(tif, buf, row, i);
+        if (TIFFReadScanline(tif, buf, row, i) < 0) {
+          _TIFFfree(buf);
+          heif_image_release(*image);
+          *image = nullptr;
+          return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+        }
         for (uint32_t x = 0; x < width; x++, dest += outSpp) {
           *dest = buf[x];
         }
@@ -501,7 +535,12 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasAl
     if (output_bit_depth <= 8) {
       for (uint16_t i = 0; i < outSpp; i++) {
         for (uint32_t row = 0; row < height; row++) {
-          TIFFReadScanline(tif, buf, row, i);
+          if (TIFFReadScanline(tif, buf, row, i) < 0) {
+            _TIFFfree(buf);
+            heif_image_release(*image);
+            *image = nullptr;
+            return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+          }
           uint16_t* src = reinterpret_cast<uint16_t*>(buf);
           uint8_t* dst = py + row * y_stride + i;
           for (uint32_t x = 0; x < width; x++) {
@@ -513,7 +552,12 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, bool hasAl
     else {
       for (uint16_t i = 0; i < outSpp; i++) {
         for (uint32_t row = 0; row < height; row++) {
-          TIFFReadScanline(tif, buf, row, i);
+          if (TIFFReadScanline(tif, buf, row, i) < 0) {
+            _TIFFfree(buf);
+            heif_image_release(*image);
+            *image = nullptr;
+            return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+          }
           uint16_t* src = reinterpret_cast<uint16_t*>(buf);
           uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
           for (uint32_t x = 0; x < width; x++) {
@@ -580,7 +624,12 @@ static heif_error readMonoFloat(TIFF* tif, heif_image** image)
 
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
   for (uint32_t row = 0; row < height; row++) {
-    TIFFReadScanline(tif, buf, row, 0);
+    if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+      _TIFFfree(buf);
+      heif_image_release(*image);
+      *image = nullptr;
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+    }
     memcpy(reinterpret_cast<uint8_t*>(plane) + row * stride, buf, width * sizeof(float));
   }
   _TIFFfree(buf);
@@ -629,7 +678,12 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
   int bytesPerSample = bps / 8;
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
   for (uint32_t row = 0; row < height; row++) {
-    TIFFReadScanline(tif, buf, row, 0);
+    if (TIFFReadScanline(tif, buf, row, 0) < 0) {
+      _TIFFfree(buf);
+      heif_image_release(*image);
+      *image = nullptr;
+      return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
+    }
     memcpy(plane + row * stride, buf, width * bytesPerSample);
   }
   _TIFFfree(buf);
