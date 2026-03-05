@@ -52,6 +52,11 @@ public:
   void set_cmpC(std::shared_ptr<const Box_cmpC> cmpC) { m_cmpC = std::move(cmpC); }
   void set_icef(std::shared_ptr<const Box_icef> icef) { m_icef = std::move(icef); }
   void set_cloc(std::shared_ptr<const Box_cloc> cloc) { m_cloc = std::move(cloc); }
+  void set_splz(std::vector<std::shared_ptr<const Box_splz>> splz) { m_splz = std::move(splz); }
+  void set_sbpm(std::vector<std::shared_ptr<const Box_sbpm>> sbpm) { m_sbpm = std::move(sbpm); }
+  void set_snuc(std::vector<std::shared_ptr<const Box_snuc>> snuc) { m_snuc = std::move(snuc); }
+
+  // Overloads accepting non-const shared_ptrs (from get_child_boxes)
   void set_splz(std::vector<std::shared_ptr<Box_splz>> splz) { m_splz.assign(splz.begin(), splz.end()); }
   void set_sbpm(std::vector<std::shared_ptr<Box_sbpm>> sbpm) { m_sbpm.assign(sbpm.begin(), sbpm.end()); }
   void set_snuc(std::vector<std::shared_ptr<Box_snuc>> snuc) { m_snuc.assign(snuc.begin(), snuc.end()); }
