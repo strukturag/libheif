@@ -209,12 +209,16 @@ Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr
     cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
     codedImageData.properties.push_back(cmpC);
 
+    /* Generating an icef for a single unit is redundant because when no icef is present,
+     * the whole data extent will automatically be used.
+
     auto icef = std::make_shared<Box_icef>();
     Box_icef::CompressedUnitInfo info;
     info.unit_offset = 0;
     info.unit_size = compressed->size();
     icef->add_component(info);
     codedImageData.properties.push_back(icef);
+    */
 
     codedImageData.bitstream = std::move(*compressed);
   }
