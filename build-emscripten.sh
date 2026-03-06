@@ -2,60 +2,201 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-CORES=$(nproc --all)
+if [[ $# -ne 1 ]] ; then
+    echo "Usage: $0 SRCDIR"
+    echo
+    echo "It is recommended to build in a separate directory."
+    echo "Then specify this directory as an argument to this script."
+    echo "Example:"
+    echo "  mkdir buildjs"
+    echo "  cd buildjs"
+    echo "  USE_WASM=0 ../build-emscripten.sh .."
+    echo
+    echo "This should generate a libheif.js and (optionally, without the USE_WASM=0) a libheif.wasm"
+    exit 5
+fi
+
+SRCDIR=$1
+
+CORES="${CORES:-`nproc --all`}"
+
+ENABLE_LIBDE265="${ENABLE_LIBDE265:-1}"
+LIBDE265_VERSION="${LIBDE265_VERSION:-1.0.15}"
+
+ENABLE_AOM="${ENABLE_AOM:-0}"
+AOM_VERSION="${AOM_VERSION:-3.6.1}"
+
+# Webcodecs is not on by default b/c asyncify increases the binary size considerably
+ENABLE_WEBCODECS="${ENABLE_WEBCODECS:-0}"
+
+ENABLE_UNCOMPRESSED="${ENABLE_UNCOMPRESSED:-0}"
+
+# J2K still defunct. OpenJPEG compiles, but library is not picked up by libheif cmake.
+ENABLE_OPENJPEG="${ENABLE_OPENJPEG:-0}"
+OPENJPEG_VERSION="${OPENJPEG_VERSION:-2.5.4}"
+
+STANDALONE="${STANDALONE:-0}"
+DEBUG="${DEBUG:-0}"
+USE_ES6="${USE_ES6:-0}"
+USE_WASM="${USE_WASM:-1}"
+USE_TYPESCRIPT="${USE_TYPESCRIPT:-1}"
+USE_UNSAFE_EVAL="${USE_UNSAFE_EVAL:-1}"
+
 echo "Build using ${CORES} CPU cores"
 
-LIBDE265_VERSION=1.0.8
-[ -s "libde265-${LIBDE265_VERSION}.tar.gz" ] || curl \
-    -L \
-    -o libde265-${LIBDE265_VERSION}.tar.gz \
-    https://github.com/strukturag/libde265/releases/download/v${LIBDE265_VERSION}/libde265-${LIBDE265_VERSION}.tar.gz
-if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
-    tar xf libde265-${LIBDE265_VERSION}.tar.gz
-    cd libde265-${LIBDE265_VERSION}
-    [ -x configure ] || ./autogen.sh
-    emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
-    emmake make -j${CORES}
-    cd ..
+LIBRARY_LINKER_FLAGS=""
+LIBRARY_INCLUDE_FLAGS=""
+
+CONFIGURE_ARGS_LIBDE265=""
+if [ "$ENABLE_LIBDE265" = "1" ]; then
+    [ -s "libde265-${LIBDE265_VERSION}.tar.gz" ] || curl \
+        -L \
+        -o libde265-${LIBDE265_VERSION}.tar.gz \
+        https://github.com/strukturag/libde265/releases/download/v${LIBDE265_VERSION}/libde265-${LIBDE265_VERSION}.tar.gz
+    if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.a" ]; then
+        tar xf libde265-${LIBDE265_VERSION}.tar.gz
+        cd libde265-${LIBDE265_VERSION}
+        [ -x configure ] || ./autogen.sh
+        CXXFLAGS=-O3 emconfigure ./configure --enable-static --disable-shared --disable-sse --disable-dec265 --disable-sherlock265
+        emmake make -j${CORES}
+        cd ..
+    fi
+    LIBDE265_DIR="$(pwd)/libde265-${LIBDE265_VERSION}"
+    CONFIGURE_ARGS_LIBDE265="-DLIBDE265_INCLUDE_DIR=${LIBDE265_DIR} -DLIBDE265_LIBRARY=-L${LIBDE265_DIR}/libde265/.libs"
+    LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${LIBDE265_DIR}/libde265/.libs -lde265"
 fi
 
-CONFIGURE_ARGS="--disable-multithreading --disable-go"
+CONFIGURE_ARGS_AOM=""
+if [ "$ENABLE_AOM" = "1" ]; then
+    [ -s "aom-${AOM_VERSION}.tar.gz" ] || curl \
+        -L \
+        -o aom-${AOM_VERSION}.tar.gz \
+        "https://aomedia.googlesource.com/aom/+archive/v${AOM_VERSION}.tar.gz"
+    if [ ! -s "aom-${AOM_VERSION}/libaom.a" ]; then
+        mkdir -p aom-${AOM_VERSION}/aom-source
+        tar xf aom-${AOM_VERSION}.tar.gz -C aom-${AOM_VERSION}/aom-source
+        cd aom-${AOM_VERSION}
 
-emconfigure ./configure $CONFIGURE_ARGS \
-    PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
-    libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
-    libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
-if [ ! -e "Makefile" ]; then
-    # Most likely the first run of "emscripten" which will generate the
-    # config file and terminate. Run "emconfigure" again.
-    emconfigure ./configure $CONFIGURE_ARGS \
-        PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
-        libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
-        libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
+        emcmake cmake aom-source \
+            -DENABLE_CCACHE=1 \
+            -DAOM_TARGET_CPU=generic \
+            -DENABLE_DOCS=0 \
+            -DENABLE_TESTS=0 \
+            -DENABLE_EXAMPLES=0 \
+            -DENABLE_TESTDATA=0 \
+            -DENABLE_TOOLS=0 \
+            -DCONFIG_MULTITHREAD=0 \
+            -DCONFIG_RUNTIME_CPU_DETECT=0 \
+            -DBUILD_SHARED_LIBS=0 \
+            -DCMAKE_BUILD_TYPE=Release
+
+        emmake make -j${CORES}
+
+        cd ..
+    fi
+
+    AOM_DIR="$(pwd)/aom-${AOM_VERSION}"
+    CONFIGURE_ARGS_AOM="-DAOM_INCLUDE_DIR=${AOM_DIR}/aom-source -DAOM_LIBRARY=-L${AOM_DIR}"
+    LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${AOM_DIR} -laom"
 fi
-emmake make -j${CORES}
 
-export TOTAL_MEMORY=16777216
+CONFIGURE_ARGS_OPENJPEG=""
+if [ "$ENABLE_OPENJPEG" = "1" ]; then
+    [ -s "openjpeg-${OPENJPEG__VERSION}.tar.gz" ] || curl \
+        -L \
+        -o openjpeg-${OPENJPEG_VERSION}.tar.gz \
+	"https://github.com/uclouvain/openjpeg/archive/refs/tags/v${OPENJPEG_VERSION}.tar.gz"
+    if [ ! -s "openjpeg-${OPENJPEG_VERSION}/bin/libopenjp2.a" ]; then
+        mkdir -p openjpeg-${OPENJPEG_VERSION}/openjpeg-source
+        tar xf openjpeg-${OPENJPEG_VERSION}.tar.gz -C openjpeg-${OPENJPEG_VERSION}/openjpeg-source
+        cd openjpeg-${OPENJPEG_VERSION}
+        emcmake cmake openjpeg-source/openjpeg-${OPENJPEG_VERSION} \
+            -DBUILD_SHARED_LIBS=0 \
+            -DCMAKE_BUILD_TYPE=Release \
+	    -DCMAKE_INSTALL_PREFIX=openjpeg-install
+
+        emmake make -j${CORES}
+        emmake make install -j${CORES}
+
+        cd ..
+    fi
+
+    J2K_DIR="$(pwd)/openjpeg-${OPENJPEG_VERSION}"
+    CONFIGURE_ARGS_OPENJPEG="-DWITH_OpenJPEG_DECODER=ON -DCMAKE_PREFIX_PATH=${J2K_DIR}/openjpeg-install -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH"
+    LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -L${J2K_DIR}/bin -lopenjp2"
+fi
+
+CONFIGURE_ARGS_WEBCODECS=""
+if [ "$ENABLE_WEBCODECS" = "1" ]; then
+    CONFIGURE_ARGS_WEBCODECS="-DWITH_WEBCODECS=ON"
+fi
+
+CONFIGURE_ARGS_UNCOMPRESSED=""
+if [ "$ENABLE_UNCOMPRESSED" = "1" ]; then
+    CONFIGURE_ARGS_UNCOMPRESSED="-DWITH_UNCOMPRESSED_CODEC=ON"
+fi
+
+EXTRA_EXE_LINKER_FLAGS="-lembind"
+EXTRA_COMPILER_FLAGS=""
+if [ "$STANDALONE" = "1" ]; then
+    EXTRA_EXE_LINKER_FLAGS=""
+    EXTRA_COMPILER_FLAGS="-D__EMSCRIPTEN_STANDALONE_WASM__=1"
+fi
+
+CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DENABLE_PLUGIN_LOADING=OFF"
+emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="${EXTRA_COMPILER_FLAGS}" \
+    -DCMAKE_CXX_FLAGS="${EXTRA_COMPILER_FLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="${LIBRARY_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}" \
+    $CONFIGURE_ARGS_LIBDE265 \
+    $CONFIGURE_ARGS_AOM \
+    $CONFIGURE_ARGS_WEBCODECS \
+    $CONFIGURE_ARGS_UNCOMPRESSED \
+    $CONFIGURE_ARGS_OPENJPEG
+
+VERBOSE=1 emmake make -j${CORES}
+
+LIBHEIFA="libheif/libheif.a"
+EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols | grep "^heif_\|^de265_\|^aom_" | grep "[^:]$" | sed 's/^/_/' | paste -sd "," -)
 
 echo "Running Emscripten..."
-emcc libheif/.libs/libheif.so \
-    --bind \
-    -s NO_EXIT_RUNTIME=1 \
-    -s TOTAL_MEMORY=${TOTAL_MEMORY} \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s ASSERTIONS=0 \
-    -s INVOKE_RUN=0 \
-    -s DOUBLE_MODE=0 \
-    -s PRECISE_F32=0 \
-    -s PRECISE_I64_MATH=0 \
-    -s DISABLE_EXCEPTION_CATCHING=1 \
-    -s USE_CLOSURE_COMPILER=0 \
-    -s LEGACY_VM_SUPPORT=1 \
-    --memory-init-file 0 \
-    -O3 \
+
+BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM -sDYNAMIC_EXECUTION=$USE_UNSAFE_EVAL"
+
+if [ "$ENABLE_WEBCODECS" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS -sASYNCIFY -sASYNCIFY_IMPORTS=['decode_with_browser_hevc']"
+fi
+
+if [ "$USE_TYPESCRIPT" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS --emit-tsd libheif.d.ts"
+fi
+
+RELEASE_BUILD_FLAGS="-O3"
+
+if [ "$STANDALONE" = "1" ]; then
+    # Note: this intentionally overwrites the BUILD_FLAGS set above
+    echo "Building in standalone (non-web) build mode"
+    BUILD_FLAGS="-sSTANDALONE_WASM -sWASM -o libheif.wasm --no-entry"
+fi
+
+if [ "$DEBUG" = "1" ]; then
+    echo "Building in debug mode"
+    RELEASE_BUILD_FLAGS="--profile -g"
+fi
+
+if [ "$USE_ES6" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS -sEXPORT_ES6"
+fi
+
+emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
+    -sEXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_free,_malloc,_memcpy" \
+    -sMODULARIZE \
+    -sEXPORT_NAME="libheif" \
+    -sWASM_ASYNC_COMPILATION=0 \
+    -sALLOW_MEMORY_GROWTH \
     -std=c++11 \
-    -L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs \
-    -lde265 \
-    --pre-js pre.js \
-    --post-js post.js \
-    -o libheif.js
+    $LIBRARY_INCLUDE_FLAGS \
+    $LIBRARY_LINKER_FLAGS \
+    $BUILD_FLAGS \
+    $RELEASE_BUILD_FLAGS

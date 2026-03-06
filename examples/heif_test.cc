@@ -3,7 +3,7 @@
 
   MIT License
 
-  Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
+  Copyright (c) 2017 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,6 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
 
 #include <errno.h>
 #include <string.h>
@@ -45,6 +42,7 @@
 #include <memory>
 #include <getopt.h>
 #include <assert.h>
+#include "common.h"
 
 
 static struct option long_options[] = {
@@ -52,6 +50,7 @@ static struct option long_options[] = {
     //{"output",    required_argument, 0, 'o' },
     {(char* const) "decode-img", required_argument, 0, 'd'},
     {(char* const) "metadata",   required_argument, 0, 'm'},
+    {(char* const) "version",    required_argument, 0, 'v'},
     {0, 0,                                          0, 0}
 };
 
@@ -65,6 +64,7 @@ void show_help(const char* argv0)
   fprintf(stderr, "  -d, --decode-img ID  decode image and output raw pixel data of all planes\n");
   fprintf(stderr, "  -m, --metadata ID    output metadata\n");
   fprintf(stderr, "  -h, --help           show help\n");
+  fprintf(stderr, "  -v, --version        show version\n");
 }
 
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "d:m:h", long_options, &option_index);
+    int c = getopt_long(argc, argv, "d:m:hv", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -103,6 +103,9 @@ int main(int argc, char** argv)
         break;
       case 'h':
         show_help(argv[0]);
+        return 0;
+      case 'v':
+        heif_examples::show_version();
         return 0;
     }
   }
@@ -146,8 +149,8 @@ int main(int argc, char** argv)
           int height = img.get_height(channel);
           int bytes = (img.get_bits_per_pixel(channel) + 7) / 8;
 
-          int stride;
-          const uint8_t* p = img.get_plane(channel, &stride);
+          size_t stride;
+          const uint8_t* p = img.get_plane2(channel, &stride);
           for (int y = 0; y < height; y++) {
             fwrite(p + y * stride, width, bytes, stdout);
           }

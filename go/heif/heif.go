@@ -1,21 +1,28 @@
 /*
  * GO interface to libheif
- * Copyright (c) 2018 struktur AG, Dirk Farin <farin@struktur.de>
  *
- * This file is part of heif, an example application using libheif.
+ * MIT License
  *
- * heif is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Copyright (c) 2018 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2018 Joachim Bauch <bauch@struktur.de>
  *
- * heif is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * You should have received a copy of the GNU General Public License
- * along with heif.  If not, see <http://www.gnu.org/licenses/>.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 package heif
@@ -45,11 +52,17 @@ func GetVersion() string {
 type Compression C.enum_heif_compression_format
 
 const (
-	CompressionUndefined = C.heif_compression_undefined
-	CompressionHEVC      = C.heif_compression_HEVC
-	CompressionAV1       = C.heif_compression_AV1
-	CompressionAVC       = C.heif_compression_AVC
-	CompressionJPEG      = C.heif_compression_JPEG
+	CompressionUndefined    = C.heif_compression_undefined
+	CompressionHEVC         = C.heif_compression_HEVC
+	CompressionAV1          = C.heif_compression_AV1
+	CompressionAVC          = C.heif_compression_AVC
+	CompressionJPEG         = C.heif_compression_JPEG
+	CompressionJPEG2000     = C.heif_compression_JPEG2000
+	CompressionVVC          = C.heif_compression_VVC
+	CompressionEVC          = C.heif_compression_EVC
+	CompressionUncompressed = C.heif_compression_uncompressed
+	CompressionMask         = C.heif_compression_mask
+	CompressionHTJ2K        = C.heif_compression_HTJ2K
 )
 
 type Chroma C.enum_heif_chroma
@@ -71,13 +84,30 @@ const (
 	ChromaInterleaved32Bit = C.heif_chroma_interleaved_32bit
 )
 
+type ChromaDownsamplingAlgorithm C.enum_heif_chroma_downsampling_algorithm
+
+const (
+	ChromaDownsamplingAverage         = C.heif_chroma_downsampling_average
+	ChromaDownsamplingNearestNeighbor = C.heif_chroma_downsampling_nearest_neighbor
+	ChromaDownsamplingSharpYUV        = C.heif_chroma_downsampling_sharp_yuv
+)
+
+type ChromaUpsamplingAlgorithm C.enum_heif_chroma_upsampling_algorithm
+
+const (
+	ChromaUpsamplingNearestNeighbor = C.heif_chroma_upsampling_nearest_neighbor
+	ChromaUpsamplingBilinear        = C.heif_chroma_upsampling_bilinear
+)
+
 type Colorspace C.enum_heif_colorspace
 
 const (
-	ColorspaceUndefined  = C.heif_colorspace_undefined
-	ColorspaceYCbCr      = C.heif_colorspace_YCbCr
-	ColorspaceRGB        = C.heif_colorspace_RGB
-	ColorspaceMonochrome = C.heif_colorspace_monochrome
+	ColorspaceUndefined   = C.heif_colorspace_undefined
+	ColorspaceYCbCr       = C.heif_colorspace_YCbCr
+	ColorspaceRGB         = C.heif_colorspace_RGB
+	ColorspaceMonochrome  = C.heif_colorspace_monochrome
+	ColorspaceFilterArray = C.heif_colorspace_filter_array
+	ColorspaceNonvisual   = C.heif_colorspace_nonvisual
 )
 
 type Channel C.enum_heif_channel
@@ -91,6 +121,10 @@ const (
 	ChannelB           = C.heif_channel_B
 	ChannelAlpha       = C.heif_channel_Alpha
 	ChannelInterleaved = C.heif_channel_interleaved
+	ChannelFilterArray = C.heif_channel_filter_array
+	ChannelDepth       = C.heif_channel_depth
+	ChannelDisparity   = C.heif_channel_disparity
+	ChannelUnknown     = C.heif_channel_unknown
 )
 
 type ProgressStep C.enum_heif_progress_step
@@ -150,10 +184,14 @@ const (
 	// Error during encoding or when writing to the output
 	ErrorEncoding = C.heif_error_Encoding_error
 
+	ErrorEndOfSequence = C.heif_error_End_of_sequence
+
 	// Application has asked for a color profile type that does not exist
 	ErrorColorProfileDoesNotExist = C.heif_error_Color_profile_does_not_exist
 
 	ErrorPluginLoadingError = C.heif_error_Plugin_loading_error
+
+	ErrorCanceled = C.heif_error_Canceled
 )
 
 type ErrorSubcode C.enum_heif_suberror_code
@@ -176,6 +214,8 @@ const (
 	SuberrorNoIdatBox = C.heif_suberror_No_idat_box
 
 	SuberrorNoMetaBox = C.heif_suberror_No_meta_box
+
+	SuberrorNoMoovBox = C.heif_suberror_No_moov_box
 
 	SuberrorNoHdlrBox = C.heif_suberror_No_hdlr_box
 
@@ -214,6 +254,8 @@ const (
 
 	SuberrorNoAV1CBox = C.heif_suberror_No_av1C_box
 
+	SuberrorNoAVCCBox = C.heif_suberror_No_avcC_box
+
 	SuberrorInvalidCleanAperture = C.heif_suberror_Invalid_clean_aperture
 
 	// Invalid specification of overlay image
@@ -230,6 +272,8 @@ const (
 
 	SuberrorCannotReadPluginDirectory = C.heif_suberror_Cannot_read_plugin_directory
 
+	SuberrorNoMatchingDecoderInstalled = C.heif_suberror_No_matching_decoder_installed
+
 	SuberrorNoOrInvalidPrimaryItem = C.heif_suberror_No_or_invalid_primary_item
 
 	SuberrorNoInfeBox = C.heif_suberror_No_infe_box
@@ -242,12 +286,20 @@ const (
 
 	SuberrorInvalidImageSize = C.heif_suberror_Invalid_image_size
 
+	SuberrorCameraIntrinsicMatrixUndefined = C.heif_suberror_Camera_intrinsic_matrix_undefined
+
+	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
+
+	SuberrorDecompressionInvalidData = C.heif_suberror_Decompression_invalid_data
+
 	// --- Memory_allocation_error ---
 
 	// A security limit preventing unreasonable memory allocations was exceeded by the input file.
 	// Please check whether the file is valid. If it is, contact us so that we could increase the
 	// security limits further.
 	SuberrorSecurityLimitExceeded = C.heif_suberror_Security_limit_exceeded
+
+	CompressionInitialisationError = C.heif_suberror_Compression_initialisation_error
 
 	// --- Usage_error ---
 
@@ -272,7 +324,15 @@ const (
 	// The value for the given parameter is not in the valid range.
 	SuberrorInvalidParameterValue = C.heif_suberror_Invalid_parameter_value
 
+	SuberrorInvalidProperty = C.heif_suberror_Invalid_property
+
+	SuberrorItemReferenceCycle = C.heif_suberror_Item_reference_cycle
+
 	SuberrorInvalidPixiBox = C.heif_suberror_Invalid_pixi_box
+
+	SuberrorInvalidRegionData = C.heif_suberror_Invalid_region_data
+
+	SuberrorNoIspeProperty = C.heif_suberror_No_ispe_property
 
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
 
@@ -281,6 +341,14 @@ const (
 	SuberrorUnknownNCLXTransferCharacteristics = C.heif_suberror_Unknown_NCLX_transfer_characteristics
 
 	SuberrorUnknownNCLXMatrixCoefficients = C.heif_suberror_Unknown_NCLX_matrix_coefficients
+
+	SuberrorInvalidJ2KCodestream = C.heif_suberror_Invalid_J2K_codestream
+
+	SuberrorNoVcCBox = C.heif_suberror_No_vvcC_box
+
+	SuberrorNoIcbrBox = C.heif_suberror_No_icbr_box
+
+	SuberrorInvalidMiniBox = C.heif_suberror_Invalid_mini_box
 
 	// --- Unsupported_feature ---
 
@@ -292,12 +360,18 @@ const (
 
 	SuberrorUnsupportedDataVersion = C.heif_suberror_Unsupported_data_version
 
+	SuberrorUnsupportedGenericCompressionMethod = C.heif_suberror_Unsupported_generic_compression_method
+
+	SuberrorUnsupportedEssentialProperty = C.heif_suberror_Unsupported_essential_property
+
 	// The conversion of the source image to the requested chroma / colorspace is not supported.
 	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion
 
 	SuberrorUnsupportedItemConstructionMethod = C.heif_suberror_Unsupported_item_construction_method
 
 	SuberrorUnsupportedHeaderCompressionMethod = C.heif_suberror_Unsupported_header_compression_method
+
+	SubErrorUnsupportedTrackType = C.heif_suberror_Unsupported_track_type
 
 	// --- Encoder_plugin_error ---
 
@@ -306,6 +380,14 @@ const (
 	// --- Encoding_error ---
 
 	SuberrorCannotWriteOutputData = C.heif_suberror_Cannot_write_output_data
+
+	SuberrorEncoderInitialization = C.heif_suberror_Encoder_initialization
+
+	SuberrorEncoderEncoding = C.heif_suberror_Encoder_encoding
+
+	SuberrorEncoderCleanup = C.heif_suberror_Encoder_cleanup
+
+	SuberrorTooManyRegions = C.heif_suberror_Too_many_regions
 )
 
 type HeifError struct {
@@ -1255,6 +1337,10 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 	switch sr := i.SubsampleRatio; sr {
 	case image.YCbCrSubsampleRatio420:
 		cm = Chroma420
+	case image.YCbCrSubsampleRatio422:
+		cm = Chroma422
+	case image.YCbCrSubsampleRatio444:
+		cm = Chroma444
 	default:
 		return nil, fmt.Errorf("unsupported subsample ratio: %s", sr.String())
 	}
@@ -1272,13 +1358,23 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 	pY.setData([]byte(i.Y), i.YStride)
 
 	// TODO: Might need to be updated for other SubsampleRatio values.
-	halfW, halfH := (w+1)/2, (h+1)/2
-	pCb, err := out.NewPlane(ChannelCb, halfW, halfH, depth)
+	var cw, ch int
+	switch cm {
+	case Chroma420:
+		cw, ch = (w+1)/2, (h+1)/2
+	case Chroma444:
+		cw, ch = w, h
+	case Chroma422:
+		cw, ch = (w+1)/2, h
+	default:
+		return nil, fmt.Errorf("cm not support: %v", cm)
+	}
+	pCb, err := out.NewPlane(ChannelCb, cw, ch, depth)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Cb plane: %v", err)
 	}
 	pCb.setData([]byte(i.Cb), i.CStride)
-	pCr, err := out.NewPlane(ChannelCr, halfW, halfH, depth)
+	pCr, err := out.NewPlane(ChannelCr, cw, ch, depth)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Cr plane: %v", err)
 	}

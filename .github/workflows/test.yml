@@ -10,9 +10,12 @@ jobs:
   test:
     env:
       TESTS: 1
-    runs-on: ubuntu-latest
+      WITH_AOM: 1
+      WITH_LIBDE265: 1
+      WITH_X265: 1
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       run: |

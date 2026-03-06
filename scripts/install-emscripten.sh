@@ -32,11 +32,13 @@ if [ ! -d emsdk ]; then
 fi
 
 cd emsdk
-echo "Updating SDK ..."
+echo "Updating SDK base to ${VERSION} ..."
+git checkout main
 git pull --verbose
+git checkout ${VERSION}
 
-echo "Installing SDK version ${VERSION} ..."
-./emsdk install sdk-fastcomp-${VERSION}-64bit
+echo "Installing SDK version latest ..."
+./emsdk install ${VERSION}
 
-echo "Activating SDK version ${VERSION} ..."
-./emsdk activate sdk-fastcomp-${VERSION}-64bit
+echo "Activating SDK version latest ..."
+./emsdk activate ${VERSION}

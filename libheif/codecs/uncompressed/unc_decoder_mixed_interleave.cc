@@ -1,0 +1,156 @@
+/*
+ * HEIF codec.
+ * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
+ *
+ * This file is part of libheif.
+ *
+ * libheif is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * libheif is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "unc_decoder_mixed_interleave.h"
+#include "context.h"
+#include "error.h"
+
+#include <cstring>
+#include <vector>
+
+
+std::vector<uint64_t> unc_decoder_mixed_interleave::get_tile_data_sizes() const
+{
+  uint64_t tile_size = 0;
+
+  for (const ChannelListEntry& entry : channelList) {
+    if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
+      uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
+      bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
+
+      tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
+    }
+    else {
+      uint32_t bits_per_component = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        uint32_t bytes_per_component = (bits_per_component + 7) / 8;
+        skip_to_alignment(bytes_per_component, entry.component_alignment);
+        bits_per_component = bytes_per_component * 8;
+      }
+
+      uint32_t bits_per_row = bits_per_component * entry.tile_width;
+      bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
+
+      tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
+    }
+  }
+
+  if (m_uncC->get_tile_align_size() != 0) {
+    skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
+  }
+
+  return {tile_size};
+}
+
+
+Error unc_decoder_mixed_interleave::decode_tile(const std::vector<uint8_t>& tile_data,
+                                                 std::shared_ptr<HeifPixelImage>& img,
+                                                 uint32_t out_x0, uint32_t out_y0)
+{
+  UncompressedBitReader srcBits(tile_data);
+
+  processTile(srcBits, out_x0, out_y0);
+
+  return Error::Ok;
+}
+
+
+void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0)
+{
+  bool haveProcessedChromaForThisTile = false;
+  for (ChannelListEntry& entry : channelList) {
+    if (entry.use_channel) {
+      if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
+        if (!haveProcessedChromaForThisTile) {
+          for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
+            // TODO: row padding
+            uint64_t dst_row_number = tile_y + out_y0;
+            uint64_t dst_row_offset = dst_row_number * entry.dst_plane_stride;
+            for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
+              uint64_t dst_column_number = out_x0 + tile_x;
+              uint64_t dst_column_offset = dst_column_number * entry.bytes_per_component_sample;
+              int val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
+              memcpy_to_native_endian(entry.dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
+              val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
+
+              uint64_t other_dst_row_offset = dst_row_number * entry.other_chroma_dst_plane_stride;
+              memcpy_to_native_endian(entry.other_chroma_dst_plane + other_dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
+            }
+            haveProcessedChromaForThisTile = true;
+          }
+        }
+      }
+      else {
+        for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
+          uint64_t dst_row_offset = uint64_t{(out_y0 + tile_y)} * entry.dst_plane_stride;
+          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
+        }
+      }
+    }
+    else {
+      // skip over the data we are not using
+      srcBits.skip_bytes(entry.get_bytes_per_tile());
+      continue;
+    }
+  }
+}
+
+
+bool unc_decoder_factory_mixed_interleave::can_decode(const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  if (!check_common_requirements(uncC)) {
+    return false;
+  }
+
+  if (uncC->get_interleave_type() != interleave_mode_mixed) {
+    return false;
+  }
+
+  auto sampling = uncC->get_sampling_type();
+  if (sampling != sampling_mode_422 && sampling != sampling_mode_420) {
+    return false;
+  }
+
+  if (sampling == sampling_mode_422) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 2 != 0) {
+      return false;
+    }
+  }
+
+  if (sampling == sampling_mode_420) {
+    if (uncC->get_tile_align_size() != 0 && uncC->get_tile_align_size() % 4 != 0) {
+      return false;
+    }
+  }
+
+  if (uncC->get_pixel_size() != 0) {
+    return false;
+  }
+
+  return true;
+}
+
+std::unique_ptr<unc_decoder> unc_decoder_factory_mixed_interleave::create(
+    uint32_t width, uint32_t height,
+    const std::shared_ptr<const Box_cmpd>& cmpd,
+    const std::shared_ptr<const Box_uncC>& uncC) const
+{
+  return std::make_unique<unc_decoder_mixed_interleave>(width, height, cmpd, uncC);
+}

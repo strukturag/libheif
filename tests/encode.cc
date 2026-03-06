@@ -3,7 +3,7 @@
 
   MIT License
 
-  Copyright (c) 2019 struktur AG, Dirk Farin <farin@struktur.de>
+  Copyright (c) 2019 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,18 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
+#include "pixelimage.h"
+#include "api_structs.h"
+#include "test_utils.h"
+
+#include <string.h>
 
 
-struct heif_image* createImage_RRGGBB_BE() {
-  struct heif_image* image;
-  struct heif_error err;
+heif_image* createImage_RRGGBB_BE() {
+  heif_image* image;
+  heif_error err;
   err = heif_image_create(256,256,
                           heif_colorspace_RGB,
                           heif_chroma_interleaved_RRGGBB_BE,
@@ -51,22 +56,15 @@ struct heif_image* createImage_RRGGBB_BE() {
 }
 
 
-struct heif_error encode_image(struct heif_image* img) {
-  struct heif_context* ctx = heif_context_alloc();
+heif_error encode_image(heif_image* img) {
+  heif_context* ctx = heif_context_alloc();
 
-  struct heif_encoder* enc;
-  struct heif_error err { heif_error_Ok };
+  heif_encoder* enc = nullptr;
+  heif_error err { heif_error_Ok };
 
-  err = heif_context_get_encoder_for_format(ctx,
-                                            heif_compression_HEVC,
-                                            &enc);
-  if (err.code) {
-    heif_context_free(ctx);
-    return err;
-  }
+  enc = get_encoder_or_skip_test(heif_compression_HEVC);
 
-
-  struct heif_image_handle* hdl;
+  heif_image_handle* hdl;
   err = heif_context_encode_image(ctx,
                                   img,
                                   enc,
@@ -78,6 +76,9 @@ struct heif_error encode_image(struct heif_image* img) {
     return err;
   }
 
+  heif_encoder_release(enc);
+  heif_image_handle_release(hdl);
+  heif_context_free(ctx);
   return err;
 }
 
@@ -101,3 +102,57 @@ TEST_CASE( "Encode HDR", "[heif_encoder]" ) {
   heif_image_release(img);
 }
 #endif
+
+static void test_ispe_size(heif_compression_format compression,
+                           heif_orientation orientation,
+                           int input_width, int input_height,
+                           int expected_minimum_ispe_width, int expected_minimum_ispe_height)
+{
+  heif_image* img;
+  heif_image_create(input_width,input_height, heif_colorspace_YCbCr, heif_chroma_420, &img);
+  fill_new_plane(img, heif_channel_Y, input_width, input_height);
+  fill_new_plane(img, heif_channel_Cb, (input_width+1)/2, (input_height+1)/2);
+  fill_new_plane(img, heif_channel_Cr, (input_width+1)/2, (input_height+1)/2);
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc = get_encoder_or_skip_test(compression);
+
+  heif_encoding_options* options;
+  options = heif_encoding_options_alloc();
+  options->macOS_compatibility_workaround = false;
+  options->macOS_compatibility_workaround_no_nclx_profile = false;
+  options->image_orientation = orientation;
+
+  heif_image_handle* handle;
+  heif_error err = heif_context_encode_image(ctx, img, enc, options, &handle);
+  UNSCOPED_INFO("heif_context_encode_image: " << err.message);
+  REQUIRE(err.code == heif_error_Ok);
+
+  int ispe_width = heif_image_handle_get_ispe_width(handle);
+  int ispe_height = heif_image_handle_get_ispe_height(handle);
+
+  REQUIRE(ispe_width >= expected_minimum_ispe_width);
+  REQUIRE(ispe_height >= expected_minimum_ispe_height);
+
+  heif_image_handle_release(handle);
+  heif_encoder_release(enc);
+  heif_encoding_options_free(options);
+  heif_context_free(ctx);
+  heif_image_release(img);
+}
+
+
+TEST_CASE( "ispe odd size", "[heif_context]" ) {
+
+  // HEVC encoders typically encode with even dimensions only
+  test_ispe_size(heif_compression_HEVC, heif_orientation_normal, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_180, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 120,100, 120,100);
+
+  // AVIF encoders typically encode with odd dimensions
+  test_ispe_size(heif_compression_AV1, heif_orientation_normal, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_180, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 120,100, 120,100);
+}

@@ -10,9 +10,9 @@ jobs:
   cpplint:
     env:
       CPPLINT: 1
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       run: |
@@ -29,9 +29,9 @@ jobs:
   licenses:
     env:
       CHECK_LICENSES: 1
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       run: |

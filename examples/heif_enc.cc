@@ -3,7 +3,7 @@
 
   MIT License
 
-  Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
+  Copyright (c) 2017 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +23,10 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
 
-#include <errno.h>
-#include <string.h>
+#include <cassert>
+#include <cerrno>
+#include <cstring>
 #include <getopt.h>
 
 #include <fstream>
@@ -38,39 +36,34 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <filesystem>
+#include <regex>
+#include <optional>
 
 #include <libheif/heif.h>
+#include <libheif/heif_properties.h>
+#include "libheif/heif_items.h"
 
-#if HAVE_LIBJPEG
-extern "C" {
-// Prevent duplicate definition for libjpeg-turbo v2.0
-// Note: these 'undef's are only a workaround for a libjpeg-turbo-v2.0 bug and
-// should be removed again later. Bug has been fixed in libjpeg-turbo-v2.0.1.
-#include <jconfig.h>
-#if defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER == 2000000
-#undef HAVE_STDDEF_H
-#undef HAVE_STDLIB_H
-#endif
-#include <jpeglib.h>
-}
-#endif
+#include "heifio/decoder_jpeg.h"
+#include "heifio/decoder_png.h"
+#include "heifio/decoder_tiff.h"
+#include "heifio/decoder_raw.h"
+#include "heifio/decoder_y4m.h"
 
-#if HAVE_LIBPNG
-extern "C" {
-#include <png.h>
-}
-#endif
-
-#include <assert.h>
 #include "benchmark.h"
-#include "libheif/exif.h"
+#include "common.h"
+#include "SAI_datafile.h"
+#include "libheif/api_structs.h"
+#include "libheif/heif_experimental.h"
+#include "libheif/heif_sequences.h"
+#include "libheif/heif_uncompressed.h"
 
-#define JPEG_EXIF_MARKER  (JPEG_APP0+1)  /* JPEG marker code for EXIF */
-#define JPEG_EXIF_MARKER_LEN 6 // "Exif/0/0"
-#define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
-#define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
-#define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
-#define JPEG_ICC_OVERHEAD_LEN  14        /* size of non-profile data in APP2 */
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+#include "vmt.h"
+#endif
+
+// --- command line parameters
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -78,13 +71,89 @@ int list_encoders = 0;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
-int metadata_compression = 0;
+heif_metadata_compression metadata_compression_method = heif_metadata_compression_off;
+int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
+std::string chroma_downsampling;
+int cut_tiles = 0;
+int tiled_image_width = 0;
+int tiled_image_height = 0;
+std::string tiling_method = "grid";
+heif_unci_compression unci_compression = heif_unci_compression_zlib;
+int add_pyramid_group = 0;
 
+uint16_t nclx_colour_primaries = 1;
+uint16_t nclx_transfer_characteristic = 13;
 uint16_t nclx_matrix_coefficients = 6;
-uint16_t nclx_colour_primaries = 2;
-uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
+
+std::optional<heif_content_light_level> clli;
+struct pixel_aspect_ratio
+{
+  uint32_t h,v;
+};
+std::optional<pixel_aspect_ratio> pasp;
+
+// default to 30 fps
+uint32_t sequence_timebase = 30;
+uint32_t sequence_durations = 1;
+uint32_t sequence_repetitions = 1;
+std::string vmt_metadata_file;
+bool binary_metadata_track = false;
+std::string metadata_track_uri = "vmt:metadata";
+
+int quality = 50;
+bool lossless = false;
+std::string output_filename;
+int logging_level = 0;
+bool option_show_parameters = false;
+int thumbnail_bbox_size = 0;
+int output_bit_depth = 10;
+bool force_enc_av1f = false;
+bool force_enc_avc = false;
+bool force_enc_hevc = false;
+bool force_enc_vvc = false;
+bool force_enc_uncompressed = false;
+bool force_enc_jpeg = false;
+bool force_enc_jpeg2000 = false;
+bool force_enc_htj2k = false;
+bool use_tiling = false;
+bool encode_sequence = false;
+bool option_unif = false;
+bool use_video_handler = false;
+std::string option_mime_item_type;
+std::string option_mime_item_file;
+std::string option_mime_item_name;
+
+enum heif_sequence_gop_structure sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
+int sequence_keyframe_distance_min = 0;
+int sequence_keyframe_distance_max = 0;
+int sequence_max_frames = 0; // 0 -> no maximum
+std::string option_gimi_track_id;
+std::string option_sai_data_file;
+
+#if HEIF_WITH_OMAF
+std::optional<heif_omaf_image_projection> omaf_image_projection;
+#endif
+std::vector<heif_brand2> additional_compatible_brands;
+
+enum heif_output_nclx_color_profile_preset
+{
+  heif_output_nclx_color_profile_preset_custom,  // Default. Use the values provided by the user.
+  heif_output_nclx_color_profile_preset_automatic,  // Choose the profile depending on the input.
+  heif_output_nclx_color_profile_preset_compatible, // Choose a profile that is decoded correctly by most systems.
+  heif_output_nclx_color_profile_preset_Rec_601,  // SD / JPEG / MPEG
+  heif_output_nclx_color_profile_preset_Rec_709,  // HDTV / (sRGB)
+  heif_output_nclx_color_profile_preset_Rec_2020  // UHDTV
+};
+
+heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_nclx_color_profile_preset_custom;
+
+
+std::string property_pitm_description;
+
+RawImageParameters raw_input_params;
+bool force_raw_input = false;
 
 // for benchmarking
 
@@ -94,8 +163,8 @@ int nclx_full_range = true;
 
 #if HAVE_GETTIMEOFDAY
 #include <sys/time.h>
-struct timeval time_encoding_start;
-struct timeval time_encoding_end;
+timeval time_encoding_start;
+timeval time_encoding_end;
 #endif
 
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
@@ -103,921 +172,274 @@ const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
 const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 const int OPTION_PLUGIN_DIRECTORY = 1004;
+const int OPTION_PITM_DESCRIPTION = 1005;
+const int OPTION_USE_JPEG_COMPRESSION = 1006;
+const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
+const int OPTION_VERBOSE = 1008;
+const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
+const int OPTION_USE_VVC_COMPRESSION = 1010;
+const int OPTION_TILED_IMAGE_WIDTH = 1011;
+const int OPTION_TILED_IMAGE_HEIGHT = 1012;
+const int OPTION_TILING_METHOD = 1013;
+const int OPTION_UNCI_COMPRESSION = 1014;
+const int OPTION_CUT_TILES = 1015;
+const int OPTION_SEQUENCES_TIMEBASE = 1016;
+const int OPTION_SEQUENCES_DURATIONS = 1017;
+const int OPTION_SEQUENCES_FPS = 1018;
+const int OPTION_VMT_METADATA_FILE = 1019;
+const int OPTION_SEQUENCES_REPETITIONS = 1020;
+const int OPTION_COLOR_PROFILE_PRESET = 1021;
+const int OPTION_SET_CLLI = 1022;
+const int OPTION_SET_PASP = 1023;
+const int OPTION_SEQUENCES_GOP_STRUCTURE = 1024;
+const int OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE = 1025;
+const int OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE = 1026;
+const int OPTION_SEQUENCES_MAX_FRAMES = 1027;
+const int OPTION_USE_AVC_COMPRESSION = 1028;
+const int OPTION_BINARY_METADATA_TRACK = 1029;
+const int OPTION_METADATA_TRACK_URI = 1030;
+const int OPTION_ADD_MIME_ITEM = 1031;
+const int OPTION_MIME_ITEM_FILE = 1032;
+const int OPTION_MIME_ITEM_NAME = 1033;
+const int OPTION_METADATA_COMPRESSION = 1034;
+const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
+const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
+const int OPTION_USE_HEVC_COMPRESSION = 1037;
+#if HEIF_WITH_OMAF
+const int OPTION_SET_OMAF_IMAGE_PROJECTION = 1038;
+#endif
+const int OPTION_ADD_COMPATIBLE_BRAND = 1039;
+const int OPTION_UNIF = 1040;
+const int OPTION_RAW_WIDTH = 1041;
+const int OPTION_RAW_HEIGHT = 1042;
+const int OPTION_RAW_TYPE = 1043;
+const int OPTION_RAW_ENDIAN = 1044;
+const int OPTION_RAW = 1045;
 
-
-static struct option long_options[] = {
+static option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
+    {(char* const) "version",                 no_argument,       0,              'v'},
     {(char* const) "quality",                 required_argument, 0,              'q'},
     {(char* const) "output",                  required_argument, 0,              'o'},
     {(char* const) "lossless",                no_argument,       0,              'L'},
     {(char* const) "thumb",                   required_argument, 0,              't'},
-    {(char* const) "verbose",                 no_argument,       0,              'v'},
+    {(char* const) "verbose",                 no_argument,       0,              OPTION_VERBOSE},
     {(char* const) "params",                  no_argument,       0,              'P'},
     {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoder",                 no_argument,       0,              'e'},
+    {(char* const) "encoder",                 required_argument, 0,              'e'},
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
-    {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
-    {(char* const) "colour_primaries",        required_argument, 0,              OPTION_NCLX_COLOUR_PRIMARIES},
-    {(char* const) "transfer_characteristic", required_argument, 0,              OPTION_NCLX_TRANSFER_CHARACTERISTIC},
-    {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
-    {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
-    {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
-    {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
-    {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
-    {0, 0,                                                       0,               0},
+    {(char* const) "hevc",                    no_argument,       0,              OPTION_USE_HEVC_COMPRESSION},
+    {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
+    {(char* const) "avc",                     no_argument,       0,              OPTION_USE_AVC_COMPRESSION},
+    {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
+    {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
+    {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
+#if WITH_UNCOMPRESSED_CODEC
+    {(char* const) "uncompressed",                no_argument,       0,                     'U'},
+    {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
+#endif
+    {(char* const) "color-profile",               required_argument, 0,                     OPTION_COLOR_PROFILE_PRESET},
+    {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
+    {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
+    {(char* const) "clli",                        required_argument, 0,                     OPTION_SET_CLLI},
+    {(char* const) "pasp",                        required_argument, 0,                     OPTION_SET_PASP},
+    {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
+    {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
+    {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
+    {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
+    {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
+    {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
+    {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
+    {(char* const) "tiled-input",                 no_argument, 0, 'T'},
+    {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
+    {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
+    {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
+    {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
+    {(char* const) "add-pyramid-group",           no_argument,       &add_pyramid_group, 1},
+    {(char* const) "sequence",                    no_argument, 0, 'S'},
+    {(char* const) "video",                       no_argument, 0, 'V'},
+    {(char* const) "timebase",                    required_argument,       nullptr, OPTION_SEQUENCES_TIMEBASE},
+    {(char* const) "duration",                    required_argument,       nullptr, OPTION_SEQUENCES_DURATIONS},
+    {(char* const) "fps",                         required_argument,       nullptr, OPTION_SEQUENCES_FPS},
+    {(char* const) "repetitions",                 required_argument,       nullptr, OPTION_SEQUENCES_REPETITIONS},
+    {(char* const) "max-frames",                  required_argument,       nullptr, OPTION_SEQUENCES_MAX_FRAMES},
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    {(char* const) "vmt-metadata",                required_argument,       nullptr, OPTION_VMT_METADATA_FILE},
+    {(char* const) "binary-metadata-track",       no_argument,             nullptr, OPTION_BINARY_METADATA_TRACK},
+    {(char* const) "metadata-track-uri",          required_argument,       nullptr, OPTION_METADATA_TRACK_URI},
+    {(char* const) "add-mime-item",               required_argument,       nullptr, OPTION_ADD_MIME_ITEM},
+    {(char* const) "mime-item-file",              required_argument,       nullptr, OPTION_MIME_ITEM_FILE},
+    {(char* const) "mime-item-name",              required_argument,       nullptr, OPTION_MIME_ITEM_NAME},
+#endif
+    {(char* const) "gop-structure",               required_argument,       nullptr, OPTION_SEQUENCES_GOP_STRUCTURE},
+    {(char* const) "min-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE},
+    {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
+    {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
+    {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
+#if HEIF_WITH_OMAF
+    {(char* const) "omaf-image-projection",       required_argument,       nullptr, OPTION_SET_OMAF_IMAGE_PROJECTION},
+#endif
+    {(char* const) "add-compatible-brand",        required_argument,       nullptr, OPTION_ADD_COMPATIBLE_BRAND},
+    {(char* const) "unif",                      no_argument,             nullptr, OPTION_UNIF},
+    {(char* const) "raw",                    no_argument,             nullptr, OPTION_RAW},
+    {(char* const) "raw-width",               required_argument,       nullptr, OPTION_RAW_WIDTH},
+    {(char* const) "raw-height",              required_argument,       nullptr, OPTION_RAW_HEIGHT},
+    {(char* const) "raw-type",                required_argument,       nullptr, OPTION_RAW_TYPE},
+    {(char* const) "raw-endian",              required_argument,       nullptr, OPTION_RAW_ENDIAN},
+    {0, 0,                                                           0,  0}
 };
+
 
 void show_help(const char* argv0)
 {
-  std::cerr << " heif-enc  libheif version: " << heif_get_version() << "\n"
-            << "----------------------------------------\n"
-            << "Usage: heif-enc [options] image.jpeg ...\n"
+  std::filesystem::path p(argv0);
+  std::string filename = p.filename().string();
+
+  std::stringstream sstr;
+  sstr << " " << filename << "  libheif version: " << heif_get_version();
+
+  std::string title = sstr.str();
+
+  std::cerr << title << "\n"
+            << std::string(title.length() + 1, '-') << "\n"
+            << "Usage: " << filename << " [options] <input-image> ...\n"
             << "\n"
             << "When specifying multiple source images, they will all be saved into the same HEIF/AVIF file.\n"
             << "\n"
-            << "When using the x265 encoder, you may pass it any of its parameters by\n"
-            << "prefixing the parameter name with 'x265:'. Hence, to set the 'ctu' parameter,\n"
-            << "you will have to set 'x265:ctu' in libheif (e.g.: -p x265:ctu=64).\n"
-            << "Note that there is no checking for valid parameters when using the prefix.\n"
+            << "Some encoders (x265, aom) let you pass-through any parameters by prefixing them with the encoder name.\n"
+            << "For example, you may pass any x265 parameter by prefixing it with 'x265:'. For example, to set\n"
+            << "the 'ctu' parameter, you will have to set 'x265:ctu' in libheif (e.g.: -p x265:ctu=64).\n"
+            << "Note that when using the prefix, libheif cannot tell you which parameters and values are supported.\n"
             << "\n"
             << "Options:\n"
-            << "  -h, --help        show help\n"
-            << "  -q, --quality     set output quality (0-100) for lossy compression\n"
-            << "  -L, --lossless    generate lossless output (-q has no effect)\n"
-            << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
-            << "      --no-alpha    do not save alpha channel\n"
-            << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
-            << "  -o, --output      output filename (optional)\n"
-            << "  -v, --verbose     enable logging output (more -v will increase logging level)\n"
-            << "  -P, --params      show all encoder parameters\n"
-            << "  -b, --bit-depth # bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
-            << "  -p                set encoder parameter (NAME=VALUE)\n"
-            << "  -A, --avif        encode as AVIF\n"
-            << "      --list-encoders         list all available encoders for the selected output format\n"
-            << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
-            << "      --plugin-directory DIR  load all codec plugins in the directory\n"
-            << "  -E, --even-size   [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
-            << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
-            << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
-            << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
-            << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
-            << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
-            << "  --premultiplied-alpha     input image has premultiplied alpha\n"
-            << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
-            << "  --benchmark               measure encoding time, PSNR, and output file size\n"
+            << "  -h, --help                     show help\n"
+            << "  -v, --version                  show version\n"
+            << "  -o, --output                   output filename (optional)\n"
+            << "  -q, --quality                  set output quality (0-100) for lossy compression\n"
+            << "  -L, --lossless                 generate lossless output (-q has no effect). Image will be encoded as RGB (matrix_coefficients=0).\n"
+            << "  -t, --thumb #                  generate thumbnail with maximum size # (default: off)\n"
+            << "      --no-alpha                 do not save alpha channel\n"
+            << "      --no-thumb-alpha           do not save alpha channel in thumbnail image\n"
+            << "      --verbose                  enable logging output (more will increase logging level)\n"
+            << "  -b, --bit-depth #              number of bits to use from an 16-bit PNG input, valid range: 9-16 (default: 10 bit)\n"
+            << "      --premultiplied-alpha      input image has premultiplied alpha\n"
+#if WITH_HEADER_COMPRESSION
+            << "      --enable-metadata-compression ALGO  enable metadata item compression (experimental)\n"
+            << "                                          Choose algorithm from {off"; // TODO: add 'auto', but it currently equals 'off'
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_deflate)) {
+    std::cerr << ",deflate,zlib";
+  }
+  if (heif_metadata_compression_method_supported(heif_metadata_compression_brotli)) {
+    std::cerr << ",brotli";
+  }
+  std::cerr << "}.\n"
+#endif
+            << "  -C, --chroma-downsampling ALGO    force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
+            << "                                    (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
+            << "      --benchmark                   measure encoding time, PSNR, and output file size\n"
+            << "      --pitm-description TEXT       set user description for primary image (experimental)\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --add-mime-item TYPE          add a mime item of the specified content type (experimental)\n"
+            << "      --mime-item-file FILE         use the specified FILE as the data to put into the mime item (experimental)\n"
+#endif
+            << "      --add-compatible-brand BRAND  add a compatible brand to the output file (4 characters)\n"
+            << "      --unif                        use unified ID namespace (adds 'unif' compatible brand)\n"
             << "\n"
-            << "Note: to get lossless encoding, you need this set of options:\n"
-            << "  -L                       switch encoder to lossless mode\n"
-            << "  -p chroma=444            switch off chroma subsampling\n"
-            << "  --matrix_coefficients=0  encode in RGB color-space\n";
-}
-
-
-
-struct InputImage
-{
-  std::shared_ptr<heif_image> image;
-  std::vector<uint8_t> xmp;
-  std::vector<uint8_t> exif;
-  heif_orientation orientation = heif_orientation_normal;
-};
-
-
-#if HAVE_LIBJPEG
-
-static bool JPEGMarkerIsIcc(jpeg_saved_marker_ptr marker)
-{
-  return
-      marker->marker == JPEG_ICC_MARKER &&
-      marker->data_length >= JPEG_ICC_OVERHEAD_LEN &&
-      /* verify the identifying string */
-      GETJOCTET(marker->data[0]) == 0x49 &&
-      GETJOCTET(marker->data[1]) == 0x43 &&
-      GETJOCTET(marker->data[2]) == 0x43 &&
-      GETJOCTET(marker->data[3]) == 0x5F &&
-      GETJOCTET(marker->data[4]) == 0x50 &&
-      GETJOCTET(marker->data[5]) == 0x52 &&
-      GETJOCTET(marker->data[6]) == 0x4F &&
-      GETJOCTET(marker->data[7]) == 0x46 &&
-      GETJOCTET(marker->data[8]) == 0x49 &&
-      GETJOCTET(marker->data[9]) == 0x4C &&
-      GETJOCTET(marker->data[10]) == 0x45 &&
-      GETJOCTET(marker->data[11]) == 0x0;
-}
-
-boolean ReadICCProfileFromJPEG(j_decompress_ptr cinfo,
-                               JOCTET** icc_data_ptr,
-                               unsigned int* icc_data_len)
-{
-  jpeg_saved_marker_ptr marker;
-  int num_markers = 0;
-  int seq_no;
-  JOCTET* icc_data;
-  unsigned int total_length;
-#define MAX_SEQ_NO  255        /* sufficient since marker numbers are bytes */
-  char marker_present[MAX_SEQ_NO + 1];      /* 1 if marker found */
-  unsigned int data_length[MAX_SEQ_NO + 1]; /* size of profile data in marker */
-  unsigned int data_offset[MAX_SEQ_NO + 1]; /* offset for data in marker */
-
-  *icc_data_ptr = NULL;        /* avoid confusion if FALSE return */
-  *icc_data_len = 0;
-
-  /* This first pass over the saved markers discovers whether there are
-   * any ICC markers and verifies the consistency of the marker numbering.
-   */
-
-  for (seq_no = 1; seq_no <= MAX_SEQ_NO; seq_no++)
-    marker_present[seq_no] = 0;
-
-  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
-    if (JPEGMarkerIsIcc(marker)) {
-      if (num_markers == 0)
-        num_markers = GETJOCTET(marker->data[13]);
-      else if (num_markers != GETJOCTET(marker->data[13]))
-        return FALSE;        /* inconsistent num_markers fields */
-      seq_no = GETJOCTET(marker->data[12]);
-      if (seq_no <= 0 || seq_no > num_markers)
-        return FALSE;        /* bogus sequence number */
-      if (marker_present[seq_no])
-        return FALSE;        /* duplicate sequence numbers */
-      marker_present[seq_no] = 1;
-      data_length[seq_no] = marker->data_length - JPEG_ICC_OVERHEAD_LEN;
-    }
-  }
-
-  if (num_markers == 0)
-    return FALSE;
-
-  /* Check for missing markers, count total space needed,
-   * compute offset of each marker's part of the data.
-   */
-
-  total_length = 0;
-  for (seq_no = 1; seq_no <= num_markers; seq_no++) {
-    if (marker_present[seq_no] == 0)
-      return FALSE;        /* missing sequence number */
-    data_offset[seq_no] = total_length;
-    total_length += data_length[seq_no];
-  }
-
-  if (total_length <= 0)
-    return FALSE;        /* found only empty markers? */
-
-  /* Allocate space for assembled data */
-  icc_data = (JOCTET*) malloc(total_length * sizeof(JOCTET));
-  if (icc_data == NULL)
-    return FALSE;        /* oops, out of memory */
-
-  /* and fill it in */
-  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
-    if (JPEGMarkerIsIcc(marker)) {
-      JOCTET FAR* src_ptr;
-      JOCTET* dst_ptr;
-      unsigned int length;
-      seq_no = GETJOCTET(marker->data[12]);
-      dst_ptr = icc_data + data_offset[seq_no];
-      src_ptr = marker->data + JPEG_ICC_OVERHEAD_LEN;
-      length = data_length[seq_no];
-      while (length--) {
-        *dst_ptr++ = *src_ptr++;
-      }
-    }
-  }
-
-  *icc_data_ptr = icc_data;
-  *icc_data_len = total_length;
-
-  return TRUE;
-}
-
-
-static bool JPEGMarkerIsXMP(jpeg_saved_marker_ptr marker)
-{
-  return
-      marker->marker == JPEG_XMP_MARKER &&
-      marker->data_length >= strlen(JPEG_XMP_MARKER_ID) + 1 &&
-      strncmp((const char*) (marker->data), JPEG_XMP_MARKER_ID, strlen(JPEG_XMP_MARKER_ID)) == 0;
-}
-
-bool ReadXMPFromJPEG(j_decompress_ptr cinfo,
-                     std::vector<uint8_t>& xmpData)
-{
-  jpeg_saved_marker_ptr marker;
-
-  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
-    if (JPEGMarkerIsXMP(marker)) {
-      int length = (int)(marker->data_length - (strlen(JPEG_XMP_MARKER_ID) + 1));
-      xmpData.resize(length);
-      memcpy(xmpData.data(), marker->data + strlen(JPEG_XMP_MARKER_ID) + 1, length);
-      return true;
-    }
-  }
-
-  return false;
-}
-
-
-static bool JPEGMarkerIsEXIF(jpeg_saved_marker_ptr marker)
-{
-  return marker->marker == JPEG_EXIF_MARKER &&
-         marker->data_length >= JPEG_EXIF_MARKER_LEN &&
-         GETJOCTET(marker->data[0]) == 'E' &&
-         GETJOCTET(marker->data[1]) == 'x' &&
-         GETJOCTET(marker->data[2]) == 'i' &&
-         GETJOCTET(marker->data[3]) == 'f' &&
-         GETJOCTET(marker->data[4]) == 0 &&
-         GETJOCTET(marker->data[5]) == 0;
-}
-
-bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
-                     std::vector<uint8_t>& exifData)
-{
-  jpeg_saved_marker_ptr marker;
-
-  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
-    if (JPEGMarkerIsEXIF(marker)) {
-      int length = (int)(marker->data_length - JPEG_EXIF_MARKER_LEN);
-      exifData.resize(length);
-      memcpy(exifData.data(), marker->data + JPEG_EXIF_MARKER_LEN, length);
-      return true;
-    }
-  }
-
-  return false;
-}
-
-
-InputImage loadJPEG(const char* filename)
-{
-  InputImage img;
-  struct heif_image* image = nullptr;
-
-
-  // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
-
-  struct jpeg_decompress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-
-  // to store embedded icc profile
-  uint32_t iccLen;
-  uint8_t* iccBuffer = NULL;
-
-  std::vector<uint8_t> xmpData;
-  std::vector<uint8_t> exifData;
-
-  // open input file
-
-  FILE* infile;
-  if ((infile = fopen(filename, "rb")) == NULL) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
-  }
-
-
-  // initialize decompressor
-
-  jpeg_create_decompress(&cinfo);
-
-  cinfo.err = jpeg_std_error(&jerr);
-  jpeg_stdio_src(&cinfo, infile);
-
-  /* Adding this part to prepare for icc profile reading. */
-  jpeg_save_markers(&cinfo, JPEG_ICC_MARKER, 0xFFFF);
-  jpeg_save_markers(&cinfo, JPEG_XMP_MARKER, 0xFFFF);
-  jpeg_save_markers(&cinfo, JPEG_EXIF_MARKER, 0xFFFF);
-
-  jpeg_read_header(&cinfo, TRUE);
-
-  boolean embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
-  boolean embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
-  if (embeddedXMPFlag) {
-    img.xmp = xmpData;
-  }
-
-  boolean embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
-  if (embeddedEXIFFlag) {
-    img.exif = exifData;
-    img.orientation = (heif_orientation)read_exif_orientation_tag(exifData.data(), (int)exifData.size());
-  }
-
-  if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
-    cinfo.out_color_space = JCS_GRAYSCALE;
-
-    jpeg_start_decompress(&cinfo);
-
-    JSAMPARRAY buffer;
-    buffer = (*cinfo.mem->alloc_sarray)
-        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
-
-
-    // create destination image
-
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_monochrome,
-                                              heif_chroma_monochrome,
-                                              &image);
-    (void) err;
-    // TODO: handle error
-
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-
-    int y_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-
-
-    // read the image
-
-    while (cinfo.output_scanline < cinfo.output_height) {
-      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-      memcpy(py + (cinfo.output_scanline - 1) * y_stride, *buffer, cinfo.output_width);
-    }
-  }
-  else {
-    cinfo.out_color_space = JCS_YCbCr;
-
-    jpeg_start_decompress(&cinfo);
-
-    JSAMPARRAY buffer;
-    buffer = (*cinfo.mem->alloc_sarray)
-        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
-
-
-    // create destination image
-
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_YCbCr,
-                                              heif_chroma_420,
-                                              &image);
-    (void) err;
-
-    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-    heif_image_add_plane(image, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
-    heif_image_add_plane(image, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
-
-    int y_stride;
-    int cb_stride;
-    int cr_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-    uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-    uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
-
-    // read the image
-
-    //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
-
-    while (cinfo.output_scanline < cinfo.output_height) {
-      JOCTET* bufp;
-
-      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-      bufp = buffer[0];
-
-      int y = cinfo.output_scanline - 1;
-
-      for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
-        py[y * y_stride + x] = *bufp++;
-        pcb[y / 2 * cb_stride + x / 2] = *bufp++;
-        pcr[y / 2 * cr_stride + x / 2] = *bufp++;
-
-        if (x + 1 < cinfo.output_width) {
-          py[y * y_stride + x + 1] = *bufp++;
-        }
-
-        bufp += 2;
-      }
-
-
-      if (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        bufp = buffer[0];
-
-        y = cinfo.output_scanline - 1;
-
-        for (unsigned int x = 0; x < cinfo.output_width; x++) {
-          py[y * y_stride + x] = *bufp++;
-          bufp += 2;
-        }
-      }
-    }
-  }
-
-  if (embeddedIccFlag && iccLen > 0) {
-    heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
-  }
-
-  // cleanup
-  free(iccBuffer);
-  jpeg_finish_decompress(&cinfo);
-  jpeg_destroy_decompress(&cinfo);
-
-  fclose(infile);
-
-  img.image = std::shared_ptr<heif_image>(image,
-                                     [](heif_image* img) { heif_image_release(img); });
-
-  return img;
-}
-
-#else
-InputImage loadJPEG(const char* filename)
-{
-  std::cerr << "Cannot load JPEG because libjpeg support was not compiled.\n";
-  exit(1);
-
-  return {};
-}
+            << "codecs:\n"
+            << "  -A, --avif                     encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --hevc                     encode as HEVC (default)\n"
+            << "      --vvc                      encode as VVC (experimental)\n"
+            << "      --avc                      encode as AVC (experimental)\n"
+            << "      --jpeg                     encode as JPEG\n"
+            << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
+            << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
+#if WITH_UNCOMPRESSED_CODEC
+            << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
 #endif
-
-
-#if HAVE_LIBPNG
-
-static void
-user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
-{
-  FILE* fh = (FILE*) png_get_io_ptr(png_ptr);
-  size_t n = fread((char*) data, length, 1, fh);
-  (void) n;
-} // user_read_data
-
-
-InputImage loadPNG(const char* filename, int output_bit_depth)
-{
-  FILE* fh = fopen(filename, "rb");
-  if (!fh) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
-  }
-
-
-  InputImage input_image;
-
-  // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
-
-  struct heif_image* image = nullptr;
-
-  png_structp png_ptr;
-  png_infop info_ptr;
-  png_uint_32 width, height;
-  int bit_depth, color_type, interlace_type;
-  int compression_type;
-  png_charp name;
-#if (PNG_LIBPNG_VER < 10500)
-  png_charp png_profile_data;
-#else
-  png_bytep png_profile_data;
+            << "      --list-encoders            list all available encoders for all compression formats\n"
+            << "  -e, --encoder ID               select encoder to use (the IDs can be listed with --list-encoders)\n"
+            << "      --plugin-directory DIR     load all codec plugins in the directory\n"
+            << "  -P, --params                   show all encoder parameters and exit, input file not required or used.\n"
+            << "  -p NAME=VALUE                  set encoder parameter\n"
+            << "\n"
+            << "raw input:\n"
+            << "      --raw                      force raw pixel data input (for files without .raw/.img suffix)\n"
+            << "      --raw-width #              width of raw input image (computed from file size if omitted)\n"
+            << "      --raw-height #             height of raw input image (computed from file size if omitted)\n"
+            << "      --raw-type TYPE            pixel data type: uint8, sint8, uint16, sint16, uint32, sint32, float32, float64\n"
+            << "      --raw-endian ENDIAN        byte order of input data: little (default), big\n"
+            << "\n"
+            << "color profile:\n"
+            << "      --color-profile NAME       use a color profile preset for the output. Valid values are:\n"
+            << "                                    custom:     (default) use the provided matrix_coefficients, colour_primaries, transfer_characteristic\n"
+            << "                                    auto:       automatically guess suitable values from the input image characteristics\n"
+            << "                                    compatible: use a profile that is decoded correctly by most applications by avoiding incomplete implementations\n"
+            << "                                    601:        use Rec.601 (SD), close to JPEG\n"
+            << "                                    709:        use Rec.709 (HDTV), close to sRGB\n"
+            << "                                    2020:       use Rec.2020 (UHDTV), transfer curve will be selected based on bits per pixel\n"
+            << "      --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
+            << "      --colour_primaries        nclx profile: color primaries (see h.273)\n"
+            << "      --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
+            << "      --full_range_flag         nclx profile: full range flag, default: 1\n"
+            << "      --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
+            << "      --clli MaxCLL,MaxPALL     add 'content light level information' property to all encoded images\n"
+            << "      --pasp h,v                set pixel aspect ratio property to all encoded images\n"
+            << "\n"
+            << "tiling:\n"
+            << "      --cut-tiles #             cuts the input image into square tiles of the given width\n"
+            << "  -T, --tiled-input             input is a set of tile images (only provide one filename with two tile position numbers).\n"
+            << "                                For example, 'tile-01-05.jpg' would be a valid input filename.\n"
+            << "                                You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
+            << "                                for the other tiles and determine the range of tiles automatically.\n"
+            << "      --tiled-image-width #     override image width of tiled image\n"
+            << "      --tiled-image-height #    override image height of tiled image\n"
+            << "      --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
+            << "                                With this option, this can be swapped so that the first number is x, the second number y.\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES || WITH_UNCOMPRESSED_CODEC
+            << "      --tiling-method METHOD    choose one of these methods: grid"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+               ", tili (experimental)"
 #endif
-  uint8_t* profile_data = nullptr;
-  png_uint_32 profile_length = 5;
-
-  /* Create and initialize the png_struct with the desired error handler
-   * functions.  If you want to use the default stderr and longjump method,
-   * you can supply NULL for the last three parameters.  We also supply the
-   * the compiler header file version, so that we know if the application
-   * was compiled with a compatible version of the library.  REQUIRED
-   */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  assert(png_ptr != NULL);
-
-  /* Allocate/initialize the memory for image information.  REQUIRED. */
-  info_ptr = png_create_info_struct(png_ptr);
-  if (info_ptr == NULL) {
-    png_destroy_read_struct(&png_ptr, (png_infopp) NULL, (png_infopp) NULL);
-    assert(false); // , "could not create info_ptr");
-  } // if
-
-  /* Set error handling if you are using the setjmp/longjmp method (this is
-   * the normal method of doing things with libpng).  REQUIRED unless you
-   * set up your own error handlers in the png_create_read_struct() earlier.
-   */
-  if (setjmp(png_jmpbuf(png_ptr))) {
-    /* Free all of the memory associated with the png_ptr and info_ptr */
-    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
-    /* If we get here, we had a problem reading the file */
-    assert(false); // , "fatal error in png library");
-  } // if
-
-  /* If you are using replacement read functions, instead of calling
-   * png_init_io() here you would call: */
-  png_set_read_fn(png_ptr, (void*) fh, user_read_fn);
-  /* where user_io_ptr is a structure you want available to the callbacks */
-
-  /* The call to png_read_info() gives us all of the information from the
-   * PNG file before the first IDAT (image data chunk).  REQUIRED
-   */
-  png_read_info(png_ptr, info_ptr);
-
-  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
-               &interlace_type, NULL, NULL);
-
-  if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
-    if (PNG_INFO_iCCP ==
-        png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) &&
-        profile_length > 0) {
-      profile_data = (uint8_t*) malloc(profile_length);
-      if (profile_data) {
-        memcpy(profile_data, png_profile_data, profile_length);
-      }
-    }
-  }
-  /**** Set up the data transformations you want.  Note that these are all
-   **** optional.  Only call them if you want/need them.  Many of the
-   **** transformations only work on specific types of images, and many
-   **** are mutually exclusive.
-   ****/
-
-  // \TODO
-  //      /* Strip alpha bytes from the input data without combining with the
-  //       * background (not recommended).
-  //       */
-  //      png_set_strip_alpha(png_ptr);
-
-  /* Extract multiple pixels with bit depths of 1, 2, and 4 from a single
-   * byte into separate bytes (useful for paletted and grayscale images).
-   */
-  png_set_packing(png_ptr);
-
-
-  /* Expand paletted colors into true RGB triplets */
-  if (color_type == PNG_COLOR_TYPE_PALETTE)
-    png_set_expand(png_ptr);
-
-  /* Expand grayscale images to the full 8 bits from 1, 2, or 4 bits/pixel */
-  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-    png_set_expand(png_ptr);
-
-  /* Set the background color to draw transparent and alpha images over.
-   * It is possible to set the red, green, and blue components directly
-   * for paletted images instead of supplying a palette index.  Note that
-   * even if the PNG file supplies a background, you are not required to
-   * use it - you should use the (solid) application background if it has one.
-   */
-
-#if 0
-  // \TODO 0 is index in color lookup table - correct? used already?
-  png_color_16 my_background = {0, 255, 255, 255, 255};
-  png_color_16 *image_background;
-
-  if (png_get_bKGD(png_ptr, info_ptr, &image_background))
-    png_set_background(png_ptr, image_background, PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
-  else
-    png_set_background(png_ptr, &my_background, PNG_BACKGROUND_GAMMA_SCREEN, 0, 1.0);
+#if WITH_UNCOMPRESSED_CODEC
+               ", unci"
 #endif
-
-
-  /* Optional call to gamma correct and add the background to the palette
-   * and update info structure.  REQUIRED if you are expecting libpng to
-   * update the palette for you (ie you selected such a transform above).
-   */
-  png_read_update_info(png_ptr, info_ptr);
-
-  /* Allocate the memory to hold the image using the fields of info_ptr. */
-
-  /* The easiest way to read the image: */
-  uint8_t** row_pointers = new png_bytep[height];
-  assert(row_pointers != NULL);
-
-  for (uint32_t y = 0; y < height; y++) {
-    row_pointers[y] = (png_bytep) malloc(png_get_rowbytes(png_ptr, info_ptr));
-    assert(row_pointers[y] != NULL);
-  } // for
-
-  /* Now it's time to read the image.  One of these methods is REQUIRED */
-  png_read_image(png_ptr, row_pointers);
-
-  /* read rest of file, and get additional chunks in info_ptr - REQUIRED */
-  png_read_end(png_ptr, info_ptr);
-
-  // --- read EXIF data
-
-  png_bytep exifPtr = nullptr;
-  png_uint_32 exifSize = 0;
-  if (png_get_eXIf_1(png_ptr, info_ptr, &exifSize, &exifPtr) == PNG_INFO_eXIf) {
-    input_image.exif.resize(exifSize);
-    memcpy(input_image.exif.data(), exifPtr, exifSize);
-
-    // remove the EXIF orientation since it is informal only in PNG and we do not want to confuse with an orientation not matching irot/imir
-    modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int)input_image.exif.size(), 1);
-  }
-
-  // --- read XMP data
-
-  png_textp textPtr = nullptr;
-  const png_uint_32 nTextChunks = png_get_text(png_ptr, info_ptr, &textPtr, nullptr);
-  for (png_uint_32 i = 0; i < nTextChunks; i++, textPtr++) {
-    png_size_t textLength = textPtr->text_length;
-    if ((textPtr->compression == PNG_ITXT_COMPRESSION_NONE) || (textPtr->compression == PNG_ITXT_COMPRESSION_zTXt)) {
-      textLength = textPtr->itxt_length;
-    }
-
-    if (!strcmp(textPtr->key, "XML:com.adobe.xmp")) {
-      if (textLength == 0) {
-        // TODO: error
-      }
-      else {
-        input_image.xmp.resize(textLength);
-        memcpy(input_image.xmp.data(), textPtr->text, textLength);
-      }
-    }
-  }
-
-  /* clean up after the read, and free any memory allocated - REQUIRED */
-  png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
-
-
-  // OK, now we should have the png image in some way in
-  // row_pointers, have fun with it
-
-  int band = 0;
-  switch (color_type) {
-    case PNG_COLOR_TYPE_GRAY:
-    case PNG_COLOR_TYPE_GRAY_ALPHA:
-      band = 1;
-      break;
-    case PNG_COLOR_TYPE_PALETTE:
-    case PNG_COLOR_TYPE_RGB:
-    case PNG_COLOR_TYPE_RGB_ALPHA:
-      band = 3;
-      break;
-    default:
-      assert(false); // , "unknown color type in png image.");
-  } // switch
-
-
-
-
-  struct heif_error err;
-
-  bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
-
-  if (band == 1 && bit_depth==8) {
-    err = heif_image_create((int) width, (int) height,
-                            heif_colorspace_monochrome,
-                            heif_chroma_monochrome,
-                            &image);
-    (void) err;
-
-    heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, 8);
-
-    int y_stride;
-    int a_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-    uint8_t* pa = nullptr;
-
-    if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, 8);
-
-      pa = heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
-    }
-
-
-    for (uint32_t y = 0; y < height; y++) {
-      uint8_t* p = row_pointers[y];
-
-      if (has_alpha) {
-        for (uint32_t x = 0; x < width; x++) {
-          py[y * y_stride + x] = *p++;
-          pa[y * a_stride + x] = *p++;
-        }
-      }
-      else {
-        memcpy(&py[y * y_stride], p, width);
-      }
-    }
-  }
-  else if (band == 1) {
-    assert(bit_depth>8);
-
-    err = heif_image_create((int) width, (int) height,
-                            heif_colorspace_monochrome,
-                            heif_chroma_monochrome,
-                            &image);
-    (void) err;
-
-    int bdShift = 16 - output_bit_depth;
-
-    heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, output_bit_depth);
-
-    int y_stride;
-    int a_stride = 0;
-    uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
-    uint16_t* pa = nullptr;
-
-    if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, output_bit_depth);
-
-      pa = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
-    }
-
-    y_stride /= 2;
-    a_stride /= 2;
-
-    for (uint32_t y = 0; y < height; y++) {
-      uint8_t* p = row_pointers[y];
-
-      if (has_alpha) {
-        for (uint32_t x = 0; x < width; x++) {
-          uint16_t vp = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
-          uint16_t va = (uint16_t) (((p[2] << 8) | p[3]) >> bdShift);
-
-          py[x + y * y_stride] = vp;
-          pa[x + y * y_stride] = va;
-
-          p += 4;
-        }
-      }
-      else {
-        for (uint32_t x = 0; x < width; x++) {
-          uint16_t vp = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
-
-          py[x + y * y_stride] = vp;
-
-          p += 2;
-        }
-      }
-    }
-  }
-  else if (bit_depth == 8) {
-    err = heif_image_create((int) width, (int) height,
-                            heif_colorspace_RGB,
-                            has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
-                            &image);
-    (void) err;
-
-    heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height,
-                         has_alpha ? 32 : 24);
-
-    int stride;
-    uint8_t* p = heif_image_get_plane(image, heif_channel_interleaved, &stride);
-
-    for (uint32_t y = 0; y < height; y++) {
-      if (has_alpha) {
-        memcpy(p + y * stride, row_pointers[y], width * 4);
-      }
-      else {
-        memcpy(p + y * stride, row_pointers[y], width * 3);
-      }
-    }
-  }
-  else {
-    err = heif_image_create((int) width, (int) height,
-                            heif_colorspace_RGB,
-                            has_alpha ?
-                            heif_chroma_interleaved_RRGGBBAA_LE :
-                            heif_chroma_interleaved_RRGGBB_LE,
-                            &image);
-    (void) err;
-
-    int bdShift = 16 - output_bit_depth;
-
-    heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height, output_bit_depth);
-
-    int stride;
-    uint8_t* p_out = (uint8_t*) heif_image_get_plane(image, heif_channel_interleaved, &stride);
-
-    for (uint32_t y = 0; y < height; y++) {
-      uint8_t* p = row_pointers[y];
-
-      uint32_t nVal = (has_alpha ? 4 : 3) * width;
-
-      for (uint32_t x = 0; x < nVal; x++) {
-        uint16_t v = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
-        p_out[2 * x + y * stride + 1] = (uint8_t) (v >> 8);
-        p_out[2 * x + y * stride + 0] = (uint8_t) (v & 0xFF);
-        p += 2;
-      }
-    }
-  }
-
-  if (profile_data && profile_length > 0) {
-    heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
-  }
-
-  free(profile_data);
-  for (uint32_t y = 0; y < height; y++) {
-    free(row_pointers[y]);
-  } // for
-
-  delete[] row_pointers;
-
-  input_image.image = std::shared_ptr<heif_image>(image,
-                                                  [](heif_image* img) { heif_image_release(img); });
-
-  return input_image;
-}
-
-#else
-InputImage loadPNG(const char* filename, int output_bit_depth)
-{
-  std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
-  exit(1);
-
-  return {};
-}
+               ". The default is 'grid'.\n"
 #endif
-
-
-std::shared_ptr<heif_image> loadY4M(const char* filename)
-{
-  struct heif_image* image = nullptr;
-
-
-  // open input file
-
-  std::ifstream istr(filename, std::ios_base::binary);
-  if (istr.fail()) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
-  }
-
-
-  std::string header;
-  getline(istr, header);
-
-  if (header.find("YUV4MPEG2 ") != 0) {
-    std::cerr << "Input is not a Y4M file.\n";
-    exit(1);
-  }
-
-  int w = -1;
-  int h = -1;
-
-  size_t pos = 0;
-  for (;;) {
-    pos = header.find(' ', pos + 1) + 1;
-    if (pos == std::string::npos) {
-      break;
-    }
-
-    size_t end = header.find_first_of(" \n", pos + 1);
-    if (end == std::string::npos) {
-      break;
-    }
-
-    if (end - pos <= 1) {
-      std::cerr << "Header format error in Y4M file.\n";
-      exit(1);
-    }
-
-    char tag = header[pos];
-    std::string value = header.substr(pos + 1, end - pos - 1);
-    if (tag == 'W') {
-      w = atoi(value.c_str());
-    }
-    else if (tag == 'H') {
-      h = atoi(value.c_str());
-    }
-  }
-
-  std::string frameheader;
-  getline(istr, frameheader);
-
-  if (frameheader != "FRAME") {
-    std::cerr << "Y4M misses the frame header.\n";
-    exit(1);
-  }
-
-  if (w < 0 || h < 0) {
-    std::cerr << "Y4M has invalid frame size.\n";
-    exit(1);
-  }
-
-  struct heif_error err = heif_image_create(w, h,
-                                            heif_colorspace_YCbCr,
-                                            heif_chroma_420,
-                                            &image);
-  (void) err;
-  // TODO: handle error
-
-  heif_image_add_plane(image, heif_channel_Y, w, h, 8);
-  heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
-  heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
-
-  int y_stride, cb_stride, cr_stride;
-  uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-  uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-  uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
-
-  for (int y = 0; y < h; y++) {
-    istr.read((char*) (py + y * y_stride), w);
-  }
-
-  for (int y = 0; y < (h + 1) / 2; y++) {
-    istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-  }
-
-  for (int y = 0; y < (h + 1) / 2; y++) {
-    istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
-  }
-
-  return std::shared_ptr<heif_image>(image,
-                                     [](heif_image* img) { heif_image_release(img); });
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group. (experimental)\n"
+#endif
+            << "\n"
+            << "sequences:\n"
+            << "  -S, --sequence                 encode input images as sequence (input filenames with a number will pull in all files with this pattern).\n"
+            << "  -V, --video                    encode as video instead of image sequence\n"
+            << "      --timebase #               set clock ticks/second for sequence\n"
+            << "      --duration #               set frame duration (default: 1)\n"
+            << "      --fps #                    set timebase and duration based on fps\n"
+            << "      --repetitions #            set how often the sequence should be played back (default=1), special value: 'infinite'\n"
+            << "      --gop-structure GOP        frame types to use in GOP (intra-only, low-delay, unrestricted)\n"
+            << "      --min-keyframe-distance #  minimum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-keyframe-distance #  maximum distance of keyframes in sequence (0 = undefined)\n"
+            << "      --max-frames #             limit sequence length to maximum number of frames\n"
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            << "      --vmt-metadata FILE        encode metadata track from VMT file (experimental)\n"
+            << "      --binary-metadata-track    parses VMT data as hex values that are written as raw binary (experimental)\n"
+            << "      --metadata-track-uri URI   uses the URI identifier for the metadata track (experimental)\n"
+            << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
+            << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
+#endif
+#if HEIF_WITH_OMAF
+            << "omnidirectional imagery:\n"
+            << "      --omaf-image-projection PROJ    set the image projection (equirectangular, cube-map)\n"
+#endif
+            ;
 }
 
 
@@ -1025,7 +447,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
 
-  const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+  const heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
   for (int i = 0; params[i]; i++) {
     const char* name = heif_encoder_parameter_get_name(params[i]);
 
@@ -1058,8 +480,8 @@ void list_encoder_parameters(heif_encoder* encoder)
         if (num_valid_values > 0) {
           std::cerr << ", {";
 
-          for (int p=0;p<num_valid_values;p++) {
-            if (p>0) {
+          for (int p = 0; p < num_valid_values; p++) {
+            if (p > 0) {
               std::cerr << ", ";
             }
 
@@ -1122,7 +544,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 }
 
 
-void set_params(struct heif_encoder* encoder, const std::vector<std::string>& params)
+void set_params(heif_encoder* encoder, const std::vector<std::string>& params)
 {
   for (const std::string& p : params) {
     auto pos = p.find_first_of('=');
@@ -1143,24 +565,760 @@ void set_params(struct heif_encoder* encoder, const std::vector<std::string>& pa
 }
 
 
-static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_descriptors,
+static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_descriptors,
                                   int count)
 {
-  std::cout << "Encoders (first is default):\n";
   for (int i = 0; i < count; i++) {
     std::cout << "- " << heif_encoder_descriptor_get_id_name(encoder_descriptors[i])
               << " = "
-              << heif_encoder_descriptor_get_name(encoder_descriptors[i])
-              << "\n";
+              << heif_encoder_descriptor_get_name(encoder_descriptors[i]);
+
+    if (i == 0) {
+      std::cout << " [default]";
+    }
+
+    std::cout << "\n";
   }
 }
 
 
-class LibHeifInitializer {
+static const char* get_compression_format_name(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1:
+      return "AV1";
+      break;
+    case heif_compression_AVC:
+      return "AVC";
+      break;
+    case heif_compression_VVC:
+      return "VVC";
+      break;
+    case heif_compression_HEVC:
+      return "HEVC";
+      break;
+    case heif_compression_JPEG:
+      return "JPEG";
+      break;
+    case heif_compression_JPEG2000:
+      return "JPEG 2000";
+      break;
+    case heif_compression_HTJ2K:
+      return "HT-J2K";
+      break;
+    case heif_compression_uncompressed:
+      return "Uncompressed";
+      break;
+    default:
+      assert(false);
+      return "unknown";
+  }
+}
+
+static void show_list_of_all_encoders()
+{
+  for (auto compression_format: {heif_compression_AVC, heif_compression_AV1, heif_compression_HEVC,
+                                 heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K,
+                                 heif_compression_uncompressed, heif_compression_VVC
+  }) {
+
+    switch (compression_format) {
+      case heif_compression_AVC:
+        std::cout << "AVC";
+        break;
+      case heif_compression_AV1:
+        std::cout << "AVIF";
+        break;
+      case heif_compression_HEVC:
+        std::cout << "HEIC";
+        break;
+      case heif_compression_JPEG:
+        std::cout << "JPEG";
+        break;
+      case heif_compression_JPEG2000:
+        std::cout << "JPEG 2000";
+        break;
+      case heif_compression_HTJ2K:
+        std::cout << "JPEG 2000 (HT)";
+        break;
+      case heif_compression_uncompressed:
+        std::cout << "Uncompressed";
+        break;
+      case heif_compression_VVC:
+        std::cout << "VVIC";
+        break;
+      default:
+        assert(false);
+    }
+
+    std::cout << " encoders:\n";
+
+#define MAX_ENCODERS 10
+    const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
+    int count = heif_get_encoder_descriptors(compression_format,
+                                             nullptr,
+                                             encoder_descriptors, MAX_ENCODERS);
+#undef MAX_ENCODERS
+
+    show_list_of_encoders(encoder_descriptors, count);
+  }
+}
+
+
+bool ends_with(const std::string& str, const std::string& end)
+{
+  if (str.length() < end.length()) {
+    return false;
+  }
+  else {
+    return str.compare(str.length() - end.length(), end.length(), end) == 0;
+  }
+}
+
+
+heif_compression_format guess_compression_format_from_filename(const std::string& filename)
+{
+  std::string filename_lowercase = filename;
+  std::transform(filename_lowercase.begin(), filename_lowercase.end(), filename_lowercase.begin(), ::tolower);
+
+  if (ends_with(filename_lowercase, ".avif")) {
+    return heif_compression_AV1;
+  }
+  else if (ends_with(filename_lowercase, ".vvic")) {
+    return heif_compression_VVC;
+  }
+  else if (ends_with(filename_lowercase, ".avci")) {
+    return heif_compression_AVC;
+  }
+  else if (ends_with(filename_lowercase, ".heic")) {
+    return heif_compression_HEVC;
+  }
+  else if (ends_with(filename_lowercase, ".hej2")) {
+    return heif_compression_JPEG2000;
+  }
+  else {
+    return heif_compression_undefined;
+  }
+}
+
+
+std::string suffix_for_compression_format(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1: return "avif";
+    case heif_compression_VVC: return "vvic";
+    case heif_compression_AVC: return "avci";
+    case heif_compression_HEVC: return "heic";
+    case heif_compression_JPEG2000: return "hej2";
+    default: return "data";
+  }
+}
+
+
+InputImage load_image(const std::string& input_filename, int output_bit_depth)
+{
+  InputImage input_image;
+
+  // get file type from file name
+
+  std::string suffix;
+  auto suffix_pos = input_filename.find_last_of('.');
+  if (suffix_pos != std::string::npos) {
+    suffix = input_filename.substr(suffix_pos + 1);
+    std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
+  }
+
+  enum
+  {
+    PNG, JPEG, Y4M, TIFF, RAW
+  } filetype = JPEG;
+  if (suffix == "png") {
+    filetype = PNG;
+  }
+  else if (suffix == "y4m") {
+    filetype = Y4M;
+  }
+  else if (suffix == "tif" || suffix == "tiff") {
+    filetype = TIFF;
+  }
+  else if (suffix == "raw" || suffix == "img") {
+    filetype = RAW;
+  }
+
+  if (force_raw_input) {
+    filetype = RAW;
+  }
+
+  if (filetype == PNG) {
+    heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load PNG input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+  else if (filetype == Y4M) {
+    heif_error err = loadY4M(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load Y4M input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+#if HAVE_LIBTIFF
+  else if (filetype == TIFF) {
+    heif_error err = loadTIFF(input_filename.c_str(), output_bit_depth, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load TIFF input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+#endif
+  else if (filetype == RAW) {
+    heif_error err = loadRAW(input_filename.c_str(), raw_input_params, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load raw input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+  else {
+    heif_error err = loadJPEG(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load JPEG input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+
+  return input_image;
+}
+
+
+heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encoder,
+                                                            heif_color_profile_nclx** out_nclx,
+                                                            std::shared_ptr<heif_image> input_image,
+                                                            bool lossless,
+                                                            heif_output_nclx_color_profile_preset profile_preset)
+{
+  *out_nclx = heif_nclx_color_profile_alloc();
+  if (!*out_nclx) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "Cannot allocate NCLX color profile."};
+  }
+
+  heif_color_profile_nclx* nclx = *out_nclx; // abbreviation;
+
+
+  // set NCLX based on preset
+
+  switch (profile_preset) {
+    case heif_output_nclx_color_profile_preset_custom: {
+      heif_error error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
+      if (error.code) {
+        std::cerr << "Invalid matrix coefficients specified.\n";
+        exit(5);
+      }
+
+      error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
+      if (error.code) {
+        std::cerr << "Invalid transfer characteristics specified.\n";
+        exit(5);
+      }
+
+      error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
+      if (error.code) {
+        std::cerr << "Invalid color primaries specified.\n";
+        exit(5);
+      }
+
+      nclx->full_range_flag = (uint8_t) nclx_full_range;
+      break;
+    }
+
+    case heif_output_nclx_color_profile_preset_automatic: {
+      heif_color_profile_nclx* input_nclx = nullptr;
+
+      // --- use input image color profile, if it exists
+
+      heif_error error = heif_image_get_nclx_color_profile(input_image.get(), &input_nclx);
+      if (error.code == heif_error_Color_profile_does_not_exist) {
+
+        // input image has not color profile, guess one
+
+        if (heif_image_get_colorspace(input_image.get()) == heif_colorspace_RGB) {
+          // sRGB
+          nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5; // will be overwritten below if lossless
+          nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+          nclx->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
+        }
+        else {
+          // BT.709
+          nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5; // will be overwritten below if lossless
+          nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+          nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_709_5;
+        }
+      }
+      else if (error.code) {
+        std::cerr << "Cannot get input NCLX color profile.\n";
+        return error;
+      }
+      else {
+        // no error, we have an input color profile that we can use for output too
+
+        nclx->matrix_coefficients = input_nclx->matrix_coefficients;
+        nclx->transfer_characteristics = input_nclx->transfer_characteristics;
+        nclx->color_primaries = input_nclx->color_primaries;
+        nclx->full_range_flag = input_nclx->full_range_flag;
+
+        heif_nclx_color_profile_free(input_nclx);
+        input_nclx = nullptr;
+      }
+
+      assert(!input_nclx);
+      break;
+    }
+
+    case heif_output_nclx_color_profile_preset_Rec_601:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_601_6;
+      nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_601_6;
+      break;
+
+    case heif_output_nclx_color_profile_preset_compatible:
+    case heif_output_nclx_color_profile_preset_Rec_709:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+      nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_709_5;
+      break;
+
+    case heif_output_nclx_color_profile_preset_Rec_2020:
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance;
+      nclx->color_primaries = heif_color_primaries_ITU_R_BT_2020_2_and_2100_0;
+
+      if (heif_image_has_channel(input_image.get(), heif_channel_Y) &&
+          heif_image_get_bits_per_pixel(input_image.get(), heif_channel_Y) <= 10) {
+        nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_2020_2_10bit;
+      }
+      else {
+        nclx->transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_2020_2_12bit;
+      }
+      break;
+  }
+
+  // modify NCLX depending on input image
+
+  if (lossless) {
+      heif_encoder_set_lossless(encoder, true);
+
+      if (heif_image_get_colorspace(input_image.get()) == heif_colorspace_RGB) {
+        nclx->matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+        nclx->full_range_flag = true;
+
+        heif_error error = heif_encoder_set_parameter(encoder, "chroma", "444");
+        if (error.code) {
+          return error;
+        }
+      }
+      else {
+        heif_error error;
+
+        // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
+        switch (heif_image_get_chroma_format(input_image.get())) {
+          case heif_chroma_420:
+          case heif_chroma_monochrome:
+            error = heif_encoder_set_parameter(encoder, "chroma", "420");
+            break;
+          case heif_chroma_422:
+            error = heif_encoder_set_parameter(encoder, "chroma", "422");
+            break;
+          case heif_chroma_444:
+            error = heif_encoder_set_parameter(encoder, "chroma", "444");
+            break;
+          default:
+            assert(false);
+            exit(5);
+        }
+
+        if (error.code) {
+          return error;
+        }
+      }
+  }
+
+  return {heif_error_Ok};
+}
+
+
+struct input_tiles_generator
+{
+  virtual ~input_tiles_generator() = default;
+
+  virtual uint32_t nColumns() const = 0;
+  virtual uint32_t nRows() const = 0;
+
+  virtual uint32_t nTiles() const { return nColumns() * nRows(); }
+
+  virtual InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) = 0;
+};
+
+struct input_tiles_generator_separate_files : public input_tiles_generator
+{
+  uint32_t first_start;
+  uint32_t first_end;
+  uint32_t first_digits;
+  uint32_t second_start;
+  uint32_t second_end;
+  uint32_t second_digits;
+
+  std::filesystem::path directory;
+  std::string prefix;
+  std::string separator;
+  std::string suffix;
+
+  bool first_is_x = false;
+
+  uint32_t nColumns() const override { return first_is_x ? (first_end - first_start + 1) : (second_end - second_start + 1); }
+  uint32_t nRows() const override { return first_is_x ? (second_end - second_start + 1) : (first_end - first_start + 1); }
+
+  uint32_t nTiles() const override { return (first_end - first_start + 1) * (second_end - second_start + 1); }
+
+  std::filesystem::path filename(uint32_t tx, uint32_t ty) const
+  {
+    std::stringstream sstr;
+
+    sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty) + first_start;
+    sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx) + second_start;
+    sstr << suffix;
+
+    std::filesystem::path p = directory / sstr.str();
+    return p;
+  }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
+  {
+    std::string input_filename = filename(tx, ty).string();
+    InputImage image = load_image(input_filename, output_bit_depth);
+    return image;
+  }
+};
+
+std::shared_ptr<input_tiles_generator> determine_input_images_tiling(const std::string& filename, bool first_is_x)
+{
+  std::regex pattern(R"((.*\D)?(\d+)(\D+?)(\d+)(\..+)$)");
+  std::smatch match;
+
+  auto generator = std::make_shared<input_tiles_generator_separate_files>();
+
+  if (std::regex_match(filename, match, pattern)) {
+    std::string prefix = match[1];
+
+    auto p = std::filesystem::absolute(std::filesystem::path(prefix));
+    generator->directory = p.parent_path();
+    generator->prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
+
+    generator->separator = match[3];
+    generator->suffix = match[5];
+
+    generator->first_start = 9999;
+    generator->first_end = 0;
+    generator->first_digits = 9;
+
+    generator->second_start = 9999;
+    generator->second_end = 0;
+    generator->second_digits = 9;
+  }
+  else {
+    return nullptr;
+  }
+
+  std::string patternString = generator->prefix + "(\\d+)" + generator->separator + "(\\d+)" + generator->suffix + "$";
+  pattern = patternString;
+
+  for (const auto& dirEntry : std::filesystem::directory_iterator(generator->directory))
+  {
+    if (dirEntry.is_regular_file()) {
+      std::string s{dirEntry.path().filename().string()};
+
+      if (std::regex_match(s, match, pattern)) {
+        uint32_t first = std::stoi(match[1]);
+        uint32_t second = std::stoi(match[2]);
+
+        generator->first_digits = std::min(generator->first_digits, (uint32_t)match[1].length());
+        generator->second_digits = std::min(generator->second_digits, (uint32_t)match[2].length());
+
+        generator->first_start = std::min(generator->first_start, first);
+        generator->first_end = std::max(generator->first_end, first);
+        generator->second_start = std::min(generator->second_start, second);
+        generator->second_end = std::max(generator->second_end, second);
+      }
+    }
+  }
+
+  generator->first_is_x = first_is_x;
+
+  return generator;
+}
+
+
+class input_tiles_generator_cut_image : public input_tiles_generator
+{
+public:
+  input_tiles_generator_cut_image(const char* filename, int tile_size, int output_bit_depth)
+  {
+    mImage = load_image(filename, output_bit_depth);
+
+    mWidth = heif_image_get_primary_width(mImage.image.get());
+    mHeight = heif_image_get_primary_height(mImage.image.get());
+
+    mTileSize = tile_size;
+  }
+
+  uint32_t nColumns() const override { return (mWidth + mTileSize - 1)/mTileSize; }
+  uint32_t nRows() const override { return (mHeight + mTileSize - 1)/mTileSize; }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
+  {
+    heif_image* tileImage;
+    heif_error err = heif_image_extract_area(mImage.image.get(), tx * mTileSize, ty * mTileSize, mTileSize, mTileSize,
+                                             heif_get_global_security_limits(),
+                                             &tileImage);
+    if (err.code) {
+      std::cerr << "error extracting tile " << tx << ";" << ty << std::endl;
+      exit(1);
+    }
+
+    InputImage tile;
+    tile.image = std::shared_ptr<heif_image>(tileImage,
+                                             [](heif_image* img) { heif_image_release(img); });
+    return tile;
+  }
+
+  uint32_t get_image_width() const { return heif_image_get_primary_width(mImage.image.get()); }
+  uint32_t get_image_height() const { return heif_image_get_primary_height(mImage.image.get()); }
+
+private:
+  InputImage mImage;
+  uint32_t mWidth, mHeight;
+  int mTileSize;
+};
+
+
+#if HAVE_LIBTIFF
+class input_tiles_generator_tiff : public input_tiles_generator
+{
+public:
+  input_tiles_generator_tiff(std::shared_ptr<TiledTiffReader> reader)
+    : m_reader(std::move(reader))
+  {
+  }
+
+  uint32_t nColumns() const override { return m_reader->nColumns(); }
+  uint32_t nRows() const override { return m_reader->nRows(); }
+
+  InputImage get_image(uint32_t tx, uint32_t ty, int output_bit_depth) override
+  {
+    heif_image* tile_image = nullptr;
+    heif_error err = m_reader->readTile(tx, ty, output_bit_depth, &tile_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Error reading TIFF tile " << tx << "," << ty << ": " << err.message << "\n";
+      exit(1);
+    }
+
+    InputImage input;
+    input.image = std::shared_ptr<heif_image>(tile_image,
+                                               [](heif_image* img) { heif_image_release(img); });
+    return input;
+  }
+
+  uint32_t imageWidth() const { return m_reader->imageWidth(); }
+  uint32_t imageHeight() const { return m_reader->imageHeight(); }
+  uint32_t tileWidth() const { return m_reader->tileWidth(); }
+  uint32_t tileHeight() const { return m_reader->tileHeight(); }
+
+  void readExif(InputImage* input_image) { m_reader->readExif(input_image); }
+
+private:
+  std::shared_ptr<TiledTiffReader> m_reader;
+};
+#endif
+
+
+// TODO: we have to attach the input image Exif and XMP to the tiled image
+heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
+                                int output_bit_depth,
+                                const std::shared_ptr<input_tiles_generator>& tile_generator,
+                                const heif_image_tiling& tiling)
+{
+  heif_image_handle* tiled_image = nullptr;
+
+
+  // --- create the main grid image
+
+  if (tiling_method == "grid") {
+    heif_error error = heif_context_add_grid_image(ctx, tiling.image_width, tiling.image_height,
+                                                   tiling.num_columns, tiling.num_rows,
+                                                   options,
+                                                   &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate grid image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  else if (tiling_method == "tili") {
+    heif_tiled_image_parameters tiled_params{};
+    tiled_params.version = 1;
+    tiled_params.image_width = tiling.image_width;
+    tiled_params.image_height = tiling.image_height;
+    tiled_params.tile_width = tiling.tile_width;
+    tiled_params.tile_height = tiling.tile_height;
+    tiled_params.offset_field_length = 32;
+    tiled_params.size_field_length = 24;
+    tiled_params.tiles_are_sequential = 1;
+
+    heif_error error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate tili image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+#endif
+#if WITH_UNCOMPRESSED_CODEC
+  else if (tiling_method == "unci") {
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = tiling.image_width;
+    params.image_height = tiling.image_height;
+    params.tile_width = tiling.tile_width;
+    params.tile_height = tiling.tile_height;
+    params.compression = unci_compression;
+
+    InputImage prototype_image = tile_generator->get_image(0,0, output_bit_depth);
+
+    heif_error error = heif_context_add_empty_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate unci image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+#endif
+  else {
+    assert(false);
+    exit(10);
+  }
+
+
+  // --- add all the image tiles
+
+  std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
+            << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
+
+  int tile_width = tiling.tile_width;
+  int tile_height = tiling.tile_height;
+
+  for (uint32_t ty = 0; ty < tile_generator->nRows(); ty++)
+    for (uint32_t tx = 0; tx < tile_generator->nColumns(); tx++) {
+      InputImage input_image = tile_generator->get_image(tx,ty, output_bit_depth);
+
+      heif_error error;
+      error = heif_image_extend_to_size_fill_with_zero(input_image.image.get(), tile_width, tile_height);
+      if (error.code) {
+        std::cerr << error.message << "\n";
+      }
+
+      std::cout << "encoding tile " << ty+1 << " " << tx+1
+                << " (of " << tile_generator->nRows() << "x" << tile_generator->nColumns() << ")  \r";
+      std::cout.flush();
+
+      error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
+                                          input_image.image.get(),
+                                          encoder);
+      if (error.code != 0) {
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return nullptr;
+      }
+    }
+
+  std::cout << "\n";
+
+  return tiled_image;
+}
+
+
+template <typename T>
+std::vector<T> parse_comma_separated_numeric_arguments(std::string arg,
+                                                       std::vector<T> max_val)
+{
+  std::istringstream ss(arg);
+  std::string token;
+
+  std::vector<T> results;
+
+  for (size_t i = 0 ; i<max_val.size(); i++) {
+
+    if (!std::getline(ss, token, ',')) return {};
+    try {
+      size_t pos;
+      unsigned long val = std::stoul(token, &pos);
+      if (pos != token.size()) return {}; // extra non-numeric characters
+      if (val > max_val[i]) return {};
+      results.push_back(static_cast<T>(val));
+    } catch (...) {
+      return {};
+    }
+  }
+
+  // There should be no extra tokens
+  if (ss.rdbuf()->in_avail() != 0) return {};
+
+  return results;
+}
+
+bool prefix_compare(const char* a, const char* b)
+{
+  auto minLen = std::min(strlen(a), strlen(b));
+  return strncmp(a,b,minLen) == 0;
+}
+
+
+bool set_metadata_compression_method(const std::string& arg)
+{
+  if (arg == "auto") {
+    metadata_compression_method = heif_metadata_compression_auto;
+    return true;
+  }
+  else if (arg == "off") {
+    metadata_compression_method = heif_metadata_compression_off;
+    return true;
+  }
+  else if (arg == "brotli") {
+    metadata_compression_method = heif_metadata_compression_brotli;
+    return true;
+  }
+  else if (arg == "deflate") {
+    metadata_compression_method = heif_metadata_compression_deflate;
+    return true;
+  }
+  else if (arg == "zlib") {
+    metadata_compression_method = heif_metadata_compression_zlib;
+    return true;
+  }
+  else {
+    std::cerr << "Unknown metadata compression method '" << arg << "'. Choose between {auto,off,deflate,zlib,brotli}\n";
+    return false;
+  }
+}
+
+
+
+class LibHeifInitializer
+{
 public:
   LibHeifInitializer() { heif_init(nullptr); }
+
   ~LibHeifInitializer() { heif_deinit(); }
 };
+
+
+int do_encode_images(heif_context*, heif_encoder*, heif_encoding_options* options, const std::vector<std::string>& args);
+int do_encode_sequence(heif_context*, heif_encoder*, heif_encoding_options* options, std::vector<std::string> args);
+int add_mime_item(heif_context* context);
 
 
 int main(int argc, char** argv)
@@ -1168,28 +1326,25 @@ int main(int argc, char** argv)
   // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
   LibHeifInitializer initializer;
 
-  int quality = 50;
-  bool lossless = false;
-  std::string output_filename;
-  int logging_level = 0;
-  bool option_show_parameters = false;
-  int thumbnail_bbox_size = 0;
-  int output_bit_depth = 10;
-  bool enc_av1f = false;
-  bool crop_to_even_size = false;
-
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:TSV"
+#if WITH_UNCOMPRESSED_CODEC
+        "U"
+#endif
+        , long_options, &option_index);
     if (c == -1)
       break;
 
     switch (c) {
       case 'h':
         show_help(argv[0]);
+        return 0;
+      case 'v':
+        heif_examples::show_version();
         return 0;
       case 'q':
         quality = atoi(optarg);
@@ -1200,7 +1355,7 @@ int main(int argc, char** argv)
       case 'o':
         output_filename = optarg;
         break;
-      case 'v':
+      case OPTION_VERBOSE:
         logging_level++;
         break;
       case 'P':
@@ -1214,47 +1369,366 @@ int main(int argc, char** argv)
         break;
       case 'b':
         output_bit_depth = atoi(optarg);
+        if (output_bit_depth < 9 || output_bit_depth > 16) {
+          std::cerr << "Bit depth for input HDR images must be 9-16 bits.\n";
+          return 5;
+        }
         break;
       case 'A':
-        enc_av1f = true;
+        force_enc_av1f = true;
         break;
-      case 'E':
-        crop_to_even_size = true;
+#if WITH_UNCOMPRESSED_CODEC
+        case 'U':
+        force_enc_uncompressed = true;
         break;
+#endif
       case 'e':
         encoderId = optarg;
         break;
       case OPTION_NCLX_MATRIX_COEFFICIENTS:
-        nclx_matrix_coefficients = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_matrix_coefficients = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_COLOUR_PRIMARIES:
-        nclx_colour_primaries = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_colour_primaries = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_TRANSFER_CHARACTERISTIC:
-        nclx_transfer_characteristic = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_transfer_characteristic = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_FULL_RANGE_FLAG:
         nclx_full_range = atoi(optarg);
+        break;
+      case OPTION_PITM_DESCRIPTION:
+        property_pitm_description = optarg;
+        break;
+      case OPTION_USE_HEVC_COMPRESSION:
+        force_enc_hevc = true;
+        break;
+      case OPTION_USE_VVC_COMPRESSION:
+        force_enc_vvc = true;
+        break;
+      case OPTION_USE_AVC_COMPRESSION:
+        force_enc_avc = true;
+        break;
+      case OPTION_USE_JPEG_COMPRESSION:
+        force_enc_jpeg = true;
+        break;
+      case OPTION_USE_JPEG2000_COMPRESSION:
+        force_enc_jpeg2000 = true;
+        break;
+      case OPTION_USE_HTJ2K_COMPRESSION:
+        force_enc_htj2k = true;
         break;
       case OPTION_PLUGIN_DIRECTORY: {
         int nPlugins;
         heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
         if (error.code) {
-          std::cerr << "Error loading libheif plugins.\n";
+          std::cerr << "Error loading libheif plugins: " << error.message << "\n";
           return 1;
         }
 
         // Note: since we process the option within the loop, we can only consider the '-v' flags coming before the plugin loading option.
-        if (logging_level>0) {
+        if (logging_level > 0) {
           std::cout << nPlugins << " plugins loaded from directory " << optarg << "\n";
         }
         break;
       }
+      case OPTION_TILED_IMAGE_WIDTH:
+        tiled_image_width = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILED_IMAGE_HEIGHT:
+        tiled_image_height = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILING_METHOD:
+        tiling_method = optarg;
+        if (tiling_method != "grid"
+#if WITH_UNCOMPRESSED_CODEC
+            && tiling_method != "unci"
+#endif
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+            && tiling_method != "tili"
+#endif
+          ) {
+          std::cerr << "Invalid tiling method '" << tiling_method << "'\n";
+          exit(5);
+        }
+        break;
+      case OPTION_CUT_TILES:
+        cut_tiles = atoi(optarg);
+        break;
+      case OPTION_UNCI_COMPRESSION: {
+        std::string option(optarg);
+        if (option == "none") {
+          unci_compression = heif_unci_compression_off;
+        }
+        else if (option == "brotli") {
+          unci_compression = heif_unci_compression_brotli;
+        }
+        else if (option == "deflate") {
+          unci_compression = heif_unci_compression_deflate;
+        }
+        else if (option == "zlib") {
+          unci_compression = heif_unci_compression_zlib;
+        }
+        else {
+          std::cerr << "Invalid unci compression method '" << option << "'\n";
+          exit(5);
+        }
+        break;
+      }
+      case 'C':
+        chroma_downsampling = optarg;
+        if (chroma_downsampling != "nn" &&
+            chroma_downsampling != "nearest-neighbor" &&
+            chroma_downsampling != "average" &&
+            chroma_downsampling != "sharp-yuv") {
+          fprintf(stderr, "Undefined chroma downsampling algorithm.\n");
+          exit(5);
+        }
+        if (chroma_downsampling == "nn") { // abbreviation
+          chroma_downsampling = "nearest-neighbor";
+        }
+#if !HAVE_LIBSHARPYUV
+        if (chroma_downsampling == "sharp-yuv") {
+          std::cerr << "Error: sharp-yuv chroma downsampling method has not been compiled into libheif.\n";
+          return 5;
+        }
+#endif
+        break;
+      case 'T':
+        use_tiling = true;
+        break;
+      case 'S':
+        encode_sequence = true;
+        break;
+      case 'V':
+        use_video_handler = true;
+        break;
+      case OPTION_SEQUENCES_TIMEBASE:
+        sequence_timebase = atoi(optarg);
+        break;
+      case OPTION_SEQUENCES_DURATIONS:
+        sequence_durations = atoi(optarg);
+        break;
+      case OPTION_SEQUENCES_FPS:
+        if (strcmp(optarg,"29.97")==0) {
+          sequence_durations = 1001;
+          sequence_timebase = 30000;
+        }
+        else {
+          double fps = std::atof(optarg);
+          sequence_timebase = 90000;
+          sequence_durations = (uint32_t)(90000 / fps + 0.5);
+        }
+        break;
+      case OPTION_SEQUENCES_REPETITIONS:
+        if (strcmp(optarg, "infinite")==0) {
+          sequence_repetitions = heif_sequence_maximum_number_of_repetitions;
+        }
+        else {
+          sequence_repetitions = atoi(optarg);
+          if (sequence_repetitions == 0) {
+            std::cerr << "Sequence repetitions may not be 0.\n";
+            return 5;
+          }
+        }
+        break;
+      case OPTION_SEQUENCES_GOP_STRUCTURE:
+        if (prefix_compare(optarg, "intra-only")) {
+          sequence_gop_structure = heif_sequence_gop_structure_intra_only;
+        }
+        else if (prefix_compare(optarg, "low-delay") || prefix_compare(optarg, "p")) {
+          sequence_gop_structure = heif_sequence_gop_structure_lowdelay;
+        }
+        else if (prefix_compare(optarg, "unrestricted") || prefix_compare(optarg, "b")) {
+          sequence_gop_structure = heif_sequence_gop_structure_unrestricted;
+        }
+        else {
+          std::cerr << "Invalid GOP structure argument\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MIN_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_min = atoi(optarg);
+        if (sequence_keyframe_distance_min < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE:
+        sequence_keyframe_distance_max = atoi(optarg);
+        if (sequence_keyframe_distance_max < 0) {
+          std::cerr << "Keyframe distance must be >= 0\n";
+          return 5;
+        }
+        break;
+      case OPTION_SEQUENCES_MAX_FRAMES:
+        sequence_max_frames = atoi(optarg);
+        if (sequence_max_frames <= 0) {
+          std::cerr << "Maximum number of frames must be >= 1\n";
+          return 5;
+        }
+        break;
+      case OPTION_COLOR_PROFILE_PRESET:
+        if (strcmp(optarg, "auto")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_automatic;
+        }
+        else if (strcmp(optarg, "custom")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_custom;
+        }
+        else if (strcmp(optarg, "compatible")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_compatible;
+        }
+        else if (strcmp(optarg, "601")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_601;
+        }
+        else if (strcmp(optarg, "709")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_709;
+        }
+        else if (strcmp(optarg, "2020")==0) {
+          output_color_profile_preset = heif_output_nclx_color_profile_preset_Rec_2020;
+        }
+        else {
+          std::cerr << "Invalid color-profile preset.\n";
+          return 5;
+        }
+        break;
+      case OPTION_VMT_METADATA_FILE:
+        vmt_metadata_file = optarg;
+        break;
+      case OPTION_BINARY_METADATA_TRACK:
+        binary_metadata_track = true;
+        break;
+      case OPTION_METADATA_TRACK_URI:
+        metadata_track_uri = optarg;
+        break;
+      case OPTION_SET_CLLI: {
+        auto clli_args = parse_comma_separated_numeric_arguments<uint16_t>(optarg,
+                                                                           {
+                                                                             std::numeric_limits<uint16_t>::max(),
+                                                                             std::numeric_limits<uint16_t>::max()
+                                                                           });
+        if (clli_args.empty()) {
+          std::cerr << "Invalid arguments for --clli option.\n";
+        }
+        else {
+          heif_content_light_level clliVal;
+          clliVal.max_content_light_level = clli_args[0];
+          clliVal.max_pic_average_light_level = clli_args[1];
+          clli = clliVal;
+        }
+        break;
+      }
+      case OPTION_SET_PASP: {
+        auto pasp_args = parse_comma_separated_numeric_arguments<uint32_t>(optarg,
+                                                                           {
+                                                                             std::numeric_limits<uint32_t>::max(),
+                                                                             std::numeric_limits<uint32_t>::max()
+                                                                           });
+        if (pasp_args.empty()) {
+          std::cerr << "Invalid arguments for --pasp option.\n";
+        }
+        else {
+          pixel_aspect_ratio aspect_ratio;
+          aspect_ratio.h = pasp_args[0];
+          aspect_ratio.v = pasp_args[1];
+          pasp = aspect_ratio;
+        }
+        break;
+      }
+      case OPTION_ADD_MIME_ITEM:
+        option_mime_item_type = optarg;
+        break;
+      case OPTION_MIME_ITEM_FILE:
+        option_mime_item_file = optarg;
+        break;
+      case OPTION_MIME_ITEM_NAME:
+        option_mime_item_name = optarg;
+        break;
+      case OPTION_METADATA_COMPRESSION: {
+        bool success = set_metadata_compression_method(optarg);
+        if (!success) {
+          exit(5);
+        }
+        break;
+      }
+      case OPTION_SEQUENCES_GIMI_TRACK_ID:
+        option_gimi_track_id = optarg;
+        break;
+      case OPTION_SEQUENCES_SAI_DATA_FILE:
+        option_sai_data_file = optarg;
+        break;
+#if HEIF_WITH_OMAF
+      case OPTION_SET_OMAF_IMAGE_PROJECTION:
+        if (strcmp(optarg, "equirectangular") == 0) {
+          omaf_image_projection = heif_omaf_image_projection_equirectangular;
+        } else if (strcmp(optarg, "cube-map") == 0) {
+          omaf_image_projection = heif_omaf_image_projection_cube_map;
+        } else {
+          std::cerr << "image projection must be 'equirectangular' or 'cube-map'\n";
+          return 5;
+        }
+        break;
+#endif
+      case OPTION_ADD_COMPATIBLE_BRAND:
+        if (strlen(optarg) != 4) {
+          std::cerr << "Brand must be exactly 4 characters\n";
+          return 5;
+        }
+        additional_compatible_brands.push_back(heif_fourcc_to_brand(optarg));
+        break;
+      case OPTION_UNIF:
+        option_unif = true;
+        break;
+      case OPTION_RAW:
+        force_raw_input = true;
+        break;
+      case OPTION_RAW_WIDTH:
+        raw_input_params.width = atoi(optarg);
+        break;
+      case OPTION_RAW_HEIGHT:
+        raw_input_params.height = atoi(optarg);
+        break;
+      case OPTION_RAW_TYPE:
+        if (!parse_raw_pixel_type(optarg, &raw_input_params.datatype, &raw_input_params.bit_depth)) {
+          std::cerr << "Unknown raw pixel type: " << optarg << "\n";
+          exit(5);
+        }
+        break;
+      case OPTION_RAW_ENDIAN:
+        raw_input_params.big_endian = (std::string(optarg) == "big");
+        break;
     }
   }
 
   if (quality < 0 || quality > 100) {
     std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
+    return 5;
+  }
+
+  if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
+      (force_enc_jpeg2000 ? 1 : 0) + (force_enc_avc ? 1 : 0) + (force_enc_hevc ? 1 : 0) > 1) {
+    std::cerr << "Choose at most one output compression format.\n";
+    return 5;
+  }
+
+  if (encode_sequence && (use_tiling || cut_tiles)) {
+    std::cerr << "Image sequences cannot be used together with tiling.\n";
+    return 5;
+  }
+
+  if (sequence_timebase <= 0) {
+    std::cerr << "Sequence clock tick rate cannot be zero.\n";
+    return 5;
+  }
+
+  if (sequence_durations <= 0) {
+    std::cerr << "Sequence frame durations cannot be zero.\n";
+    return 5;
+  }
+
+
+  if (!option_sai_data_file.empty() && !encode_sequence) {
+    std::cerr << "Image SAI data can only be used with sequences.\n";
     return 5;
   }
 
@@ -1269,6 +1743,52 @@ int main(int argc, char** argv)
 
   // ==============================================================================
 
+  struct heif_encoder* encoder = nullptr;
+
+  if (list_encoders) {
+    show_list_of_all_encoders();
+    return 0;
+  }
+
+  // --- determine output compression format (from output filename or command line parameter)
+
+  heif_compression_format compressionFormat;
+
+  if (force_enc_av1f) {
+    compressionFormat = heif_compression_AV1;
+  }
+  else if (force_enc_vvc) {
+    compressionFormat = heif_compression_VVC;
+  }
+  else if (force_enc_avc) {
+    compressionFormat = heif_compression_AVC;
+  }
+  else if (force_enc_uncompressed) {
+    compressionFormat = heif_compression_uncompressed;
+  }
+  else if (force_enc_jpeg) {
+    compressionFormat = heif_compression_JPEG;
+  }
+  else if (force_enc_jpeg2000) {
+    compressionFormat = heif_compression_JPEG2000;
+  }
+  else if (force_enc_htj2k) {
+    compressionFormat = heif_compression_HTJ2K;
+  }
+  else if (force_enc_hevc) {
+    compressionFormat = heif_compression_HEVC;
+  }
+  else {
+    compressionFormat = guess_compression_format_from_filename(output_filename);
+  }
+
+  if (compressionFormat == heif_compression_undefined) {
+    compressionFormat = heif_compression_HEVC;
+  }
+
+
+  // --- select encoder
+
   std::shared_ptr<heif_context> context(heif_context_alloc(),
                                         [](heif_context* c) { heif_context_free(c); });
   if (!context) {
@@ -1276,27 +1796,24 @@ int main(int argc, char** argv)
     return 1;
   }
 
-
-  struct heif_encoder* encoder = nullptr;
-
-#define MAX_ENCODERS 5
-  const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
-  int count = heif_context_get_encoder_descriptors(context.get(),
-                                                   enc_av1f ? heif_compression_AV1 : heif_compression_HEVC,
-                                                   nullptr,
-                                                   encoder_descriptors, MAX_ENCODERS);
-
-  if (list_encoders) {
-    show_list_of_encoders(encoder_descriptors, count);
-    return 0;
+  if (option_unif) {
+    heif_context_set_unif(context.get(), 1);
   }
+
+
+#define MAX_ENCODERS 10
+  const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
+  int count = heif_get_encoder_descriptors(compressionFormat,
+                                           nullptr,
+                                           encoder_descriptors, MAX_ENCODERS);
+#undef MAX_ENCODERS
 
   const heif_encoder_descriptor* active_encoder_descriptor = nullptr;
   if (count > 0) {
     int idx = 0;
     if (encoderId != nullptr) {
       for (int i = 0; i <= count; i++) {
-        if (i==count) {
+        if (i == count) {
           std::cerr << "Unknown encoder ID. Choose one from the list below.\n";
           show_list_of_encoders(encoder_descriptors, count);
           return 5;
@@ -1318,16 +1835,15 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
+    std::cerr << "No " << get_compression_format_name(compressionFormat) << " encoder available.\n";
     return 5;
   }
 
-
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
+    heif_encoder_release(encoder);
     return 0;
   }
-
 
   if (optind > argc - 1) {
     show_help(argv[0]);
@@ -1335,61 +1851,264 @@ int main(int argc, char** argv)
   }
 
 
-  struct heif_error error;
+  if (lossless && !heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
+    std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+    lossless = false;
+  }
 
-  std::shared_ptr<heif_image> primary_image;
+  // If we were given a list of filenames and no '-o' option, check whether the last filename is the desired output filename.
 
+  if (output_filename.empty() && argc>1) {
+    if (guess_compression_format_from_filename(argv[argc-1]) != heif_compression_undefined) {
+      output_filename = argv[argc-1];
+      argc--;
+    }
+  }
+
+  std::vector<std::string> args;
   for (; optind < argc; optind++) {
-    std::string input_filename = argv[optind];
-
-    if (output_filename.empty()) {
-      std::string filename_without_suffix;
-      std::string::size_type dot_position = input_filename.find_last_of('.');
-      if (dot_position != std::string::npos) {
-        filename_without_suffix = input_filename.substr(0, dot_position);
-      }
-      else {
-        filename_without_suffix = input_filename;
-      }
-
-      output_filename = filename_without_suffix + (enc_av1f ? ".avif" : ".heic");
-    }
+    args.emplace_back(argv[optind]);
+  }
 
 
-    // ==============================================================================
+  // If we get a list of image filenames, but no '-o' option, assume that the last option
+  // denotes the output filename.
 
-    // get file type from file name
+  if (output_filename.empty() && args.size() > 1) {
+    output_filename = args.back();
+    args.pop_back();
+  }
 
-    std::string suffix;
-    auto suffix_pos = input_filename.find_last_of('.');
-    if (suffix_pos != std::string::npos) {
-      suffix = input_filename.substr(suffix_pos + 1);
-      std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
-    }
 
-    enum
-    {
-      PNG, JPEG, Y4M
-    } filetype = JPEG;
-    if (suffix == "png") {
-      filetype = PNG;
-    }
-    else if (suffix == "y4m") {
-      filetype = Y4M;
-    }
+  if (!lossless) {
+    heif_encoder_set_lossy_quality(encoder, quality);
+  }
 
-    InputImage input_image;
-    if (filetype == PNG) {
-      input_image = loadPNG(input_filename.c_str(), output_bit_depth);
-    }
-    else if (filetype == Y4M) {
-      input_image.image = loadY4M(input_filename.c_str());
+  heif_encoder_set_logging_level(encoder, logging_level);
+
+  set_params(encoder, raw_params);
+  struct heif_encoding_options* options = heif_encoding_options_alloc();
+  options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
+
+  if (chroma_downsampling == "average") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+  else if (chroma_downsampling == "sharp-yuv") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+  else if (chroma_downsampling == "nearest-neighbor") {
+    options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
+    options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+  }
+
+  options->unci_compression = unci_compression;
+
+  // --- if no output filename was given, synthesize one from the first input image filename
+
+  if (output_filename.empty()) {
+    const std::string& first_input_filename = args[0];
+
+    std::string filename_without_suffix;
+    std::string::size_type dot_position = first_input_filename.find_last_of('.');
+    if (dot_position != std::string::npos) {
+      filename_without_suffix = first_input_filename.substr(0, dot_position);
     }
     else {
-      input_image = loadJPEG(input_filename.c_str());
+      filename_without_suffix = first_input_filename;
+    }
+
+    std::string suffix = suffix_for_compression_format(compressionFormat);
+    output_filename = filename_without_suffix + '.' + suffix;
+  }
+
+
+  int ret;
+
+  if (!encode_sequence) {
+    ret = do_encode_images(context.get(), encoder, options, args);
+  }
+  else {
+    ret = do_encode_sequence(context.get(), encoder, options, args);
+  }
+
+  if (ret != 0) {
+    heif_encoding_options_free(options);
+    heif_encoder_release(encoder);
+    return ret;
+  }
+
+  // --- add extra MIME item with user data
+
+  ret = add_mime_item(context.get());
+  if (ret != 0) {
+    heif_encoding_options_free(options);
+    heif_encoder_release(encoder);
+    return ret;
+  }
+
+
+  // --- write HEIF file
+
+  for (heif_brand2 brand : additional_compatible_brands) {
+    heif_context_add_compatible_brand(context.get(), brand);
+  }
+
+  heif_error error = heif_context_write_to_file(context.get(), output_filename.c_str());
+  if (error.code) {
+    std::cerr << error.message << "\n";
+    return 5;
+  }
+
+  heif_encoding_options_free(options);
+  heif_encoder_release(encoder);
+
+  return 0;
+}
+
+
+int add_mime_item(heif_context* context)
+{
+  if (!option_mime_item_file.empty() || !option_mime_item_type.empty()) {
+    if (option_mime_item_file.empty() || option_mime_item_type.empty()) {
+      std::cerr << "Options --add-mime-item and --mime-item-file have to be used together\n";
+      return 5;
+    }
+
+    std::ifstream istr(option_mime_item_file.c_str(), std::ios::binary | std::ios::ate);
+    if (!istr) {
+      std::cerr << "Failed to open file for MIME item: '" << option_mime_item_file << "'\n";
+      return 5;
+    }
+
+    // Get size by seeking to the end (thanks to ios::ate)
+    std::streamsize size = istr.tellg();
+    if (size < 0) {
+      std::cerr << "Querying size of file '" << option_mime_item_file << "' failed.\n";
+      return 5;
+    }
+
+    std::vector<uint8_t> buffer(size);
+
+    // Seek back to beginning and read
+    istr.seekg(0, std::ios::beg);
+    istr.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    heif_item_id itemId;
+    heif_context_add_mime_item(context, option_mime_item_type.c_str(),
+                               metadata_compression_method,
+                               buffer.data(), (int)buffer.size(),
+                               &itemId);
+
+    if (!option_mime_item_name.empty()) {
+      heif_item_set_item_name(context, itemId, option_mime_item_name.c_str());
+    }
+  }
+
+  return 0;
+}
+
+
+int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, const std::vector<std::string>& args)
+{
+  std::shared_ptr<heif_image> primary_image;
+
+  bool is_primary_image = true;
+
+  std::vector<heif_item_id> encoded_image_ids;
+
+  for (std::string input_filename : args) {
+
+    InputImage input_image;
+    heif_image_tiling tiling{};
+    std::shared_ptr<input_tiles_generator> tile_generator;
+    std::shared_ptr<TiledTiffReader> tiff_reader_for_pyramid;
+
+#if HAVE_LIBTIFF
+    // Auto-detect tiled TIFFs when not using explicit tiling options
+    if (!use_tiling && cut_tiles == 0) {
+      std::string suffix;
+      auto suffix_pos = input_filename.find_last_of('.');
+      if (suffix_pos != std::string::npos) {
+        suffix = input_filename.substr(suffix_pos + 1);
+        std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
+      }
+
+      if (suffix == "tif" || suffix == "tiff") {
+        heif_error tiff_err;
+        auto tiff_reader = TiledTiffReader::open(input_filename.c_str(), &tiff_err);
+        if (tiff_err.code != heif_error_Ok) {
+          std::cerr << "Error opening TIFF: " << tiff_err.message << "\n";
+          return 1;
+        }
+
+        if (tiff_reader) {
+          auto shared_tiff_reader = std::shared_ptr<TiledTiffReader>(std::move(tiff_reader));
+          auto tiff_gen = std::make_shared<input_tiles_generator_tiff>(shared_tiff_reader);
+
+          // Read tile (0,0) as representative for nclx profile
+          input_image = tiff_gen->get_image(0, 0, output_bit_depth);
+          tiff_gen->readExif(&input_image);
+
+          tiling.version = 1;
+          tiling.num_columns = tiff_gen->nColumns();
+          tiling.num_rows = tiff_gen->nRows();
+          tiling.tile_width = tiff_gen->tileWidth();
+          tiling.tile_height = tiff_gen->tileHeight();
+          tiling.image_width = tiff_gen->imageWidth();
+          tiling.image_height = tiff_gen->imageHeight();
+          tiling.number_of_extra_dimensions = 0;
+
+          tile_generator = tiff_gen;
+          tiff_reader_for_pyramid = shared_tiff_reader;
+        }
+      }
+    }
+#endif
+
+    // If no tiled TIFF was detected, load the image normally
+    if (!input_image.image) {
+      input_image = load_image(input_filename, output_bit_depth);
     }
 
     std::shared_ptr<heif_image> image = input_image.image;
+
+    if (use_tiling) {
+      tile_generator = determine_input_images_tiling(input_filename, tiled_input_x_y);
+      if (tile_generator) {
+        tiling.version = 1;
+
+        tiling.num_columns = tile_generator->nColumns();
+        tiling.num_rows = tile_generator->nRows();
+        tiling.tile_width = heif_image_get_primary_width(image.get());
+        tiling.tile_height = heif_image_get_primary_height(image.get());
+        tiling.image_width = tiling.num_columns * tiling.tile_width;
+        tiling.image_height = tiling.num_rows * tiling.tile_height;
+        tiling.number_of_extra_dimensions = 0;
+      }
+
+      if (tiled_image_width) tiling.image_width = tiled_image_width;
+      if (tiled_image_height) tiling.image_height = tiled_image_height;
+
+      if (!tile_generator || tile_generator->nTiles()==1) {
+        std::cerr << "Cannot enumerate input tiles. Please use filenames with the two tile coordinates in the name.\n";
+        return 5;
+      }
+    }
+    else if (cut_tiles != 0) {
+      auto cutting_tile_generator = std::make_shared<input_tiles_generator_cut_image>(input_filename.c_str(),
+                                                                         cut_tiles, output_bit_depth);
+      tile_generator = cutting_tile_generator;
+
+      tiling.num_columns = tile_generator->nColumns();
+      tiling.num_rows = tile_generator->nRows();
+      tiling.tile_width = cut_tiles;
+      tiling.tile_height = cut_tiles;
+      tiling.image_width = cutting_tile_generator->get_image_width();
+      tiling.image_height = cutting_tile_generator->get_image_height();
+      tiling.number_of_extra_dimensions = 0;
+    }
 
     if (!primary_image) {
       primary_image = image;
@@ -1401,91 +2120,120 @@ int main(int argc, char** argv)
     }
 #endif
 
-    heif_color_profile_nclx nclx;
-    error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
+    heif_color_profile_nclx* nclx;
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, primary_image,
+                                                                        lossless, output_color_profile_preset);
     if (error.code) {
-      std::cerr << "Invalid matrix coefficients specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_transfer_characteristics(&nclx, nclx_transfer_characteristic);
-    if (error.code) {
-      std::cerr << "Invalid transfer characteristics specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_color_primaries(&nclx, nclx_colour_primaries);
-    if (error.code) {
-      std::cerr << "Invalid color primaries specified.\n";
-      exit(5);
-    }
-    nclx.full_range_flag = (uint8_t) nclx_full_range;
-
-    //heif_image_set_nclx_color_profile(image.get(), &nclx);
-
-    if (lossless) {
-      if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
-        heif_encoder_set_lossless(encoder, lossless);
-      }
-      else {
-        std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
-      }
+      std::cerr << error.message << "\n";
+      return 5;
     }
 
-    heif_encoder_set_lossy_quality(encoder, quality);
-    heif_encoder_set_logging_level(encoder, logging_level);
-
-    set_params(encoder, raw_params);
-    struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
-    options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
-    options->output_nclx_profile = &nclx;
+    options->output_nclx_profile = nclx;
     options->image_orientation = input_image.orientation;
-
-    if (crop_to_even_size) {
-      if (heif_image_get_primary_width(image.get()) == 1 ||
-          heif_image_get_primary_height(image.get()) == 1) {
-        std::cerr << "Image only has a size of 1 pixel width or height. Cannot crop to even size.\n";
-        return 1;
-      }
-
-      std::cerr << "Warning: option --even-size/-E is deprecated as it is not needed anymore.\n";
-
-      int right = heif_image_get_primary_width(image.get()) % 2;
-      int bottom = heif_image_get_primary_height(image.get()) % 2;
-
-      error = heif_image_crop(image.get(), 0, right, 0, bottom);
-      if (error.code != 0) {
-        heif_encoding_options_free(options);
-        std::cerr << "Could not crop image: " << error.message << "\n";
-        return 1;
-      }
-    }
 
     if (premultiplied_alpha) {
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
+    heif_image_handle* handle;
 
-    struct heif_image_handle* handle;
-    error = heif_context_encode_image(context.get(),
-                                      image.get(),
-                                      encoder,
-                                      options,
-                                      &handle);
-    if (error.code != 0) {
-      heif_encoding_options_free(options);
-      std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+    if (tile_generator) {
+      handle = encode_tiled(context, encoder, options, output_bit_depth, tile_generator, tiling);
+    }
+    else {
+      error = heif_context_encode_image(context,
+                                        image.get(),
+                                        encoder,
+                                        options,
+                                        &handle);
+      if (error.code != 0) {
+        heif_nclx_color_profile_free(nclx);
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return 1;
+      }
+    }
+
+    if (handle==nullptr) {
+      std::cerr << "Could not encode image\n";
       return 1;
     }
+
+    if (clli) {
+      heif_image_handle_set_content_light_level(handle, &*clli);
+    }
+
+    if (pasp) {
+      heif_image_handle_set_pixel_aspect_ratio(handle, pasp->h, pasp->v);
+    }
+
+#if HEIF_WITH_OMAF
+    if (omaf_image_projection) {
+      heif_image_handle_set_omaf_image_projection(handle, *omaf_image_projection);
+    }
+#endif
+
+    if (is_primary_image) {
+      heif_context_set_primary_image(context, handle);
+    }
+
+    encoded_image_ids.push_back(heif_image_handle_get_item_id(handle));
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES && HAVE_LIBTIFF
+    // Auto-encode TIFF pyramid overviews
+    if (tiff_reader_for_pyramid && !tiff_reader_for_pyramid->overviews().empty()) {
+      heif_item_id fullres_id = heif_image_handle_get_item_id(handle);
+      std::vector<heif_item_id> pyramid_ids;
+      pyramid_ids.push_back(fullres_id);
+
+      for (const auto& ov : tiff_reader_for_pyramid->overviews()) {
+        if (!tiff_reader_for_pyramid->setDirectory(ov.dir_index)) {
+          std::cerr << "Warning: could not switch to TIFF overview directory " << ov.dir_index << "\n";
+          continue;
+        }
+
+        auto ov_gen = std::make_shared<input_tiles_generator_tiff>(tiff_reader_for_pyramid);
+
+        heif_image_tiling ov_tiling{};
+        ov_tiling.version = 1;
+        ov_tiling.num_columns = ov_gen->nColumns();
+        ov_tiling.num_rows = ov_gen->nRows();
+        ov_tiling.tile_width = ov_gen->tileWidth();
+        ov_tiling.tile_height = ov_gen->tileHeight();
+        ov_tiling.image_width = ov_gen->imageWidth();
+        ov_tiling.image_height = ov_gen->imageHeight();
+        ov_tiling.number_of_extra_dimensions = 0;
+
+        heif_image_handle* ov_handle = encode_tiled(context, encoder, options, output_bit_depth, ov_gen, ov_tiling);
+        if (ov_handle) {
+          pyramid_ids.push_back(heif_image_handle_get_item_id(ov_handle));
+          heif_image_handle_release(ov_handle);
+        }
+      }
+
+      // Restore directory 0 for any subsequent use
+      tiff_reader_for_pyramid->setDirectory(0);
+
+      if (pyramid_ids.size() > 1) {
+        error = heif_context_add_pyramid_entity_group(context, pyramid_ids.data(), pyramid_ids.size(), nullptr);
+        if (error.code) {
+          std::cerr << "Cannot create pyramid entity group: " << error.message << "\n";
+          return 5;
+        }
+        std::cout << "Created pyramid entity group with " << pyramid_ids.size() << " layers\n";
+      }
+    }
+#endif
 
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
       // Note: we do not modify the EXIF Orientation here because we want it to match the HEIF transforms.
       // TODO: is this a good choice? Or should we set it to 1 (normal) so that other, faulty software will not transform it once more?
 
-      error = heif_context_add_exif_metadata(context.get(), handle,
+      error = heif_context_add_exif_metadata(context, handle,
                                              input_image.exif.data(), (int) input_image.exif.size());
       if (error.code != 0) {
-        heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not write EXIF metadata: " << error.message << "\n";
         return 1;
       }
@@ -1493,11 +2241,11 @@ int main(int argc, char** argv)
 
     // write XMP to HEIC
     if (!input_image.xmp.empty()) {
-      error = heif_context_add_XMP_metadata2(context.get(), handle,
-                                     input_image.xmp.data(), (int) input_image.xmp.size(),
-                                     metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
+      error = heif_context_add_XMP_metadata2(context, handle,
+                                             input_image.xmp.data(), (int) input_image.xmp.size(),
+                                             metadata_compression_method);
       if (error.code != 0) {
-        heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
         return 1;
       }
@@ -1510,7 +2258,7 @@ int main(int argc, char** argv)
 
       options->save_alpha_channel = master_alpha && thumb_alpha;
 
-      error = heif_context_encode_thumbnail(context.get(),
+      error = heif_context_encode_thumbnail(context,
                                             image.get(),
                                             handle,
                                             encoder,
@@ -1518,7 +2266,7 @@ int main(int argc, char** argv)
                                             thumbnail_bbox_size,
                                             &thumbnail_handle);
       if (error.code) {
-        heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -1535,23 +2283,51 @@ int main(int argc, char** argv)
 #endif
 
     heif_image_handle_release(handle);
-    heif_encoding_options_free(options);
+    heif_nclx_color_profile_free(nclx);
+
+    is_primary_image = false;
   }
 
-  heif_encoder_release(encoder);
+  if (!property_pitm_description.empty()) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set user description\n";
+      return 5;
+    }
 
-  error = heif_context_write_to_file(context.get(), output_filename.c_str());
-  if (error.code) {
-    std::cerr << error.message << "\n";
-    return 5;
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+
+    heif_property_user_description udes;
+    udes.lang = nullptr;
+    udes.name = nullptr;
+    udes.tags = nullptr;
+    udes.description = property_pitm_description.c_str();
+    err = heif_item_add_property_user_description(context, pitm_id, &udes, nullptr);
+    if (err.code) {
+      std::cerr << "Cannot set user description\n";
+      return 5;
+    }
+
+    heif_image_handle_release(primary_image_handle);
   }
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  if (add_pyramid_group && encoded_image_ids.size() > 1) {
+    heif_error error = heif_context_add_pyramid_entity_group(context, encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
+    if (error.code) {
+      std::cerr << "Cannot set multi-resolution pyramid: " << error.message << "\n";
+      return 5;
+    }
+  }
+#endif
 
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
     std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
 
 #if HAVE_GETTIMEOFDAY
-    double t = (double)(time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double)(time_encoding_end.tv_usec - time_encoding_start.tv_usec)/1000000.0;
+    double t = (double) (time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double) (time_encoding_end.tv_usec - time_encoding_start.tv_usec) / 1000000.0;
     std::cout << "time: " << std::setprecision(1) << std::fixed << t << " ";
 #endif
 
@@ -1559,6 +2335,239 @@ int main(int argc, char** argv)
     istr.seekg(0, std::ios_base::end);
     std::streamoff size = istr.tellg();
     std::cout << "size: " << size << "\n";
+  }
+
+  return 0;
+}
+
+
+
+
+std::vector<std::string> deflate_input_filenames(const std::string& filename_example)
+{
+  std::regex pattern(R"((.*\D)?(\d+)(\..+)$)");
+  std::smatch match;
+
+  if (!std::regex_match(filename_example, match, pattern)) {
+    return {filename_example};
+  }
+
+  std::string prefix = match[1];
+
+  auto p = std::filesystem::absolute(std::filesystem::path(prefix));
+  std::filesystem::path directory = p.parent_path();
+  std::string filename_prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
+  std::string number = match[2];
+  std::string suffix = match[3];
+
+
+  std::string patternString = filename_prefix + "(\\d+)" + suffix + "$";
+  pattern = patternString;
+
+  uint32_t digits = std::numeric_limits<uint32_t>::max();
+  uint32_t start = std::numeric_limits<uint32_t>::max();
+  uint32_t end = 0;
+
+  for (const auto& dirEntry : std::filesystem::directory_iterator(directory))
+  {
+    if (dirEntry.is_regular_file()) {
+      std::string s{dirEntry.path().filename().string()};
+
+      if (std::regex_match(s, match, pattern)) {
+        digits = std::min(digits, (uint32_t)match[1].length());
+
+        uint32_t number = std::stoi(match[1]);
+        start = std::min(start, number);
+        end = std::max(end, number);
+      }
+    }
+  }
+
+
+  std::vector<std::string> files;
+
+  for (uint32_t i=start;i<=end;i++)
+  {
+    std::stringstream sstr;
+
+    sstr << prefix << std::setw(digits) << std::setfill('0') << i << suffix;
+
+    std::filesystem::path p = directory / sstr.str();
+    files.emplace_back(p.string());
+  }
+
+  return files;
+}
+
+
+int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encoding_options* options, std::vector<std::string> args)
+{
+  if (args.size() == 1) {
+    args = deflate_input_filenames(args[0]);
+  }
+
+  size_t currImage = 0;
+
+  size_t nImages = args.size();
+  if (sequence_max_frames && nImages > static_cast<size_t>(sequence_max_frames)) {
+    nImages = sequence_max_frames;
+  }
+
+  // --- optionally load SAI data to be used for the frames
+
+  SAI_datafile sai_data;
+  if (!option_sai_data_file.empty()) {
+    sai_data.load_sai_data_from_file(option_sai_data_file.c_str());
+  }
+
+
+  uint16_t image_width=0, image_height=0;
+
+  bool first_image = true;
+
+  heif_track* track = nullptr;
+  heif_sequence_encoding_options* encoding_options = nullptr;
+
+  for (std::string input_filename : args) {
+    currImage++;
+    if (currImage > nImages) {
+      break;
+    }
+
+    std::cout << "\rencoding sequence image " << currImage << "/" << nImages;
+    std::cout.flush();
+
+    InputImage input_image = load_image(input_filename, output_bit_depth);
+
+    std::shared_ptr<heif_image> image = input_image.image;
+
+    int w = heif_image_get_primary_width(image.get());
+    int h = heif_image_get_primary_height(image.get());
+
+    if (w > 0xFFFF || h > 0xFFFF) {
+      std::cerr << "maximum image size of 65535x65535 exceeded\n";
+      return 5;
+    }
+
+    if (first_image) {
+      heif_track_options* track_options = heif_track_options_alloc();
+      heif_track_options_set_timescale(track_options, sequence_timebase);
+
+      if (!option_gimi_track_id.empty()) {
+        heif_track_options_set_gimi_track_id(track_options, option_gimi_track_id.c_str());
+      }
+
+      if (sai_data.tai_clock_info) {
+        heif_track_options_enable_sample_tai_timestamps(track_options,
+                                                        sai_data.tai_clock_info,
+                                                        heif_sample_aux_info_presence_optional);
+      }
+
+      if (!sai_data.gimi_content_ids.empty()) {
+        heif_track_options_enable_sample_gimi_content_ids(track_options,
+                                                          heif_sample_aux_info_presence_optional);
+      }
+
+      heif_context_set_sequence_timescale(context, sequence_timebase);
+      heif_context_set_number_of_sequence_repetitions(context, sequence_repetitions);
+
+      encoding_options = heif_sequence_encoding_options_alloc();
+      encoding_options->gop_structure = sequence_gop_structure;
+      encoding_options->keyframe_distance_min = sequence_keyframe_distance_min;
+      encoding_options->keyframe_distance_max = sequence_keyframe_distance_max;
+      encoding_options->save_alpha_channel = master_alpha;
+
+      image_width = static_cast<uint16_t>(w);
+      image_height = static_cast<uint16_t>(h);
+
+      heif_context_add_visual_sequence_track(context,
+                                             image_width, image_height,
+                                             use_video_handler ? heif_track_type_video : heif_track_type_image_sequence,
+                                             track_options,
+                                             encoding_options,
+                                             &track);
+
+      heif_track_options_release(track_options);
+
+      first_image = false;
+    }
+
+    if (image_width != static_cast<uint16_t>(w) ||
+        image_height != static_cast<uint16_t>(h)) {
+      std::cerr << "image '" << input_filename << "' has size " << w << "x" << h
+                << " which is different from the first image size " << image_width << "x" << image_height << "\n";
+      return 5;
+    }
+
+    heif_color_profile_nclx* nclx;
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless, output_color_profile_preset);
+    if (error.code) {
+      std::cerr << error.message << "\n";
+      return 5;
+    }
+
+    //seq_options->save_alpha_channel = false; // TODO: sequences with alpha ?
+    encoding_options->output_nclx_profile = nclx;
+    //seq_options->image_orientation = heif_orientation_normal; // input_image.orientation;  TODO: sequence rotation
+
+    heif_image_set_duration(image.get(), sequence_durations);
+
+    // --- set SAI data
+
+    if (currImage-1 < sai_data.gimi_content_ids.size()) {
+      if (!sai_data.gimi_content_ids[currImage-1].empty()) {
+        heif_image_set_gimi_sample_content_id(image.get(), sai_data.gimi_content_ids[currImage-1].c_str());
+      }
+    }
+
+    if (currImage-1 < sai_data.tai_timestamps.size()) {
+      if (sai_data.tai_timestamps[currImage-1]) {
+        heif_image_set_tai_timestamp(image.get(), sai_data.tai_timestamps[currImage-1]);
+      }
+    }
+
+    // --- encode image
+
+    error = heif_track_encode_sequence_image(track, image.get(), encoder, encoding_options);
+    if (error.code) {
+      heif_nclx_color_profile_free(nclx);
+      std::cerr << "Cannot encode sequence image: " << error.message << "\n";
+      return 5;
+    }
+
+    heif_nclx_color_profile_free(nclx);
+  }
+
+  if (!track) {
+    std::cerr << "No input files could be encoded into sequence track\n";
+    return 5;
+  }
+
+  std::cout << "\n";
+
+  heif_error error = heif_track_encode_end_of_sequence(track, encoder);
+  if (error.code) {
+    std::cerr << "Cannot end sequence: " << error.message << "\n";
+    return 5;
+  }
+
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  if (!vmt_metadata_file.empty()) {
+    int ret = encode_vmt_metadata_track(context, track, vmt_metadata_file, metadata_track_uri, binary_metadata_track);
+    if (ret) {
+      return ret;
+    }
+  }
+#endif
+
+  heif_track_release(track);
+  heif_sequence_encoding_options_release(encoding_options);
+
+
+  // --- add first image as image item
+
+  if (!use_video_handler) {
+    do_encode_images(context, encoder, options, {args[0]});
   }
 
   return 0;
