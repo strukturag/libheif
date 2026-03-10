@@ -1281,12 +1281,25 @@ Error Box_snuc::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_nuc.image_width = range.read32();
   m_nuc.image_height = range.read32();
 
+  if (m_nuc.image_width == 0 || m_nuc.image_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_parameter_value,
+            "snuc image width and height must be non-zero."};
+  }
+
   uint64_t num_pixels = static_cast<uint64_t>(m_nuc.image_width) * m_nuc.image_height;
 
   if (limits->max_image_size_pixels && num_pixels > limits->max_image_size_pixels) {
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "snuc image dimensions exceed security limit."};
+  }
+
+  // Prevent size_t overflow when computing alloc size (matters on 32-bit systems)
+  if (std::numeric_limits<size_t>::max() / num_pixels < 2 * sizeof(float)) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "snuc image memory size exceeds max integer size."};
   }
 
   Error err = m_memory_handle.alloc(2 * sizeof(float) * num_pixels, limits, "snuc box");
