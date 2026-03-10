@@ -352,7 +352,9 @@ static option long_options[] = {
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
     {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     {(char* const) "component-content-ids",       no_argument,       nullptr, OPTION_COMPONENT_CONTENT_IDS},
+#endif
 #endif
     {(char* const) "color-profile",               required_argument, 0,                     OPTION_COLOR_PROFILE_PRESET},
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
