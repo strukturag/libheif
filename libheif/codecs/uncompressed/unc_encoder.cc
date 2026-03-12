@@ -120,19 +120,7 @@ heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr
 }
 
 
-Result<Encoder::CodedImageData> unc_encoder::encode_full_image(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                               const heif_encoding_options& options)
-{
-  auto uncEncoder = unc_encoder_factory::get_unc_encoder(src_image, options);
-  if (uncEncoder.error()) {
-    return uncEncoder.error();
-  }
-
-  return (*uncEncoder)->encode_static(src_image, options);
-}
-
-
-Result<Encoder::CodedImageData> unc_encoder::encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
+Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                            const heif_encoding_options& in_options) const
 {
   auto parameters = std::unique_ptr<heif_unci_image_parameters,

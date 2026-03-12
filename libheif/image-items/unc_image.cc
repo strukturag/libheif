@@ -97,7 +97,7 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared
     return {uncEncoder.error()};
   }
 
-  return (*uncEncoder)->encode_static(src_image, options);
+  return (*uncEncoder)->encode(src_image, options);
 }
 
 

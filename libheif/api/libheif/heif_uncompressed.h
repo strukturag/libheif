@@ -142,7 +142,7 @@ heif_error heif_image_add_sensor_bad_pixels_map(heif_image*,
                                                  uint32_t num_bad_columns,
                                                  const uint32_t* bad_columns,
                                                  uint32_t num_bad_pixels,
-                                                 const struct heif_bad_pixel* bad_pixels);
+                                                 const heif_bad_pixel* bad_pixels);
 
 // Returns the number of sensor bad pixels maps on this image (0 if none).
 LIBHEIF_API

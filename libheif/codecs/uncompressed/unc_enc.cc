@@ -36,14 +36,17 @@ Result<Encoder::CodedImageData> Encoder_uncompressed::encode(const std::shared_p
                                                              const struct heif_encoding_options& options,
                                                              enum heif_image_input_class input_class)
 {
-  Encoder::CodedImageData codedImage;
+  auto uncEncoder = unc_encoder_factory::get_unc_encoder(image, options);
+  if (uncEncoder.error()) {
+    return uncEncoder.error();
+  }
 
-  Result<Encoder::CodedImageData> codingResult = unc_encoder::encode_full_image(image, options);
+  auto codingResult = (*uncEncoder)->encode(image, options);
   if (!codingResult) {
     return codingResult.error();
   }
 
-  codedImage = *codingResult;
+  Encoder::CodedImageData codedImage = *codingResult;
 
   // codedImage.bitstream = std::move(vec);
 

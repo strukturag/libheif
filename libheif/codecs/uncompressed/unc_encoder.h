@@ -63,11 +63,8 @@ public:
 
   [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const = 0;
 
-  Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                const heif_encoding_options& options) const;
-
-  static Result<Encoder::CodedImageData> encode_full_image(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                           const heif_encoding_options& options);
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                         const heif_encoding_options& options) const;
 
 protected:
   std::shared_ptr<Box_cmpd> m_cmpd;
