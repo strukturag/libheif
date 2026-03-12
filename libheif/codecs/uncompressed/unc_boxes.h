@@ -66,9 +66,11 @@ public:
 
   bool has_component(heif_uncompressed_component_type) const;
 
-  void add_component(const Component& component)
+  uint16_t add_component(const Component& component)
   {
+    auto index = static_cast<uint16_t>(m_components.size());
     m_components.push_back(component);
+    return index;
   }
 
 protected:

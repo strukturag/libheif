@@ -46,7 +46,7 @@ heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype
 class unc_encoder
 {
 public:
-  unc_encoder();
+  explicit unc_encoder(const std::shared_ptr<const HeifPixelImage>& image);
 
   virtual ~unc_encoder() = default;
 

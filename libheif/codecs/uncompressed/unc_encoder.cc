@@ -22,6 +22,8 @@
 
 #include <cassert>
 #include <cstring>
+#include <map>
+#include <set>
 
 #include "pixelimage.h"
 #include "unc_boxes.h"
@@ -76,10 +78,79 @@ heif_uncompressed_component_format to_unc_component_format(heif_channel_datatype
 }
 
 
-unc_encoder::unc_encoder()
+unc_encoder::unc_encoder(const std::shared_ptr<const HeifPixelImage>& image)
 {
   m_cmpd = std::make_shared<Box_cmpd>();
   m_uncC = std::make_shared<Box_uncC>();
+
+  // --- Bayer pattern: add reference components to cmpd and generate cpat box
+
+  if (image->has_bayer_pattern()) {
+    const BayerPattern& bayer = image->get_bayer_pattern();
+
+    // The bayer pattern stores component_index values. When the image has a cmpd
+    // table (add_component path), we look up the component type from it. When it
+    // doesn't (legacy add_plane path), the component_index IS the component type.
+
+    // Collect unique component types from the pattern (in order of first appearance)
+    std::vector<uint16_t> unique_types;
+    std::set<uint16_t> seen;
+    for (const auto& pixel : bayer.pixels) {
+      uint16_t comp_type = pixel.component_index;  // legacy: index IS the type
+      if (seen.insert(comp_type).second) {
+        unique_types.push_back(comp_type);
+      }
+    }
+
+    // Add reference components to cmpd (these have no uncC entries).
+    std::map<uint16_t, uint16_t> type_to_cmpd_index;
+    for (uint16_t type : unique_types) {
+      type_to_cmpd_index[type] = m_cmpd->add_component({type});
+    }
+
+    // Build cpat box with resolved cmpd indices
+    BayerPattern cpat_pattern;
+    cpat_pattern.pattern_width = bayer.pattern_width;
+    cpat_pattern.pattern_height = bayer.pattern_height;
+    cpat_pattern.pixels.resize(bayer.pixels.size());
+    for (size_t i = 0; i < bayer.pixels.size(); i++) {
+      uint16_t comp_type = bayer.pixels[i].component_index;  // legacy: index IS the type
+      cpat_pattern.pixels[i].component_index = type_to_cmpd_index[comp_type];
+      cpat_pattern.pixels[i].component_gain = bayer.pixels[i].component_gain;
+    }
+
+    m_cpat = std::make_shared<Box_cpat>();
+    m_cpat->set_pattern(cpat_pattern);
+  }
+
+  if (image->has_polarization_patterns()) {
+    for (const auto& pol : image->get_polarization_patterns()) {
+      auto splz = std::make_shared<Box_splz>();
+      splz->set_pattern(pol);
+      m_splz.push_back(splz);
+    }
+  }
+
+  if (image->has_sensor_bad_pixels_maps()) {
+    for (const auto& bpm : image->get_sensor_bad_pixels_maps()) {
+      auto sbpm = std::make_shared<Box_sbpm>();
+      sbpm->set_bad_pixels_map(bpm);
+      m_sbpm.push_back(sbpm);
+    }
+  }
+
+  if (image->has_sensor_nuc()) {
+    for (const auto& nuc : image->get_sensor_nuc()) {
+      auto snuc = std::make_shared<Box_snuc>();
+      snuc->set_nuc(nuc);
+      m_snuc.push_back(snuc);
+    }
+  }
+
+  if (image->has_chroma_location()) {
+    m_cloc = std::make_shared<Box_cloc>();
+    m_cloc->set_chroma_location(image->get_chroma_location());
+  }
 }
 
 

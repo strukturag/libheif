@@ -57,10 +57,11 @@ std::unique_ptr<const unc_encoder> unc_encoder_factory_rgb_block_pixel_interleav
 
 unc_encoder_rgb_block_pixel_interleave::unc_encoder_rgb_block_pixel_interleave(const std::shared_ptr<const HeifPixelImage>& image,
                                                                              const heif_encoding_options& options)
+    : unc_encoder(image)
 {
-  m_cmpd->add_component({heif_uncompressed_component_type_red});
-  m_cmpd->add_component({heif_uncompressed_component_type_green});
-  m_cmpd->add_component({heif_uncompressed_component_type_blue});
+  uint16_t idx_r = m_cmpd->add_component({heif_uncompressed_component_type_red});
+  uint16_t idx_g = m_cmpd->add_component({heif_uncompressed_component_type_green});
+  uint16_t idx_b = m_cmpd->add_component({heif_uncompressed_component_type_blue});
 
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
@@ -73,9 +74,9 @@ unc_encoder_rgb_block_pixel_interleave::unc_encoder_rgb_block_pixel_interleave(c
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
   m_uncC->set_block_little_endian(true);
 
-  m_uncC->add_component({0, bpp, component_format_unsigned, 0});
-  m_uncC->add_component({1, bpp, component_format_unsigned, 0});
-  m_uncC->add_component({2, bpp, component_format_unsigned, 0});
+  m_uncC->add_component({idx_r, bpp, component_format_unsigned, 0});
+  m_uncC->add_component({idx_g, bpp, component_format_unsigned, 0});
+  m_uncC->add_component({idx_b, bpp, component_format_unsigned, 0});
 }
 
 
