@@ -129,33 +129,57 @@ heif_channel map_uncompressed_component_to_channel(uint16_t component_type)
 }
 
 
-static uint16_t map_channel_to_component_type(heif_channel channel)
+static std::vector<uint16_t> map_channel_to_component_type(heif_channel channel, heif_chroma chroma)
 {
   switch (channel) {
     case heif_channel_Y:
-      return heif_uncompressed_component_type_Y;
+      return {heif_uncompressed_component_type_Y};
     case heif_channel_Cb:
-      return heif_uncompressed_component_type_Cb;
+      return {heif_uncompressed_component_type_Cb};
     case heif_channel_Cr:
-      return heif_uncompressed_component_type_Cr;
+      return {heif_uncompressed_component_type_Cr};
     case heif_channel_R:
-      return heif_uncompressed_component_type_red;
+      return {heif_uncompressed_component_type_red};
     case heif_channel_G:
-      return heif_uncompressed_component_type_green;
+      return {heif_uncompressed_component_type_green};
     case heif_channel_B:
-      return heif_uncompressed_component_type_blue;
+      return {heif_uncompressed_component_type_blue};
     case heif_channel_Alpha:
-      return heif_uncompressed_component_type_alpha;
+      return {heif_uncompressed_component_type_alpha};
     case heif_channel_filter_array:
-      return heif_uncompressed_component_type_filter_array;
+      return {heif_uncompressed_component_type_filter_array};
     case heif_channel_depth:
-      return heif_uncompressed_component_type_depth;
+      return {heif_uncompressed_component_type_depth};
     case heif_channel_disparity:
-      return heif_uncompressed_component_type_disparity;
+      return {heif_uncompressed_component_type_disparity};
+    case heif_channel_interleaved:
+      switch (chroma) {
+        case heif_chroma_interleaved_RGB:
+        case heif_chroma_interleaved_RRGGBB_BE:
+        case heif_chroma_interleaved_RRGGBB_LE:
+          return {
+            heif_uncompressed_component_type_red,
+            heif_uncompressed_component_type_green,
+            heif_uncompressed_component_type_blue
+          };
+        case heif_chroma_interleaved_RGBA:
+        case heif_chroma_interleaved_RRGGBBAA_BE:
+        case heif_chroma_interleaved_RRGGBBAA_LE:
+          return {
+            heif_uncompressed_component_type_red,
+            heif_uncompressed_component_type_green,
+            heif_uncompressed_component_type_blue,
+            heif_uncompressed_component_type_alpha
+          };
+        default:
+          assert(false);
+          return {static_cast<uint16_t>(1000 + channel)};
+          break;
+      }
     default:
-      // For interleaved and other channels without a direct match,
+      // For other channels without a direct match,
       // use an internal custom value.
-      return static_cast<uint16_t>(1000 + channel);
+      return {static_cast<uint16_t>(1000 + channel)};
   }
 }
 
@@ -469,13 +493,32 @@ static uint32_t rounded_size(uint32_t s)
   return s;
 }
 
+HeifPixelImage::ImageComponent HeifPixelImage::new_image_plane_for_channel(heif_channel channel)
+{
+  ImageComponent plane;
+
+  // libheif channel type
+
+  plane.m_channel = channel;
+
+  // ISO 23001-17 component types
+  // For interleaved planes, several component types are added to cmpd
+
+  auto cmpd = map_channel_to_component_type(channel, m_chroma);
+  for (size_t i = 0; i < cmpd.size(); i++) {
+    plane.m_component_index.push_back(static_cast<uint32_t>(m_cmpd_component_types.size()));
+    m_cmpd_component_types.push_back(cmpd[i]);
+  }
+
+  return plane;
+}
+
+
 Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth,
                                 const heif_security_limits* limits)
 {
-  ImageComponent plane;
-  plane.m_channel = channel;
-  m_cmpd_component_types.push_back(map_channel_to_component_type(channel));
-  plane.m_component_index = static_cast<uint32_t>(m_cmpd_component_types.size() - 1);
+  ImageComponent plane = new_image_plane_for_channel(channel);
+
   int num_interleaved_pixels = num_interleaved_components_per_plane(m_chroma);
 
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
@@ -501,10 +544,8 @@ Error HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t h
 Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                   const heif_security_limits* limits)
 {
-  ImageComponent plane;
-  plane.m_channel = channel;
-  m_cmpd_component_types.push_back(map_channel_to_component_type(channel));
-  plane.m_component_index = static_cast<uint32_t>(m_cmpd_component_types.size() - 1);
+  ImageComponent plane = new_image_plane_for_channel(channel);
+
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
@@ -831,7 +872,7 @@ uint32_t HeifPixelImage::get_primary_component() const
       case heif_channel_G:
       case heif_channel_B:
       case heif_channel_filter_array:
-        return m_planes[idx].m_component_index;
+        return m_planes[idx].m_component_index[0];
       default:
         ; // NOP
     }
@@ -841,7 +882,7 @@ uint32_t HeifPixelImage::get_primary_component() const
 
   if (!m_cmpd_component_types.empty()) {
     for (uint32_t idx=0; idx<m_planes.size(); idx++) {
-      uint16_t comp_type = get_component_type(m_planes[idx].m_component_index);
+      uint16_t comp_type = get_component_type(m_planes[idx].m_component_index[0]);
       switch (comp_type) {
         case heif_uncompressed_component_type_Y:
         case heif_uncompressed_component_type_monochrome:
@@ -854,7 +895,7 @@ uint32_t HeifPixelImage::get_primary_component() const
         case heif_uncompressed_component_type_key_black:
         case heif_uncompressed_component_type_filter_array:
         case heif_uncompressed_component_type_palette:
-          return m_planes[idx].m_component_index;
+          return m_planes[idx].m_component_index[0];
 
         default:
           ; // NOP
@@ -865,7 +906,7 @@ uint32_t HeifPixelImage::get_primary_component() const
   // third pass: allow anything
 
   if (!m_planes.empty()) {
-    return m_planes[0].m_component_index;
+    return m_planes[0].m_component_index[0];
   }
   return 0;
 }
@@ -2110,7 +2151,10 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
 HeifPixelImage::ImageComponent* HeifPixelImage::find_component_by_index(uint32_t component_index)
 {
   for (auto& plane : m_planes) {
-    if (plane.m_component_index == component_index) {
+    // we search through all indices in case we have an interleaved plane
+    if (std::find(plane.m_component_index.begin(),
+                  plane.m_component_index.end(),
+                  component_index) != plane.m_component_index.end()) {
       return &plane;
     }
   }
@@ -2183,6 +2227,14 @@ uint16_t HeifPixelImage::get_component_type(uint32_t component_idx) const
 }
 
 
+std::vector<uint16_t> HeifPixelImage::get_component_cmpd_indices_interleaved() const
+{
+  const ImageComponent* comp = find_component_for_channel(heif_channel_interleaved);
+  assert(comp);
+  return comp->m_component_index;
+}
+
+
 Result<uint32_t> HeifPixelImage::add_component(uint32_t width, uint32_t height,
                                                uint16_t component_type,
                                                heif_channel_datatype datatype, int bit_depth,
@@ -2190,11 +2242,11 @@ Result<uint32_t> HeifPixelImage::add_component(uint32_t width, uint32_t height,
 {
   // Auto-generate component_index by appending to cmpd table
   m_cmpd_component_types.push_back(component_type);
-  uint32_t component_index = static_cast<uint32_t>(m_cmpd_component_types.size() - 1);
+  uint16_t component_index = static_cast<uint16_t>(m_cmpd_component_types.size() - 1);
 
   ImageComponent plane;
   plane.m_channel = map_uncompressed_component_to_channel(component_type);
-  plane.m_component_index = component_index;
+  plane.m_component_index = std::vector{component_index};
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
@@ -2218,7 +2270,7 @@ Result<uint32_t> HeifPixelImage::add_component_for_index(uint32_t component_inde
 
   ImageComponent plane;
   plane.m_channel = map_uncompressed_component_to_channel(component_type);
-  plane.m_component_index = component_index;
+  plane.m_component_index = std::vector{static_cast<uint16_t>(component_index)};
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
@@ -2233,7 +2285,7 @@ std::vector<uint32_t> HeifPixelImage::get_used_component_indices() const
   std::vector<uint32_t> indices;
   indices.reserve(m_planes.size());
   for (const auto& plane : m_planes) {
-    indices.push_back(plane.m_component_index);
+    indices.insert(indices.end(), plane.m_component_index.begin(), plane.m_component_index.end());
   }
   return indices;
 }

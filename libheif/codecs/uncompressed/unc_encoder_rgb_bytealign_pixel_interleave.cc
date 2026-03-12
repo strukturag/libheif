@@ -59,18 +59,12 @@ unc_encoder_rgb_bytealign_pixel_interleave::unc_encoder_rgb_bytealign_pixel_inte
                                        const heif_encoding_options& options)
     : unc_encoder(image)
 {
-  uint16_t idx_r = m_cmpd->add_component({heif_uncompressed_component_type_red});
-  uint16_t idx_g = m_cmpd->add_component({heif_uncompressed_component_type_green});
-  uint16_t idx_b = m_cmpd->add_component({heif_uncompressed_component_type_blue});
+  auto cmpd_idx = image->get_component_cmpd_indices_interleaved();
 
   bool save_alpha = image->has_alpha();
-  uint16_t idx_a = 0;
-
-  if (save_alpha) {
-    idx_a = m_cmpd->add_component({heif_uncompressed_component_type_alpha});
-  }
 
   m_bytes_per_pixel = save_alpha ? 8 : 6;
+  assert(cmpd_idx.size() == m_bytes_per_pixel);
 
   bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
                         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
@@ -90,11 +84,11 @@ unc_encoder_rgb_bytealign_pixel_interleave::unc_encoder_rgb_bytealign_pixel_inte
   m_uncC->set_components_little_endian(false); // little_endian);
   m_uncC->set_pixel_size(m_bytes_per_pixel);
 
-  m_uncC->add_component({idx_r, bpp, component_format_unsigned, component_align_size});
-  m_uncC->add_component({idx_g, bpp, component_format_unsigned, component_align_size});
-  m_uncC->add_component({idx_b, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[0], bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[1], bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[2], bpp, component_format_unsigned, component_align_size});
   if (save_alpha) {
-    m_uncC->add_component({idx_a, bpp, component_format_unsigned, component_align_size});
+    m_uncC->add_component({cmpd_idx[3], bpp, component_format_unsigned, component_align_size});
   }
 }
 

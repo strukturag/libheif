@@ -72,14 +72,16 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
     auto comp_format = to_unc_component_format(image->get_component_datatype(idx));
     bool aligned = (bpp % 8 == 0);
 
-    m_components.push_back({idx, ch, comp_type, comp_format, bpp, aligned});
+    uint16_t cmpd_idx = image->get_component_cmpd_index();
+
+    m_components.push_back({cmpd_idx, ch, comp_type, comp_format, bpp, aligned});
   }
 
   // Build cmpd/uncC boxes
   bool little_endian = false;
 
   for (const auto& comp : m_components) {
-    uint16_t cmpd_index = m_cmpd->add_component({static_cast<uint16_t>(comp.component_type)});
+    //uint16_t cmpd_index = m_cmpd->add_component({static_cast<uint16_t>(comp.component_type)});
 
     uint8_t component_align_size = 0;
 
@@ -87,7 +89,7 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
       little_endian = true;
     }
 
-    m_uncC->add_component({cmpd_index, comp.bpp, comp.component_format, component_align_size});
+    m_uncC->add_component({comp.component_idx, comp.bpp, comp.component_format, component_align_size});
   }
 
   m_uncC->set_interleave_type(interleave_mode_component);

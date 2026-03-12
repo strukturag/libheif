@@ -130,6 +130,16 @@ template <typename T> const char* get_name(T val, const std::map<T, const char*>
   }
 }
 
+void Box_cmpd::set_components(const std::vector<uint16_t>& components)
+{
+  m_components.clear();
+
+  for (const auto& component : components) {
+    m_components.push_back({component, {}});
+  }
+}
+
+
 Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint32_t component_count = range.read32();

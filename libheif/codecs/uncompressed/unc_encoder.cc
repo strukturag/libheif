@@ -83,6 +83,8 @@ unc_encoder::unc_encoder(const std::shared_ptr<const HeifPixelImage>& image)
   m_cmpd = std::make_shared<Box_cmpd>();
   m_uncC = std::make_shared<Box_uncC>();
 
+  m_cmpd->set_components(image->get_cmpd_component_types());
+
   // --- Bayer pattern: add reference components to cmpd and generate cpat box
 
   if (image->has_bayer_pattern()) {

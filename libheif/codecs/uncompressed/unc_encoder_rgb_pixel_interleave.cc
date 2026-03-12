@@ -55,18 +55,11 @@ unc_encoder_rgb_pixel_interleave::unc_encoder_rgb_pixel_interleave(const std::sh
                                              const heif_encoding_options& options)
     : unc_encoder(image)
 {
-  uint16_t idx_r = m_cmpd->add_component({heif_uncompressed_component_type_red});
-  uint16_t idx_g = m_cmpd->add_component({heif_uncompressed_component_type_green});
-  uint16_t idx_b = m_cmpd->add_component({heif_uncompressed_component_type_blue});
-
+  auto cmpd_idx = image->get_component_cmpd_indices_interleaved();
   bool save_alpha = image->has_alpha();
-  uint16_t idx_a = 0;
-
-  if (save_alpha) {
-    idx_a = m_cmpd->add_component({heif_uncompressed_component_type_alpha});
-  }
 
   m_bytes_per_pixel = save_alpha ? 4 : 3;
+  assert(cmpd_idx.size() == m_bytes_per_pixel);
 
   uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
 
@@ -86,11 +79,11 @@ unc_encoder_rgb_pixel_interleave::unc_encoder_rgb_pixel_interleave(const std::sh
 
   m_uncC->set_interleave_type(interleave_mode_pixel);
   m_uncC->set_sampling_type(sampling_mode_no_subsampling);
-  m_uncC->add_component({idx_r, bpp, component_format_unsigned, component_align_size});
-  m_uncC->add_component({idx_g, bpp, component_format_unsigned, component_align_size});
-  m_uncC->add_component({idx_b, bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[0], bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[1], bpp, component_format_unsigned, component_align_size});
+  m_uncC->add_component({cmpd_idx[2], bpp, component_format_unsigned, component_align_size});
   if (save_alpha) {
-    m_uncC->add_component({idx_a, bpp, component_format_unsigned, component_align_size});
+    m_uncC->add_component({cmpd_idx[3], bpp, component_format_unsigned, component_align_size});
   }
 }
 

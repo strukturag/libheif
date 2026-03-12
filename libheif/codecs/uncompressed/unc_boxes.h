@@ -73,6 +73,8 @@ public:
     return index;
   }
 
+  void set_components(const std::vector<uint16_t>&);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 

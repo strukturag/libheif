@@ -441,6 +441,12 @@ public:
   // even those that have no image plane (e.g. bayer reference components).
   uint16_t get_component_type(uint32_t component_idx) const;
 
+  std::vector<uint16_t> get_cmpd_component_types() const { return m_cmpd_component_types; }
+
+  std::vector<uint16_t> get_component_cmpd_indices_interleaved() const;
+
+  uint16_t get_component_cmpd_index() const { assert(m_cmpd_component_types.size()==1); return m_cmpd_component_types[0]; }
+
   // Encoder path: auto-generates component_index by appending to cmpd table.
   Result<uint32_t> add_component(uint32_t width, uint32_t height,
                                  uint16_t component_type,
@@ -455,6 +461,8 @@ public:
 
   // Populate the cmpd component types table (decoder path).
   void set_cmpd_component_types(std::vector<uint16_t> types) { m_cmpd_component_types = std::move(types); }
+
+  const std::vector<uint16_t>& get_cmpd_component_types() { return m_cmpd_component_types; }
 
   // Returns the sorted list of component_indices of all planes that have pixel data.
   std::vector<uint32_t> get_used_component_indices() const;
@@ -545,7 +553,10 @@ private:
   struct ImageComponent
   {
     heif_channel m_channel = heif_channel_Y;
-    uint32_t m_component_index = 0;  // index into the cmpd component definition table
+
+    // index into the cmpd component definition table
+    // Interleaved channels will have a list of indices in the order R,G,B,A
+    std::vector<uint16_t> m_component_index;
 
     // limits=nullptr disables the limits
     Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
@@ -589,6 +600,8 @@ private:
 
   ImageComponent* find_component_by_index(uint32_t component_index);
   const ImageComponent* find_component_by_index(uint32_t component_index) const;
+
+  ImageComponent new_image_plane_for_channel(heif_channel channel);
 
   uint32_t m_width = 0;
   uint32_t m_height = 0;
