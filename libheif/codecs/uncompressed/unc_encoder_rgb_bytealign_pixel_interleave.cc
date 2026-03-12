@@ -64,7 +64,7 @@ unc_encoder_rgb_bytealign_pixel_interleave::unc_encoder_rgb_bytealign_pixel_inte
   bool save_alpha = image->has_alpha();
 
   m_bytes_per_pixel = save_alpha ? 8 : 6;
-  assert(cmpd_idx.size() == m_bytes_per_pixel);
+  assert(cmpd_idx.size() == m_bytes_per_pixel/2);
 
   bool little_endian = (image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE ||
                         image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
