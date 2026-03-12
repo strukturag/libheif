@@ -72,9 +72,7 @@ unc_encoder_component_interleave::unc_encoder_component_interleave(const std::sh
     auto comp_format = to_unc_component_format(image->get_component_datatype(idx));
     bool aligned = (bpp % 8 == 0);
 
-    uint16_t cmpd_idx = image->get_component_cmpd_index();
-
-    m_components.push_back({cmpd_idx, ch, comp_type, comp_format, bpp, aligned});
+    m_components.push_back({idx, ch, comp_type, comp_format, bpp, aligned});
   }
 
   // Build cmpd/uncC boxes

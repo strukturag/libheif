@@ -443,9 +443,9 @@ public:
 
   std::vector<uint16_t> get_cmpd_component_types() const { return m_cmpd_component_types; }
 
-  std::vector<uint16_t> get_component_cmpd_indices_interleaved() const;
+  std::vector<uint32_t> get_component_cmpd_indices_interleaved() const;
 
-  uint16_t get_component_cmpd_index() const { assert(m_cmpd_component_types.size()==1); return m_cmpd_component_types[0]; }
+  uint32_t get_component_cmpd_index() const { assert(m_cmpd_component_types.size()==1); return m_cmpd_component_types[0]; }
 
   // Encoder path: auto-generates component_index by appending to cmpd table.
   Result<uint32_t> add_component(uint32_t width, uint32_t height,
@@ -556,7 +556,7 @@ private:
 
     // index into the cmpd component definition table
     // Interleaved channels will have a list of indices in the order R,G,B,A
-    std::vector<uint16_t> m_component_index;
+    std::vector<uint32_t> m_component_index;
 
     // limits=nullptr disables the limits
     Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,

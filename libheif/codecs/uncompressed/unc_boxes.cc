@@ -401,7 +401,10 @@ Error Box_uncC::write(StreamWriter& writer) const
         return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component bit-depth out of range [1..256]"};
       }
 
-      writer.write16(component.component_index);
+      if (component.component_index > 0xFFFF) {
+        return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component index must be 16 bit"};
+      }
+      writer.write16(static_cast<uint16_t>(component.component_index));
       writer.write8(uint8_t(component.component_bit_depth - 1));
       writer.write8(component.component_format);
       writer.write8(component.component_align_size);

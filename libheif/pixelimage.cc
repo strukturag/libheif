@@ -2227,7 +2227,7 @@ uint16_t HeifPixelImage::get_component_type(uint32_t component_idx) const
 }
 
 
-std::vector<uint16_t> HeifPixelImage::get_component_cmpd_indices_interleaved() const
+std::vector<uint32_t> HeifPixelImage::get_component_cmpd_indices_interleaved() const
 {
   const ImageComponent* comp = find_component_for_channel(heif_channel_interleaved);
   assert(comp);
@@ -2241,14 +2241,14 @@ Result<uint32_t> HeifPixelImage::add_component(uint32_t width, uint32_t height,
                                                const heif_security_limits* limits)
 {
   // Auto-generate component_index by appending to cmpd table
+  uint32_t component_index = static_cast<uint32_t>(m_cmpd_component_types.size());
   m_cmpd_component_types.push_back(component_type);
-  uint16_t component_index = static_cast<uint16_t>(m_cmpd_component_types.size() - 1);
 
   ImageComponent plane;
   plane.m_channel = map_uncompressed_component_to_channel(component_type);
   plane.m_component_index = std::vector{component_index};
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
-    return err;
+    return {err};
   }
 
   m_planes.push_back(plane);
@@ -2270,7 +2270,7 @@ Result<uint32_t> HeifPixelImage::add_component_for_index(uint32_t component_inde
 
   ImageComponent plane;
   plane.m_channel = map_uncompressed_component_to_channel(component_type);
-  plane.m_component_index = std::vector{static_cast<uint16_t>(component_index)};
+  plane.m_component_index = std::vector{component_index};
   if (Error err = plane.alloc(width, height, datatype, bit_depth, 1, limits, m_memory_handle)) {
     return err;
   }
