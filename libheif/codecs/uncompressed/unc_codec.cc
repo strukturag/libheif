@@ -85,7 +85,7 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
   uint16_t componentSet = 0;
 
   for (Box_uncC::Component component : uncC->get_components()) {
-    uint16_t component_index = component.component_index;
+    uint32_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
     if (component_type > heif_uncompressed_component_type_max_valid) {
@@ -123,7 +123,8 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
     *out_colourspace = heif_colorspace_YCbCr;
   }
 
-  if (componentSet == ((1 << heif_uncompressed_component_type_monochrome)) || componentSet == ((1 << heif_uncompressed_component_type_monochrome) | (1 << heif_uncompressed_component_type_alpha))) {
+  if (componentSet == (1 << heif_uncompressed_component_type_monochrome) || componentSet == ((1 << heif_uncompressed_component_type_monochrome) | (1 << heif_uncompressed_component_type_alpha)) ||
+      componentSet == (1 << heif_uncompressed_component_type_Y) || componentSet == ((1 << heif_uncompressed_component_type_Y) | (1 << heif_uncompressed_component_type_alpha))) {
     // mono or mono + alpha input, mono output.
     *out_chroma = heif_chroma_monochrome;
     *out_colourspace = heif_colorspace_monochrome;
@@ -156,7 +157,7 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
                                            Box_uncC::Component component,
                                            heif_channel* channel)
 {
-  uint16_t component_index = component.component_index;
+  uint32_t component_index = component.component_index;
   uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
   *channel = map_uncompressed_component_to_channel(component_type);
