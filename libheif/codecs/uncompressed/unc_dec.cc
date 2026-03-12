@@ -59,7 +59,7 @@ int Decoder_uncompressed::get_luma_bits_per_pixel() const
   int luma_bits = 0;
   int alternate_channel_bits = 0;
   for (Box_uncC::Component component : m_uncC->get_components()) {
-    uint16_t component_index = component.component_index;
+    uint32_t component_index = component.component_index;
     if (component_index >= m_cmpd->get_components().size()) {
       return -1;
     }
@@ -103,7 +103,7 @@ int Decoder_uncompressed::get_chroma_bits_per_pixel() const
   int chroma_bits = 0;
   int alternate_channel_bits = 0;
   for (Box_uncC::Component component : m_uncC->get_components()) {
-    uint16_t component_index = component.component_index;
+    uint32_t component_index = component.component_index;
     if (component_index >= m_cmpd->get_components().size()) {
       return -1;
     }
