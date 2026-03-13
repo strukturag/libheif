@@ -855,6 +855,12 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_count = range.read32();
+  if (entry_count == 0) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "'stsc' box with zero entries."};
+  }
 
   // Note: test against maximum number of frames (upper limit) since we have no limit on maximum number of chunks
   if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
