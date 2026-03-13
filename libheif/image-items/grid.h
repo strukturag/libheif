@@ -167,10 +167,17 @@ private:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty, std::set<heif_item_id> processed_ids) const;
 
+  struct FailedTile {
+    // Top-left pixel coordinates
+    uint32_t x0;
+    uint32_t y0;
+  };
+
   Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                     std::shared_ptr<HeifPixelImage>& inout_image,
                                     const heif_decoding_options& options, int& progress_counter,
                                     std::shared_ptr<std::vector<Error> > warnings,
+                                    std::vector<FailedTile>& failed_tiles,
                                     std::set<heif_item_id> processed_ids) const;
 };
 

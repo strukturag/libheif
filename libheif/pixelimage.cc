@@ -1255,6 +1255,41 @@ Error HeifPixelImage::copy_image_to(const std::shared_ptr<const HeifPixelImage>&
 }
 
 
+void HeifPixelImage::zero_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h)
+{
+  uint32_t img_w = get_width();
+  uint32_t img_h = get_height();
+  heif_chroma chroma = get_chroma_format();
+
+  std::set<enum heif_channel> channels = get_channel_set();
+
+  for (heif_channel channel : channels) {
+    uint32_t cx0 = channel_width(x0, chroma, channel);
+    uint32_t cy0 = channel_height(y0, chroma, channel);
+    uint32_t cw = channel_width(w, chroma, channel);
+    uint32_t ch = channel_height(h, chroma, channel);
+
+    // clamp to plane bounds
+    uint32_t plane_w = channel_width(img_w, chroma, channel);
+    uint32_t plane_h = channel_height(img_h, chroma, channel);
+    if (cx0 >= plane_w || cy0 >= plane_h) {
+      continue;
+    }
+    cw = std::min(cw, plane_w - cx0);
+    ch = std::min(ch, plane_h - cy0);
+
+    size_t stride = 0;
+    uint8_t* data = get_plane(channel, &stride);
+    uint32_t bytes_per_pixel = get_storage_bits_per_pixel(channel) / 8;
+    uint32_t width_bytes = cw * bytes_per_pixel;
+
+    for (uint32_t y = 0; y < ch; y++) {
+      memset(data + cx0 * bytes_per_pixel + (cy0 + y) * stride, 0, width_bytes);
+    }
+  }
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_degrees, const heif_security_limits* limits)
 {
   // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before rotation

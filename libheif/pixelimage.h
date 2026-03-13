@@ -508,6 +508,8 @@ public:
 
   Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
 
+  void zero_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h);
+
   Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees, const heif_security_limits* limits);
 
   Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction, const heif_security_limits* limits);
