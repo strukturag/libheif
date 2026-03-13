@@ -195,12 +195,18 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
   jpeg_create_decompress(&cinfo);
 
+  heif_image* heif_img = nullptr;
+
   cinfo.err = jpeg_std_error(&jerr.mgr);
   jerr.mgr.error_exit = on_jpeg_error;
   if (setjmp(jerr.setjmp_buffer)) {
     // If we get here, the JPEG code has signaled an error.
 
     jpeg_destroy_decompress(&cinfo);
+
+    if (heif_img) {
+      heif_image_release(heif_img);
+    }
 
     return heif_error{
       heif_error_Decoder_plugin_error,
@@ -243,7 +249,6 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
     // create destination image
 
-    heif_image* heif_img = nullptr;
     heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
                                        heif_colorspace_monochrome,
                                        heif_chroma_monochrome,
@@ -276,6 +281,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     }
 
     *out_img = heif_img;
+    heif_img = nullptr;  // pass ownership to caller, don't delete it in the plugin during any subsequent error
   }
   else {
     cinfo.out_color_space = JCS_YCbCr;
@@ -289,7 +295,6 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
     // create destination image
 
-    heif_image* heif_img = nullptr;
     heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
                                        heif_colorspace_YCbCr,
                                        heif_chroma_420,
@@ -305,6 +310,8 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
       decoder->error_message = err.message;
       err.message = decoder->error_message.c_str();
 
+      heif_image_release(heif_img);
+      heif_img = nullptr; // avoid double free in jpeg error handler
       return err;
     }
     err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
@@ -313,6 +320,8 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
       decoder->error_message = err.message;
       err.message = decoder->error_message.c_str();
 
+      heif_image_release(heif_img);
+      heif_img = nullptr; // avoid double free in jpeg error handler
       return err;
     }
     err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
@@ -321,6 +330,8 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
       decoder->error_message = err.message;
       err.message = decoder->error_message.c_str();
 
+      heif_image_release(heif_img);
+      heif_img = nullptr; // avoid double free in jpeg error handler
       return err;
     }
 
@@ -372,6 +383,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     }
 
     *out_img = heif_img;
+    heif_img = nullptr; // pass ownership to caller (see similar comment above)
   }
 
   if (out_user_data) {
