@@ -621,14 +621,11 @@ Error Box_stts::write(StreamWriter& writer) const
 
 uint32_t Box_stts::get_sample_duration(uint32_t sample_idx)
 {
-  size_t i = 0;
-  while (i < m_entries.size()) {
-    if (sample_idx < m_entries[i].sample_count) {
-      return m_entries[i].sample_delta;
+  for (const auto& entry : m_entries) {
+    if (sample_idx < entry.sample_count) {
+      return entry.sample_delta;
     }
-    else {
-      sample_idx -= m_entries[i].sample_count;
-    }
+    sample_idx -= entry.sample_count;
   }
 
   return 0;
@@ -813,14 +810,11 @@ Error Box_ctts::write(StreamWriter& writer) const
 
 int32_t Box_ctts::get_sample_offset(uint32_t sample_idx)
 {
-  size_t i = 0;
-  while (i < m_entries.size()) {
-    if (sample_idx < m_entries[i].sample_count) {
-      return m_entries[i].sample_offset;
+  for (const auto& entry : m_entries) {
+    if (sample_idx < entry.sample_count) {
+      return entry.sample_offset;
     }
-    else {
-      sample_idx -= m_entries[i].sample_count;
-    }
+    sample_idx -= entry.sample_count;
   }
 
   return 0;
