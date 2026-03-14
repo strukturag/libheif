@@ -255,6 +255,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
                                        &heif_img);
     if (err.code != heif_error_Ok) {
       assert(heif_img==nullptr);
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
 
@@ -265,6 +266,8 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
       err.message = decoder->error_message.c_str();
 
       heif_image_release(heif_img);
+      heif_img = nullptr;
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
 
@@ -301,6 +304,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
                                        &heif_img);
     if (err.code != heif_error_Ok) {
       assert(heif_img==nullptr);
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
 
@@ -312,6 +316,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
       heif_image_release(heif_img);
       heif_img = nullptr; // avoid double free in jpeg error handler
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
     err = heif_image_add_plane_safe(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
@@ -322,6 +327,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
       heif_image_release(heif_img);
       heif_img = nullptr; // avoid double free in jpeg error handler
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
     err = heif_image_add_plane_safe(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8, limits);
@@ -332,6 +338,7 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
       heif_image_release(heif_img);
       heif_img = nullptr; // avoid double free in jpeg error handler
+      jpeg_destroy_decompress(&cinfo);
       return err;
     }
 
