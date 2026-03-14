@@ -884,6 +884,13 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
     entry.samples_per_chunk = range.read32();
     entry.sample_description_index = range.read32();
 
+    if (entry.samples_per_chunk == 0) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "'stsc' box with zero samples per chunk entry."};
+    }
+
     if (entry.sample_description_index == 0) {
       return {
       heif_error_Invalid_input,
