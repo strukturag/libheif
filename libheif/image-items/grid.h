@@ -119,6 +119,10 @@ public:
     heif_encoding_options_copy(m_encoding_options, options);
   }
 
+  void override_encoding_option_image_orientation(heif_orientation orientation) {
+    m_encoding_options->image_orientation = orientation;
+  }
+
   const heif_encoding_options* get_encoding_options() const { return m_encoding_options; }
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
