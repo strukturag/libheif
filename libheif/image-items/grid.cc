@@ -729,6 +729,9 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
   heif_item_id grid_id = *grid_id_result;
   grid_image = std::make_shared<ImageItem_Grid>(ctx, grid_id);
   grid_image->set_encoding_options(encoding_options);
+  // Override image_orientation to normal for tiles — orientation is applied
+  // to the grid item, not to individual tiles.
+  grid_image->override_encoding_option_image_orientation(heif_orientation_normal);
   grid_image->set_grid_spec(grid);
   grid_image->set_resolution(output_width, output_height);
 
@@ -745,6 +748,9 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
   // Add ISPE property
   file->add_ispe_property(grid_id, output_width, output_height, false);
+
+  // Add orientation properties (irot/imir) to the grid item.
+  file->add_orientation_properties(grid_id, encoding_options->image_orientation);
 
   // PIXI property will be added when the first tile is set
 
