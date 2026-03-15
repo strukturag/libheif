@@ -1832,7 +1832,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
         for (uint32_t x = in_x0; x < in_w; x++) {
           uint8_t* outptr = &out_p[out_x0 + (out_y0 + y - in_y0) * out_stride + x];
           uint8_t in_val = in_p[in_x0 + y * in_stride + x];
-          uint8_t alpha_val = alpha_p[in_x0 + y * in_stride + x];
+          uint8_t alpha_val = alpha_p[in_x0 + y * alpha_stride + x];
 
           *outptr = (uint8_t) ((in_val * alpha_val + *outptr * (255 - alpha_val)) / 255);
         }
