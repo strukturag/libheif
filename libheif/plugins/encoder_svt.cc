@@ -699,6 +699,14 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
   EbErrorType res = EB_ErrorNone;
   heif_error err;
 
+  // deinit the encoder if it was already initialized
+  // (e.g. when the encoder is reused for alpha encoding after being used for YUV encoding)
+  if (encoder->svt_encoder) {
+    svt_av1_enc_deinit(encoder->svt_encoder);
+    svt_av1_enc_deinit_handle(encoder->svt_encoder);
+    encoder->svt_encoder = nullptr;
+  }
+
   // encoder->compressed_data.clear();
 
   int w = heif_image_get_width(image, heif_channel_Y);
