@@ -912,6 +912,10 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
+  // destroy the codec in case it was already initialized
+  // (e.g. when the encoder is reused for alpha encoding after being used for YUV encoding)
+  aom_codec_destroy(&encoder->codec);
+
   heif_error err;
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
