@@ -37,8 +37,7 @@
 
 
 struct NALUnit {
-  void* data;
-  size_t size;
+  std::vector<uint8_t> data;
 };
 
 struct webcodecs_decoder
@@ -405,11 +404,11 @@ static struct heif_error webcodecs_push_data(void* decoder_raw, const void* data
       return err;
     }
 
-    NALUnit nal_unit = {(void*)(cdata + ptr), nal_size};
-    decoder->data_queue.push(nal_unit);
+    NALUnit nal_unit;
+    nal_unit.data.assign(cdata + ptr, cdata + ptr + nal_size);
+    decoder->data_queue.push(std::move(nal_unit));
     ptr += nal_size;
   }
-
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
   return err;
@@ -631,20 +630,19 @@ static void get_nal_units(struct webcodecs_decoder* decoder,
     NALUnit nal_unit = decoder->data_queue.front();
     decoder->data_queue.pop();
 
-    if (nal_unit.size == 0) {
+    if (nal_unit.data.empty()) {
       continue;
     }
 
-    const auto* nal_data = static_cast<const uint8_t*>(nal_unit.data);
-    const uint8_t nal_type = (nal_data[0] >> 1) & 0x3F;
+    const uint8_t nal_type = (nal_unit.data[0] >> 1) & 0x3F;
 
-    if (nal_type == NAL_UNIT_VPS_NUT) {
+    if (nal_type == HEVC_NAL_UNIT_VPS_NUT) {
       vps_nal_unit = nal_unit;
-    } else if (nal_type == NAL_UNIT_SPS_NUT) {
+    } else if (nal_type == HEVC_NAL_UNIT_SPS_NUT) {
       sps_nal_unit = nal_unit;
-    } else if (nal_type == NAL_UNIT_PPS_NUT) {
+    } else if (nal_type == HEVC_NAL_UNIT_PPS_NUT) {
       pps_nal_unit = nal_unit;
-    } else if (nal_type <= NAL_UNIT_MAX_VCL) {
+    } else if (nal_type <= HEVC_NAL_UNIT_MAX_VCL) {
       // Assume the plugin will only receive one VCL NAL unit.
       data_unit = nal_unit;
     }
@@ -658,14 +656,14 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
   struct webcodecs_decoder* decoder = (struct webcodecs_decoder*) decoder_raw;
   *out_img = nullptr;
 
-  NALUnit vps_nal_unit = {nullptr, 0};
-  NALUnit sps_nal_unit = {nullptr, 0};
-  NALUnit pps_nal_unit = {nullptr, 0};
-  NALUnit data_unit = {nullptr, 0};
+  NALUnit vps_nal_unit;
+  NALUnit sps_nal_unit;
+  NALUnit pps_nal_unit;
+  NALUnit data_unit;
 
   get_nal_units(decoder, vps_nal_unit, sps_nal_unit, pps_nal_unit, data_unit);
 
-  if (!vps_nal_unit.data || !sps_nal_unit.data || !pps_nal_unit.data || !data_unit.data) {
+  if (vps_nal_unit.data.empty() || sps_nal_unit.data.empty() || pps_nal_unit.data.empty() || data_unit.data.empty()) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_End_of_data,
             "Missing required NAL units (VPS, SPS, PPS, or data)"};
@@ -673,23 +671,23 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
 
   HEVCDecoderConfigurationRecord config;
   int w, h;
-  Error err = parse_sps_for_hvcC_configuration2((const uint8_t*)sps_nal_unit.data, sps_nal_unit.size, &config, &w, &h);
+  Error err = parse_sps_for_hvcC_configuration2(sps_nal_unit.data.data(), sps_nal_unit.data.size(), &config, &w, &h);
   if (err != Error::Ok) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_Unspecified,
             "Failed to parse SPS"};
   }
 
-  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, NAL_UNIT_VPS_NUT, {std::vector<uint8_t>((uint8_t*)vps_nal_unit.data, (uint8_t*)vps_nal_unit.data + vps_nal_unit.size)}});
-  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, NAL_UNIT_SPS_NUT, {std::vector<uint8_t>((uint8_t*)sps_nal_unit.data, (uint8_t*)sps_nal_unit.data + sps_nal_unit.size)}});
-  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, NAL_UNIT_PPS_NUT, {std::vector<uint8_t>((uint8_t*)pps_nal_unit.data, (uint8_t*)pps_nal_unit.data + pps_nal_unit.size)}});
+  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, HEVC_NAL_UNIT_VPS_NUT, {vps_nal_unit.data}});
+  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, HEVC_NAL_UNIT_SPS_NUT, {sps_nal_unit.data}});
+  config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, HEVC_NAL_UNIT_PPS_NUT, {pps_nal_unit.data}});
 
   StreamWriter writer;
   config.write(writer);
   std::vector<uint8_t> hvcc_record = writer.get_data();
 
   // The WebCodecs API expects the NAL unit to be prefixed with its size (4 bytes, big-endian).
-  size_t nal_size = data_unit.size;
+  uint32_t nal_size = static_cast<uint32_t>(data_unit.data.size());
   std::vector<uint8_t> data_with_size(4 + nal_size);
   // Write length in Big Endian
   data_with_size[0] = (nal_size >> 24) & 0xFF;
@@ -697,7 +695,7 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
   data_with_size[2] = (nal_size >> 8) & 0xFF;
   data_with_size[3] = nal_size & 0xFF;
   // Append NAL payload
-  memcpy(data_with_size.data() + 4, data_unit.data, nal_size);
+  memcpy(data_with_size.data() + 4, data_unit.data.data(), nal_size);
 
   std::string codec_string = get_hevc_codec_string(config);
 
@@ -875,13 +873,56 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
 
 void webcodecs_set_strict_decoding(void* decoder_raw, int flag)
 {
+}
 
+
+static int webcodecs_does_support_format2(const heif_decoder_plugin_compressed_format_description* format)
+{
+  return webcodecs_does_support_format(format->format);
+}
+
+
+static struct heif_error webcodecs_new_decoder2(void** dec, const heif_decoder_plugin_options* options)
+{
+  return webcodecs_new_decoder(dec);
+}
+
+
+static struct heif_error webcodecs_push_data2(void* decoder_raw, const void* data, size_t size, uintptr_t user_data)
+{
+  return webcodecs_push_data(decoder_raw, data, size);
+}
+
+
+static struct heif_error webcodecs_flush_data(void* decoder_raw)
+{
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+}
+
+
+static struct heif_error webcodecs_decode_next_image(void* decoder_raw,
+                                                     struct heif_image** out_img,
+                                                     const heif_security_limits* limits)
+{
+  return webcodecs_decode_image(decoder_raw, out_img);
+}
+
+
+static struct heif_error webcodecs_decode_next_image2(void* decoder_raw,
+                                                      struct heif_image** out_img,
+                                                      uintptr_t* out_user_data,
+                                                      const heif_security_limits* limits)
+{
+  if (out_user_data) {
+    *out_user_data = 0;
+  }
+  return webcodecs_decode_image(decoder_raw, out_img);
 }
 
 
 static const struct heif_decoder_plugin decoder_webcodecs
     {
-        1,
+        5,
         webcodecs_plugin_name,
         webcodecs_init_plugin,
         webcodecs_deinit_plugin,
@@ -891,7 +932,14 @@ static const struct heif_decoder_plugin decoder_webcodecs
         webcodecs_push_data,
         webcodecs_decode_image,
         webcodecs_set_strict_decoding,
-        "webcodecs"
+        "webcodecs",
+        webcodecs_decode_next_image,
+        0,
+        webcodecs_does_support_format2,
+        webcodecs_new_decoder2,
+        webcodecs_push_data2,
+        webcodecs_flush_data,
+        webcodecs_decode_next_image2
     };
 
 
