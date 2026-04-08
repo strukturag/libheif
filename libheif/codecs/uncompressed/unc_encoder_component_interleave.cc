@@ -20,6 +20,7 @@
 
 #include "unc_encoder_component_interleave.h"
 
+#include <bit>
 #include <cstring>
 
 #include "pixelimage.h"
