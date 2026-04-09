@@ -649,7 +649,7 @@ int BitReader::peek_bits(int n)
   return (int) val;
 }
 
-void BitReader::skip_bytes(int nBytes)
+void BitReader::skip_bytes(uint32_t nBytes)
 {
   // TODO: this is slow
   while (nBytes--) {

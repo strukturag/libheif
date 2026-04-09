@@ -51,6 +51,8 @@ public:
 
   std::vector<uint8_t> get_main_item_codec_config() const { return m_main_item_codec_config; }
   std::vector<uint8_t> get_alpha_item_codec_config() const { return m_alpha_item_codec_config; }
+  std::vector<uint8_t> get_gainmap_item_codec_config() const { return m_gainmap_item_codec_config; }
+
   std::vector<uint8_t> get_icc_data() const { return m_icc_data; }
 
   uint64_t get_main_item_data_offset() const { return m_main_item_data_offset; }
@@ -58,9 +60,9 @@ public:
   uint64_t get_alpha_item_data_offset() const { return m_alpha_item_data_offset; }
   uint32_t get_alpha_item_data_size() const { return m_alpha_item_data_size; }
   uint64_t get_exif_item_data_offset() const { return m_exif_item_data_offset; }
-  uint32_t get_exif_item_data_size() const { return m_exif_item_data_size; }
+  uint32_t get_exif_item_data_size() const { return m_exif_data_size; }
   uint64_t get_xmp_item_data_offset() const { return m_xmp_item_data_offset; }
-  uint32_t get_xmp_item_data_size() const { return m_xmp_item_data_size; }
+  uint32_t get_xmp_item_data_size() const { return m_xmp_data_size; }
 
   uint16_t get_colour_primaries() const { return m_colour_primaries; }
   uint16_t get_transfer_characteristics() const { return m_transfer_characteristics; }
@@ -83,14 +85,15 @@ private:
   bool m_icc_flag = false;
   bool m_exif_flag = false;
   bool m_xmp_flag = false;
+  bool m_exif_xmp_compressed_flag = false; // when enabled, data is compressed with 'deflate'
   uint8_t m_chroma_subsampling = 0;
   uint8_t m_orientation = 0;
 
   uint32_t m_width = 0;
   uint32_t m_height = 0;
   uint8_t m_bit_depth = 8;
-  bool m_chroma_is_horizontally_centred = false;
-  bool m_chroma_is_vertically_centred = false;
+  bool m_chroma_is_horizontally_centered = false;
+  bool m_chroma_is_vertically_centered = false;
   bool m_alpha_is_premultiplied = false;
   uint16_t m_colour_primaries = 0;
   uint16_t m_transfer_characteristics = 0;
@@ -149,9 +152,9 @@ private:
   uint64_t m_gainmap_item_data_offset = 0;
   uint32_t m_gainmap_item_data_size = 0;
   uint64_t m_exif_item_data_offset = 0;
-  uint32_t m_exif_item_data_size = 0;
+  uint32_t m_exif_data_size = 0;
   uint64_t m_xmp_item_data_offset = 0;
-  uint32_t m_xmp_item_data_size = 0;
+  uint32_t m_xmp_data_size = 0;
 };
 
 #endif

@@ -435,7 +435,7 @@ public:
 
   int peek_bits(int n);
 
-  void skip_bytes(int nBytes);
+  void skip_bytes(uint32_t nBytes);
 
   void skip_bits(int n);
 
