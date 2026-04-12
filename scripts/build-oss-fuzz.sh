@@ -222,7 +222,7 @@ ninja -C build
 ninja -C build install
 
 echo ""
-echo "=== Building libwebp ==="
+echo "=== Building libwebp (for sharpyuv) ==="
 mkdir -p "$WORK/libwebp/build"
 cd "$WORK/libwebp/build"
 cmake -G Ninja \
