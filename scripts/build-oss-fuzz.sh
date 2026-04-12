@@ -40,7 +40,6 @@ apt-get install -y \
 		build-essential \
 		cmake \
 		libbrotli-dev \
-		libjpeg-dev \
 		libtool \
 		make \
 		mercurial \
@@ -52,6 +51,12 @@ apt-get install -y \
 		zlib1g-dev
 
 # Install and build codec dependencies.
+
+git clone \
+		--depth 1 \
+		--branch main \
+		https://github.com/libjpeg-turbo/libjpeg-turbo.git \
+		"$WORK/libjpeg-turbo"
 
 git clone \
 		--depth 1 \
@@ -126,6 +131,19 @@ git clone \
 
 export DEPS_PATH="$SRC/deps"
 mkdir -p "$DEPS_PATH"
+
+mkdir -p "$WORK/libjpeg-turbo/build"
+cd "$WORK/libjpeg-turbo/build"
+cmake -G "Unix Makefiles" \
+	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
+	-DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+	-DCMAKE_INSTALL_PREFIX="$DEPS_PATH" \
+	-DENABLE_SHARED=OFF \
+	-DENABLE_STATIC=ON \
+	-DWITH_TURBOJPEG=OFF \
+	..
+make -j"$(nproc)"
+make install
 
 if [ -d "$WORK/x265/.git" ]; then
 	mv "$WORK/x265/.git" "$WORK/x265/.git-unused"
