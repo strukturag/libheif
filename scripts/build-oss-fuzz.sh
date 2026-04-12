@@ -144,6 +144,7 @@ cmake -G "Unix Makefiles" \
 	-DENABLE_SHARED=OFF \
 	-DENABLE_STATIC=ON \
 	-DWITH_TURBOJPEG=OFF \
+	-DWITH_SIMD=OFF \
 	..
 make -j"$(nproc)"
 make install
