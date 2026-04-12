@@ -3366,14 +3366,23 @@ void Box_ipma::sort_properties(const std::shared_ptr<Box_ipco>& ipco)
 
   for (auto& item : m_entries) {
     size_t nAssoc = item.associations.size();
+    if (nAssoc < 2) {
+      continue;
+    }
 
     // simple Bubble sort as a stable sorting algorithm
 
     for (size_t n = 0; n < nAssoc - 1; n++)
       for (size_t i = 0; i < nAssoc - 1 - n; i++) {
+        uint16_t idx_a = item.associations[i].property_index;
+        uint16_t idx_b = item.associations[i + 1].property_index;
+        if (idx_a == 0 || idx_a > properties.size() ||
+            idx_b == 0 || idx_b > properties.size()) {
+          continue;
+        }
         // If transformative property precedes descriptive property, swap them.
-        if (properties[item.associations[i].property_index - 1]->is_transformative_property() &&
-            !properties[item.associations[i + 1].property_index - 1]->is_transformative_property()) {
+        if (properties[idx_a - 1]->is_transformative_property() &&
+            !properties[idx_b - 1]->is_transformative_property()) {
           std::swap(item.associations[i], item.associations[i+1]);
         }
       }
