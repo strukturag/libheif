@@ -132,6 +132,9 @@ git clone \
 export DEPS_PATH="$SRC/deps"
 mkdir -p "$DEPS_PATH"
 
+
+echo ""
+echo "=== Building libjpeg-turbo ==="
 mkdir -p "$WORK/libjpeg-turbo/build"
 cd "$WORK/libjpeg-turbo/build"
 cmake -G "Unix Makefiles" \
@@ -145,6 +148,8 @@ cmake -G "Unix Makefiles" \
 make -j"$(nproc)"
 make install
 
+echo ""
+echo "=== Building x265 ==="
 if [ -d "$WORK/x265/.git" ]; then
 	mv "$WORK/x265/.git" "$WORK/x265/.git-unused"
 fi
@@ -165,6 +170,8 @@ if [ -d "$WORK/x265/.git-unused" ]; then
 	mv "$WORK/x265/.git-unused" "$WORK/x265/.git"
 fi
 
+echo ""
+echo "=== Building libde265 ==="
 cd "$WORK/libde265"
 cmake -G "Unix Makefiles" \
 	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -180,6 +187,8 @@ make clean
 make -j"$(nproc)"
 make install
 
+echo ""
+echo "=== Building aom ==="
 mkdir -p "$WORK/aom/build/linux"
 cd "$WORK/aom/build/linux"
 cmake -G "Unix Makefiles" \
@@ -199,6 +208,8 @@ make clean
 make -j"$(nproc)"
 make install
 
+echo ""
+echo "=== Building dav1d ==="
 cd "$WORK/dav1d"
 meson build \
 	--default-library=static \
@@ -209,6 +220,8 @@ meson build \
 ninja -C build
 ninja -C build install
 
+echo ""
+echo "=== Building libwebp ==="
 mkdir -p "$WORK/libwebp/build"
 cd "$WORK/libwebp/build"
 cmake -G Ninja \
@@ -221,6 +234,8 @@ cmake -G Ninja \
 ninja sharpyuv
 ninja install
 
+echo ""
+echo "=== Building vvdec ==="
 cd "$WORK/vvdec"
 cmake -B build/release-static \
 	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -235,6 +250,8 @@ cmake -B build/release-static \
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
 
+echo ""
+echo "=== Building vvenc ==="
 cd "$WORK/vvenc"
 cmake -B build/release-static \
 	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -249,6 +266,8 @@ cmake -B build/release-static \
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
 
+echo ""
+echo "=== Building x264 ==="
 cd "$WORK/x264"
 ./configure \
 	--prefix="$DEPS_PATH" \
@@ -259,6 +278,8 @@ cd "$WORK/x264"
 make -j"$(nproc)"
 make install
 
+echo ""
+echo "=== Building SVT-AV1 ==="
 cd "$WORK/svt-av1/Build/linux"
 ./build.sh \
 	release \
@@ -268,10 +289,14 @@ cd "$WORK/svt-av1/Build/linux"
 	prefix="$DEPS_PATH" \
 	install
 
+echo ""
+echo "=== Building openh264 ==="
 cd "$WORK/openh264"
 make -j"$(nproc)" BUILDTYPE=Debug libopenh264.a
 make -j"$(nproc)" BUILDTYPE=Debug PREFIX="$DEPS_PATH" install-static
 
+echo ""
+echo "=== Building openjpeg ==="
 cd "$WORK/openjpeg"
 cmake -G "Unix Makefiles" \
 	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -284,6 +309,8 @@ cmake -G "Unix Makefiles" \
 make -j"$(nproc)"
 make install
 
+echo ""
+echo "=== Building OpenJPH ==="
 cd "$WORK/openjph"
 cmake -G "Unix Makefiles" \
 	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -303,6 +330,8 @@ rm -f "$DEPS_PATH/lib/"*.so.*
 rm -f /usr/lib/*/libjpeg.so
 rm -f /usr/lib/*/libjpeg.so.*
 
+echo ""
+echo "=== Building libheif ==="
 cd "$SRC/libheif"
 mkdir build
 cd build
