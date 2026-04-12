@@ -44,7 +44,7 @@ TEST_CASE("mini")
       0x00, 0x00, 0x00, 0x10, 0x66, 0x74, 0x79, 0x70,
       0x6d, 0x69, 0x66, 0x33, 0x61, 0x76, 0x69, 0x66,
       0x00, 0x00, 0x00, 0x4a, 0x6d, 0x69, 0x6e, 0x69,
-      0x08, 0x18, 0x00, 0xff, 0x01, 0xfe, 0xe0, 0x03,
+      0x08, 0x18, 0x80, 0xff, 0x01, 0xfe, 0x20, 0x03,
       0x40, 0x81, 0x20, 0x00, 0x00, 0x12, 0x00, 0x0a,
       0x09, 0x38, 0x1d, 0xff, 0xff, 0xd8, 0x40, 0x43,
       0x41, 0xa4, 0x32, 0x26, 0x11, 0x90, 0x01, 0x86,
@@ -147,7 +147,7 @@ TEST_CASE("check mini+alpha version")
   Indent indent;
   std::string dumpResult = mini->dump(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
-                        "size: 788   (header size: 8)\n"
+                        "size: 1923   (header size: 8)\n"
                         "version: 0\n"
                         "explicit_codec_types_flag: 0\n"
                         "float_flag: 0\n"
@@ -170,8 +170,8 @@ TEST_CASE("check mini+alpha version")
                         "alpha_item_code_config size: 4\n"
                         "main_item_code_config size: 4\n"
                         "icc_data size: 672\n"
-                        "alpha_item_data offset: 717, size: 34\n"
-                        "main_item_data offset: 751, size: 53\n");
+                        "alpha_item_data offset: 717, size: 219\n"
+                        "main_item_data offset: 936, size: 1003\n");
 }
 
 TEST_CASE("check mini+exif+xmp version")
@@ -199,7 +199,7 @@ TEST_CASE("check mini+exif+xmp version")
   Indent indent;
   std::string dumpResult = mini->dump(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
-                        "size: 4388   (header size: 8)\n"
+                        "size: 6294   (header size: 8)\n"
                         "version: 0\n"
                         "explicit_codec_types_flag: 0\n"
                         "float_flag: 0\n"
@@ -220,9 +220,9 @@ TEST_CASE("check mini+exif+xmp version")
                         "matrix_coefficients: 6\n"
                         "main_item_code_config size: 4\n"
                         "icc_data size: 672\n"
-                        "main_item_data offset: 717, size: 53\n"
-                        "exif_data offset: 770, size: 208\n"
-                        "xmp_data offset: 978, size: 3426\n");
+                        "main_item_data offset: 717, size: 1003\n"
+                        "exif_data offset: 1720, size: 314\n"
+                        "xmp_data offset: 2034, size: 4276\n");
 }
 
 
@@ -241,13 +241,13 @@ TEST_CASE("check heif mini")
   REQUIRE(mini->get_colour_primaries() == 1);
   REQUIRE(mini->get_transfer_characteristics() == 13);
   REQUIRE(mini->get_matrix_coefficients() == 6);
-  REQUIRE(mini->get_width() == 128);
-  REQUIRE(mini->get_height() == 128);
-  REQUIRE(mini->get_main_item_codec_config().size() == 112);
+  REQUIRE(mini->get_width() == 256);
+  REQUIRE(mini->get_height() == 256);
+  REQUIRE(mini->get_main_item_codec_config().size() == 113);
   Indent indent;
   std::string dumpResult = mini->dump(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
-                        "size: 4710   (header size: 8)\n"
+                        "size: 19229   (header size: 8)\n"
                         "version: 0\n"
                         "explicit_codec_types_flag: 0\n"
                         "float_flag: 0\n"
@@ -260,15 +260,15 @@ TEST_CASE("check heif mini")
                         "xmp_flag: 0\n"
                         "chroma_subsampling: 1\n"
                         "orientation: 1\n"
-                        "width: 128\n"
-                        "height: 128\n"
+                        "width: 256\n"
+                        "height: 256\n"
                         "chroma_is_horizontally_centered: 0\n"
                         "chroma_is_vertically_centered: 0\n"
                         "bit_depth: 8\n"
                         "colour_primaries: 1\n"
                         "transfer_characteristics: 13\n"
                         "matrix_coefficients: 6\n"
-                        "main_item_code_config size: 112\n"
-                        "main_item_data offset: 144, size: 4582\n");
+                        "main_item_code_config size: 113\n"
+                        "main_item_data offset: 147, size: 19098\n");
 }
 
