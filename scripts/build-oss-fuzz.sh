@@ -248,7 +248,7 @@ cmake -B build/release-static \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=TRUE \
 	-DVVDEC_ENABLE_WERROR=OFF \
 	-DVVDEC_LIBRARY_ONLY=ON \
-	-DVVDEC_OPT_TARGET_ARCH=SCALAR \
+	-DVVDEC_ENABLE_X86_SIMD=OFF \
 	.
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
@@ -265,7 +265,7 @@ cmake -B build/release-static \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=TRUE \
 	-DVVENC_ENABLE_WERROR=OFF \
 	-DVVENC_LIBRARY_ONLY=ON \
-	-DVVENC_OPT_TARGET_ARCH=SCALAR \
+	-DVVENC_ENABLE_X86_SIMD=OFF \
 	.
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
