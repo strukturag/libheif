@@ -287,6 +287,7 @@ cd "$WORK/svt-av1/Build/linux"
 	static \
 	no-apps \
 	disable-lto \
+	c-only \
 	prefix="$DEPS_PATH" \
 	install
 
