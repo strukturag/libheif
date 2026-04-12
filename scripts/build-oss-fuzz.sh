@@ -217,7 +217,8 @@ meson build \
 	--buildtype release \
 	--prefix "$DEPS_PATH" \
 	-D enable_tools=false \
-	-D enable_tests=false
+	-D enable_tests=false \
+	-D enable_asm=false
 ninja -C build
 ninja -C build install
 
@@ -247,6 +248,7 @@ cmake -B build/release-static \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=TRUE \
 	-DVVDEC_ENABLE_WERROR=OFF \
 	-DVVDEC_LIBRARY_ONLY=ON \
+	-DVVDEC_OPT_TARGET_ARCH=SCALAR \
 	.
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
@@ -263,6 +265,7 @@ cmake -B build/release-static \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=TRUE \
 	-DVVENC_ENABLE_WERROR=OFF \
 	-DVVENC_LIBRARY_ONLY=ON \
+	-DVVENC_OPT_TARGET_ARCH=SCALAR \
 	.
 cmake --build build/release-static -j"$(nproc)"
 cmake --build build/release-static --target install
@@ -294,8 +297,8 @@ cd "$WORK/svt-av1/Build/linux"
 echo ""
 echo "=== Building openh264 ==="
 cd "$WORK/openh264"
-make -j"$(nproc)" BUILDTYPE=Debug libopenh264.a
-make -j"$(nproc)" BUILDTYPE=Debug PREFIX="$DEPS_PATH" install-static
+make -j"$(nproc)" BUILDTYPE=Debug ENABLEASM=No libopenh264.a
+make -j"$(nproc)" BUILDTYPE=Debug ENABLEASM=No PREFIX="$DEPS_PATH" install-static
 
 echo ""
 echo "=== Building openjpeg ==="
