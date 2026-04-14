@@ -233,9 +233,14 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
   uint8_t** row_pointers = new png_bytep[height];
   assert(row_pointers != NULL);
 
-  for (uint32_t y = 0; y < height; y++) {
-    row_pointers[y] = (png_bytep) malloc(png_get_rowbytes(png_ptr, info_ptr));
-    assert(row_pointers[y] != NULL);
+  size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+  // make it 16 bytes aligned
+  if(rowbytes % 16 != 0)
+    rowbytes += 16 - (rowbytes % 16);
+  row_pointers[0] = (png_bytep)malloc(rowbytes * height);
+  assert(row_pointers[0] != NULL);
+  for (uint32_t y = 1; y < height; y++) {
+    row_pointers[y] = row_pointers[0] + rowbytes * y;
   } // for
 
   /* Now it's time to read the image.  One of these methods is REQUIRED */
@@ -553,9 +558,7 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
   }
 
   free(profile_data);
-  for (uint32_t y = 0; y < height; y++) {
-    free(row_pointers[y]);
-  } // for
+  free(row_pointers[0]);
 
   delete[] row_pointers;
   fclose(fh);
