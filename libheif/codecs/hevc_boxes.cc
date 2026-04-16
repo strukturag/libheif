@@ -184,7 +184,7 @@ bool HEVCDecoderConfigurationRecord::get_general_profile_compatibility_flag(int 
 }
 
 
-bool HEVCDecoderConfigurationRecord::is_profile_compatibile(Profile profile) const
+bool HEVCDecoderConfigurationRecord::is_profile_compatible(Profile profile) const
 {
   return (general_profile_idc == profile ||
           get_general_profile_compatibility_flag(profile));

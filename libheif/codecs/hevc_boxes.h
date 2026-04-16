@@ -83,7 +83,7 @@ struct HEVCDecoderConfigurationRecord
 
   bool get_general_profile_compatibility_flag(int idx) const;
 
-  bool is_profile_compatibile(Profile) const;
+  bool is_profile_compatible(Profile) const;
 };
 
 

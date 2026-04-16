@@ -690,8 +690,8 @@ heif_brand2 Track_Visual::get_compatible_brand() const
       if (!hvcC) { return 0; }
 
       const auto& config = hvcC->get_configuration();
-      if (config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_Main) ||
-          config.is_profile_compatibile(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
+      if (config.is_profile_compatible(HEVCDecoderConfigurationRecord::Profile_Main) ||
+          config.is_profile_compatible(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
         return heif_brand2_hevc;
       }
       else {
