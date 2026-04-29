@@ -43,12 +43,16 @@ apt-get install -y \
 		libtool \
 		make \
 		mercurial \
-		meson \
 		nasm \
 		ninja-build \
 		pkg-config \
+		python3-pip \
 		yasm \
 		zlib1g-dev
+
+# The meson packaged for Ubuntu 20.04 (OSS-Fuzz base image) is too old for
+# recent dav1d (requires >= 0.54.0), so install a current version via pip.
+pip3 install --upgrade meson
 
 # Install and build codec dependencies.
 
