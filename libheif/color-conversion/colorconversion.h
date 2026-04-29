@@ -49,7 +49,8 @@ struct ColorState
   int bits_per_pixel_filter_array = 0;
 
   // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values
-  // if the colorspace is heif_colorspace_YCbCr. Otherwise, the values should preferably be 'unspecified'.
+  // if the colorspace is heif_colorspace_YCbCr. 'unspecified' should not be used. Copy it from input
+  // state, if not relevant.
   nclx_profile nclx;
 
   ColorState() = default;
