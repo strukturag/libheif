@@ -52,6 +52,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGBA;
   output_state.has_alpha = true;
   output_state.bits_per_pixel = 8;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -61,6 +62,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGB;
   output_state.has_alpha = false;
   output_state.bits_per_pixel = 8;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -179,6 +181,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -190,6 +193,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
   output_state.has_alpha = true;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -321,6 +325,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -332,6 +337,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
   output_state.has_alpha = true;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -453,6 +459,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
   output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -570,6 +577,7 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
   output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -678,6 +686,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -698,6 +707,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
     output_state.has_alpha = true;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
