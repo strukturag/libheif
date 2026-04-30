@@ -68,45 +68,26 @@ Op_tonemapping_hdr_to_sdr_planes<Pixel>::state_after_conversion(const ColorState
   // --- output bit depth = 8
 
   output_state = input_state;
-  output_state.bits_per_pixel = is8bit ? 8 : target_state.bits_per_pixel;
-  if (is8bit) {
-    output_state.alpha_bits_per_pixel = 8;
-    output_state.chroma = heif_chroma_interleaved_RGBA;
-  }
-  else {
-    output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
-    output_state.chroma = heif_chroma_interleaved_RRGGBBAA_LE;
-  }
-  output_state.nclx.m_transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
-  output_state.nclx.m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
+  for (bool alpha : {false, true}) {
+    for (heif_transfer_characteristics transfer_characteristics : {heif_transfer_characteristic_IEC_61966_2_1, heif_transfer_characteristic_linear}) {
+      for (bool full_range : {false, true}) {
+        output_state.bits_per_pixel = is8bit ? 8 : target_state.bits_per_pixel;
+        if (is8bit) {
+          output_state.alpha_bits_per_pixel = 8;
+          output_state.chroma = alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB;
+        }
+        else {
+          output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+          output_state.chroma = alpha ? heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE;
+        }
+        output_state.nclx.m_transfer_characteristics = transfer_characteristics;
+        output_state.nclx.m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
+        output_state.nclx.m_full_range_flag = full_range;
 
-  states.emplace_back(output_state, SpeedCosts_Slow, true);
-  // with and without alpha, linear and gamma color space
-  if (is8bit) {
-    output_state.chroma = heif_chroma_interleaved_RGB;
-    output_state.alpha_bits_per_pixel = 0;
+        states.emplace_back(output_state, SpeedCosts_Slow, true);
+      }
+    }
   }
-  else {
-    output_state.chroma = heif_chroma_interleaved_RRGGBB_LE;
-    output_state.alpha_bits_per_pixel = 0;
-  }
-
-  states.emplace_back(output_state, SpeedCosts_Slow, true);
-
-  output_state.nclx.m_transfer_characteristics = heif_transfer_characteristic_linear;
-
-  states.emplace_back(output_state, SpeedCosts_Slow, true);
-
-  if (is8bit) {
-    output_state.alpha_bits_per_pixel = 8;
-    output_state.chroma = heif_chroma_interleaved_RGBA;
-  }
-  else {
-    output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
-    output_state.chroma = heif_chroma_interleaved_RRGGBBAA_LE;
-  }
-
-  states.emplace_back(output_state, SpeedCosts_Slow, true);
   return states;
 }
 
@@ -123,10 +104,19 @@ Op_tonemapping_hdr_to_sdr_planes<uint8_t>::convert_colorspace(const std::shared_
                                      const heif_security_limits* limits) const
 {
   std::vector<float> HDR_LUT;
+  float target_range_bias = (float)(target_state.nclx.get_full_range_flag() ? 1 : 1 << (target_state.bits_per_pixel - 4));
+  float target_range_scale = (float)(target_state.nclx.get_full_range_flag() ? (1 << target_state.bits_per_pixel) : 219 << (target_state.bits_per_pixel - 8));
   HDR_LUT.resize(1 << input_state.bits_per_pixel);
   for (uint16_t x = 0; x != HDR_LUT.size(); x++) {
-    // TODO: limited range
-    float E = ldexpf((float)x, -input_state.bits_per_pixel); // 0-1 PQ/HLG value
+    float E;
+    if (input_state.nclx.get_full_range_flag()) {
+      // full range
+      E = ldexpf((float)x, -input_state.bits_per_pixel); // 0-1 PQ/HLG value
+    }
+    else { // limited range
+      E = (float)(x - (1 << (input_state.bits_per_pixel - 4))) / (float)(219 << (input_state.bits_per_pixel - 8));
+      E = fminf(fmaxf(E, 0.0f), 1.0f);
+    }
     switch (input_state.nclx.m_transfer_characteristics) {
     case heif_transfer_characteristic_ITU_R_BT_2100_0_PQ:
       E = PQ_EOTF(E);
@@ -245,21 +235,21 @@ Op_tonemapping_hdr_to_sdr_planes<uint8_t>::convert_colorspace(const std::shared_
         blue = sRGB_inv_EOTF(blue);
       } // heif_transfer_characteristic_linear will preserve linear values and clip
       if (want_alpha) {
-        p_out[y * stride_out + 4 * x] = clip_f_u8(red * 255.0f);
-        p_out[y * stride_out + 4 * x + 1] = clip_f_u8(green * 255.0f);
-        p_out[y * stride_out + 4 * x + 2] = clip_f_u8(blue * 255.0f);
+        p_out[y * stride_out + 4 * x] = clip_f_u8(fmaf(red, target_range_scale, target_range_bias));
+        p_out[y * stride_out + 4 * x + 1] = clip_f_u8(fmaf(green, target_range_scale, target_range_bias));
+        p_out[y * stride_out + 4 * x + 2] = clip_f_u8(fmaf(blue, target_range_scale, target_range_bias));
         if (has_alpha) {
           uint16_t in = p_in[3][y * stride_in + x];
-          p_out[y * stride_out + 4 * x + 3] = in >> shift_alpha;
+          p_out[y * stride_out + 4 * x + 3] = in >> shift_alpha; // TODO: full-range/limited-range
         }
         else {
-          p_out[y * stride_out + 4 * x + 3] = 0xFF;
+          p_out[y * stride_out + 4 * x + 3] = 255; // TODO: full-range/limited-range
         }
       }
       else {
-        p_out[y * stride_out + 3 * x] = clip_f_u8(red * 255.0f);
-        p_out[y * stride_out + 3 * x + 1] = clip_f_u8(green * 255.0f);
-        p_out[y * stride_out + 3 * x + 2] = clip_f_u8(blue * 255.0f);
+        p_out[y * stride_out + 3 * x] = clip_f_u8(fmaf(red, target_range_scale, target_range_bias));
+        p_out[y * stride_out + 3 * x + 1] = clip_f_u8(fmaf(green, target_range_scale, target_range_bias));
+        p_out[y * stride_out + 3 * x + 2] = clip_f_u8(fmaf(blue, target_range_scale, target_range_bias));
       }
     }
   }
@@ -278,10 +268,19 @@ Op_tonemapping_hdr_to_sdr_planes<uint16_t>::convert_colorspace(const std::shared
   const heif_security_limits* limits) const
 {
   std::vector<float> HDR_LUT;
+  float target_range_bias = (float)(target_state.nclx.get_full_range_flag() ? 1 : 1 << (target_state.bits_per_pixel - 4));
+  float target_range_scale = (float)(target_state.nclx.get_full_range_flag() ? (1 << target_state.bits_per_pixel) : 219 << (target_state.bits_per_pixel - 8));
   HDR_LUT.resize(1 << input_state.bits_per_pixel);
   for (uint16_t x = 0; x != HDR_LUT.size(); x++) {
-    // TODO: limited range
-    float E = ldexpf((float)x, -input_state.bits_per_pixel); // 0-1 PQ/HLG value
+    float E;
+    if (input_state.nclx.get_full_range_flag()) {
+      // full range
+      E = ldexpf((float)x, -input_state.bits_per_pixel); // 0-1 PQ/HLG value
+    }
+    else { // limited range
+      E = (float)(x - (1 << (input_state.bits_per_pixel - 4))) / (float)(219 << (input_state.bits_per_pixel - 8));
+      E = fminf(fmaxf(E, 0.0f), 1.0f);
+    }
     switch (input_state.nclx.m_transfer_characteristics) {
     case heif_transfer_characteristic_ITU_R_BT_2100_0_PQ:
       E = PQ_EOTF(E);
@@ -369,7 +368,6 @@ Op_tonemapping_hdr_to_sdr_planes<uint16_t>::convert_colorspace(const std::shared
   p_out = outimg->get_channel<uint16_t>(heif_channel_interleaved, &stride_out);
 
   int out_scale = (1 << target_state.bits_per_pixel) - 1;
-  float out_scale_f = (float)out_scale;
 
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
@@ -402,9 +400,9 @@ Op_tonemapping_hdr_to_sdr_planes<uint16_t>::convert_colorspace(const std::shared
         blue = sRGB_inv_EOTF(blue);
       } // heif_transfer_characteristic_linear will preserve linear values and clip
       if (want_alpha) {
-        p_out[y * stride_out + 4 * x] = clip_f_u16(red * out_scale_f, out_scale);
-        p_out[y * stride_out + 4 * x + 1] = clip_f_u16(green * out_scale_f, out_scale);
-        p_out[y * stride_out + 4 * x + 2] = clip_f_u16(blue * out_scale_f, out_scale);
+        p_out[y * stride_out + 4 * x] = clip_f_u16(fmaf(red, target_range_scale, target_range_bias), out_scale);
+        p_out[y * stride_out + 4 * x + 1] = clip_f_u16(fmaf(green, target_range_scale, target_range_bias), out_scale);
+        p_out[y * stride_out + 4 * x + 2] = clip_f_u16(fmaf(blue, target_range_scale, target_range_bias), out_scale);
         if (has_alpha) {
           uint16_t in = p_in[3][y * stride_in + x];
           if(shift_alpha >= 0)
@@ -417,9 +415,9 @@ Op_tonemapping_hdr_to_sdr_planes<uint16_t>::convert_colorspace(const std::shared
         }
       }
       else {
-        p_out[y * stride_out + 3 * x] = clip_f_u16(red * out_scale_f, out_scale);
-        p_out[y * stride_out + 3 * x + 1] = clip_f_u16(green * out_scale_f, out_scale);
-        p_out[y * stride_out + 3 * x + 2] = clip_f_u16(blue * out_scale_f, out_scale);
+        p_out[y * stride_out + 3 * x] = clip_f_u16(fmaf(red, target_range_scale, target_range_bias), out_scale);
+        p_out[y * stride_out + 3 * x + 1] = clip_f_u16(fmaf(green, target_range_scale, target_range_bias), out_scale);
+        p_out[y * stride_out + 3 * x + 2] = clip_f_u16(fmaf(blue, target_range_scale, target_range_bias), out_scale);
       }
     }
   }

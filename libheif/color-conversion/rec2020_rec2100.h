@@ -31,7 +31,7 @@ inline float PQ_EOTF(float E) {
 	constexpr float m2_rcp = 32.0f / 2523.0f;
 	constexpr float m1_rcp = 8192.0f / 1305.0f;
 	float EM = powf(E, m2_rcp);
-	float Y = powf(fmaxf(EM - c1, 0.0f) / (c2 - c3 * EM), m1_rcp);
+	float Y = powf(fmaxf(EM - c1, 0.0f) / fmaf(-c3, EM, c2), m1_rcp);
 	return Y;
 }
 
@@ -43,7 +43,7 @@ inline float PQ_inv_EOTF(float Y) {
 	constexpr float m2 = 2523.0f / 32.0f;
 	constexpr float m1 = 1305.0f / 8192.0f;
 	float YM = powf(Y, m1);
-	return powf((c1 + c2 * YM) / (c3 * YM + 1.0f), m2);
+	return powf(fmaf(c2, YM, c1) / fmaf(c3, YM, 1.0f), m2);
 }
 
 inline float HLG_OETF(float E) {
@@ -59,7 +59,7 @@ inline float HLG_OETF(float E) {
 		constexpr float a = 0.17883277f;
 		constexpr float b = 1.0f - 4.0f * a;
 		constexpr float c = 0.55991073f; // 0.5f - a * logf(4.0f * a);
-		return a * logf(12.0 * E - b) + c;
+		return a * logf(fmaf(12.0f, E, -b)) + c;
 	}
 }
 
