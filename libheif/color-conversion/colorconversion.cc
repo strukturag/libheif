@@ -40,6 +40,7 @@
 #include "hdr_sdr.h"
 #include "chroma_sampling.h"
 #include "bayer_bilinear.h"
+#include "tonemapping_hdr_sdr.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 
@@ -171,6 +172,9 @@ bool ColorState::operator==(const ColorState& b) const
       return false;
     }
   }
+  else if (colorspace == heif_colorspace_RGB) {
+    return nclx.equal_except_matrix_coefficients(b.nclx); // The examples are setting matrix coefficients even if it should be RGB (0)
+  }
 
   return true;
 }
@@ -184,13 +188,17 @@ struct Node
        const std::shared_ptr<ColorConversionOperation>& _op,
       //const ColorState& _input_state,
        const ColorState& _output_state,
-       int _speed_cost)
+       int _speed_cost,
+       bool _lossy = false)
   {
     prev_processed_idx = prev;
     op = _op;
     //input_state = _input_state;
     output_state = _output_state;
     speed_costs = _speed_cost;
+    lossy = _lossy;
+    if (lossy)
+      speed_costs += 50; // Avoid lossy tone mapping
   }
 
   int prev_processed_idx = -1;
@@ -198,6 +206,7 @@ struct Node
   //ColorState input_state;
   ColorState output_state;
   int speed_costs;
+  bool lossy;
 };
 
 std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
@@ -210,7 +219,7 @@ std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
     ostr << " alpha_bpp=" << state.get_alpha_bits_per_pixel();
   }
 
-  if (state.colorspace == heif_colorspace_YCbCr) {
+  if (state.colorspace == heif_colorspace_YCbCr || state.colorspace == heif_colorspace_RGB) {
     ostr << " matrix-coefficients=" << state.nclx.get_matrix_coefficients()
          << " colour-primaries=" << state.nclx.get_colour_primaries()
          << " transfer-characteristics=" << state.nclx.get_transfer_characteristics()
@@ -267,6 +276,8 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint8_t>>());
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint16_t>>());
   ops.emplace_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr_planes<uint8_t>>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr_planes<uint16_t>>());
 }
 
 
@@ -282,6 +293,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
                                                  const heif_color_conversion_options_ext& options_ext)
 {
   m_conversion_steps.clear();
+  m_tonemapping_remove_icc = false;
 
   m_options = options;
   m_options_ext = options_ext;
@@ -348,6 +360,8 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
       while (idx > 0) {
         m_conversion_steps[len - 1 - step].operation = processed_states[idx].op;
         m_conversion_steps[len - 1 - step].output_state = processed_states[idx].output_state;
+        if (processed_states[idx].lossy)
+          m_tonemapping_remove_icc = true;
         if (step > 0) {
           m_conversion_steps[len - step].input_state = m_conversion_steps[len - 1 - step].output_state;
         }
@@ -421,11 +435,13 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
         if (!state_exists) {
           ColorStateWithCost s = out_state;
           s.speed_costs = s.speed_costs + processed_states.back().speed_costs;
+          s.lossy = s.lossy || processed_states.back().lossy;
 
           border_states.emplace_back((int) (processed_states.size() - 1),
                                      op_ptr,
                                      s.color_state,
-                                     s.speed_costs);
+                                     s.speed_costs,
+                                     s.lossy);
         }
       }
     }
@@ -473,7 +489,12 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
 
     // overwrite color profile nclx from color conversion
     out->set_color_profile_nclx(step.output_state.nclx);
-
+    // remove icc after lossy tone mapping
+    if (m_tonemapping_remove_icc) {
+      out->set_color_profile_icc(nullptr);
+      out->set_clli({ 0, 0 });
+      out->unset_mdcv();
+    }
 
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {

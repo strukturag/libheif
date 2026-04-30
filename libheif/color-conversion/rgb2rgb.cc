@@ -97,7 +97,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
-                 want_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
+                 want_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB);
 
   if (auto err = outimg->add_channel(heif_channel_interleaved, width, height, 8, limits)) {
     return err;
