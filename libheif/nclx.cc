@@ -381,6 +381,14 @@ bool nclx_profile::equal_except_transfer_curve(const nclx_profile& b) const
 }
 
 
+bool nclx_profile::equal_except_matrix_coefficients(const nclx_profile& b) const
+{
+  return (m_transfer_characteristics == b.m_transfer_characteristics &&
+    m_colour_primaries == b.m_colour_primaries &&
+    m_full_range_flag == b.m_full_range_flag);
+}
+
+
 Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   StreamReader::grow_status status;
