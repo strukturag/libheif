@@ -68,11 +68,12 @@ enum SpeedCosts
 
 struct ColorStateWithCost
 {
-  ColorStateWithCost(ColorState c, int s) : color_state(std::move(c)), speed_costs(s) {}
+  ColorStateWithCost(ColorState c, int s, bool lossy = false) : color_state(std::move(c)), speed_costs(s), lossy(lossy) {}
 
   ColorState color_state;
 
   int speed_costs;
+  bool lossy;
 };
 
 
@@ -132,6 +133,7 @@ private:
 
   heif_color_conversion_options m_options;
   heif_color_conversion_options_ext m_options_ext;
+  bool m_tonemapping_remove_icc;
 };
 
 
