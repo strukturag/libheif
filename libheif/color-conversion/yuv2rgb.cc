@@ -49,6 +49,13 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   }
 
   heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
   // This is a linear transform, cannot handle nonlinear transforms
   if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
     return {};
@@ -324,12 +331,19 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
   }
 
   heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
   // This is a linear transform, cannot handle nonlinear transforms
   if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
-      return {};
+    return {};
   // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
   if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
-      return {};
+    return {};
   }
   if (!input_state.nclx.get_full_range_flag()) {
     return {};
@@ -466,6 +480,13 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
   }
 
   heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
   // This is a linear transform, cannot handle nonlinear transforms
   if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
       return {};
@@ -606,12 +627,19 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   }
 
   heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
   // This is a linear transform, cannot handle nonlinear transforms
   if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
-      return {};
+    return {};
   // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
   if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
-      return {};
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
