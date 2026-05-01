@@ -496,6 +496,7 @@ Error RegionGeometry_InlineMask::parse(const std::vector<uint8_t>& data,
 
   mask_data.resize(bytes_for_mask);
   std::copy(data.begin() + *dataOffset, data.begin() + *dataOffset + static_cast<ptrdiff_t>(bytes_for_mask), mask_data.begin());
+  *dataOffset += static_cast<unsigned int>(bytes_for_mask);
   return Error::Ok;
 }
 
