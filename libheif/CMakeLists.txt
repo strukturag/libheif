@@ -183,6 +183,8 @@ set(libheif_sources
         color-conversion/bayer_bilinear.h
         color-conversion/tonemapping_hdr_sdr.cc
         color-conversion/tonemapping_hdr_sdr.h
+        color-conversion/tonemapping_hdr_hdr.cc
+        color-conversion/tonemapping_hdr_hdr.h
         sequences/seq_boxes.h
         sequences/seq_boxes.cc
         sequences/chunk.h
