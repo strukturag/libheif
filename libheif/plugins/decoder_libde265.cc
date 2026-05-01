@@ -45,7 +45,7 @@ static const int LIBDE265_PLUGIN_PRIORITY = 100;
 #define MAX_PLUGIN_NAME_LENGTH 80
 
 static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
-
+static std::string version_prefix = ", version ";
 
 static const char* libde265_plugin_name()
 {
@@ -53,8 +53,8 @@ static const char* libde265_plugin_name()
 
   const char* libde265_version = de265_get_version();
 
-  if (strlen(libde265_version) + 10 < MAX_PLUGIN_NAME_LENGTH) {
-    strcat(plugin_name, ", version ");
+  if (strlen(plugin_name) + strlen(libde265_version) + version_prefix.length() + 1 < MAX_PLUGIN_NAME_LENGTH) {
+    strcat(plugin_name, version_prefix.c_str());
     strcat(plugin_name, libde265_version);
   }
 
