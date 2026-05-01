@@ -304,7 +304,7 @@ static heif_error get_next_image_from_decoder(aom_decoder* decoder,
     int bytes_per_pixel = (bpp + 7) / 8;
 
     for (int y = 0; y < h; y++) {
-      memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
+      memcpy(dst_mem + y * dst_stride, data + y * stride, static_cast<size_t>(w) * bytes_per_pixel);
     }
   }
 

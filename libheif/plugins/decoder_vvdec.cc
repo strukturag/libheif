@@ -377,7 +377,7 @@ heif_error vvdec_decode_next_image2(void* decoder_raw, heif_image** out_img,
     int bytes_per_pixel = (bpp + 7) / 8;
 
     for (int y = 0; y < h; y++) {
-      memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
+      memcpy(dst_mem + y * dst_stride, data + y * stride, static_cast<size_t>(w) * bytes_per_pixel);
     }
 
 #if 0

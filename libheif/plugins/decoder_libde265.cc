@@ -161,7 +161,7 @@ static heif_error convert_libde265_image_to_heif_image(libde265_decoder* decoder
     int bytes_per_pixel = (bpp + 7) / 8;
 
     for (int y = 0; y < h; y++) {
-      memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
+      memcpy(dst_mem + y * dst_stride, data + y * stride, static_cast<size_t>(w) * bytes_per_pixel);
     }
   }
 

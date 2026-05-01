@@ -1158,7 +1158,7 @@ void HeifPixelImage::zero_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t 
     size_t stride = 0;
     uint8_t* data = get_channel_memory(channel, &stride);
     uint32_t bytes_per_pixel = get_storage_bits_per_pixel(channel) / 8;
-    uint32_t width_bytes = cw * bytes_per_pixel;
+    size_t width_bytes = static_cast<size_t>(cw) * bytes_per_pixel;
 
     for (uint32_t y = 0; y < ch; y++) {
       memset(data + cx0 * bytes_per_pixel + (cy0 + y) * stride, 0, width_bytes);

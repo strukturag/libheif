@@ -375,7 +375,7 @@ heif_error dav1d_decode_next_image2(void* decoder_raw, heif_image** out_img,
     const int bytes_per_pixel = (bpp + 7) / 8;
 
     for (uint32_t y = 0; y < h; y++) {
-      memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
+      memcpy(dst_mem + y * dst_stride, data + y * stride, static_cast<size_t>(w) * bytes_per_pixel);
     }
   }
 
