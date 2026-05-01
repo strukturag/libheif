@@ -335,7 +335,7 @@ heif_error aom_push_data2(void* decoder_raw, const void* frame_data, size_t fram
   for (;;) {
     heif_image* img;
     uintptr_t out_user_data;
-    heif_error err = get_next_image_from_decoder(decoder, &iter, &img, &out_user_data, nullptr); // TODO: send limits);
+    heif_error err = get_next_image_from_decoder(decoder, &iter, &img, &out_user_data, heif_get_global_security_limits());
     if (err.code) {
       return err;
     }
