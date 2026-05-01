@@ -27,7 +27,7 @@
 #include <memory>
 
 template<class Pixel>
-class Op_tonemapping_hdr_to_sdr_planes : public ColorConversionOperation
+class Op_tonemapping_hdr_to_sdr : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
