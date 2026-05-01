@@ -41,6 +41,7 @@
 #include "chroma_sampling.h"
 #include "bayer_bilinear.h"
 #include "tonemapping_hdr_sdr.h"
+#include "tonemapping_hdr_hdr.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 
@@ -276,8 +277,11 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint8_t>>());
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint16_t>>());
   ops.emplace_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
-  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr_planes<uint8_t>>());
-  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr_planes<uint16_t>>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr<uint8_t>>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_sdr<uint16_t>>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_hdr>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_constant_luminance_to_hdr>());
+  ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_hdr_constant_luminance>());
 }
 
 
