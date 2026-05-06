@@ -95,7 +95,16 @@ heif_error heif_image_crop(heif_image* img,
     };
   }
 
-  auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, nullptr);
+  if (left < 0 || top < 0 || right < left || bottom < top ||
+      static_cast<uint32_t>(right) >= w || static_cast<uint32_t>(bottom) >= h) {
+    return heif_error{
+      heif_error_Usage_error,
+      heif_suberror_Invalid_parameter_value,
+      "Invalid crop coordinates"
+    };
+  }
+
+  auto cropResult = img->image->crop(left, right, top, bottom, nullptr);
   if (!cropResult) {
     return cropResult.error_struct(img->image.get());
   }
