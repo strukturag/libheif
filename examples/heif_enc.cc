@@ -1042,7 +1042,7 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
       break;
 
     case heif_output_nclx_color_profile_preset_Rec_2020:
-      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance;
+      nclx->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
       nclx->color_primaries = heif_color_primaries_ITU_R_BT_2020_2_and_2100_0;
 
       if (heif_image_has_channel(input_image.get(), heif_channel_Y) &&
