@@ -378,7 +378,15 @@ int main(int argc, char** argv)
 
     uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
     printf("  color profile: %s\n", profileType ? heif_examples::fourcc_to_string(profileType).c_str() : "no");
-
+    
+    heif_color_profile_nclx* nclx = NULL;
+    err = heif_image_handle_get_nclx_color_profile(handle, &nclx);
+    if (err.code == heif_error_Ok && nclx) {
+      printf("    matrix coefficients: %d, transfer characteristics: %d, colour primaries: %d, full range flag: %d\n",
+             nclx->matrix_coefficients, nclx->transfer_characteristics, nclx->color_primaries, nclx->full_range_flag);
+    }
+    if(nclx)
+      heif_nclx_color_profile_free(nclx);
 
     // --- depth information
 
@@ -488,7 +496,14 @@ int main(int argc, char** argv)
     else {
       printf("  none\n");
     }
-
+    
+    heif_content_light_level cll = { 0,0 };
+    if (heif_image_handle_get_content_light_level(handle, &cll)) {
+      if (cll.max_content_light_level > 0 || cll.max_pic_average_light_level > 0) {
+        printf("content light level metadata: MaxCLL=%d MaxFALL=%d\n", cll.max_content_light_level, cll.max_pic_average_light_level);
+      }
+    }
+    
     // --- transforms
 
 #define MAX_PROPERTIES 50
