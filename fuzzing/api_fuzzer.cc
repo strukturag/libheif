@@ -152,12 +152,12 @@ static void TestDepthAux(const struct heif_image_handle* handle)
           heif_image_handle_release(depth_handle);
         }
       }
-    }
 
-    const struct heif_depth_representation_info* depth_info = nullptr;
-    heif_image_handle_get_depth_image_representation_info(handle, 0, &depth_info);
-    if (depth_info) {
-      heif_depth_representation_info_free(depth_info);
+      const struct heif_depth_representation_info* depth_info = nullptr;
+      heif_image_handle_get_depth_image_representation_info(handle, depth_ids[0], &depth_info);
+      if (depth_info) {
+        heif_depth_representation_info_free(depth_info);
+      }
     }
   }
 
@@ -171,7 +171,7 @@ static void TestDepthAux(const struct heif_image_handle* handle)
       if (err.code == heif_error_Ok && aux_handle) {
         const char* aux_type = nullptr;
         heif_image_handle_get_auxiliary_type(aux_handle, &aux_type);
-        if (aux_type) heif_image_handle_free_auxiliary_types(aux_handle, &aux_type);
+        if (aux_type) heif_image_handle_release_auxiliary_type(aux_handle, &aux_type);
 
         struct heif_image* img = nullptr;
         heif_decode_image(aux_handle, &img,
@@ -239,7 +239,7 @@ static void TestEntityGroups(struct heif_context* ctx)
 {
   int num_groups = 0;
   struct heif_entity_group* groups = heif_context_get_entity_groups(ctx, 0, 0, &num_groups);
-  if (groups && num_groups > 0) {
+  if (groups) {
     heif_entity_groups_release(groups, num_groups);
   }
 }
