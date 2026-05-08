@@ -14,3 +14,6 @@ configure_file(encoder_fuzzer_lsan_suppressions.txt ${CMAKE_CURRENT_BINARY_DIR}/
 
 add_executable(file_fuzzer file_fuzzer.cc)
 target_link_libraries(file_fuzzer PRIVATE heif)
+
+add_executable(api_fuzzer api_fuzzer.cc)
+target_link_libraries(api_fuzzer PRIVATE heif)
