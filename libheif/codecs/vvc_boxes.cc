@@ -543,8 +543,15 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
       default: break;                                // mono / 4:4:4
     }
 
-    *width  -= subWidthC  * (left + right);
-    *height -= subHeightC * (top + bottom);
+    const uint64_t crop_w = (uint64_t)subWidthC  * ((uint64_t)left + (uint64_t)right);
+    const uint64_t crop_h = (uint64_t)subHeightC * ((uint64_t)top  + (uint64_t)bottom);
+    if (crop_w > *width || crop_h > *height) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_parameter_value,
+              "SPS conformance window exceeds image dimensions"};
+    }
+    *width  -= (uint32_t)crop_w;
+    *height -= (uint32_t)crop_h;
   }
 
   bool sps_subpic_info_present_flag = reader.get_bits(1);

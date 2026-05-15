@@ -299,8 +299,15 @@ Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
     }
     if (config->chroma_format == 2) { subH = 2; }
 
-    *width -= subH * (left + right);
-    *height -= subV * (top + bottom);
+    const uint64_t crop_w = (uint64_t)subH * ((uint64_t)left + (uint64_t)right);
+    const uint64_t crop_h = (uint64_t)subV * ((uint64_t)top + (uint64_t)bottom);
+    if (crop_w > *width || crop_h > *height) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Invalid_parameter_value,
+                   "SPS conformance window exceeds image dimensions"};
+    }
+    *width  -= (uint32_t)crop_w;
+    *height -= (uint32_t)crop_h;
   }
 
   reader.get_uvlc(&value);
