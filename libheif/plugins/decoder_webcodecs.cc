@@ -269,26 +269,37 @@ Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
 
   // --- SPS continued ---
 
-  uint32_t dummy, value;
-  reader.get_uvlc(&dummy); // skip seq_parameter_seq_id
+  Error invalidUVLC{
+    heif_error_Invalid_input,
+    heif_suberror_Invalid_parameter_value,
+    "Invalid variable length code in HEVC SPS header"
+  };
 
-  reader.get_uvlc(&value);
+  uint32_t dummy, value;
+  if (!reader.get_uvlc(&dummy) || // skip seq_parameter_seq_id
+      !reader.get_uvlc(&value)) {
+    return invalidUVLC;
+  }
   config->chroma_format = (uint8_t) value;
 
   if (config->chroma_format == 3) {
     reader.skip_bits(1);
   }
 
-  reader.get_uvlc(width);
-  reader.get_uvlc(height);
+  if (!reader.get_uvlc(width) ||
+      !reader.get_uvlc(height)) {
+    return invalidUVLC;
+  }
 
   bool conformance_window = reader.get_bits(1);
   if (conformance_window) {
     uint32_t left, right, top, bottom;
-    reader.get_uvlc(&left);
-    reader.get_uvlc(&right);
-    reader.get_uvlc(&top);
-    reader.get_uvlc(&bottom);
+    if (!reader.get_uvlc(&left) ||
+        !reader.get_uvlc(&right) ||
+        !reader.get_uvlc(&top) ||
+        !reader.get_uvlc(&bottom)) {
+      return invalidUVLC;
+    }
 
     //printf("conformance borders: %u %u %u %u\n",left,right,top,bottom);
 
@@ -310,7 +321,9 @@ Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
     *height -= (uint32_t)crop_h;
   }
 
-  reader.get_uvlc(&value);
+  if (!reader.get_uvlc(&value)) {
+    return invalidUVLC;
+  }
   if (value > 8) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Invalid_parameter_value,
@@ -318,7 +331,9 @@ Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
   }
   config->bit_depth_luma = (uint8_t) (value + 8);
 
-  reader.get_uvlc(&value);
+  if (!reader.get_uvlc(&value)) {
+    return invalidUVLC;
+  }
   if (value > 8) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Invalid_parameter_value,

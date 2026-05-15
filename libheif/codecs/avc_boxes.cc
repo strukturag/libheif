@@ -362,14 +362,14 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
   config->AVCLevelIndication = reader.get_bits8(8);
   config->lengthSize = 4;
 
-  uint32_t value;
-  reader.get_uvlc(&value); // SPS ID
-
   Error invalidUVLC{
     heif_error_Invalid_input,
     heif_suberror_Unspecified,
     "Invalid variable length code in AVC SPS header"
   };
+
+  uint32_t value;
+  if (!reader.get_uvlc(&value)) { return invalidUVLC; } // SPS ID
 
   if (std::set<int>{100, 110, 122, 244, 44, 83, 86}.contains(config->AVCProfileIndication)) {
     if (!reader.get_uvlc(&value)) {
@@ -413,31 +413,33 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
     config->bit_depth_chroma = 8;
   }
 
-  reader.get_uvlc(&value); // log2_max_frame_num_minus4
+  if (!reader.get_uvlc(&value)) { return invalidUVLC; } // log2_max_frame_num_minus4
   uint32_t pic_order_cnt_type;
-  reader.get_uvlc(&pic_order_cnt_type);
+  if (!reader.get_uvlc(&pic_order_cnt_type)) { return invalidUVLC; }
   if (pic_order_cnt_type == 0) {
-    reader.get_uvlc(&value);
+    if (!reader.get_uvlc(&value)) { return invalidUVLC; }
   }
   else if (pic_order_cnt_type == 1) {
     reader.get_bits(1);
     int32_t svalue;
-    reader.get_svlc(&svalue);
-    reader.get_svlc(&svalue);
+    if (!reader.get_svlc(&svalue) ||
+        !reader.get_svlc(&svalue)) { return invalidUVLC; }
     uint32_t num_ref_franes_in_pic_order_cnt_cycle;
-    reader.get_uvlc(&num_ref_franes_in_pic_order_cnt_cycle);
+    if (!reader.get_uvlc(&num_ref_franes_in_pic_order_cnt_cycle)) { return invalidUVLC; }
     for (uint32_t i = 0; i < num_ref_franes_in_pic_order_cnt_cycle; i++) {
-      reader.get_uvlc(&value);
+      if (!reader.get_uvlc(&value)) { return invalidUVLC; }
     }
   }
 
-  reader.get_uvlc(&value); // num_ref_frames
+  if (!reader.get_uvlc(&value)) { return invalidUVLC; } // num_ref_frames
   reader.skip_bits(1);
 
   uint32_t pic_width_in_mbs_minus1;
   uint32_t pic_height_in_mbs_minus1;
-  reader.get_uvlc(&pic_width_in_mbs_minus1);
-  reader.get_uvlc(&pic_height_in_mbs_minus1);
+  if (!reader.get_uvlc(&pic_width_in_mbs_minus1) ||
+      !reader.get_uvlc(&pic_height_in_mbs_minus1)) {
+    return invalidUVLC;
+  }
 
   *width = (pic_width_in_mbs_minus1 + 1) * 16;
   *height = (pic_height_in_mbs_minus1 + 1) * 16;
@@ -455,10 +457,12 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
   uint32_t frame_cropping_flag = reader.get_bits(1);
   if (frame_cropping_flag) {
     uint32_t left, right, top, bottom;
-    reader.get_uvlc(&left);
-    reader.get_uvlc(&right);
-    reader.get_uvlc(&top);
-    reader.get_uvlc(&bottom);
+    if (!reader.get_uvlc(&left) ||
+        !reader.get_uvlc(&right) ||
+        !reader.get_uvlc(&top) ||
+        !reader.get_uvlc(&bottom)) {
+      return invalidUVLC;
+    }
 
     *width -= left + right;
     *height -= top + bottom;
