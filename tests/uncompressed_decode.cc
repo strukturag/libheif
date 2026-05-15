@@ -163,6 +163,63 @@ TEST_CASE("check image handle no metadata blocks") {
   heif_context_free(context);
 }
 
+// Regression test for commit 16252dab "unci: allocate tiles with correct size":
+// decoding a single tile of an uncompressed image must use per-tile plane
+// sizes rather than the full-image plane sizes carried in the source
+// component descriptions.
+void check_decode_individual_tiles(heif_context*& context, heif_colorspace colorspace, heif_chroma chroma) {
+  heif_image_handle* handle = get_primary_image_handle(context);
+
+  heif_image_tiling tiling{};
+  heif_error err = heif_image_handle_get_image_tiling(handle, 1, &tiling);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(tiling.num_columns >= 1);
+  REQUIRE(tiling.num_rows >= 1);
+
+  for (uint32_t ty = 0; ty < tiling.num_rows; ty++) {
+    for (uint32_t tx = 0; tx < tiling.num_columns; tx++) {
+      INFO("tile (" << tx << "," << ty << ")");
+      heif_image* tile = nullptr;
+      err = heif_image_handle_decode_image_tile(handle, &tile, colorspace, chroma, nullptr, tx, ty);
+      REQUIRE(err.code == heif_error_Ok);
+      REQUIRE(tile != nullptr);
+
+      int w = heif_image_get_primary_width(tile);
+      int h = heif_image_get_primary_height(tile);
+      REQUIRE(w == (int) tiling.tile_width);
+      REQUIRE(h == (int) tiling.tile_height);
+
+      heif_image_release(tile);
+    }
+  }
+
+  heif_image_handle_release(handle);
+}
+
+TEST_CASE("decode individual tiles RGB") {
+  auto file = GENERATE(FILES);
+  auto context = get_context_for_test_file(file);
+  INFO("file name: " << file);
+  check_decode_individual_tiles(context, heif_colorspace_RGB, heif_chroma_444);
+  heif_context_free(context);
+}
+
+TEST_CASE("decode individual tiles mono") {
+  auto file = GENERATE(MONO_FILES);
+  auto context = get_context_for_test_file(file);
+  INFO("file name: " << file);
+  check_decode_individual_tiles(context, heif_colorspace_monochrome, heif_chroma_monochrome);
+  heif_context_free(context);
+}
+
+TEST_CASE("decode individual tiles YUV") {
+  auto file = GENERATE(YUV_FILES);
+  auto context = get_context_for_test_file(file);
+  INFO("file name: " << file);
+  check_decode_individual_tiles(context, heif_colorspace_YCbCr, heif_chroma_444);
+  heif_context_free(context);
+}
+
 TEST_CASE("check uncompressed is advertised") {
   REQUIRE(heif_have_decoder_for_format(heif_compression_uncompressed));
 }
