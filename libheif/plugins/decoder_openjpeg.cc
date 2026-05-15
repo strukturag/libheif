@@ -22,6 +22,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "decoder_openjpeg.h"
+#include "common_utils.h"
 #include <openjpeg.h>
 #include <cstring>
 
@@ -434,6 +435,20 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "unsupported image format"};
   }
 
+
+  // Validate per-component sizes against the chroma format derived above. A malformed
+  // JPEG 2000 stream may set comp[1].dx/dy consistently with a chroma format yet declare
+  // comp[c].w/h that do not match the subsampled dimensions; using such planes downstream
+  // causes out-of-bounds reads in color conversion (issue #1796).
+  for (size_t c = 0; c < image->numcomps; c++) {
+    uint32_t expected_w, expected_h;
+    get_subsampled_size(static_cast<uint32_t>(width), static_cast<uint32_t>(height),
+                        channels[c], chroma, &expected_w, &expected_h);
+    if (image->comps[c].w != expected_w || image->comps[c].h != expected_h) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified,
+              "JPEG 2000 component size does not match the image's chroma subsampling"};
+    }
+  }
 
   heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
   if (error.code) {

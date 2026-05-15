@@ -731,30 +731,44 @@ uint32_t HeifPixelImage::get_height(uint32_t component_id) const
 
 bool HeifPixelImage::primary_planes_have_size(uint32_t width, uint32_t height) const
 {
-  auto channel_has_size = [&](heif_channel channel) {
+  auto channel_has_size = [&](heif_channel channel, uint32_t w, uint32_t h) {
     // get_width()/get_height() return 0 for an absent channel -> mismatch.
-    return get_width(channel) == width && get_height(channel) == height;
+    return get_width(channel) == w && get_height(channel) == h;
   };
 
   switch (m_colorspace) {
     case heif_colorspace_monochrome:
-    case heif_colorspace_YCbCr:
-      // Cb/Cr may be legitimately subsampled, so only the Y plane is checked.
-      return channel_has_size(heif_channel_Y);
+      return channel_has_size(heif_channel_Y, width, height);
+
+    case heif_colorspace_YCbCr: {
+      // Y has the full size; Cb/Cr are subsampled according to the chroma format.
+      // Downstream color conversion derives chroma plane indices from m_chroma, so
+      // Cb/Cr must actually match those subsampled dimensions (issue #1796).
+      if (!channel_has_size(heif_channel_Y, width, height)) {
+        return false;
+      }
+      if (m_chroma == heif_chroma_monochrome) {
+        return true;
+      }
+      uint32_t chroma_w, chroma_h;
+      get_subsampled_size(width, height, heif_channel_Cb, m_chroma, &chroma_w, &chroma_h);
+      return channel_has_size(heif_channel_Cb, chroma_w, chroma_h) &&
+             channel_has_size(heif_channel_Cr, chroma_w, chroma_h);
+    }
 
     case heif_colorspace_RGB:
       if (m_chroma == heif_chroma_444) {
         // planar RGB: all three planes must be present and have the full size
-        return channel_has_size(heif_channel_R) &&
-               channel_has_size(heif_channel_G) &&
-               channel_has_size(heif_channel_B);
+        return channel_has_size(heif_channel_R, width, height) &&
+               channel_has_size(heif_channel_G, width, height) &&
+               channel_has_size(heif_channel_B, width, height);
       }
       else {
-        return channel_has_size(heif_channel_interleaved);
+        return channel_has_size(heif_channel_interleaved, width, height);
       }
 
     case heif_colorspace_filter_array:
-      return channel_has_size(heif_channel_filter_array);
+      return channel_has_size(heif_channel_filter_array, width, height);
 
     case heif_colorspace_undefined:
     default:
