@@ -254,6 +254,9 @@ const (
 	// Tile-images in a grid image are missing
 	SuberrorMissingGridImages = C.heif_suberror_Missing_grid_images
 
+	// The colr (NCLX) box and the codec bitstream VUI/color signalling disagree.
+	SuberrorNCLXColrVUIMismatch = C.heif_suberror_NCLX_colr_VUI_mismatch
+
 	SuberrorNoAV1CBox = C.heif_suberror_No_av1C_box
 
 	SuberrorNoAVCCBox = C.heif_suberror_No_avcC_box
