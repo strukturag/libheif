@@ -64,6 +64,42 @@ heif_security_limits disabled_security_limits{
 };
 
 
+uint32_t max_coding_unit_size_for_codec(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1:      return 128;  // AV1 max superblock
+    case heif_compression_VVC:      return 128;  // VVC max CTU
+    case heif_compression_HEVC:     return 64;   // HEVC max CTU
+    case heif_compression_AVC:      return 16;   // H.264 macroblock
+    case heif_compression_JPEG:     return 16;   // JPEG MCU (4:2:0)
+    case heif_compression_JPEG2000: return 64;
+    case heif_compression_HTJ2K:    return 64;
+    default:                        return 0;
+  }
+}
+
+
+heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limits* base,
+                                                       uint32_t ispe_width,
+                                                       uint32_t ispe_height,
+                                                       uint32_t coding_unit_size)
+{
+  heif_security_limits result = *base;
+
+  if (ispe_width == 0 || ispe_height == 0) {
+    return result;
+  }
+
+  uint64_t allowed = (static_cast<uint64_t>(ispe_width)  + coding_unit_size) *
+                     (static_cast<uint64_t>(ispe_height) + coding_unit_size);
+
+  if (result.max_image_size_pixels == 0 || allowed < result.max_image_size_pixels) {
+    result.max_image_size_pixels = allowed;
+  }
+  return result;
+}
+
+
 Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height)
 {
   uint64_t maximum_image_size_limit = limits->max_image_size_pixels;

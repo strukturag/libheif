@@ -1011,8 +1011,13 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
 
   m_tile_decoder->set_data_extent(std::move(*extentResult));
 
-  return m_tile_decoder->decode_single_frame_from_compressed_data(options,
-                                                                  get_context()->get_security_limits());
+  uint32_t tw = 0, th = 0;
+  get_tile_size(tw, th);
+  heif_security_limits tightened = tighten_image_size_limit_for_ispe(
+      get_context()->get_security_limits(), tw, th,
+      max_coding_unit_size_for_codec(m_tile_decoder->get_compression_format()));
+
+  return m_tile_decoder->decode_single_frame_from_compressed_data(options, &tightened);
 }
 
 

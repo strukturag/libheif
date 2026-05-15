@@ -1142,8 +1142,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
 
   decoder->set_data_extent(std::move(extent));
 
-  return decoder->decode_single_frame_from_compressed_data(options,
-                                                           get_context()->get_security_limits());
+  // Tighten max_image_size_pixels for this decode so a decoder plugin (e.g.
+  // dav1d) cannot allocate buffers far larger than the ispe-declared size
+  // when the codec bitstream lies about its dimensions.
+  heif_security_limits tightened = tighten_image_size_limit_for_ispe(
+      get_context()->get_security_limits(),
+      get_width(), get_height(),
+      max_coding_unit_size_for_codec(get_compression_format()));
+
+  return decoder->decode_single_frame_from_compressed_data(options, &tightened);
 }
 
 
