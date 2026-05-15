@@ -705,9 +705,19 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   }
 
   reader.get_uvlc(&value);
+  if (value > 8) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS bit_depth_luma_minus8 out of range"};
+  }
   config->bit_depth_luma = (uint8_t) (value + 8);
 
   reader.get_uvlc(&value);
+  if (value > 8) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS bit_depth_chroma_minus8 out of range"};
+  }
   config->bit_depth_chroma = (uint8_t) (value + 8);
 
 
