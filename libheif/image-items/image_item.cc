@@ -1042,10 +1042,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   if (!nclx.is_undefined()) {
     // If the decoder plugin populated an NCLX profile from the bitstream's
     // color signalling (e.g. HEVC SPS VUI, AV1 sequence header), compare it
-    // against the colr box. Per ISO/IEC 14496-12 §12.1.5.1 the colr box
-    // overrides the bitstream, but a mismatch is a strong indication of a
-    // muxer bug (e.g. some Sony cameras mis-tag full_range_flag in colr while
-    // the bitstream VUI is correct) and is worth surfacing as a warning.
+    // against the colr box. Per ISO/IEC 14496-12 and ISO/IEC 23000-22 (MIAF)
+    // the colr box overrides the bitstream, but a mismatch is a strong
+    // indication of a muxer bug (e.g. some Sony cameras mis-tag full_range_flag
+    // in colr while the bitstream VUI is correct, see issue #1770) and is
+    // worth surfacing as a warning.
     auto bitstream_nclx = img->get_color_profile_nclx();
     if (!bitstream_nclx.is_undefined()) {
       auto cicp_mismatch = [](uint16_t bs, uint16_t cr) {
@@ -1066,7 +1067,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
             << bitstream_nclx.m_transfer_characteristics << "/"
             << bitstream_nclx.m_matrix_coefficients << "/"
             << (bitstream_nclx.m_full_range_flag ? "full" : "limited")
-            << "); colr takes precedence per ISO/IEC 14496-12";
+            << "); colr takes precedence per ISO/IEC 14496-12 and ISO/IEC 23000-22 (MIAF)";
         add_decoding_warning({heif_error_Invalid_input,
                               heif_suberror_NCLX_colr_VUI_mismatch,
                               msg.str()});
