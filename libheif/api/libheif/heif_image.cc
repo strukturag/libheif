@@ -84,16 +84,20 @@ heif_error heif_image_crop(heif_image* img,
   uint32_t w = img->image->get_width();
   uint32_t h = img->image->get_height();
 
-  if (w == 0 || w > 0x7FFFFFFF ||
-      h == 0 || h > 0x7FFFFFFF) {
+  // Margins must be non-negative and must not consume the entire image.
+  // Without this check, `left + right >= w` would underflow the unsigned
+  // `w - 1 - right` computation below and cause an OOB read (issue #1746).
+  if (left < 0 || right < 0 || top < 0 || bottom < 0 ||
+      static_cast<int64_t>(left) + right >= w ||
+      static_cast<int64_t>(top) + bottom >= h) {
     return heif_error{
       heif_error_Usage_error,
-      heif_suberror_Invalid_image_size,
-      "Image size exceeds maximum supported size"
+      heif_suberror_Invalid_parameter_value,
+      "Invalid crop margins"
     };
   }
 
-  auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, nullptr);
+  auto cropResult = img->image->crop(left, w - 1 - right, top, h - 1 - bottom, nullptr);
   if (!cropResult) {
     return cropResult.error_struct(img->image.get());
   }

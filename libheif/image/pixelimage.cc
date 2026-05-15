@@ -1452,6 +1452,15 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
   //   Either translate / resample these structures to the crop region, or
   //   return an error when the crop would invalidate them.
 
+  // (left, right, top, bottom) are coordinate endpoints of the kept region.
+  // Reject inverted or out-of-bounds rectangles so the unsigned arithmetic
+  // below cannot underflow into a multi-GB memcpy (issue #1746).
+  if (right < left || bottom < top || right >= m_width || bottom >= m_height) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Invalid crop region"};
+  }
+
   // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before cropping
 
   bool need_conversion = false;

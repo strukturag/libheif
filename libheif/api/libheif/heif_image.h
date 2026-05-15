@@ -232,6 +232,27 @@ int heif_image_get_primary_width(const heif_image* img);
 LIBHEIF_API
 int heif_image_get_primary_height(const heif_image* img);
 
+/**
+ * Crop the image in place by removing margins from each edge.
+ *
+ * The four parameters specify the number of pixels to remove from each side,
+ * not absolute pixel coordinates. For example, to crop a 100x100 image down
+ * to its central 80x80 region, pass `left=10, right=10, top=10, bottom=10`.
+ * Passing all zeros leaves the image unchanged.
+ *
+ * The resulting image has dimensions `(w - left - right) x (h - top - bottom)`,
+ * which must be at least 1x1. All four values must be non-negative and the
+ * sums `left + right` and `top + bottom` must each be strictly less than the
+ * corresponding image dimension; otherwise `heif_error_Usage_error` /
+ * `heif_suberror_Invalid_parameter_value` is returned and the image is left
+ * unchanged.
+ *
+ * @param img    the image to crop (modified in place on success)
+ * @param left   number of pixels to remove from the left edge
+ * @param right  number of pixels to remove from the right edge
+ * @param top    number of pixels to remove from the top edge
+ * @param bottom number of pixels to remove from the bottom edge
+ */
 LIBHEIF_API
 heif_error heif_image_crop(heif_image* img,
                            int left, int right, int top, int bottom);
