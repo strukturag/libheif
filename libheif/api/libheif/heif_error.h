@@ -191,6 +191,10 @@ typedef enum heif_suberror_code
 
   heif_suberror_No_moov_box = 151,
 
+  // The colr (NCLX) box and the codec bitstream VUI/color signalling disagree.
+  // Per ISO/IEC 14496-12 the colr box takes precedence, but the conflict is reported as a warning.
+  heif_suberror_NCLX_colr_VUI_mismatch = 152,
+
   // --- Memory_allocation_error ---
 
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.

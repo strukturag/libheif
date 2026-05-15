@@ -40,6 +40,7 @@
 #include <limits>
 #include <cassert>
 #include <cstring>
+#include <sstream>
 //#include <ranges>
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -1039,6 +1040,38 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   // (non-NCLX) profile later.
   auto nclx = get_color_profile_nclx();
   if (!nclx.is_undefined()) {
+    // If the decoder plugin populated an NCLX profile from the bitstream's
+    // color signalling (e.g. HEVC SPS VUI, AV1 sequence header), compare it
+    // against the colr box. Per ISO/IEC 14496-12 §12.1.5.1 the colr box
+    // overrides the bitstream, but a mismatch is a strong indication of a
+    // muxer bug (e.g. some Sony cameras mis-tag full_range_flag in colr while
+    // the bitstream VUI is correct) and is worth surfacing as a warning.
+    auto bitstream_nclx = img->get_color_profile_nclx();
+    if (!bitstream_nclx.is_undefined()) {
+      auto cicp_mismatch = [](uint16_t bs, uint16_t cr) {
+        return bs != 2 /*unspecified*/ && cr != 2 && bs != cr;
+      };
+      if (cicp_mismatch(bitstream_nclx.m_colour_primaries,        nclx.m_colour_primaries)        ||
+          cicp_mismatch(bitstream_nclx.m_transfer_characteristics, nclx.m_transfer_characteristics) ||
+          cicp_mismatch(bitstream_nclx.m_matrix_coefficients,     nclx.m_matrix_coefficients)     ||
+          bitstream_nclx.m_full_range_flag != nclx.m_full_range_flag) {
+        std::stringstream msg;
+        msg << "colr box NCLX ("
+            << nclx.m_colour_primaries << "/"
+            << nclx.m_transfer_characteristics << "/"
+            << nclx.m_matrix_coefficients << "/"
+            << (nclx.m_full_range_flag ? "full" : "limited")
+            << ") disagrees with bitstream signalling ("
+            << bitstream_nclx.m_colour_primaries << "/"
+            << bitstream_nclx.m_transfer_characteristics << "/"
+            << bitstream_nclx.m_matrix_coefficients << "/"
+            << (bitstream_nclx.m_full_range_flag ? "full" : "limited")
+            << "); colr takes precedence per ISO/IEC 14496-12";
+        add_decoding_warning({heif_error_Invalid_input,
+                              heif_suberror_NCLX_colr_VUI_mismatch,
+                              msg.str()});
+      }
+    }
     img->set_color_profile_nclx(nclx);
   }
 
