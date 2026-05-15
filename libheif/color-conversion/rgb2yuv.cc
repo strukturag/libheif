@@ -58,6 +58,9 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
   if (matrix == 11 || matrix == 14) {
     return {};
   }
+  // TODO: matrix == 10 (BT.2020 CL) currently falls through and is encoded as if it were
+  //   BT.2020 NCL. A correct CL path needs OETF application before deriving Y'C, not the
+  //   linear matrix below.
 
   std::vector<ColorStateWithCost> states;
 

@@ -52,6 +52,8 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   if (matrix == 11 || matrix == 14) {
     return {};
   }
+  // TODO: matrix == 10 (BT.2020 CL) currently falls through and is decoded as if it were
+  //   BT.2020 NCL. A correct CL path needs EOTF inversion on Cb/Cr, not the linear matrix below.
 
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
