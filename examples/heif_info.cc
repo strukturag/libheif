@@ -1064,6 +1064,22 @@ int main(int argc, char** argv)
         std::cout << "  resolution: " << w << "x" << h << "\n";
       }
 
+      uint32_t repetitions = heif_track_get_number_of_repetitions(track);
+      std::cout << "  repetitions: ";
+      if (repetitions == 0) {
+        std::cout << "unsupported editlist\n";
+      }
+      else if (repetitions == heif_sequence_track_number_of_repetitions_infinite) {
+        std::cout << "infinite\n";
+      }
+      else {
+        std::cout << repetitions;
+        if (repetitions == 1) {
+          std::cout << " (single playback)";
+        }
+        std::cout << "\n";
+      }
+
       uint32_t sampleEntryType = heif_track_get_sample_entry_type_of_first_cluster(track);
       std::cout << "  sample entry type: " << heif_examples::fourcc_to_string(sampleEntryType) << "\n";
 

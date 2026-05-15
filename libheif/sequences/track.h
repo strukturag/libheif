@@ -222,11 +222,12 @@ protected:
   std::vector<SampleTiming> m_presentation_timeline;
   uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
 
-  // How many times the media timeline is repeated as dictated by the editlist.
-  // 0  = no editlist / editlist pattern not supported (caller should assume a single playback).
+  // How many times the media timeline is repeated.
+  // 0  = editlist is present but its pattern is not understood (caller should assume a single playback).
+  // 1  = no editlist: media plays exactly once.
   // UINT32_MAX = infinite (mvhd duration is the indefinite-sentinel and the editlist is in repeat mode).
   // N  = the media segment is played N times.
-  uint32_t m_num_repetitions = 0;
+  uint32_t m_num_repetitions = 1;
 
   // Continuous counting through all repetitions. You have to take the modulo operation to get the
   // index into m_presentation_timeline SampleTiming table.

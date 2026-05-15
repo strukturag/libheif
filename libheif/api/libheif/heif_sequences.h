@@ -170,8 +170,9 @@ uint32_t heif_track_get_timescale(const heif_track*);
  * How many times the media segment should be played according to the track's edit list.
  *
  * Returns:
- *  - 0 if the edit list is absent or follows a pattern that libheif does not interpret
+ *  - 0 if an edit list box is present but follows a pattern libheif does not interpret
  *    as a loop count. Callers should fall back to a single playback in that case.
+ *  - 1 when no edit list is present. The media plays exactly once.
  *  - `heif_sequence_track_number_of_repetitions_infinite` (= UINT32_MAX) when the file
  *    signals indefinite playback (mvhd duration is the all-1s sentinel together with an
  *    editlist in repeat mode), or when the repetition count does not fit in uint32_t.

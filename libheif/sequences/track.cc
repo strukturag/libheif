@@ -1088,7 +1088,10 @@ Error Track::init_sample_timing_table()
   if (fallback) {
     m_presentation_timeline = media_timeline;
     m_num_output_samples = media_timeline.size();
-    m_num_repetitions = 0; // editlist absent or not understood
+    // No editlist box at all: the media plays exactly once.
+    // Editlist box present but its pattern isn't one libheif interprets: report
+    // 0 so callers know they should not rely on a repetition count.
+    m_num_repetitions = m_elst ? 0 : 1;
   }
 
   return {};
