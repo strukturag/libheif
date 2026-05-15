@@ -134,6 +134,12 @@ uint32_t heif_track_get_timescale(const heif_track* track)
 }
 
 
+uint32_t heif_track_get_number_of_repetitions(const heif_track* track)
+{
+  return track->track->get_number_of_repetitions();
+}
+
+
 heif_error heif_track_get_image_resolution(const heif_track* track_ptr, uint16_t* out_width, uint16_t* out_height)
 {
   auto track = track_ptr->track;

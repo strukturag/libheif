@@ -1065,7 +1065,20 @@ Error Track::init_sample_timing_table()
       };
     }
 
-    m_num_output_samples = m_heif_context->get_sequence_duration() / get_duration_in_media_units() * media_timeline.size();
+    uint64_t multiplier = m_heif_context->get_sequence_duration() / get_duration_in_media_units();
+    m_num_output_samples = multiplier * media_timeline.size();
+
+    if (m_heif_context->is_sequence_duration_indefinite()) {
+      // mvhd carries the all-1s sentinel -> editlist repeats forever.
+      m_num_repetitions = std::numeric_limits<uint32_t>::max();
+    }
+    else if (multiplier >= std::numeric_limits<uint32_t>::max()) {
+      // Doesn't fit in the API's uint32_t; treat as effectively infinite.
+      m_num_repetitions = std::numeric_limits<uint32_t>::max();
+    }
+    else {
+      m_num_repetitions = static_cast<uint32_t>(multiplier);
+    }
   }
   else {
     fallback = true;
@@ -1075,6 +1088,7 @@ Error Track::init_sample_timing_table()
   if (fallback) {
     m_presentation_timeline = media_timeline;
     m_num_output_samples = media_timeline.size();
+    m_num_repetitions = 0; // editlist absent or not understood
   }
 
   return {};

@@ -159,6 +159,40 @@ int heif_track_has_alpha_channel(const heif_track*);
 LIBHEIF_API
 uint32_t heif_track_get_timescale(const heif_track*);
 
+/**
+ * Special return value of `heif_track_get_number_of_repetitions()` indicating that
+ * the editlist requests indefinite repetition (the mvhd duration is the ISOBMFF
+ * "duration unknown" sentinel and the editlist is in repeat mode).
+ */
+#define heif_sequence_track_number_of_repetitions_infinite 0xFFFFFFFFu
+
+/**
+ * How many times the media segment should be played according to the track's edit list.
+ *
+ * Returns:
+ *  - 0 if the edit list is absent or follows a pattern that libheif does not interpret
+ *    as a loop count. Callers should fall back to a single playback in that case.
+ *  - `heif_sequence_track_number_of_repetitions_infinite` (= UINT32_MAX) when the file
+ *    signals indefinite playback (mvhd duration is the all-1s sentinel together with an
+ *    editlist in repeat mode), or when the repetition count does not fit in uint32_t.
+ *  - Otherwise the number of times the media segment is played.
+ *
+ * The reported value is informational; it does not change how
+ * `heif_track_decode_next_image()` walks samples. By default, that function applies
+ * the edit list and (for repeated playback) returns samples for every requested
+ * repetition; iterating until end-of-sequence on an infinite-loop file therefore
+ * never terminates.
+ *
+ * Clients that want to handle repetition themselves (e.g. to honor an "infinite"
+ * value with their own looping policy or to enforce an application-level cap) should
+ * set `heif_decoding_options::ignore_sequence_editlist` when calling
+ * `heif_track_decode_next_image()`. With that flag set, libheif plays the media
+ * timeline exactly once. Use the value returned by this function to decide how often
+ * to replay the track at the application level.
+ */
+LIBHEIF_API
+uint32_t heif_track_get_number_of_repetitions(const heif_track*);
+
 
 // --- reading visual tracks
 

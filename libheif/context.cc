@@ -2166,6 +2166,17 @@ uint64_t HeifContext::get_sequence_duration() const
 }
 
 
+bool HeifContext::is_sequence_duration_indefinite() const
+{
+  auto mvhd = m_heif_file->get_mvhd_box();
+  if (!mvhd) {
+    return false;
+  }
+
+  return mvhd->is_duration_indefinite();
+}
+
+
 Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(const TrackOptions* options,
                                                                              uint32_t handler_type,
                                                                              uint16_t width, uint16_t height)

@@ -222,6 +222,10 @@ public:
 
   uint64_t get_sequence_duration() const;
 
+  // Returns true if the mvhd box signals an "indefinite" / unknown duration.
+  // For such files, an editlist in repeat mode means "loop forever".
+  bool is_sequence_duration_indefinite() const;
+
   void set_sequence_timescale(uint32_t timescale);
 
   void set_number_of_sequence_repetitions(uint32_t repetitions);
