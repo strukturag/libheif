@@ -202,6 +202,10 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   if (src->version >= 4) {
     dst->max_bad_pixels = src->max_bad_pixels;
   }
+
+  // `parent` is an internal field; user-supplied limits are always treated as
+  // a root context. dst is HeifContext::m_limits, which is registered.
+  dst->parent = nullptr;
 }
 
 
