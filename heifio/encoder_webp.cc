@@ -39,39 +39,6 @@ WebpEncoder::WebpEncoder(int quality) : quality_(quality)
 {
 }
 
-// Returns false if ICC profile recognized invalid and could not be fixed.
-bool fix_icc_profile(const uint8_t* profile_data, size_t& profile_size)
-{
-  if (profile_size < 128) {
-    return false;
-  }
-
-
-  // --- check that profile size specified in header matches the real size
-
-  uint32_t size_in_header = four_bytes_to_uint32(profile_data[0],
-                                                 profile_data[1],
-                                                 profile_data[2],
-                                                 profile_data[3]);
-
-  if (size_in_header != profile_size) {
-
-    // Size in header is smaller than actual size, but alignment indicates that it might
-    // be correct. Replace real data length with size in header.
-    if (size_in_header < profile_size && (size_in_header & 3)==0) {
-      fprintf(stderr, "Input ICC profile has wrong size in header (%d instead of %d). Skipping extra bytes at the end. "
-              "Note that this may still be incorrect and the ICC profile may be broken.\n", size_in_header, profile_size);
-
-      profile_size = size_in_header;
-    }
-    else {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 void WebpEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
     struct heif_decoding_options* options) const
 {

@@ -19,6 +19,7 @@
  */
 
 #include <cassert>
+#include <cstdio>
 #include "exif.h"
 
 #include "common_utils.h"
@@ -260,4 +261,36 @@ int read_exif_orientation_tag(const uint8_t* exif, uint32_t size)
   }
 
   return DEFAULT_EXIF_ORIENTATION;
+}
+
+
+bool fix_icc_profile(const uint8_t* profile_data, size_t& profile_size)
+{
+  if (profile_size < 128) {
+    return false;
+  }
+
+  // --- check that profile size specified in header matches the real size
+
+  uint32_t size_in_header = four_bytes_to_uint32(profile_data[0],
+                                                 profile_data[1],
+                                                 profile_data[2],
+                                                 profile_data[3]);
+
+  if (size_in_header != profile_size) {
+
+    // Size in header is smaller than actual size, but alignment indicates that it might
+    // be correct. Replace real data length with size in header.
+    if (size_in_header < profile_size && (size_in_header & 3) == 0) {
+      fprintf(stderr, "Input ICC profile has wrong size in header (%u instead of %zu). Skipping extra bytes at the end. "
+                      "Note that this may still be incorrect and the ICC profile may be broken.\n", size_in_header, profile_size);
+
+      profile_size = size_in_header;
+    }
+    else {
+      return false;
+    }
+  }
+
+  return true;
 }
