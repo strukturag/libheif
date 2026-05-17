@@ -303,7 +303,8 @@ void heif_context_debug_dump_boxes_to_file(heif_context* ctx, int fd);
 // When enabled, the output file will use a single 'mini' box instead of the standard
 // meta+mdat box structure, if the file content is compatible with the mini format.
 // If the content cannot be represented as a mini box, the standard format is used as fallback.
-// Requires ENABLE_EXPERIMENTAL_MINI_FORMAT to be enabled at compile time.
+// Note: the mini box format is defined by a draft amendment to ISO/IEC 23008-12
+// and may have reduced interoperability with other readers.
 // Default: disabled.
 LIBHEIF_API
 void heif_context_set_write_mini_format(heif_context*, int enable);

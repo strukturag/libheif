@@ -331,12 +331,9 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_encoder_rgb_block_pixel_interleave.h)
 endif ()
 
-if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
-    target_compile_definitions(heif PUBLIC ENABLE_EXPERIMENTAL_MINI_FORMAT=1)
-    target_sources(heif PRIVATE
-            mini.h
-            mini.cc)
-endif ()
+target_sources(heif PRIVATE
+        mini.h
+        mini.cc)
 
 target_sources(heif PRIVATE
         omaf_boxes.h

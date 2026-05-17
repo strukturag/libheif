@@ -159,7 +159,6 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       meta_found = true;
     }
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
     // TODO: this is basically the same as the meta box case above, with different error handling.
     if (box_header.get_short_type() == fourcc("mini")) {
       const uint64_t mini_box_start = next_box_start;
@@ -195,7 +194,6 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
 
       mini_found = true;
     }
-#endif
 
     if (box_header.get_short_type() == fourcc("moov")) {
       const uint64_t moov_box_start = next_box_start;

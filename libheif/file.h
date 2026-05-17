@@ -96,10 +96,8 @@ public:
 
   void write(StreamWriter& writer);
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
   void set_write_mini_format(bool enable) { m_write_mini_format = enable; }
   bool get_write_mini_format() const { return m_write_mini_format; }
-#endif
 
   int get_num_images() const { return static_cast<int>(m_infe_boxes.size()); }
 
@@ -273,10 +271,8 @@ private:
   std::shared_ptr<Box_ftyp> m_ftyp_box;
   std::shared_ptr<Box_hdlr> m_hdlr_box;
   std::shared_ptr<Box_meta> m_meta_box;
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
   std::shared_ptr<Box_mini> m_mini_box; // meta alternative
   bool m_write_mini_format = false;
-#endif
 
   std::shared_ptr<Box_iloc> m_iloc_box;
   std::shared_ptr<Box_idat> m_idat_box;

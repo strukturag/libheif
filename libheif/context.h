@@ -142,9 +142,7 @@ public:
 
   [[nodiscard]] Error write(StreamWriter& writer);
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
   void set_write_mini_format(bool enable);
-#endif
 
   // Create all boxes necessary for an empty HEIF file.
   // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but

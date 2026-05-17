@@ -215,11 +215,8 @@ TEST_CASE("unci with cpat: handle and decoded image agree on component IDs")
 }
 
 
-// The following three test cases load files in the experimental low-overhead MINI box
-// format (lightning_mini.heif, simple_osm_tile_meta.avif, simple_osm_tile_alpha.avif).
-// The mini box is only parsed when ENABLE_EXPERIMENTAL_MINI_FORMAT is compiled in
-// (consistent with mini_box / mini_decode which are CMake-gated the same way).
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+// The following three test cases load files in the low-overhead MINI box format
+// (lightning_mini.heif, simple_osm_tile_meta.avif, simple_osm_tile_alpha.avif).
 
 TEST_CASE("HEVC YUV 4:2:0 component IDs match between handle and decoded image")
 {
@@ -378,4 +375,3 @@ TEST_CASE("AVIF with alpha: handle exposes alpha as the 4th component")
                                            heif_compression_AV1);
 }
 
-#endif // ENABLE_EXPERIMENTAL_MINI_FORMAT

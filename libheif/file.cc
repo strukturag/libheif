@@ -31,9 +31,7 @@
 #include "codecs/avif_boxes.h"
 #include "codecs/hevc_boxes.h"
 #include "sequences/seq_boxes.h"
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
 #include "mini.h"
-#endif
 
 #include <cstdint>
 #include <fstream>
@@ -258,7 +256,6 @@ void HeifFile::derive_box_versions()
 
 void HeifFile::write(StreamWriter& writer)
 {
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
   if (m_write_mini_format) {
     std::string reason;
     if (Box_mini::can_convert_to_mini(this, reason)) {
@@ -289,15 +286,12 @@ void HeifFile::write(StreamWriter& writer)
     }
     // Fall through to normal write if conversion fails
   }
-#endif
 
   for (auto& box : m_top_level_boxes) {
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
     if (box == nullptr) {
       // Either mini or meta will be null, just ignore that one
       continue;
     }
-#endif
     Error err = box->write(writer);
     (void)err; // TODO: error ?
   }
@@ -328,12 +322,10 @@ std::string HeifFile::debug_dump_boxes() const
   bool first = true;
 
   for (const auto& box : m_top_level_boxes) {
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
     if (box == nullptr) {
       // Either mini or meta will be null, just ignore that one
       continue;
     }
-#endif
     // dump box content for debugging
 
     if (first) {
@@ -478,9 +470,7 @@ Error HeifFile::parse_heif_file()
       !m_ftyp_box->has_compatible_brand(heif_brand2_mif1) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_avif) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_1pic) &&
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
-#endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_isom) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_mp42) &&
@@ -494,7 +484,6 @@ Error HeifFile::parse_heif_file()
                  sstr.str());
       }
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
   m_mini_box = m_file_layout->get_mini_box();
   m_top_level_boxes.push_back(m_mini_box);
 
@@ -505,7 +494,6 @@ Error HeifFile::parse_heif_file()
     }
     return Error::Ok;
   }
-#endif
 
   m_meta_box = m_file_layout->get_meta_box();
   if (m_meta_box) {

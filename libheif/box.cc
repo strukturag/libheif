@@ -752,11 +752,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       break;
 #endif
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
     case fourcc("mini"):
       box = std::make_shared<Box_mini>();
       break;
-#endif
 
     case fourcc("mdat"):
       // avoid generating a 'Box_other'
