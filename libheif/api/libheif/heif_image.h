@@ -154,11 +154,12 @@ typedef enum heif_omaf_image_projection
    */
   heif_omaf_image_projection_cube_map = 0x01,
 
-  /* Values 2 through 31 are reserved in ISO/IEC 23090-2:2023 Table 10. */
-  /**
-   * Projection is specified, but not recognised.
+  /*
+   * Values 2 through 31 are reserved in ISO/IEC 23090-2:2023 Table 10.
+   * Files may carry any of them; libheif passes the raw projection_type
+   * value through unchanged, so callers can log or round-trip it.
+   * Handle anything outside the named constants in a `default:` arm.
    */
-  heif_omaf_image_projection_unknown = 0xFE,
 
   /**
    * Flat projection. Also returned by the get-projection accessors when no

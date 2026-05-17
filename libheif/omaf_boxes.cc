@@ -34,18 +34,7 @@ Error Box_prfr::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint8_t projection_type = (range.read8() & 0x1F);
-  switch (projection_type)
-  {
-  case 0x00:
-    m_projection = heif_omaf_image_projection::heif_omaf_image_projection_equirectangular;
-    break;
-  case 0x01:
-    m_projection = heif_omaf_image_projection::heif_omaf_image_projection_cube_map;
-    break;
-  default:
-    m_projection = heif_omaf_image_projection::heif_omaf_image_projection_unknown;
-    break;
-  }
+  m_projection = static_cast<heif_omaf_image_projection>(projection_type);
   return range.get_error();
 }
 
@@ -70,35 +59,30 @@ std::string Box_prfr::dump(Indent& indent) const
 
 Error Box_prfr::write(StreamWriter& writer) const
 {
-  size_t box_start = reserve_box_header_space(writer);
-  switch (m_projection) {
-    case heif_omaf_image_projection::heif_omaf_image_projection_equirectangular:
-      writer.write8(0x00);
-      break;
-    case heif_omaf_image_projection::heif_omaf_image_projection_cube_map:
-      writer.write8(0x01);
-      break;
-    default:
-      return {
-        heif_error_Invalid_input,
-        heif_suberror_Unspecified,
-        "Unsupported image projection value."
+  if (static_cast<uint32_t>(m_projection) >= 32) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Image projection value out of the 5-bit prfr range."
     };
   }
+
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write8(static_cast<uint8_t>(m_projection) & 0x1F);
   prepend_header(writer, box_start);
   return Error::Ok;
 }
 
 Error Box_prfr::set_image_projection(heif_omaf_image_projection projection)
 {
-  if ((projection == heif_omaf_image_projection::heif_omaf_image_projection_equirectangular) || (projection == heif_omaf_image_projection::heif_omaf_image_projection_cube_map)) {
-    m_projection = projection;
-    return Error::Ok;
-  } else {
+  if (static_cast<uint32_t>(projection) >= 32) {
     return {
       heif_error_Invalid_input,
       heif_suberror_Unspecified,
-      "Unsupported image projection value."
+      "Image projection value out of the 5-bit prfr range."
     };
   }
+
+  m_projection = projection;
+  return Error::Ok;
 }
