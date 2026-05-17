@@ -424,6 +424,34 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
 
   bits.skip_to_byte_boundary();
 
+  // Validate that the declared chunk sizes don't exceed the remaining payload.
+  // Without this, a malformed mini box with 28-bit *_item_data_size fields set
+  // near 2^28 makes skip_bytes/read_bytes loop hundreds of millions of times
+  // past EOF, eventually triggering signed-int overflow in BitReader::refill().
+  {
+    uint64_t required_bytes = (uint64_t) main_item_codec_config_size + m_main_item_data_size;
+    if (m_alpha_flag && m_alpha_item_data_size > 0) {
+      required_bytes += alpha_item_codec_config_size;
+      required_bytes += m_alpha_item_data_size;
+    }
+    if (m_hdr_flag && m_gainmap_flag && m_gainmap_item_data_size > 0) {
+      required_bytes += gainmap_item_codec_config_size;
+      required_bytes += m_gainmap_item_data_size;
+    }
+    if (m_icc_flag) required_bytes += icc_data_size;
+    if (m_hdr_flag && m_gainmap_flag && m_tmap_icc_flag) required_bytes += tmap_icc_data_size;
+    if (m_hdr_flag && m_gainmap_flag) required_bytes += gainmap_metadata_size;
+    if (m_exif_flag) required_bytes += m_exif_data_size;
+    if (m_xmp_flag) required_bytes += m_xmp_data_size;
+
+    int64_t remaining_bits = bits.get_bits_remaining();
+    if (remaining_bits < 0 || required_bytes > (uint64_t) remaining_bits / 8) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_mini_box,
+              "Declared chunk sizes in MinimizedImageBox exceed available payload."};
+    }
+  }
+
   if (main_item_codec_config_size > 0)
   {
     m_main_item_codec_config = bits.read_bytes(main_item_codec_config_size);
