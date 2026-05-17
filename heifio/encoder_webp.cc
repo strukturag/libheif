@@ -205,7 +205,7 @@ bool WebpEncoder::Encode(const heif_image_handle* handle,
         }
       }
       else {
-        fprintf(stderr, "Invalid ICC profile. Writing PNG file without ICC.\n");
+        fprintf(stderr, "Invalid ICC profile. Writing WebP file without ICC.\n");
       }
       free((void*)icc_bitstream.bytes);
     }

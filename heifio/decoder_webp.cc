@@ -78,8 +78,15 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
   }
   fseek(infile, 0, SEEK_SET);
   bitstream.resize(static_cast<size_t>(fsize));
-  fread(bitstream.data(), 1, static_cast<size_t>(fsize), infile);
+  size_t bytes_read = fread(bitstream.data(), 1, static_cast<size_t>(fsize), infile);
   fclose(infile);
+  if (bytes_read != static_cast<size_t>(fsize)) {
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Could not read WEBP file" };
+    return err;
+  }
 
   // initialize decompressor
   int copy_data = 0;
