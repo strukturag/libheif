@@ -48,13 +48,6 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
   struct heif_image* image = nullptr;
   struct heif_error err = heif_error_ok;
 
-  // to store embedded icc profile
-  uint32_t iccLen;
-  uint8_t* iccBuffer = NULL;
-
-  std::vector<uint8_t> xmpData;
-  std::vector<uint8_t> exifData;
-
   // open input file
 
   FILE* infile;
@@ -115,7 +108,7 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
   std::unique_ptr<WebPData, void(*)(WebPData*)> frame_deleter(&frame.bitstream, &WebPDataClear);
   // Getting ICC, XMP and EXIF
   WebPData icc_chunk;
-  bool has_icc = false;;
+  bool has_icc = false;
   WebPDataInit(&icc_chunk);
   if (WebPMuxGetChunk(mux, "ICCP", &icc_chunk) == WEBP_MUX_OK) {
     has_icc = true;
