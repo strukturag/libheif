@@ -1475,34 +1475,6 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   // TODO: replace this placeholder with pixi box version 1 once that is supported
   ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 8
 
-  if (get_orientation() == 2) {
-    std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-    irot->set_rotation_ccw(2 * 90);
-    ipco_box->append_child_box(irot); // entry 9
-  } else if ((get_orientation() == 4) || (get_orientation() == 6) || (get_orientation() == 7)) {
-    std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-    irot->set_rotation_ccw(1 * 90);
-    ipco_box->append_child_box(irot); // entry 9
-  } else if (get_orientation() == 5) {
-    std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-    irot->set_rotation_ccw(3 * 90);
-    ipco_box->append_child_box(irot); // entry 9
-  } else {
-    ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 9
-  }
-
-  if ((get_orientation() == 1) || (get_orientation() == 6)) {
-    std::shared_ptr<Box_imir> imir = std::make_shared<Box_imir>();
-    imir->set_mirror_direction(heif_transform_mirror_direction_horizontal);
-    ipco_box->append_child_box(imir); // entry 10
-  } else if ((get_orientation() == 3) || (get_orientation() == 4)) {
-    std::shared_ptr<Box_imir> imir = std::make_shared<Box_imir>();
-    imir->set_mirror_direction(heif_transform_mirror_direction_vertical);
-    ipco_box->append_child_box(imir); // entry 10
-  } else {
-    ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 10
-  }
-
   auto ipma_box = std::make_shared<Box_ipma>();
   file->set_ipma_box(ipma_box);
   ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(1)});
@@ -1510,18 +1482,23 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, uint16_t(3)});
   ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(4)});
   ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(5)});
-  ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(9)});
-  ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(10)});
 
   if (get_alpha_item_data_size() != 0) {
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(6)});
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(2)});
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(7)});
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(8)});
-    ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(9)});
-    ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(10)});
   }
   // TODO: will need more once we support HDR / gainmap representation
+
+  // Append irot/imir (only as needed) and associate them with the items.
+  // mini's orientation field uses standard EXIF orientation values 1..8,
+  // matching the heif_orientation enum.
+  auto orientation = static_cast<heif_orientation>(get_orientation());
+  file->add_orientation_properties(1, orientation);
+  if (get_alpha_item_data_size() != 0) {
+    file->add_orientation_properties(2, orientation);
+  }
 
   auto iloc_box = std::make_shared<Box_iloc>();
   file->set_iloc_box(iloc_box);
@@ -1590,49 +1567,34 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
 }
 
 
-// --- Reverse mapping: irot/imir to EXIF orientation ---
+// --- Map a single irot/imir box to its equivalent heif_orientation ---
+//
+// Used together with heif_orientation_concat() to compose the cumulative
+// orientation of a sequence of transform boxes. Box order in ipma is not
+// strictly fixed across files, so accumulating via concat lets us recover
+// the right orientation regardless of whether irot or imir appears first.
 
-static uint8_t compute_orientation_from_transforms(const Box_irot* irot, const Box_imir* imir)
+static heif_orientation transform_box_to_orientation(const std::shared_ptr<Box>& box)
 {
-  int rotation = irot ? irot->get_rotation_ccw() : 0;
-  bool has_mirror = (imir != nullptr);
-  heif_transform_mirror_direction mirror_dir = has_mirror ? imir->get_mirror_direction() : heif_transform_mirror_direction_horizontal;
-
-  // Reverse of create_expanded_boxes (mini.cc lines 955-981):
-  // orientation 1: no transform
-  // orientation 2: irot(180) only
-  // orientation 3: imir(horizontal) only
-  // orientation 4: imir(vertical) only
-  // orientation 5: irot(270) only
-  // orientation 6: irot(90) + imir(horizontal)
-  // orientation 7: irot(90) only
-  // orientation 8: irot(90) + imir(vertical)
-
-  if (!has_mirror) {
-    switch (rotation) {
-      case 0:   return 1;
-      case 180: return 2;
-      case 270: return 5;
-      case 90:  return 7;
-      default:  return 1;
+  if (auto irot = std::dynamic_pointer_cast<Box_irot>(box)) {
+    // irot stores the rotation in counter-clockwise degrees.
+    switch (irot->get_rotation_ccw()) {
+      case 0:   return heif_orientation_normal;
+      case 90:  return heif_orientation_rotate_270_cw; // 90 ccw == 270 cw
+      case 180: return heif_orientation_rotate_180;
+      case 270: return heif_orientation_rotate_90_cw;  // 270 ccw == 90 cw
+      default:  return heif_orientation_normal;
     }
   }
-  else {
-    if (mirror_dir == heif_transform_mirror_direction_horizontal) {
-      switch (rotation) {
-        case 0:  return 3;
-        case 90: return 6;
-        default: return 1;
-      }
-    }
-    else { // vertical
-      switch (rotation) {
-        case 0:  return 4;
-        case 90: return 8;
-        default: return 1;
-      }
+  if (auto imir = std::dynamic_pointer_cast<Box_imir>(box)) {
+    switch (imir->get_mirror_direction()) {
+      case heif_transform_mirror_direction_horizontal:
+        return heif_orientation_flip_horizontally;
+      case heif_transform_mirror_direction_vertical:
+        return heif_orientation_flip_vertically;
     }
   }
+  return heif_orientation_normal;
 }
 
 
@@ -1798,9 +1760,12 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
   std::shared_ptr<Box_pixi> pixi;
   std::shared_ptr<Box_colr> colr_nclx;
   std::shared_ptr<Box_colr> colr_icc;
-  std::shared_ptr<Box_irot> irot;
-  std::shared_ptr<Box_imir> imir;
   std::shared_ptr<Box> codec_config;
+
+  // Accumulate cumulative orientation by composing transforms in property
+  // order. Use heif_orientation_concat() so the result is correct regardless
+  // of whether irot or imir comes first in ipma.
+  heif_orientation orientation = heif_orientation_normal;
 
   for (auto& prop : properties) {
     if (auto p = std::dynamic_pointer_cast<Box_ispe>(prop)) {
@@ -1817,11 +1782,9 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
         colr_icc = p;
       }
     }
-    else if (auto p = std::dynamic_pointer_cast<Box_irot>(prop)) {
-      irot = p;
-    }
-    else if (auto p = std::dynamic_pointer_cast<Box_imir>(prop)) {
-      imir = p;
+    else if (std::dynamic_pointer_cast<Box_irot>(prop) ||
+             std::dynamic_pointer_cast<Box_imir>(prop)) {
+      orientation = heif_orientation_concat(orientation, transform_box_to_orientation(prop));
     }
     else if (std::dynamic_pointer_cast<Box_av1C>(prop) || std::dynamic_pointer_cast<Box_hvcC>(prop)) {
       codec_config = prop;
@@ -1920,9 +1883,8 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
   }
   mini->set_explicit_cicp_flag(need_explicit_cicp);
 
-  // Orientation
-  uint8_t orientation = compute_orientation_from_transforms(irot.get(), imir.get());
-  mini->set_orientation(orientation);
+  // Orientation (accumulated via heif_orientation_concat during the property walk above)
+  mini->set_orientation(static_cast<uint8_t>(orientation));
 
   // Codec config
   auto config_bytes = extract_codec_config_bytes(codec_config);
