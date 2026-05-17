@@ -463,6 +463,10 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 {
   encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
+  // an encoder instance must only be used once
+  assert(encoder->kvzencoder == nullptr);
+  assert(encoder->config == nullptr);
+
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
   // Kvazaar uses a hard-coded bit depth (https://github.com/ultravideo/kvazaar/issues/399).

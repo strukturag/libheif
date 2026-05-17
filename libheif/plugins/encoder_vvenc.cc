@@ -434,6 +434,9 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
 {
   encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
 
+  // an encoder instance must only be used once
+  assert(encoder->vvencoder == nullptr);
+
   vvenc_config params;
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
