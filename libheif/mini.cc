@@ -22,6 +22,7 @@
 #include "mini.h"
 #include "file.h"
 #include "nclx.h"
+#include "security_limits.h"
 #include "codecs/avif_boxes.h"
 #include "codecs/hevc_boxes.h"
 
@@ -40,8 +41,18 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
   uint64_t start_offset = range.get_istream()->get_position();
   std::size_t length = range.get_remaining_bytes();
 
+  // Register the payload allocation with the total-memory tracker (also
+  // checks against max_memory_block_size). The buffer is local to parse(),
+  // so use a scoped handle that releases the budget when parse() returns.
+  MemoryHandle mini_data_handle;
+  if (auto err = mini_data_handle.alloc(length, limits, "MinimizedImageBox payload")) {
+    return err;
+  }
+
   std::vector<uint8_t> mini_data(length);
-  range.read(mini_data.data(), mini_data.size());
+  if (!range.read(mini_data.data(), mini_data.size())) {
+    return range.get_error();
+  }
 
   BitReader bits(mini_data.data(), (int)(mini_data.size()));
 
@@ -449,6 +460,22 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       return {heif_error_Invalid_input,
               heif_suberror_Invalid_mini_box,
               "Declared chunk sizes in MinimizedImageBox exceed available payload."};
+    }
+  }
+
+  // Enforce the color-profile size limit on embedded ICC blobs, matching
+  // the check applied to regular 'colr' boxes in nclx.cc.
+  if (limits && limits->max_color_profile_size) {
+    if (m_icc_flag && icc_data_size > limits->max_color_profile_size) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              "ICC color profile in MinimizedImageBox exceeds maximum supported size"};
+    }
+    if (m_hdr_flag && m_gainmap_flag && m_tmap_icc_flag &&
+        tmap_icc_data_size > limits->max_color_profile_size) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              "Tone-map ICC color profile in MinimizedImageBox exceeds maximum supported size"};
     }
   }
 
