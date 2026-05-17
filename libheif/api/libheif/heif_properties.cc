@@ -458,23 +458,41 @@ heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_ex
   return heif_error_success;
 }
 
-#if HEIF_WITH_OMAF
 int heif_image_handle_has_omaf_image_projection(const heif_image_handle* handle)
 {
   if (!handle) {
     return false;
   }
 
+#if HEIF_WITH_OMAF
   return handle->image->has_omaf_image_projection();
+#else
+  return false;
+#endif
 }
 
 heif_omaf_image_projection heif_image_handle_get_omaf_image_projection(const heif_image_handle* handle)
 {
+#if HEIF_WITH_OMAF
   return handle->image->get_omaf_image_projection();
+#else
+  (void) handle;
+  return heif_omaf_image_projection_flat;
+#endif
 }
 
-void heif_image_handle_set_omaf_image_projection(const heif_image_handle* handle, heif_omaf_image_projection image_projection)
+heif_error heif_image_handle_set_omaf_image_projection(const heif_image_handle* handle, heif_omaf_image_projection image_projection)
 {
-  return handle->image->set_omaf_image_projection(image_projection);
-}
+#if HEIF_WITH_OMAF
+  if (!handle) {
+    return heif_error_null_pointer_argument;
+  }
+  handle->image->set_omaf_image_projection(image_projection);
+  return heif_error_success;
+#else
+  (void) handle;
+  (void) image_projection;
+  return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+          "libheif was built without OMAF support"};
 #endif
+}

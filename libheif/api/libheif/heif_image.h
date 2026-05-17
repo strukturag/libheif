@@ -128,7 +128,6 @@ typedef enum heif_channel
   heif_channel_unknown = 65535
 } heif_channel;
 
-#if HEIF_WITH_OMAF
 /**
  * OMAF Image projection.
  *
@@ -137,6 +136,11 @@ typedef enum heif_channel
  * equivalent), there are alternatives such as an equirectangular projection or cubemap projection.
  *
  * See ISO/IEC 23090-2 "Omnidirectional media format" for more information.
+ *
+ * The accessor functions are always present in the API, but reading/writing OMAF
+ * projection information only has an effect when libheif was built with OMAF
+ * support. Without it, the getters return `heif_omaf_image_projection_flat` and
+ * the setters are no-ops.
  */
 typedef enum heif_omaf_image_projection
 {
@@ -161,7 +165,6 @@ typedef enum heif_omaf_image_projection
    */
   heif_omaf_image_projection_flat = 0xFF,
 } heif_omaf_image_projection;
-#endif
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
 // and bit depths.
@@ -360,13 +363,11 @@ void heif_image_set_pixel_aspect_ratio(heif_image*, uint32_t aspect_h, uint32_t 
 LIBHEIF_API
 void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle*, uint32_t aspect_h, uint32_t aspect_v);
 
-#if HEIF_WITH_OMAF
 LIBHEIF_API
 heif_omaf_image_projection heif_image_get_omaf_image_projection(const heif_image*);
 
 LIBHEIF_API
 void heif_image_set_omaf_image_projection(const heif_image*, heif_omaf_image_projection image_projection);
-#endif
 
 // --- heif_image allocation
 
