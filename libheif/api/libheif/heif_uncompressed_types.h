@@ -23,13 +23,14 @@
 
 #include <stdint.h>
 
+#include "libheif/heif_components.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // --- ISO 23001-17 component types (Table 1)
 
-//NEWAPI
 typedef enum heif_unci_component_type
 {
   heif_unci_component_type_monochrome = 0,
@@ -54,7 +55,6 @@ typedef enum heif_unci_component_type
 
 // --- Bayer / filter array pattern
 
-//NEWAPI
 typedef struct heif_bayer_pattern_pixel
 {
   uint32_t component_id;
@@ -64,13 +64,11 @@ typedef struct heif_bayer_pattern_pixel
 
 // --- Sensor bad pixels map (ISO 23001-17, Section 6.1.7)
 
-//NEWAPI
 struct heif_bad_pixel { uint32_t row; uint32_t column; };
 
 
 // --- Chroma sample location (ISO 23091-2 / ITU-T H.273 + ISO 23001-17)
 
-//NEWAPI
 typedef enum heif_chroma420_sample_location {
   // values 0-5 according to ISO 23091-2 / ITU-T H.273
   heif_chroma420_sample_location_00_05 = 0,
@@ -119,33 +117,9 @@ typedef struct heif_unci_image_parameters
 } heif_unci_image_parameters;
 
 
-// --- pixel datatype support
-//
-// The numeric values are aligned with the ISO/IEC 23001-17 Table 2
-// component_format byte (used by the uncC box of the uncompressed codec).
-// This is an internal convenience and should not be relied upon.
+// heif_component_datatype, heif_complex32, heif_complex64 are defined in
+// heif_components.h (included above).
 
-//NEWAPI
-typedef enum heif_component_datatype
-{
-  heif_component_datatype_unsigned_integer = 0,
-  heif_component_datatype_floating_point   = 1,
-  heif_component_datatype_complex_number   = 2,
-  heif_component_datatype_signed_integer   = 3,
-  heif_component_datatype_undefined        = 0xFF
-} heif_component_datatype;
-
-//NEWAPI
-typedef struct heif_complex32
-{
-  float real, imaginary;
-} heif_complex32;
-
-//NEWAPI
-typedef struct heif_complex64
-{
-  double real, imaginary;
-} heif_complex64;
 
 #ifdef __cplusplus
 }

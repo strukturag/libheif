@@ -377,7 +377,6 @@ LIBHEIF_API
 void heif_context_add_compatible_brand(heif_context* ctx,
                                        heif_brand2 compatible_brand);
 
-//NEWAPI
 /**
  * Enable the unified ID namespace ('unif' brand).
  *

@@ -278,68 +278,9 @@ const char* heif_image_handle_get_cmpd_component_type_uri(const heif_image_handl
 }
 
 
-// --- handle-side per-component getters
-//
-// These read from ImageItem::m_components (populated at parse time by
-// ImageItem::populate_component_descriptions). For unci images, the ids are
-// the same numerical values that heif_image_get_used_component_ids() will
-// report after decoding.
-
-uint32_t heif_image_handle_get_number_of_components(const heif_image_handle* handle)
-{
-  if (!handle) {
-    return 0;
-  }
-  return static_cast<uint32_t>(handle->image->get_component_descriptions().size());
-}
-
-
-void heif_image_handle_get_used_component_ids(const heif_image_handle* handle, uint32_t* out_component_ids)
-{
-  if (!handle || !out_component_ids) {
-    return;
-  }
-  const auto& comps = handle->image->get_component_descriptions();
-  for (size_t i = 0; i < comps.size(); i++) {
-    out_component_ids[i] = comps[i].component_id;
-  }
-}
-
-
-uint16_t heif_image_handle_get_component_type(const heif_image_handle* handle, uint32_t component_id)
-{
-  if (!handle) {
-    return 0;
-  }
-  if (auto* desc = handle->image->find_component_description(component_id)) {
-    return desc->component_type;
-  }
-  return 0;
-}
-
-
-int heif_image_handle_get_component_bits_per_pixel(const heif_image_handle* handle, uint32_t component_id)
-{
-  if (!handle) {
-    return -1;
-  }
-  if (auto* desc = handle->image->find_component_description(component_id)) {
-    return static_cast<int>(desc->bit_depth);
-  }
-  return -1;
-}
-
-
-heif_component_datatype heif_image_handle_get_component_datatype(const heif_image_handle* handle, uint32_t component_id)
-{
-  if (!handle) {
-    return heif_component_datatype_undefined;
-  }
-  if (auto* desc = handle->image->find_component_description(component_id)) {
-    return desc->datatype;
-  }
-  return heif_component_datatype_undefined;
-}
+// heif_image_handle_get_number_of_components, _get_used_component_ids,
+// _get_component_type, _get_component_bits_per_pixel and _get_component_datatype
+// live in heif_components.cc.
 
 
 int heif_image_handle_has_gimi_component_content_ids(const heif_image_handle* handle)

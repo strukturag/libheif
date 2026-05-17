@@ -22,6 +22,7 @@
 #define LIBHEIF_HEIF_UNCOMPRESSED_H
 
 #include "libheif/heif_uncompressed_types.h"
+#include "libheif/heif_components.h"
 #include "libheif/heif.h"
 
 #ifdef __cplusplus
@@ -37,7 +38,6 @@ extern "C" {
 
 // heif_uncompressed_component_type and heif_bayer_pattern_pixel are defined in heif_uncompressed_types.h.
 
-//NEWAPI
 // Set a Bayer / filter array pattern on an image.
 // The pattern is a 2D array of component indices with dimensions pattern_width x pattern_height.
 // The number of entries in patternPixels must be pattern_width * pattern_height.
@@ -52,13 +52,23 @@ heif_error heif_image_set_bayer_pattern(heif_image*,
                                         uint16_t pattern_height,
                                         const heif_bayer_pattern_pixel* patternPixels);
 
-//NEWAPI
+// Add a reference-only component to the image's component description table for use as
+// a Bayer pattern entry. The component is registered (its component_type appears in the
+// cmpd box) but carries no pixel plane of its own — the actual pixel data lives in the
+// single combined Bayer component (added with heif_image_add_component()).
+//
+// Use this for the per-cell colors that the Bayer pattern references (e.g. red, green,
+// blue) when those colors have no standalone plane. Pass the returned component_id in
+// heif_bayer_pattern_pixel::component_id of the patternPixels array given to
+// heif_image_set_bayer_pattern().
+//
+// component_type: one of heif_unci_component_type_* (e.g. _red, _green, _blue).
+// out_component_id: receives the minted component id. Must not be NULL.
 LIBHEIF_API
 heif_error heif_image_add_bayer_component(heif_image*,
                                           uint16_t component_type,
                                           uint32_t* out_component_id);
 
-//NEWAPI
 // Returns whether the image has a Bayer / filter array pattern.
 // If the image has a pattern, out_pattern_width and out_pattern_height are set.
 // Either output pointer may be NULL if the caller does not need that value.
@@ -68,7 +78,6 @@ int heif_image_get_bayer_pattern_size(const heif_image*,
                                       uint16_t* out_pattern_width,
                                       uint16_t* out_pattern_height);
 
-//NEWAPI
 // Get the Bayer / filter array pattern pixels.
 // The caller must provide an array large enough for pattern_width * pattern_height entries
 // (use heif_image_get_bayer_pattern_size() to query the dimensions first).
@@ -84,17 +93,14 @@ heif_error heif_image_get_bayer_pattern(const heif_image*,
 // On the wire this is the IEEE 754 bit pattern 0xFFFFFFFF (a signaling NaN).
 // Test with heif_polarization_angle_is_no_filter() below, or with isnan()/std::isnan().
 
-//NEWAPI
 // Returns a float with the 0xFFFFFFFF bit pattern (NaN) representing "no polarization filter".
 LIBHEIF_API
 float heif_polarization_angle_no_filter(void);
 
-//NEWAPI
 // Returns non-zero if the given angle has the "no filter" bit pattern (0xFFFFFFFF).
 LIBHEIF_API
 int heif_polarization_angle_is_no_filter(float angle);
 
-//NEWAPI
 // Add a polarization pattern to an image.
 // component_indices: array of component indices this pattern applies to (may be NULL if num_component_indices == 0,
 //                    meaning the pattern applies to all components).
@@ -109,12 +115,10 @@ heif_error heif_image_add_polarization_pattern(heif_image*,
                                                uint16_t pattern_height,
                                                const float* polarization_angles);
 
-//NEWAPI
 // Returns the number of polarization patterns on this image (0 if none).
 LIBHEIF_API
 int heif_image_get_number_of_polarization_patterns(const heif_image*);
 
-//NEWAPI
 // Get the sizes/dimensions of a polarization pattern (to allocate arrays for the data query).
 LIBHEIF_API
 heif_error heif_image_get_polarization_pattern_info(const heif_image*,
@@ -123,7 +127,6 @@ heif_error heif_image_get_polarization_pattern_info(const heif_image*,
                                                     uint16_t* out_pattern_width,
                                                     uint16_t* out_pattern_height);
 
-//NEWAPI
 // Get the actual data of a polarization pattern.
 // Caller must provide pre-allocated arrays:
 //   out_component_indices: num_component_indices entries (may be NULL if num_component_indices == 0)
@@ -134,7 +137,6 @@ heif_error heif_image_get_polarization_pattern_data(const heif_image*,
                                                     uint32_t* out_component_indices,
                                                     float* out_polarization_angles);
 
-//NEWAPI
 // Find the polarization pattern index that applies to a given component index.
 // Returns the pattern index (>= 0), or -1 if no pattern matches.
 // A pattern with an empty component list (component_count == 0) matches all components.
@@ -147,7 +149,6 @@ int heif_image_get_polarization_pattern_index_for_component(const heif_image*,
 
 // struct heif_bad_pixel is defined in heif_uncompressed_types.h.
 
-//NEWAPI
 // Add a sensor bad pixels map to an image.
 // component_indices: array of component indices this map applies to (may be NULL if num_component_indices == 0,
 //                    meaning the map applies to all components).
@@ -164,12 +165,10 @@ heif_error heif_image_add_sensor_bad_pixels_map(heif_image*,
                                                  uint32_t num_bad_pixels,
                                                  const heif_bad_pixel* bad_pixels);
 
-//NEWAPI
 // Returns the number of sensor bad pixels maps on this image (0 if none).
 LIBHEIF_API
 int heif_image_get_number_of_sensor_bad_pixels_maps(const heif_image*);
 
-//NEWAPI
 // Get the sizes of a sensor bad pixels map (to allocate arrays for the data query).
 LIBHEIF_API
 heif_error heif_image_get_sensor_bad_pixels_map_info(const heif_image*,
@@ -180,7 +179,6 @@ heif_error heif_image_get_sensor_bad_pixels_map_info(const heif_image*,
                                                       uint32_t* out_num_bad_columns,
                                                       uint32_t* out_num_bad_pixels);
 
-//NEWAPI
 // Get the actual data of a sensor bad pixels map.
 // Caller must provide pre-allocated arrays:
 //   out_component_indices: num_component_indices entries (may be NULL if num_component_indices == 0)
@@ -198,7 +196,6 @@ heif_error heif_image_get_sensor_bad_pixels_map_data(const heif_image*,
 
 // --- Sensor non-uniformity correction (ISO 23001-17, Section 6.1.6)
 
-//NEWAPI
 // Add a sensor non-uniformity correction table to an image.
 // component_indices: array of component indices this NUC applies to (may be NULL if num_component_indices == 0,
 //                    meaning it applies to all components).
@@ -215,12 +212,10 @@ heif_error heif_image_add_sensor_nuc(heif_image*,
                                       const float* nuc_gains,
                                       const float* nuc_offsets);
 
-//NEWAPI
 // Returns the number of sensor NUC tables on this image (0 if none).
 LIBHEIF_API
 int heif_image_get_number_of_sensor_nucs(const heif_image*);
 
-//NEWAPI
 // Get the sizes of a sensor NUC table (to allocate arrays for the data query).
 LIBHEIF_API
 heif_error heif_image_get_sensor_nuc_info(const heif_image*,
@@ -230,7 +225,6 @@ heif_error heif_image_get_sensor_nuc_info(const heif_image*,
                                            uint32_t* out_image_width,
                                            uint32_t* out_image_height);
 
-//NEWAPI
 // Get the actual data of a sensor NUC table.
 // Caller must provide pre-allocated arrays:
 //   out_component_indices: num_component_indices entries (may be NULL if num_component_indices == 0)
@@ -248,18 +242,15 @@ heif_error heif_image_get_sensor_nuc_data(const heif_image*,
 
 // --- Chroma sample location (ISO 23001-17, Section 6.1.4)
 
-//NEWAPI
 // Set the chroma sample location on an image.
 // chroma_location must be in the range 0-6 (see heif_chroma420_sample_location).
 LIBHEIF_API
 heif_error heif_image_set_chroma_location(heif_image*, uint8_t chroma_location);
 
-//NEWAPI
 // Returns non-zero if the image has a chroma sample location set.
 LIBHEIF_API
 int heif_image_has_chroma_location(const heif_image*);
 
-//NEWAPI
 // Returns the chroma sample location (0-6), or 0 if none is set.
 LIBHEIF_API
 uint8_t heif_image_get_chroma_location(const heif_image*);
@@ -313,209 +304,10 @@ heif_error heif_context_add_empty_unci_image(heif_context* ctx,
                                              const heif_image* prototype,
                                              heif_image_handle** out_unci_image_handle);
 
-// heif_channel_datatype, heif_complex32, heif_complex64 are defined in heif_uncompressed_types.h.
+// Multi-component access functions (heif_image_get/add_component_*,
+// heif_image_handle_get_component_*, heif_image_set_gimi_component_content_id)
+// live in heif_components.h, which is included above.
 
-// --- index-based component access (for ISO 23001-17 multi-component images)
-
-//NEWAPI
-// Returns the number of components that have pixel data (planes) in this image.
-LIBHEIF_API
-uint32_t heif_image_get_number_of_used_components(const heif_image*);
-
-//NEWAPI
-// Fills `out_component_indices` with the valid component indices.
-// The caller must allocate an array of at least heif_image_get_number_of_used_components() elements.
-LIBHEIF_API
-void heif_image_get_used_component_ids(const heif_image*, uint32_t* out_component_ids);
-
-//NEWAPI
-LIBHEIF_API
-heif_channel heif_image_get_component_channel(const heif_image*, uint32_t component_idx);
-
-//NEWAPI
-LIBHEIF_API
-uint32_t heif_image_get_component_width(const heif_image*, uint32_t component_idx);
-
-//NEWAPI
-LIBHEIF_API
-uint32_t heif_image_get_component_height(const heif_image*, uint32_t component_idx);
-
-//NEWAPI
-LIBHEIF_API
-int heif_image_get_component_bits_per_pixel(const heif_image*, uint32_t component_idx);
-
-//NEWAPI
-LIBHEIF_API
-uint16_t heif_image_get_component_type(const heif_image*, uint32_t component_idx);
-
-//NEWAPI
-// Returns the datatype (unsigned/signed integer, floating point, or complex
-// number) of the given component.
-LIBHEIF_API
-heif_component_datatype heif_image_get_component_datatype(const heif_image*, uint32_t component_idx);
-
-// --- ID-based component access via heif_image_handle (before decoding)
-//
-// These let the caller introspect a unci image's components without decoding
-// any tile. They return 0 / -1 / heif_component_datatype_undefined for
-// non-unci images or unknown component IDs.
-//
-// The component IDs returned here match the IDs that
-// heif_image_get_used_component_ids() will report after the same image is
-// decoded, so the same numerical id can be used to address a component on
-// either side of the API.
-
-//NEWAPI
-LIBHEIF_API
-uint32_t heif_image_handle_get_number_of_components(const heif_image_handle*);
-
-//NEWAPI
-// Fills `out_component_ids` with the valid component IDs.
-// The caller must allocate an array of at least
-// heif_image_handle_get_number_of_components() elements.
-LIBHEIF_API
-void heif_image_handle_get_used_component_ids(const heif_image_handle*, uint32_t* out_component_ids);
-
-//NEWAPI
-LIBHEIF_API
-uint16_t heif_image_handle_get_component_type(const heif_image_handle*, uint32_t component_id);
-
-//NEWAPI
-LIBHEIF_API
-int heif_image_handle_get_component_bits_per_pixel(const heif_image_handle*, uint32_t component_id);
-
-//NEWAPI
-LIBHEIF_API
-heif_component_datatype heif_image_handle_get_component_datatype(const heif_image_handle*, uint32_t component_id);
-
-// TODO
-//LIBHEIF_API
-//heif_error heif_image_get_component_indices_of_interleaved_channel(const heif_image* image, uint32_t* component_indices, uint8_t* nComponents_in_out);
-
-//NEWAPI
-LIBHEIF_API
-heif_error heif_image_add_component(heif_image* image,
-                                    int width, int height,
-                                    uint16_t component_type,
-                                    heif_component_datatype datatype,
-                                    int bit_depth,
-                                    uint32_t* out_component_idx);
-
-// Untyped uint8 component data getters: stride is in BYTES per row.
-//NEWAPI
-LIBHEIF_API
-const uint8_t* heif_image_get_component_readonly(const heif_image*, uint32_t component_idx, size_t* out_stride);
-
-//NEWAPI
-LIBHEIF_API
-uint8_t* heif_image_get_component(heif_image*, uint32_t component_idx, size_t* out_stride);
-
-// Typed component data getters: `out_row_elements` is the number of T elements
-// per row, not bytes. Index with `data[y * row_elements + x]` (no casts, no
-// sizeof). libheif allocates rows with element-aligned padding, so this count
-// is always exact for the named type T.
-//NEWAPI
-LIBHEIF_API
-const uint16_t* heif_image_get_component_uint16_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-uint16_t* heif_image_get_component_uint16(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const uint32_t* heif_image_get_component_uint32_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-uint32_t* heif_image_get_component_uint32(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const uint64_t* heif_image_get_component_uint64_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-uint64_t* heif_image_get_component_uint64(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const int8_t* heif_image_get_component_int8_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-int8_t* heif_image_get_component_int8(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const int16_t* heif_image_get_component_int16_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-int16_t* heif_image_get_component_int16(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const int32_t* heif_image_get_component_int32_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-int32_t* heif_image_get_component_int32(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const int64_t* heif_image_get_component_int64_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-int64_t* heif_image_get_component_int64(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const float* heif_image_get_component_float32_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-float* heif_image_get_component_float32(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const double* heif_image_get_component_float64_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-double* heif_image_get_component_float64(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const heif_complex32* heif_image_get_component_complex32_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-heif_complex32* heif_image_get_component_complex32(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-const heif_complex64* heif_image_get_component_complex64_readonly(const heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-//NEWAPI
-LIBHEIF_API
-heif_complex64* heif_image_get_component_complex64(heif_image*, uint32_t component_idx, size_t* out_row_elements);
-
-
-// --- GIMI component content IDs (set before encoding)
-
-//NEWAPI
-// Set a GIMI component content ID for the component with the given
-// component_id (as minted by heif_image_add_component / returned via the
-// component access API). Pass an empty string to clear a previously set id.
-// Returns an error if no component with this id exists on the image.
-// The collected ids are written into an ItemComponentContentIDProperty box
-// during encoding.
-LIBHEIF_API
-heif_error heif_image_set_gimi_component_content_id(heif_image*,
-                                                    uint32_t component_id,
-                                                    const char* content_id);
 
 #ifdef __cplusplus
 }

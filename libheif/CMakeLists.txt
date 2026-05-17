@@ -24,6 +24,7 @@ set(libheif_headers
         api/libheif/heif_image_handle.h
         api/libheif/heif_context.h
         api/libheif/heif_tiling.h
+        api/libheif/heif_components.h
         api/libheif/heif_uncompressed.h
         api/libheif/heif_uncompressed_types.h
         api/libheif/heif_text.h
@@ -93,6 +94,7 @@ set(libheif_sources
         api/libheif/heif_image_handle.cc
         api/libheif/heif_context.cc
         api/libheif/heif_tiling.cc
+        api/libheif/heif_components.cc
         api/libheif/heif_uncompressed.cc
         api/libheif/heif_text.cc
         api/libheif/heif_omaf.cc
