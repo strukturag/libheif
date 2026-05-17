@@ -112,6 +112,7 @@ if(WEBP_FOUND)
     target_link_libraries(heifio PRIVATE WebP::webp)
     target_link_libraries(heifio PRIVATE WebP::libwebpmux)
 
+    target_sources(heifio PRIVATE encoder_webp.cc encoder_webp.h)
     target_sources(heifio PRIVATE decoder_webp.cc decoder_webp.h)
 endif()
 
