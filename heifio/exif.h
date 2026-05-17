@@ -30,4 +30,8 @@ void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, uint32_t size, 
 
 void overwrite_exif_image_size_if_it_exists(uint8_t* exif, uint32_t size, uint32_t width, uint32_t height);
 
+// Validates an ICC profile and adjusts profile_size if a trailing-padding
+// fixup is applied. Returns false if the profile is unrecoverably invalid.
+bool fix_icc_profile(const uint8_t* profile_data, size_t& profile_size);
+
 #endif //LIBHEIF_EXIF_H
