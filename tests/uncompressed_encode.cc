@@ -27,6 +27,8 @@
 #include "catch_amalgamated.hpp"
 #include "api_structs.h"
 #include "libheif/heif.h"
+#include "libheif/heif_uncompressed.h"
+#include "libheif/heif_tiling.h"
 #include <cstdint>
 #include <string.h>
 #include "test_utils.h"
@@ -775,4 +777,181 @@ TEST_CASE("Encode RGBA planar")
 {
   heif_image *input_image = createImage_RGBA_planar();
   do_encode(input_image, "encode_rgba_planar.heif", true);
+}
+
+
+// Regression test for the heap OOB write reported as GHSA-5x55-x5pf-9c6g
+// (https://github.com/strukturag/libheif/security/advisories/GHSA-5x55-x5pf-9c6g).
+// Chroma destination offsets in unc_decoder_component_interleave and
+// unc_decoder_mixed_interleave used the full-resolution tile origin against
+// the subsampled chroma plane stride, so the second tile row in a 4:2:0 tiled
+// unci image was written past the end of the chroma plane. The fix scales the
+// tile origin into the chroma grid; this test encodes a 2x2-tiled YCbCr 4:2:0
+// unci with a distinctive per-tile chroma pattern and verifies the round-trip
+// places each tile correctly.
+static heif_image *createImage_YCbCr_420_tiled_pattern(int w, int h)
+{
+  heif_image *image;
+  heif_error err;
+  err = heif_image_create(w, h, heif_colorspace_YCbCr, heif_chroma_420, &image);
+  REQUIRE(err.code == heif_error_Ok);
+
+  err = heif_image_add_plane(image, heif_channel_Y, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_Cb, w / 2, h / 2, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_Cr, w / 2, h / 2, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  int y_stride, cb_stride, cr_stride;
+  uint8_t *Y = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+  uint8_t *Cb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+  uint8_t *Cr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+
+  // Each tile (in a 2x2 tile grid) gets a unique chroma constant so that
+  // misplaced chroma tiles are detected.
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      Y[row * y_stride + col] = static_cast<uint8_t>((row * 3 + col) & 0xFF);
+    }
+  }
+  int cw = w / 2;
+  int ch = h / 2;
+  for (int row = 0; row < ch; row++) {
+    int tile_row = (row < ch / 2) ? 0 : 1;
+    for (int col = 0; col < cw; col++) {
+      int tile_col = (col < cw / 2) ? 0 : 1;
+      // Distinct per-tile chroma constants.
+      Cb[row * cb_stride + col] = static_cast<uint8_t>(0x10 + tile_row * 2 + tile_col);
+      Cr[row * cr_stride + col] = static_cast<uint8_t>(0xA0 + tile_row * 2 + tile_col);
+    }
+  }
+
+  return image;
+}
+
+TEST_CASE("Encode tiled YCbCr 4:2:0 unci - chroma placement round-trip")
+{
+  const int W = 32;
+  const int H = 32;
+  const int TW = 16;
+  const int TH = 16;
+
+  heif_unci_image_parameters params{};
+  params.version = 1;
+  params.image_width = W;
+  params.image_height = H;
+  params.tile_width = TW;
+  params.tile_height = TH;
+  params.compression = heif_unci_compression_off;
+
+  heif_image *input_image = createImage_YCbCr_420_tiled_pattern(W, H);
+  REQUIRE(input_image != nullptr);
+
+  heif_context *ctx = heif_context_alloc();
+
+  heif_encoder *encoder;
+  heif_error err = heif_context_get_encoder_for_format(ctx, heif_compression_uncompressed, &encoder);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_encoding_options *options = heif_encoding_options_alloc();
+  options->macOS_compatibility_workaround_no_nclx_profile = true;
+
+  heif_image_handle *tiled_image;
+  err = heif_context_add_empty_unci_image(ctx, &params, options, input_image, &tiled_image);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // Add each 16x16 tile carrying the corresponding sub-region of the input.
+  for (uint32_t ty = 0; ty < 2; ty++) {
+    for (uint32_t tx = 0; tx < 2; tx++) {
+      heif_image *tile;
+      err = heif_image_create(TW, TH, heif_colorspace_YCbCr, heif_chroma_420, &tile);
+      REQUIRE(err.code == heif_error_Ok);
+      err = heif_image_add_plane(tile, heif_channel_Y, TW, TH, 8);
+      REQUIRE(err.code == heif_error_Ok);
+      err = heif_image_add_plane(tile, heif_channel_Cb, TW / 2, TH / 2, 8);
+      REQUIRE(err.code == heif_error_Ok);
+      err = heif_image_add_plane(tile, heif_channel_Cr, TW / 2, TH / 2, 8);
+      REQUIRE(err.code == heif_error_Ok);
+
+      int y_stride, cb_stride, cr_stride;
+      uint8_t *tY = heif_image_get_plane(tile, heif_channel_Y, &y_stride);
+      uint8_t *tCb = heif_image_get_plane(tile, heif_channel_Cb, &cb_stride);
+      uint8_t *tCr = heif_image_get_plane(tile, heif_channel_Cr, &cr_stride);
+
+      int src_y_stride, src_cb_stride, src_cr_stride;
+      const uint8_t *sY = heif_image_get_plane(input_image, heif_channel_Y, &src_y_stride);
+      const uint8_t *sCb = heif_image_get_plane(input_image, heif_channel_Cb, &src_cb_stride);
+      const uint8_t *sCr = heif_image_get_plane(input_image, heif_channel_Cr, &src_cr_stride);
+
+      for (int row = 0; row < TH; row++) {
+        memcpy(tY + row * y_stride,
+               sY + (ty * TH + row) * src_y_stride + tx * TW,
+               TW);
+      }
+      for (int row = 0; row < TH / 2; row++) {
+        memcpy(tCb + row * cb_stride,
+               sCb + (ty * (TH / 2) + row) * src_cb_stride + tx * (TW / 2),
+               TW / 2);
+        memcpy(tCr + row * cr_stride,
+               sCr + (ty * (TH / 2) + row) * src_cr_stride + tx * (TW / 2),
+               TW / 2);
+      }
+
+      err = heif_context_add_image_tile(ctx, tiled_image, tx, ty, tile, encoder);
+      REQUIRE(err.code == heif_error_Ok);
+      heif_image_release(tile);
+    }
+  }
+
+  err = heif_context_write_to_file(ctx, "encode_ycbcr420_tiled.heif");
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle_release(tiled_image);
+
+  // --- decode and check chroma placement (the bug placed second-tile-row
+  //     chroma far past the end of the chroma plane).
+
+  heif_context *decode_context = heif_context_alloc();
+  err = heif_context_read_from_file(decode_context, "encode_ycbcr420_tiled.heif", NULL);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle *decode_handle = get_primary_image_handle(decode_context);
+  heif_image *decoded;
+  err = heif_decode_image(decode_handle, &decoded, heif_colorspace_YCbCr, heif_chroma_420, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+
+  int stride;
+  const uint8_t *cb = heif_image_get_plane_readonly(decoded, heif_channel_Cb, &stride);
+  REQUIRE(cb != nullptr);
+  for (int row = 0; row < H / 2; row++) {
+    int expected_tile_row = (row < H / 4) ? 0 : 1;
+    for (int col = 0; col < W / 2; col++) {
+      int expected_tile_col = (col < W / 4) ? 0 : 1;
+      uint8_t expected = static_cast<uint8_t>(0x10 + expected_tile_row * 2 + expected_tile_col);
+      INFO("Cb row=" << row << " col=" << col);
+      REQUIRE(((int) cb[row * stride + col]) == expected);
+    }
+  }
+
+  const uint8_t *cr = heif_image_get_plane_readonly(decoded, heif_channel_Cr, &stride);
+  REQUIRE(cr != nullptr);
+  for (int row = 0; row < H / 2; row++) {
+    int expected_tile_row = (row < H / 4) ? 0 : 1;
+    for (int col = 0; col < W / 2; col++) {
+      int expected_tile_col = (col < W / 4) ? 0 : 1;
+      uint8_t expected = static_cast<uint8_t>(0xA0 + expected_tile_row * 2 + expected_tile_col);
+      INFO("Cr row=" << row << " col=" << col);
+      REQUIRE(((int) cr[row * stride + col]) == expected);
+    }
+  }
+
+  heif_image_release(decoded);
+  heif_image_handle_release(decode_handle);
+  heif_context_free(decode_context);
+
+  heif_encoding_options_free(options);
+  heif_encoder_release(encoder);
+  heif_image_release(input_image);
+  heif_context_free(ctx);
 }

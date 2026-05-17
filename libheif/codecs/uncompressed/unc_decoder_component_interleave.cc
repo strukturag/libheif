@@ -96,13 +96,23 @@ Error unc_decoder_component_interleave::decode_tile(const std::vector<uint8_t>& 
 
   bool per_channel_tile_align = (m_uncC->get_interleave_type() == interleave_mode_tile_component);
 
+  // out_x0/out_y0 are in full-resolution image coordinates. For subsampled channels
+  // (Cb/Cr at 4:2:0 or 4:2:2), entry.tile_width/tile_height and entry.dst_plane_stride
+  // refer to the subsampled chroma plane, so the destination origin must be scaled
+  // to the channel's grid. Failing to do so wrote past the chroma plane on any
+  // non-first tile row/column — see GHSA-5x55-x5pf-9c6g.
+  uint32_t tile_col = out_x0 / m_tile_width;
+  uint32_t tile_row = out_y0 / m_tile_height;
+
   for (ChannelListEntry& entry : channelList) {
     srcBits.markTileStart();
+    uint64_t channel_x0 = uint64_t{tile_col} * entry.tile_width;
+    uint64_t channel_y0 = uint64_t{tile_row} * entry.tile_height;
     for (uint32_t y = 0; y < entry.tile_height; y++) {
       srcBits.markRowStart();
       if (entry.use_channel) {
-        uint64_t dst_row_offset = uint64_t{(out_y0 + y)} * entry.dst_plane_stride;
-        processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
+        uint64_t dst_row_offset = (channel_y0 + y) * entry.dst_plane_stride;
+        processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
       }
       else {
         srcBits.skip_bytes(entry.bytes_per_tile_row_src);

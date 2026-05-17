@@ -74,17 +74,27 @@ Error unc_decoder_mixed_interleave::decode_tile(const std::vector<uint8_t>& tile
 
 void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0)
 {
+  // out_x0/out_y0 are in full-resolution image coordinates. For subsampled chroma
+  // channels (4:2:0 or 4:2:2), entry.tile_width/tile_height and entry.dst_plane_stride
+  // refer to the subsampled chroma plane, so the destination origin must be scaled
+  // to each channel's grid. Failing to do so wrote past the chroma plane on any
+  // non-first tile row/column — see GHSA-5x55-x5pf-9c6g.
+  uint32_t tile_col = out_x0 / m_tile_width;
+  uint32_t tile_row = out_y0 / m_tile_height;
+
   bool haveProcessedChromaForThisTile = false;
   for (ChannelListEntry& entry : channelList) {
     if (entry.use_channel) {
+      uint64_t channel_x0 = uint64_t{tile_col} * entry.tile_width;
+      uint64_t channel_y0 = uint64_t{tile_row} * entry.tile_height;
       if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
         if (!haveProcessedChromaForThisTile) {
           for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
             // TODO: row padding
-            uint64_t dst_row_number = tile_y + out_y0;
+            uint64_t dst_row_number = tile_y + channel_y0;
             uint64_t dst_row_offset = dst_row_number * entry.dst_plane_stride;
             for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
-              uint64_t dst_column_number = out_x0 + tile_x;
+              uint64_t dst_column_number = channel_x0 + tile_x;
               uint64_t dst_column_offset = dst_column_number * entry.bytes_per_component_sample;
               int val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
               memcpy_to_native_endian(entry.dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
@@ -99,8 +109,8 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
       }
       else {
         for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-          uint64_t dst_row_offset = uint64_t{(out_y0 + tile_y)} * entry.dst_plane_stride;
-          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
+          uint64_t dst_row_offset = (channel_y0 + tile_y) * entry.dst_plane_stride;
+          processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
         }
       }
     }
