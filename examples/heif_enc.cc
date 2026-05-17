@@ -48,6 +48,7 @@
 #include <libheif/heif_properties.h>
 #include "libheif/heif_items.h"
 
+#include "heifio/decoder_heif.h"
 #include "heifio/decoder_jpeg.h"
 #include "heifio/decoder_png.h"
 #include "heifio/decoder_tiff.h"
@@ -885,7 +886,7 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 
   enum
   {
-    PNG, JPEG, Y4M, TIFF, RAW, WEBP
+    PNG, JPEG, Y4M, TIFF, RAW, WEBP, HEIF
   } filetype = JPEG;
   if (suffix == "png") {
     filetype = PNG;
@@ -901,6 +902,10 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
   }
   else if (suffix == "webp") {
     filetype = WEBP;
+  }
+  else if (suffix == "heif" || suffix == "heic" || suffix == "hif" ||
+           suffix == "avif" || suffix == "avifs") {
+    filetype = HEIF;
   }
 
   if (force_raw_input) {
@@ -946,6 +951,13 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
     }
   }
 #endif
+  else if (filetype == HEIF) {
+    heif_error err = loadHEIF(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load HEIF input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
   else {
     heif_error err = loadJPEG(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
