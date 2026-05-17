@@ -245,7 +245,10 @@ Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const 
 
   // --- optionally compress
 
-  heif_unci_compression compression = (in_options.version >= 8) ? in_options.unci_compression : heif_unci_compression_off;
+  heif_unci_compression compression = heif_unci_compression_off;
+  if (in_options.version >= 8 && in_options.unci_parameters != nullptr) {
+    compression = in_options.unci_parameters->compression;
+  }
 
   if (compression != heif_unci_compression_off) {
     uint32_t compr_fourcc = unci_compression_to_fourcc(compression);

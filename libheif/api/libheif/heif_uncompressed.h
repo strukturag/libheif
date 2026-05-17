@@ -287,9 +287,17 @@ void heif_unci_image_parameters_release(heif_unci_image_parameters*);
  * However, this will by default disable any compression and any control about
  * the data layout.
  *
+ * The function also accepts a direct heif_unci_image_parameters argument and
+ * indirectly through encoding_options. At least one of the two must be non-null.
+ * If both are non-null and differ, the direct argument takes precedence.
+ *
  * @param ctx The file context
- * @param parameters The parameters for the image, must not be NULL.
- * @param encoding_options Optional, may be NULL.
+ * @param parameters The parameters for the image. May be NULL if
+ *                  heif_encoding_options::unci_parameters is set instead. If both this
+ *                  argument and encoding_options->unci_parameters are non-null and
+ *                  differ, this argument takes precedence.
+ * @param encoding_options Optional, may be NULL. If non-null and unci_parameters is set,
+ *                  it may carry the unci parameters in place of the direct argument.
  * @param prototype An image with the same channel configuration as the image data
  *                  that will be later inserted. The image size need not match this.
  *                  Must not be NULL.

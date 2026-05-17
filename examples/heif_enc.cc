@@ -2116,7 +2116,13 @@ int main(int argc, char** argv)
     options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
   }
 
-  options->unci_compression = unci_compression;
+  // Stash unci compression in a parameters struct that 'options' will point at.
+  // Geometry fields are ignored on the heif_context_encode_image() path; only
+  // 'compression' is consulted there.
+  heif_unci_image_parameters unci_params_for_encode_image{};
+  unci_params_for_encode_image.version = 1;
+  unci_params_for_encode_image.compression = unci_compression;
+  options->unci_parameters = &unci_params_for_encode_image;
 
   // --- if no output filename was given, synthesize one from the first input image filename
 

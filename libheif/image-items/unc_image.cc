@@ -193,6 +193,21 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 {
   assert(encoding_options != nullptr);
 
+  // Resolve effective unci parameters: the direct argument takes precedence; otherwise
+  // fall back to encoding_options->unci_parameters. At least one must be non-null.
+
+  if (parameters == nullptr &&
+      (encoding_options->version < 8 || encoding_options->unci_parameters == nullptr)) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "heif_context_add_empty_unci_image: either the 'parameters' argument or "
+                 "heif_encoding_options::unci_parameters must be non-null."};
+  }
+
+  if (parameters == nullptr) {
+    parameters = encoding_options->unci_parameters;
+  }
+
   // Check input parameters
 
   if (parameters->image_width % parameters->tile_width != 0 ||

@@ -270,7 +270,6 @@ typedef enum heif_orientation
 } heif_orientation;
 
 
-//NEWAPI
 LIBHEIF_API
 heif_orientation heif_orientation_concat(heif_orientation first, heif_orientation second);
 
@@ -316,10 +315,11 @@ typedef struct heif_encoding_options
 
   // version 8 options
 
-  //NEWAPI
-  // Set this to enable compression for 'unci' images encoded through heif_context_encode_image().
-  // Default: heif_unci_compression_off
-  heif_unci_compression unci_compression;
+  // Optional 'unci'-specific encoding parameters (compression method, and future fields
+  // such as interleave type and padding).
+  //
+  // Default: nullptr
+  const heif_unci_image_parameters* unci_parameters;
 
   // TODO: we should add a flag to force MIAF compatible outputs. E.g. this will put restrictions on grid tile sizes and
   //       might add a clap box when the grid output size does not match the color subsampling factors.

@@ -618,7 +618,7 @@ static void set_default_encoding_options(heif_encoding_options& options)
 
   options.prefer_uncC_short_form = true;
 
-  options.unci_compression = heif_unci_compression_off;
+  options.unci_parameters = nullptr;
 }
 
 
@@ -642,7 +642,7 @@ void heif_encoding_options_copy(heif_encoding_options* dst, const heif_encoding_
 
   switch (min_version) {
     case 8:
-      dst->unci_compression = src->unci_compression;
+      dst->unci_parameters = src->unci_parameters;
       [[fallthrough]];
     case 7:
       dst->prefer_uncC_short_form = src->prefer_uncC_short_form;
