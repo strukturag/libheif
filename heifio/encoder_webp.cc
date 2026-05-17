@@ -26,6 +26,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
+#include <memory>
 #include <vector>
 #include "webp/mux.h"
 #include "webp/encode.h"
