@@ -939,12 +939,11 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
   }
 #if HAVE_LIBWEBP
   else if (filetype == WEBP) {
-      heif_error err = loadWEBP(input_filename.c_str(), &input_image);
-      if (err.code != heif_error_Ok) {
-          std::cerr << "Can not load WEBP input image: " << err.message << '\n';
-          exit(1);
-      }
-      output_bit_depth = 8;
+    heif_error err = loadWEBP(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load WEBP input image: " << err.message << '\n';
+      exit(1);
+    }
   }
 #endif
   else {

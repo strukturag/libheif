@@ -31,10 +31,10 @@
 
 #include "encoder.h"
 
-class WebpEncoder : public Encoder
+class WebPEncoder : public Encoder
 {
 public:
-  WebpEncoder(int quality);
+  WebPEncoder(int quality);
 
   heif_colorspace colorspace(bool has_alpha) const override
   {

@@ -35,11 +35,14 @@
 #include "common_utils.h"
 #include "exif.h"
 
-WebpEncoder::WebpEncoder(int quality) : quality_(quality)
+WebPEncoder::WebPEncoder(int quality) : quality_(quality)
 {
+  if (quality_ == 100) {
+    fprintf(stderr, "WebP: quality 100 selected -- encoding in lossless mode.\n");
+  }
 }
 
-void WebpEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
+void WebPEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
     struct heif_decoding_options* options) const
 {
   options->convert_hdr_to_8bit = 1;
@@ -55,7 +58,7 @@ static int WebPWriter(const uint8_t* data, size_t data_size,
   return 1;
 }
 
-bool WebpEncoder::Encode(const heif_image_handle* handle,
+bool WebPEncoder::Encode(const heif_image_handle* handle,
                         const heif_image* image, const std::string& filename)
 {
   int width = heif_image_get_primary_width(image);
@@ -232,7 +235,7 @@ bool WebpEncoder::Encode(const heif_image_handle* handle,
     fprintf(stderr, "Error while encoding image\n");
     WebPDataClear(&webp_data);
     return false;
-  };
+  }
   std::unique_ptr<WebPData, void(*)(WebPData*)> webp_data_deleter(&webp_data, &WebPDataClear);
   if (fwrite(webp_data.bytes, 1, webp_data.size, fp) != webp_data.size) {
     fprintf(stderr, "Writing WEBP file failed\n");

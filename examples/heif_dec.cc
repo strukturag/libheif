@@ -783,7 +783,7 @@ int main(int argc, char** argv)
       if (quality == -1) {
         quality = kDefaultWebpQuality;
       }
-      encoder.reset(new WebpEncoder(quality));
+      encoder.reset(new WebPEncoder(quality));
 #else
       fprintf(stderr, "WEBP support has not been compiled in.\n");
       return 1;

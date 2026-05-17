@@ -43,6 +43,13 @@ extern "C" {
 
 static struct heif_error heif_error_ok = { heif_error_Ok, heif_suberror_Unspecified, "Success" };
 
+// WebP bitstream format values returned by WebPGetFeatures() in WebPBitstreamFeatures::format.
+// libwebp does not expose these as named symbols.
+static const int WEBP_FORMAT_UNDEFINED = 0;
+static const int WEBP_FORMAT_LOSSY     = 1;
+static const int WEBP_FORMAT_LOSSLESS  = 2;
+static const int WEBP_FORMAT_MIXED     = 3;
+
 heif_error loadWEBP(const char* filename, InputImage* input_image)
 {
   struct heif_image* image = nullptr;
@@ -97,6 +104,13 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     return err;
   }
   std::unique_ptr<WebPMux, void(*)(WebPMux*)> mux_deleter(mux, &WebPMuxDelete);
+
+  // Animated WebP: warn that only the first frame is converted.
+  int num_frames = 0;
+  if (WebPMuxNumChunks(mux, WEBP_CHUNK_ANMF, &num_frames) == WEBP_MUX_OK && num_frames > 1) {
+    fprintf(stderr, "WebP: animated input with %d frames -- only the first frame will be converted.\n", num_frames);
+  }
+
   WebPMuxFrameInfo frame;
   if (WebPMuxGetFrame(mux, 1, &frame) != WEBP_MUX_OK) {
     struct heif_error err = {
@@ -144,7 +158,7 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     return err;
   }
 
-  if (config.input.format == 2) {
+  if (config.input.format == WEBP_FORMAT_LOSSLESS) {
     // Lossless: RGB(A)
     if (config.input.has_alpha) {
       config.output.colorspace = MODE_RGBA;
@@ -193,7 +207,7 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
       return err;
     }
   }
-  else if (config.input.format == 1) {
+  else if (config.input.format == WEBP_FORMAT_LOSSY) {
     // Lossy: YUV420
     if (config.input.has_alpha) {
       config.output.colorspace = MODE_YUVA;
@@ -264,10 +278,11 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     }
   }
   else {
+    // WEBP_FORMAT_UNDEFINED or WEBP_FORMAT_MIXED -- not supported here.
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = "WEBP file is too strange" };
+      .message = "Unsupported WebP bitstream format (mixed or undefined)" };
     return err;
   }
 
