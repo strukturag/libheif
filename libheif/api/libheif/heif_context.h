@@ -298,7 +298,6 @@ void heif_context_debug_dump_boxes_to_file(heif_context* ctx, int fd);
 // ====================================================================================================
 //   Mini format (experimental)
 
-//NEWAPI
 // Enable writing in the compact 'mini' box format (ISO/IEC 23008-12 DAmd2).
 // When enabled, the output file will use a single 'mini' box instead of the standard
 // meta+mdat box structure, if the file content is compatible with the mini format.

@@ -458,16 +458,3 @@ heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_ex
   return heif_error_success;
 }
 
-heif_omaf_image_projection heif_image_handle_get_omaf_image_projection(const heif_image_handle* handle)
-{
-  return handle->image->get_omaf_image_projection();
-}
-
-heif_error heif_image_handle_set_omaf_image_projection(const heif_image_handle* handle, heif_omaf_image_projection image_projection)
-{
-  if (!handle) {
-    return heif_error_null_pointer_argument;
-  }
-  handle->image->set_omaf_image_projection(image_projection);
-  return heif_error_success;
-}

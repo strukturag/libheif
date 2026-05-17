@@ -130,45 +130,6 @@ typedef enum heif_channel
   heif_channel_unknown = 65535
 } heif_channel;
 
-//NEWAPI
-/**
- * OMAF Image projection.
- *
- * The image projection for most images is flat - it is projected as intended to be shown on
- * a flat screen or print. For immersive or omnidirectional media (e.g. VR headsets, or
- * equivalent), there are alternatives such as an equirectangular projection or cubemap projection.
- *
- * See ISO/IEC 23090-2 "Omnidirectional media format" for more information.
- */
-typedef enum heif_omaf_image_projection
-{
-  /**
-   * Equirectangular projection.
-   */
-  heif_omaf_image_projection_equirectangular = 0x00,
-
-  /**
-   * Cube map.
-   */
-  heif_omaf_image_projection_cube_map = 0x01,
-
-  /*
-   * Values 2 through 31 are reserved in ISO/IEC 23090-2:2023 Table 10.
-   * Files may carry any of them; libheif passes the raw projection_type
-   * value through unchanged, so callers can log or round-trip it.
-   * Handle anything outside the named constants in a `default:` arm.
-   */
-
-  /**
-   * Flat projection. Also returned by the get-projection accessors when no
-   * projection information is present on the image, so callers can use
-   * `result == heif_omaf_image_projection_flat` to test for "no prfr box".
-   * 0xFF lies outside the prfr value range reserved by ISO 23090-2:2023
-   * Table 10, so it cannot collide with a value read from a file.
-   */
-  heif_omaf_image_projection_flat = 0xFF,
-} heif_omaf_image_projection;
-
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
 // and bit depths.
 
@@ -365,14 +326,6 @@ void heif_image_set_pixel_aspect_ratio(heif_image*, uint32_t aspect_h, uint32_t 
 
 LIBHEIF_API
 void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle*, uint32_t aspect_h, uint32_t aspect_v);
-
-//NEWAPI
-LIBHEIF_API
-heif_omaf_image_projection heif_image_get_omaf_image_projection(const heif_image*);
-
-//NEWAPI
-LIBHEIF_API
-void heif_image_set_omaf_image_projection(const heif_image*, heif_omaf_image_projection image_projection);
 
 // --- heif_image allocation
 

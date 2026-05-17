@@ -73,7 +73,6 @@ typedef struct heif_decoder_plugin_options
   int strict_decoding; // bool
   int num_threads; // 0 - undefined, use decoder default
 
-  //NEWAPI
   // --- added in plugin_api_version 6 ---
   // Security limits the plugin must enforce for image allocations during decoding.
   // The pointee must outlive the decoder instance (typically the context's limits).
