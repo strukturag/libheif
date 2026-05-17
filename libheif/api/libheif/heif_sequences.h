@@ -159,6 +159,7 @@ int heif_track_has_alpha_channel(const heif_track*);
 LIBHEIF_API
 uint32_t heif_track_get_timescale(const heif_track*);
 
+//NEWAPI
 /**
  * Special return value of `heif_track_get_number_of_repetitions()` indicating that
  * the editlist requests indefinite repetition (the mvhd duration is the ISOBMFF
@@ -191,6 +192,7 @@ uint32_t heif_track_get_timescale(const heif_track*);
  * timeline exactly once. Use the value returned by this function to decide how often
  * to replay the track at the application level.
  */
+//NEWAPI
 LIBHEIF_API
 uint32_t heif_track_get_number_of_repetitions(const heif_track*);
 

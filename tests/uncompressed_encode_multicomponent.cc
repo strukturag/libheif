@@ -260,7 +260,6 @@ static heif_image* create_and_fill_image(heif_component_datatype datatype, int b
     size_t stride = 0;
     T* data = get_component_ptr<T>(image, id, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(T);
     REQUIRE(stride >= kWidth);
 
     for (uint32_t y = 0; y < kHeight; y++) {
@@ -322,7 +321,6 @@ static void verify_image_data(const heif_image* image)
     size_t stride = 0;
     const T* data = get_component_ptr_readonly<T>(image, c, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(T);
 
     for (uint32_t y = 0; y < kHeight; y++) {
       for (uint32_t x = 0; x < kWidth; x++) {
@@ -473,7 +471,6 @@ TEST_CASE("Mixed bpp: 16-bit and 14-bit components")
     size_t stride = 0;
     uint16_t* data = heif_image_get_component_uint16(image, idx0, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(uint16_t);
     for (uint32_t y = 0; y < kH; y++) {
       for (uint32_t x = 0; x < kW; x++) {
         data[y * stride + x] = static_cast<uint16_t>(y * kW + x + 100);
@@ -486,7 +483,6 @@ TEST_CASE("Mixed bpp: 16-bit and 14-bit components")
     size_t stride = 0;
     uint16_t* data = heif_image_get_component_uint16(image, idx1, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(uint16_t);
     for (uint32_t y = 0; y < kH; y++) {
       for (uint32_t x = 0; x < kW; x++) {
         data[y * stride + x] = static_cast<uint16_t>((y * kW + x + 200) & kMaxVal14);
@@ -532,7 +528,6 @@ TEST_CASE("Mixed bpp: 16-bit and 14-bit components")
     size_t stride = 0;
     const uint16_t* data = heif_image_get_component_uint16_readonly(decoded, idx0, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(uint16_t);
     for (uint32_t y = 0; y < kH; y++) {
       for (uint32_t x = 0; x < kW; x++) {
         uint16_t expected = static_cast<uint16_t>(y * kW + x + 100);
@@ -547,7 +542,6 @@ TEST_CASE("Mixed bpp: 16-bit and 14-bit components")
     size_t stride = 0;
     const uint16_t* data = heif_image_get_component_uint16_readonly(decoded, idx1, &stride);
     REQUIRE(data != nullptr);
-    stride /= sizeof(uint16_t);
     for (uint32_t y = 0; y < kH; y++) {
       for (uint32_t x = 0; x < kW; x++) {
         uint16_t expected = static_cast<uint16_t>((y * kW + x + 200) & kMaxVal14);

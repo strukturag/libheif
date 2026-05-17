@@ -270,6 +270,7 @@ typedef enum heif_orientation
 } heif_orientation;
 
 
+//NEWAPI
 LIBHEIF_API
 heif_orientation heif_orientation_concat(heif_orientation first, heif_orientation second);
 
@@ -315,6 +316,7 @@ typedef struct heif_encoding_options
 
   // version 8 options
 
+  //NEWAPI
   // Set this to enable compression for 'unci' images encoded through heif_context_encode_image().
   // Default: heif_unci_compression_off
   heif_unci_compression unci_compression;
@@ -375,6 +377,7 @@ LIBHEIF_API
 void heif_context_add_compatible_brand(heif_context* ctx,
                                        heif_brand2 compatible_brand);
 
+//NEWAPI
 /**
  * Enable the unified ID namespace ('unif' brand).
  *

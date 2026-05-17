@@ -744,27 +744,37 @@ uint8_t* heif_image_get_component(heif_image* image, uint32_t component_idx, siz
 }
 
 
+// Typed accessors: convert the internal byte stride to element count for the
+// public API. libheif's allocator pads rows to a 16-byte boundary (see
+// pixelimage.cc), which is a multiple of sizeof(T) for every supported T
+// (<= 16 bytes), so the division is always exact.
 #define heif_image_get_component_X(name, type) \
 const type* heif_image_get_component_ ## name ## _readonly(const struct heif_image* image, \
                                                             uint32_t component_idx, \
-                                                            size_t* out_stride) \
+                                                            size_t* out_row_elements) \
 {                                                            \
   if (!image || !image->image) {                             \
-    if (out_stride) *out_stride = 0;                         \
+    if (out_row_elements) *out_row_elements = 0;             \
     return nullptr;                                          \
   }                                                          \
-  return image->image->get_component_memory<type>(component_idx, out_stride); \
+  size_t byte_stride = 0;                                    \
+  const type* p = image->image->get_component_memory<type>(component_idx, &byte_stride); \
+  if (out_row_elements) *out_row_elements = byte_stride / sizeof(type); \
+  return p;                                                  \
 }                                                            \
                                                              \
 type* heif_image_get_component_ ## name (struct heif_image* image, \
                                          uint32_t component_idx,  \
-                                         size_t* out_stride)      \
+                                         size_t* out_row_elements) \
 {                                                            \
   if (!image || !image->image) {                             \
-    if (out_stride) *out_stride = 0;                         \
+    if (out_row_elements) *out_row_elements = 0;             \
     return nullptr;                                          \
   }                                                          \
-  return image->image->get_component_memory<type>(component_idx, out_stride); \
+  size_t byte_stride = 0;                                    \
+  type* p = image->image->get_component_memory<type>(component_idx, &byte_stride); \
+  if (out_row_elements) *out_row_elements = byte_stride / sizeof(type); \
+  return p;                                                  \
 }
 
 heif_image_get_component_X(uint16, uint16_t)

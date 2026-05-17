@@ -717,7 +717,7 @@ static heif_error readMonoFloat(TIFF* tif, heif_image** image)
       *image = nullptr;
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
     }
-    memcpy(reinterpret_cast<uint8_t*>(plane) + row * stride, buf, width * sizeof(float));
+    memcpy(plane + row * stride, buf, width * sizeof(float));
   }
   _TIFFfree(buf);
 
@@ -748,13 +748,13 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
     return err;
   }
 
-  size_t stride;
+  size_t row_elements;  // int8 or int16 elements per row, depending on bps
   uint8_t* plane;
   if (bps == 8) {
-    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*image, component_idx, &stride));
+    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*image, component_idx, &row_elements));
   }
   else {
-    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*image, component_idx, &stride));
+    plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*image, component_idx, &row_elements));
   }
   if (!plane) {
     heif_image_release(*image);
@@ -763,6 +763,7 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
   }
 
   int bytesPerSample = bps > 8 ? 2 : 1;
+  size_t row_bytes = row_elements * bytesPerSample;
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
   for (uint32_t row = 0; row < height; row++) {
     if (TIFFReadScanline(tif, buf, row, 0) < 0) {
@@ -771,7 +772,7 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
       *image = nullptr;
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
     }
-    memcpy(plane + row * stride, buf, width * bytesPerSample);
+    memcpy(plane + row * row_bytes, buf, width * bytesPerSample);
   }
   _TIFFfree(buf);
 
@@ -1067,8 +1068,8 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
         uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
 
         for (uint32_t row = 0; row < actual_h; row++) {
-          uint8_t* dst = reinterpret_cast<uint8_t*>(out_plane) + (size_t)(ty * tile_height + row) * out_stride
-                         + (size_t)tx * tile_width * sizeof(float);
+          float* dst = out_plane + (size_t)(ty * tile_height + row) * out_stride
+                       + (size_t)tx * tile_width;
           float* src = reinterpret_cast<float*>(tile_buf.data() + (size_t)row * tile_width * sizeof(float));
           memcpy(dst, src, actual_w * sizeof(float));
         }
@@ -1099,13 +1100,13 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
       return err;
     }
 
-    size_t out_stride;
+    size_t row_elements;  // int8 or int16 elements per row, depending on bps
     uint8_t* out_plane;
     if (bps == 8) {
-      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &out_stride));
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &row_elements));
     }
     else {
-      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &out_stride));
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &row_elements));
     }
     if (!out_plane) {
       heif_image_release(*out_image);
@@ -1114,6 +1115,7 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
     }
 
     int bytesPerSample = bps > 8 ? 2 : 1;
+    size_t row_bytes = row_elements * bytesPerSample;
     tmsize_t tile_buf_size = TIFFTileSize(tif);
     std::vector<uint8_t> tile_buf(tile_buf_size);
 
@@ -1134,7 +1136,7 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
         uint32_t actual_h = std::min(tile_height, height - ty * tile_height);
 
         for (uint32_t row = 0; row < actual_h; row++) {
-          uint8_t* dst = out_plane + ((size_t)ty * tile_height + row) * out_stride
+          uint8_t* dst = out_plane + ((size_t)ty * tile_height + row) * row_bytes
                          + (size_t)tx * tile_width * bytesPerSample;
           uint8_t* src = tile_buf.data() + (size_t)row * tile_width * bytesPerSample;
           memcpy(dst, src, actual_w * bytesPerSample);
@@ -1665,7 +1667,7 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
     }
 
     for (uint32_t row = 0; row < actual_h; row++) {
-      uint8_t* dst = reinterpret_cast<uint8_t*>(out_plane) + row * out_stride;
+      float* dst = out_plane + row * out_stride;
       float* src = reinterpret_cast<float*>(tile_buf.data() + row * m_tile_width * sizeof(float));
       memcpy(dst, src, actual_w * sizeof(float));
     }
@@ -1692,13 +1694,13 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
       return err;
     }
 
-    size_t out_stride;
+    size_t row_elements;  // int8 or int16 elements per row, depending on bps
     uint8_t* out_plane;
     if (m_bits_per_sample == 8) {
-      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &out_stride));
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int8(*out_image, component_idx, &row_elements));
     }
     else {
-      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &out_stride));
+      out_plane = reinterpret_cast<uint8_t*>(heif_image_get_component_int16(*out_image, component_idx, &row_elements));
     }
     if (!out_plane) {
       heif_image_release(*out_image);
@@ -1707,6 +1709,7 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
     }
 
     int bytesPerSample = m_bits_per_sample > 8 ? 2 : 1;
+    size_t row_bytes = row_elements * bytesPerSample;
     tmsize_t tile_buf_size = TIFFTileSize(tif);
     std::vector<uint8_t> tile_buf(tile_buf_size);
 
@@ -1719,7 +1722,7 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
     }
 
     for (uint32_t row = 0; row < actual_h; row++) {
-      uint8_t* dst = out_plane + row * out_stride;
+      uint8_t* dst = out_plane + row * row_bytes;
       uint8_t* src = tile_buf.data() + row * m_tile_width * bytesPerSample;
       memcpy(dst, src, actual_w * bytesPerSample);
     }

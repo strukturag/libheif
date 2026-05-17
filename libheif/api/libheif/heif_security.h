@@ -72,10 +72,12 @@ typedef struct heif_security_limits
 
   // --- version 4
 
+  //NEWAPI
   uint32_t max_bad_pixels;
 
   // --- version 5
 
+  //NEWAPI
   // Internal: when libheif derives a limits struct from another one (e.g. to
   // tighten the maximum image size for a specific decode), this points back to
   // the registered context whose total-memory budget the allocation should be

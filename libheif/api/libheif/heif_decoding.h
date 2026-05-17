@@ -39,6 +39,7 @@ extern "C" {
 LIBHEIF_API
 void heif_context_set_max_decoding_threads(heif_context* ctx, int max_threads);
 
+//NEWAPI
 // Returns the current maximum number of background threads used for parallel tile decoding.
 // This reflects either the library default or the value last passed to
 // heif_context_set_max_decoding_threads().

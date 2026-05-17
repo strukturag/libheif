@@ -105,6 +105,7 @@ typedef enum heif_colorspace
   // Images of this type are always planar and use heif_chroma_planar.
   heif_colorspace_custom = 3,
 
+  //NEWAPI
   // Images of this type are filter-array (CFA / Bayer) mosaics. The single
   // mosaicked plane is described as heif_chroma_planar.
   heif_colorspace_filter_array = 4
@@ -125,9 +126,11 @@ typedef enum heif_channel
   heif_channel_filter_array = 11,
   heif_channel_depth = 12,
   heif_channel_disparity = 13,
+  //NEWAPI
   heif_channel_unknown = 65535
 } heif_channel;
 
+//NEWAPI
 /**
  * OMAF Image projection.
  *
@@ -363,9 +366,11 @@ void heif_image_set_pixel_aspect_ratio(heif_image*, uint32_t aspect_h, uint32_t 
 LIBHEIF_API
 void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle*, uint32_t aspect_h, uint32_t aspect_v);
 
+//NEWAPI
 LIBHEIF_API
 heif_omaf_image_projection heif_image_get_omaf_image_projection(const heif_image*);
 
+//NEWAPI
 LIBHEIF_API
 void heif_image_set_omaf_image_projection(const heif_image*, heif_omaf_image_projection image_projection);
 

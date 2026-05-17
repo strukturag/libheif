@@ -250,6 +250,7 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_avci   heif_fourcc('a','v','c','i')
 #define heif_brand2_avcs   heif_fourcc('a','v','c','s')
 
+//NEWAPI
 /**
  * Unified ID namespace (`unif`) brand.
  *

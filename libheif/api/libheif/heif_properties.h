@@ -231,9 +231,11 @@ heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_ex
 // ------------------------- OMAF projection information -------------------------
 // To test whether projection information is present, compare the getter's result
 // against heif_omaf_image_projection_flat.
+//NEWAPI
 LIBHEIF_API
 heif_omaf_image_projection heif_image_handle_get_omaf_image_projection(const heif_image_handle* handle);
 
+//NEWAPI
 LIBHEIF_API
 heif_error heif_image_handle_set_omaf_image_projection(const heif_image_handle* handle, heif_omaf_image_projection image_projection);
 
