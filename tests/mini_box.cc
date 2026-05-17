@@ -531,3 +531,135 @@ TEST_CASE("check heif mini")
                         "main_item_data offset: 147, size: 19098\n");
 }
 
+
+// --- Orientation round-trip tests ---
+//
+// Exercise Box_mini::compute_orientation_from_properties() — the static helper
+// that walks a list of irot/imir property boxes and composes them via
+// heif_orientation_concat() to recover the cumulative EXIF orientation.
+// The order in ipma is not fixed across files, so the recovery must work
+// regardless of whether irot or imir appears first.
+
+namespace {
+
+std::shared_ptr<Box_irot> make_irot(int rotation_ccw)
+{
+  auto b = std::make_shared<Box_irot>();
+  b->set_rotation_ccw(rotation_ccw);
+  return b;
+}
+
+std::shared_ptr<Box_imir> make_imir(heif_transform_mirror_direction dir)
+{
+  auto b = std::make_shared<Box_imir>();
+  b->set_mirror_direction(dir);
+  return b;
+}
+
+// A non-transform property to verify it's ignored.
+std::shared_ptr<Box> make_ispe()
+{
+  auto b = std::make_shared<Box_ispe>();
+  b->set_size(64, 64);
+  return b;
+}
+
+} // namespace
+
+TEST_CASE("Box_mini::compute_orientation_from_properties — single boxes")
+{
+  // Empty -> normal
+  REQUIRE(Box_mini::compute_orientation_from_properties({}) == heif_orientation_normal);
+
+  // Non-transform properties are ignored.
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_ispe()}) == heif_orientation_normal);
+
+  // Single irot at every supported angle (Box_irot stores rotation in
+  // counter-clockwise degrees; EXIF labels rotations clockwise).
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_irot(0)})   == heif_orientation_normal);
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_irot(180)}) == heif_orientation_rotate_180);
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_irot(270)}) == heif_orientation_rotate_90_cw);  // 270 ccw == 90 cw
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_irot(90)})  == heif_orientation_rotate_270_cw); // 90 ccw == 270 cw
+
+  // Single imir in each direction.
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_imir(heif_transform_mirror_direction_horizontal)})
+          == heif_orientation_flip_horizontally);
+  REQUIRE(Box_mini::compute_orientation_from_properties({make_imir(heif_transform_mirror_direction_vertical)})
+          == heif_orientation_flip_vertically);
+}
+
+TEST_CASE("Box_mini::compute_orientation_from_properties — irot followed by imir")
+{
+  // This is the canonical order emitted by HeifFile::add_orientation_properties:
+  // rotation first, then mirror.
+
+  using H = std::pair<std::vector<std::shared_ptr<Box>>, heif_orientation>;
+  std::vector<H> cases = {
+      // The two combinations add_orientation_properties produces (orientations
+      // 5 and 7 in the EXIF mapping).
+      { {make_irot(270), make_imir(heif_transform_mirror_direction_horizontal)},
+        heif_orientation_rotate_90_cw_then_flip_horizontally },                 // 5
+      { {make_irot(270), make_imir(heif_transform_mirror_direction_vertical)},
+        heif_orientation_rotate_90_cw_then_flip_vertically },                   // 7
+
+      // A few more rotation+mirror pairs that exercise different table cells.
+      { {make_irot(180), make_imir(heif_transform_mirror_direction_horizontal)},
+        heif_orientation_flip_vertically },                                     // 4
+      { {make_irot(180), make_imir(heif_transform_mirror_direction_vertical)},
+        heif_orientation_flip_horizontally },                                   // 2
+      { {make_irot(90),  make_imir(heif_transform_mirror_direction_horizontal)},
+        heif_orientation_rotate_90_cw_then_flip_vertically },                   // 7
+  };
+
+  for (auto& [transforms, expected] : cases) {
+    INFO("expected orientation = " << expected);
+    REQUIRE(Box_mini::compute_orientation_from_properties(transforms) == expected);
+  }
+}
+
+TEST_CASE("Box_mini::compute_orientation_from_properties — imir followed by irot")
+{
+  // add_orientation_properties always emits irot-then-imir, but a file
+  // produced by other tools could place them in the reverse order. The
+  // heif_orientation_concat() composition must give the right answer for
+  // that order too. These expected values come from the concat table in
+  // heif_encoding.cc: concat(imir, irot).
+
+  using H = std::pair<std::vector<std::shared_ptr<Box>>, heif_orientation>;
+  std::vector<H> cases = {
+      // imir(H) then irot(270 ccw / 90 cw) = concat(2, 6) = 7
+      { {make_imir(heif_transform_mirror_direction_horizontal), make_irot(270)},
+        heif_orientation_rotate_90_cw_then_flip_vertically },                   // 7
+
+      // imir(H) then irot(180) = concat(2, 3) = 4
+      { {make_imir(heif_transform_mirror_direction_horizontal), make_irot(180)},
+        heif_orientation_flip_vertically },                                     // 4
+
+      // imir(V) then irot(270 ccw / 90 cw) = concat(4, 6) = 5
+      { {make_imir(heif_transform_mirror_direction_vertical),   make_irot(270)},
+        heif_orientation_rotate_90_cw_then_flip_horizontally },                 // 5
+
+      // imir(V) then irot(90 ccw / 270 cw) = concat(4, 8) = 7 again (different path)
+      { {make_imir(heif_transform_mirror_direction_vertical),   make_irot(90)},
+        heif_orientation_rotate_90_cw_then_flip_vertically },                   // 7
+  };
+
+  for (auto& [transforms, expected] : cases) {
+    INFO("expected orientation = " << expected);
+    REQUIRE(Box_mini::compute_orientation_from_properties(transforms) == expected);
+  }
+}
+
+TEST_CASE("Box_mini::compute_orientation_from_properties — mixed with non-transform properties")
+{
+  // Non-transform properties between transforms must not affect the result.
+  std::vector<std::shared_ptr<Box>> props = {
+      make_ispe(),
+      make_irot(270),
+      make_ispe(),
+      make_imir(heif_transform_mirror_direction_horizontal),
+      make_ispe(),
+  };
+  REQUIRE(Box_mini::compute_orientation_from_properties(props)
+          == heif_orientation_rotate_90_cw_then_flip_horizontally); // 5
+}

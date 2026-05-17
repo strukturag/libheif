@@ -151,6 +151,13 @@ public:
   // Returns nullptr if conversion is not possible.
   static std::shared_ptr<Box_mini> create_from_heif_file(class HeifFile* file);
 
+  // Compose the cumulative EXIF-style orientation of a sequence of property
+  // boxes by composing irot/imir transforms in list order via
+  // heif_orientation_concat(). Non-transform properties are ignored.
+  // Returns heif_orientation_normal (1) for an empty list.
+  static heif_orientation compute_orientation_from_properties(
+      const std::vector<std::shared_ptr<Box>>& properties);
+
 protected:
   Error parse(BitstreamRange &range, const heif_security_limits *limits) override;
 

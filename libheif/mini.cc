@@ -1592,9 +1592,25 @@ static heif_orientation transform_box_to_orientation(const std::shared_ptr<Box>&
         return heif_orientation_flip_horizontally;
       case heif_transform_mirror_direction_vertical:
         return heif_orientation_flip_vertically;
+      case heif_transform_mirror_direction_invalid:
+        return heif_orientation_normal;
     }
   }
   return heif_orientation_normal;
+}
+
+
+heif_orientation Box_mini::compute_orientation_from_properties(
+    const std::vector<std::shared_ptr<Box>>& properties)
+{
+  heif_orientation orientation = heif_orientation_normal;
+  for (auto& prop : properties) {
+    if (std::dynamic_pointer_cast<Box_irot>(prop) ||
+        std::dynamic_pointer_cast<Box_imir>(prop)) {
+      orientation = heif_orientation_concat(orientation, transform_box_to_orientation(prop));
+    }
+  }
+  return orientation;
 }
 
 
@@ -1762,11 +1778,6 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
   std::shared_ptr<Box_colr> colr_icc;
   std::shared_ptr<Box> codec_config;
 
-  // Accumulate cumulative orientation by composing transforms in property
-  // order. Use heif_orientation_concat() so the result is correct regardless
-  // of whether irot or imir comes first in ipma.
-  heif_orientation orientation = heif_orientation_normal;
-
   for (auto& prop : properties) {
     if (auto p = std::dynamic_pointer_cast<Box_ispe>(prop)) {
       ispe = p;
@@ -1782,14 +1793,12 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
         colr_icc = p;
       }
     }
-    else if (std::dynamic_pointer_cast<Box_irot>(prop) ||
-             std::dynamic_pointer_cast<Box_imir>(prop)) {
-      orientation = heif_orientation_concat(orientation, transform_box_to_orientation(prop));
-    }
     else if (std::dynamic_pointer_cast<Box_av1C>(prop) || std::dynamic_pointer_cast<Box_hvcC>(prop)) {
       codec_config = prop;
     }
   }
+
+  heif_orientation orientation = compute_orientation_from_properties(properties);
 
   // Dimensions
   if (ispe) {
