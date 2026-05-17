@@ -6,6 +6,10 @@ on:
 
 jobs:
   scan:
+    # TEMPORARILY DISABLED: scan.coverity.com is down and the download step
+    # fails before the build can run. Re-enable by removing this `if` line
+    # once the Coverity service is back.
+    if: false
     runs-on: ubuntu-22.04
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
