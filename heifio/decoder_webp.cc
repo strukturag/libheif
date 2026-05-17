@@ -224,8 +224,8 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
       &image);
     if (err.code)
       return err;
-    size_t stride[4];
-    uint8_t* ptr[4];
+    size_t stride[4] = {};
+    uint8_t* ptr[4] = {};
     const int uv_width = (width + 1) / 2;
     const int uv_height = (height + 1) / 2;
     err = heif_image_add_plane(image, heif_channel_Y, (int)width, (int)height, 8);
