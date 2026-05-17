@@ -257,12 +257,16 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     uint16_t alpha_max = static_cast<uint16_t>((1 << input_bits) - 1);
     for (uint32_t y = 0; y < height; y++) {
       for (uint32_t x = 0; x < width; x++) {
-        const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
-        uint16_t a = has_alpha
-                     ? ((input_bits == 8)
-                        ? in[0]
-                        : (uint16_t) ((in[0 + le] << 8) | in[1 - le]))
-                     : alpha_max;
+        uint16_t a;
+        if (has_alpha) {
+          const uint8_t* in = &in_a[y * in_a_stride + x * rgb_step];
+          a = (input_bits == 8)
+              ? in[0]
+              : (uint16_t) ((in[0 + le] << 8) | in[1 - le]);
+        }
+        else {
+          a = alpha_max;
+        }
         if (output_bits == 8) {
           out_a[y * out_a_stride + x] = (uint8_t) Shift(a, input_bits, output_bits);
         }
