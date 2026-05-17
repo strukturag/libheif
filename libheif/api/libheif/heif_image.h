@@ -161,7 +161,11 @@ typedef enum heif_omaf_image_projection
   heif_omaf_image_projection_unknown = 0xFE,
 
   /**
-   * Flat projection, assumed if no projection information provided.
+   * Flat projection. Also returned by the get-projection accessors when no
+   * projection information is present on the image, so callers can use
+   * `result == heif_omaf_image_projection_flat` to test for "no prfr box".
+   * 0xFF lies outside the prfr value range reserved by ISO 23090-2:2023
+   * Table 10, so it cannot collide with a value read from a file.
    */
   heif_omaf_image_projection_flat = 0xFF,
 } heif_omaf_image_projection;

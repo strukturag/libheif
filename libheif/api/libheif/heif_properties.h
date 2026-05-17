@@ -230,12 +230,10 @@ heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const heif_camera_ex
 
 // ------------------------- OMAF projection information -------------------------
 // These accessors are always present in the API. When libheif was built without
-// OMAF support, the query functions report "no projection" (0 /
-// heif_omaf_image_projection_flat) and the setter returns
-// heif_error_Unsupported_feature.
-LIBHEIF_API
-int heif_image_handle_has_omaf_image_projection(const heif_image_handle* handle);
-
+// OMAF support, the getter reports "no projection" (heif_omaf_image_projection_flat)
+// and the setter returns heif_error_Unsupported_feature.
+// To test whether projection information is present, compare the getter's result
+// against heif_omaf_image_projection_flat.
 LIBHEIF_API
 heif_omaf_image_projection heif_image_handle_get_omaf_image_projection(const heif_image_handle* handle);
 

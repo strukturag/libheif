@@ -949,8 +949,8 @@ int main(int argc, char** argv)
 #if HEIF_WITH_OMAF
     // --- OMAF
 
-    if (heif_image_handle_has_omaf_image_projection(handle)) {
-      heif_omaf_image_projection projection = heif_image_handle_get_omaf_image_projection(handle);
+    heif_omaf_image_projection projection = heif_image_handle_get_omaf_image_projection(handle);
+    if (projection != heif_omaf_image_projection_flat) {
       std::cout << "  image projection: ";
       switch (projection)
       {
