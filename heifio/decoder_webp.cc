@@ -45,10 +45,10 @@ static struct heif_error heif_error_ok = { heif_error_Ok, heif_suberror_Unspecif
 
 // WebP bitstream format values returned by WebPGetFeatures() in WebPBitstreamFeatures::format.
 // libwebp does not expose these as named symbols.
-static const int WEBP_FORMAT_UNDEFINED = 0;
+//static const int WEBP_FORMAT_UNDEFINED = 0;
 static const int WEBP_FORMAT_LOSSY     = 1;
 static const int WEBP_FORMAT_LOSSLESS  = 2;
-static const int WEBP_FORMAT_MIXED     = 3;
+//static const int WEBP_FORMAT_MIXED     = 3;
 
 heif_error loadWEBP(const char* filename, InputImage* input_image)
 {
