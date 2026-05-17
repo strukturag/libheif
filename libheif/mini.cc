@@ -27,6 +27,7 @@
 #include "codecs/hevc_boxes.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <memory>
@@ -87,6 +88,11 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
   if (m_float_flag)
   {
     uint8_t bit_depth_log2 = bits.get_bits8(2) + 4; // [4;6] (7 is reserved)
+    if (bit_depth_log2 > 6) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_mini_box,
+              "Reserved float bit_depth_log2 value 7 in MinimizedImageBox"};
+    }
     m_bit_depth = (uint8_t)powl(2, (bit_depth_log2)); // [16,32,64]
   }
   else
@@ -159,6 +165,11 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       if (m_gainmap_float_flag)
       {
         uint8_t bit_depth_log2 = bits.get_bits8(2) + 4;
+        if (bit_depth_log2 > 6) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_Invalid_mini_box,
+                  "Reserved float gainmap bit_depth_log2 value 7 in MinimizedImageBox"};
+        }
         m_gainmap_bit_depth = (uint8_t)powl(2, (bit_depth_log2));
       }
       else
@@ -889,6 +900,7 @@ Error Box_mini::write(StreamWriter& writer) const
   bits.write_flag(m_exif_flag);
   bits.write_flag(m_xmp_flag);
   bits.write_bits8(m_chroma_subsampling, 2);
+  assert(m_orientation >= 1 && m_orientation <= 8);
   bits.write_bits8(m_orientation - 1, 3);
 
   // Dimensions
@@ -1272,6 +1284,38 @@ static uint32_t get_item_type_for_brand(const heif_brand2 brand)
 }
 
 
+// Parse a codec config blob (raw av1C/hvcC payload, no box header) by wrapping
+// it in a synthetic box header so Box::read can dispatch and m_size is set
+// properly (av1C/hvcC parse refuses to run with unspecified box size).
+static Error parse_codec_config_box(const std::vector<uint8_t>& config_bytes,
+                                    uint32_t type_4cc,
+                                    std::shared_ptr<Box>* out_box)
+{
+  const size_t header_size = 8;
+  const size_t total_size = header_size + config_bytes.size();
+  if (total_size > 0x7FFFFFFFu) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_mini_box,
+            "Codec config in MinimizedImageBox is too large"};
+  }
+
+  std::vector<uint8_t> framed(total_size);
+  framed[0] = (uint8_t)((total_size >> 24) & 0xff);
+  framed[1] = (uint8_t)((total_size >> 16) & 0xff);
+  framed[2] = (uint8_t)((total_size >> 8) & 0xff);
+  framed[3] = (uint8_t)(total_size & 0xff);
+  framed[4] = (uint8_t)((type_4cc >> 24) & 0xff);
+  framed[5] = (uint8_t)((type_4cc >> 16) & 0xff);
+  framed[6] = (uint8_t)((type_4cc >> 8) & 0xff);
+  framed[7] = (uint8_t)(type_4cc & 0xff);
+  std::copy(config_bytes.begin(), config_bytes.end(), framed.begin() + header_size);
+
+  auto istr = std::make_shared<StreamReader_memory>(framed.data(), framed.size(), false);
+  BitstreamRange range(istr, framed.size(), nullptr);
+  return Box::read(range, out_box, heif_get_global_security_limits());
+}
+
+
 Error Box_mini::create_expanded_boxes(class HeifFile* file)
 {
   file->init_meta_box();
@@ -1287,7 +1331,13 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   primary_infe_box->set_item_ID(1);
 
   // TODO: check explicit codec flag
-  uint32_t minor_version = file->get_ftyp_box()->get_minor_version();
+  auto ftyp_box = file->get_ftyp_box();
+  if (!ftyp_box) {
+    return {heif_error_Invalid_input,
+            heif_suberror_No_ftyp_box,
+            "MinimizedImageBox requires an ftyp box to identify the codec brand"};
+  }
+  uint32_t minor_version = ftyp_box->get_minor_version();
   heif_brand2 mini_brand = minor_version;
   uint32_t infe_type = get_item_type_for_brand(mini_brand);
   if (infe_type == 0) {
@@ -1339,29 +1389,21 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   file->set_ipco_box(ipco_box);
 
   if (get_main_item_codec_config().size() != 0) {
-    std::shared_ptr<StreamReader> istr = std::make_shared<StreamReader_memory>(
-        get_main_item_codec_config().data(),
-        get_main_item_codec_config().size(),
-        false
-    );
-    BitstreamRange codec_range(istr, get_main_item_codec_config().size(), nullptr);
-
-    std::shared_ptr<Box> main_item_codec_prop;
+    uint32_t config_type;
     if (infe_type == fourcc("av01")) {
-      std::shared_ptr<Box_av1C> codec_prop = std::make_shared<Box_av1C>();
-      codec_prop->parse(codec_range, heif_get_global_security_limits());
-      main_item_codec_prop = std::move(codec_prop);
+      config_type = fourcc("av1C");
     } else if (infe_type == fourcc("hvc1")) {
-      std::shared_ptr<Box_hvcC> codec_prop = std::make_shared<Box_hvcC>();
-      codec_prop->parse(codec_range, heif_get_global_security_limits());
-      main_item_codec_prop = std::move(codec_prop);
+      config_type = fourcc("hvcC");
     } else {
-      // not found
       std::stringstream sstr;
       sstr << "Minimised file requires infe support for " << fourcc_to_string(infe_type) << " but this is not yet supported.";
       return Error(heif_error_Unsupported_filetype,
                    heif_suberror_Unspecified,
                    sstr.str());
+    }
+    std::shared_ptr<Box> main_item_codec_prop;
+    if (auto err = parse_codec_config_box(get_main_item_codec_config(), config_type, &main_item_codec_prop)) {
+      return err;
     }
     ipco_box->append_child_box(main_item_codec_prop); // entry 1
   } else {
@@ -1401,28 +1443,21 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   }
 
   if (get_alpha_item_codec_config().size() != 0) {
-    std::shared_ptr<StreamReader> istr = std::make_shared<StreamReader_memory>(
-        get_alpha_item_codec_config().data(),
-        get_alpha_item_codec_config().size(),
-        false
-    );
-    BitstreamRange alpha_codec_range(istr, get_alpha_item_codec_config().size(), nullptr);
-    std::shared_ptr<Box> alpha_item_codec_prop;
+    uint32_t config_type;
     if (infe_type == fourcc("av01")) {
-      std::shared_ptr<Box_av1C> codec_prop = std::make_shared<Box_av1C>();
-      codec_prop->parse(alpha_codec_range, heif_get_global_security_limits());
-      alpha_item_codec_prop = std::move(codec_prop);
+      config_type = fourcc("av1C");
     } else if (infe_type == fourcc("hvc1")) {
-      std::shared_ptr<Box_hvcC> codec_prop = std::make_shared<Box_hvcC>();
-      codec_prop->parse(alpha_codec_range, heif_get_global_security_limits());
-      alpha_item_codec_prop = std::move(codec_prop);
+      config_type = fourcc("hvcC");
     } else {
-      // not found
       std::stringstream sstr;
       sstr << "Minimised file requires infe support for " << fourcc_to_string(infe_type) << " but this is not yet supported.";
       return Error(heif_error_Unsupported_filetype,
                    heif_suberror_Unspecified,
                    sstr.str());
+    }
+    std::shared_ptr<Box> alpha_item_codec_prop;
+    if (auto err = parse_codec_config_box(get_alpha_item_codec_config(), config_type, &alpha_item_codec_prop)) {
+      return err;
     }
     ipco_box->append_child_box(alpha_item_codec_prop); // entry 6
   } else {
