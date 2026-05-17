@@ -77,8 +77,6 @@ include (TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
 add_compile_definitions(IS_BIG_ENDIAN=${IS_BIG_ENDIAN})
 
-option(HEIF_WITH_OMAF "Enable omnidirectional media format (OMAF) support." ON)
-
 # --- codec plugins
 
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
@@ -530,12 +528,6 @@ if(HAVE_LIBCPP)
   set(LIBS_PRIVATE "-lc++")
 else()
   set(LIBS_PRIVATE "-lstdc++")
-endif()
-
-if(HEIF_WITH_OMAF)
-  set(WITH_OMAF "1")
-else ()
-  set(WITH_OMAF "0")
 endif()
 
 configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)

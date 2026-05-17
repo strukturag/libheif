@@ -946,7 +946,6 @@ int main(int argc, char** argv)
       properties_shown = true;
     }
 
-#if HEIF_WITH_OMAF
     // --- OMAF
 
     heif_omaf_image_projection projection = heif_image_handle_get_omaf_image_projection(handle);
@@ -966,7 +965,6 @@ int main(int argc, char** argv)
       std::cout << "\n";
       properties_shown = true;
     }
-#endif
 
     if (!properties_shown) {
       std::cout << "none\n";

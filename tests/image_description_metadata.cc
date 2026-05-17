@@ -54,9 +54,7 @@ struct MetadataFixture
   SensorNonUniformityCorrection nuc;
   uint8_t chroma_location = 2;
   uint32_t sample_duration = 33; // sequence frame duration
-#if HEIF_WITH_OMAF
   heif_omaf_image_projection omaf = heif_omaf_image_projection_equirectangular;
-#endif
 
   MetadataFixture()
   {
@@ -152,9 +150,7 @@ build_image(MetadataFixture& fix, uint32_t& comp1, uint32_t& comp2)
 
   img->set_chroma_location(fix.chroma_location);
 
-#if HEIF_WITH_OMAF
   img->set_omaf_image_projection(fix.omaf);
-#endif
 
   return img;
 }
@@ -218,9 +214,7 @@ static void check_metadata(const std::shared_ptr<HeifPixelImage>& img,
 
   REQUIRE(img->get_sample_duration() == fix.sample_duration);
 
-#if HEIF_WITH_OMAF
   REQUIRE(img->get_omaf_image_projection() == fix.omaf);
-#endif
 
   // Two monochrome components must still be there, with their gimi content IDs.
   // Rotate / crop re-mint component IDs; create_clone_image_at_new_size reuses

@@ -796,12 +796,10 @@ Error HeifContext::interpret_heif_file_images()
       image->set_gimi_sample_content_id(box_gimi_content_id->get_content_id());
     }
 
-#if HEIF_WITH_OMAF
     // add image projection information
     if (auto prfr = image->get_property<Box_prfr>()) {
       image->ImageDescription::set_omaf_image_projection(prfr->get_omaf_image_projection());
     }
-#endif
   }
 
 

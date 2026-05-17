@@ -833,13 +833,11 @@ void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_
   add_property(create_colr_box_icc(), false);
 }
 
-#if HEIF_WITH_OMAF
 void ImageItem::set_omaf_image_projection(heif_omaf_image_projection projection)
 {
   ImageDescription::set_omaf_image_projection(projection);
   add_property(create_prfr_box(), true);
 }
-#endif
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
@@ -1123,13 +1121,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
       img->set_gimi_sample_content_id(gimi_content_id->get_content_id());
     }
 
-#if HEIF_WITH_OMAF
     // Image projection (OMAF)
     auto prfr = get_property<Box_prfr>();
     if (prfr) {
       img->set_omaf_image_projection(prfr->get_omaf_image_projection());
     }
-#endif
   }
 
 

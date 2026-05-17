@@ -136,11 +136,6 @@ typedef enum heif_channel
  * equivalent), there are alternatives such as an equirectangular projection or cubemap projection.
  *
  * See ISO/IEC 23090-2 "Omnidirectional media format" for more information.
- *
- * The accessor functions are always present in the API, but reading/writing OMAF
- * projection information only has an effect when libheif was built with OMAF
- * support. Without it, the getters return `heif_omaf_image_projection_flat` and
- * the setters are no-ops.
  */
 typedef enum heif_omaf_image_projection
 {

@@ -146,9 +146,7 @@ int sequence_max_frames = 0; // 0 -> no maximum
 std::string option_gimi_track_id;
 std::string option_sai_data_file;
 
-#if HEIF_WITH_OMAF
 std::optional<heif_omaf_image_projection> omaf_image_projection;
-#endif
 std::vector<heif_brand2> additional_compatible_brands;
 
 enum heif_output_nclx_color_profile_preset
@@ -230,9 +228,7 @@ const int OPTION_METADATA_COMPRESSION = 1034;
 const int OPTION_SEQUENCES_GIMI_TRACK_ID = 1035;
 const int OPTION_SEQUENCES_SAI_DATA_FILE = 1036;
 const int OPTION_USE_HEVC_COMPRESSION = 1037;
-#if HEIF_WITH_OMAF
 const int OPTION_SET_OMAF_IMAGE_PROJECTION = 1038;
-#endif
 const int OPTION_ADD_COMPATIBLE_BRAND = 1039;
 const int OPTION_UNIF = 1040;
 const int OPTION_RAW_WIDTH = 1041;
@@ -425,9 +421,7 @@ static option long_options[] = {
     {(char* const) "max-keyframe-distance",       required_argument,       nullptr, OPTION_SEQUENCES_MAX_KEYFRAME_DISTANCE},
     {(char* const) "set-gimi-track-id",           required_argument,       nullptr, OPTION_SEQUENCES_GIMI_TRACK_ID},
     {(char* const) "sai-data-file",               required_argument,       nullptr, OPTION_SEQUENCES_SAI_DATA_FILE},
-#if HEIF_WITH_OMAF
     {(char* const) "omaf-image-projection",       required_argument,       nullptr, OPTION_SET_OMAF_IMAGE_PROJECTION},
-#endif
     {(char* const) "add-compatible-brand",        required_argument,       nullptr, OPTION_ADD_COMPATIBLE_BRAND},
     {(char* const) "unif",                      no_argument,             nullptr, OPTION_UNIF},
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
@@ -591,10 +585,8 @@ void show_help(const char* argv0)
             << "      --set-gimi-track-id ID     set the GIMI track ID for the visual track (experimental)\n"
             << "      --sai-data-file FILE       use the specified FILE as input data for the video frames SAI data\n"
 #endif
-#if HEIF_WITH_OMAF
             << "omnidirectional imagery:\n"
             << "      --omaf-image-projection PROJ    set the image projection (equirectangular, cube-map)\n"
-#endif
             ;
 }
 
@@ -1881,7 +1873,6 @@ int main(int argc, char** argv)
       case OPTION_SEQUENCES_SAI_DATA_FILE:
         option_sai_data_file = optarg;
         break;
-#if HEIF_WITH_OMAF
       case OPTION_SET_OMAF_IMAGE_PROJECTION:
         if (strcmp(optarg, "equirectangular") == 0) {
           omaf_image_projection = heif_omaf_image_projection_equirectangular;
@@ -1892,7 +1883,6 @@ int main(int argc, char** argv)
           return 5;
         }
         break;
-#endif
       case OPTION_ADD_COMPATIBLE_BRAND:
         if (strlen(optarg) != 4) {
           std::cerr << "Brand must be exactly 4 characters\n";
@@ -2449,11 +2439,9 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     }
 #endif
       
-#if HEIF_WITH_OMAF
     if (omaf_image_projection) {
       heif_image_handle_set_omaf_image_projection(handle, *omaf_image_projection);
     }
-#endif
 
     if (option_component_content_ids && force_enc_uncompressed) {
       uint32_t num_components = heif_image_handle_get_number_of_cmpd_components(handle);

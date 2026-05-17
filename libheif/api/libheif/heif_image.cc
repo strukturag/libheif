@@ -317,22 +317,12 @@ void heif_image_handle_set_pixel_aspect_ratio(heif_image_handle* handle, uint32_
 
 heif_omaf_image_projection heif_image_get_omaf_image_projection(const heif_image* image)
 {
-#if HEIF_WITH_OMAF
   return image->image->get_omaf_image_projection();
-#else
-  (void) image;
-  return heif_omaf_image_projection_flat;
-#endif
 }
 
 void heif_image_set_omaf_image_projection(const heif_image* image, heif_omaf_image_projection image_projection)
 {
-#if HEIF_WITH_OMAF
   image->image->set_omaf_image_projection(image_projection);
-#else
-  (void) image;
-  (void) image_projection;
-#endif
 }
 
 heif_error heif_image_create(int width, int height,

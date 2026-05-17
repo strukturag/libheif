@@ -25,9 +25,7 @@
 #include "nclx.h"
 #include <libheif/heif_experimental.h>
 #include <libheif/heif_uncompressed.h>
-#if HEIF_WITH_OMAF
 #include "omaf_boxes.h"
-#endif
 
 #include <cassert>
 #include <map>
@@ -405,7 +403,6 @@ public:
   uint32_t get_sample_duration() const { return m_sample_duration; }
 
 
-#if HEIF_WITH_OMAF
   bool has_omaf_image_projection() const {
     return (m_omaf_image_projection != heif_omaf_image_projection_flat);
   }
@@ -417,7 +414,6 @@ public:
   virtual void set_omaf_image_projection(const heif_omaf_image_projection projection) {
     m_omaf_image_projection = projection;
   }
-#endif
 
   // Copies all per-image metadata from `other` (color profiles, premultiplied
   // alpha, pixel aspect ratio, clli, mdcv, tai timestamp, gimi sample content
@@ -468,9 +464,7 @@ private:
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame, 0 for stills
 
-#if HEIF_WITH_OMAF
   heif_omaf_image_projection m_omaf_image_projection = heif_omaf_image_projection::heif_omaf_image_projection_flat;
-#endif
 
 protected:
   std::shared_ptr<Box_clli> create_clli_box() const;
@@ -483,9 +477,7 @@ protected:
 
   std::shared_ptr<Box_colr> create_colr_box_icc() const;
 
-#if HEIF_WITH_OMAF
   std::shared_ptr<Box_prfr> create_prfr_box() const;
-#endif
 };
 
 #endif

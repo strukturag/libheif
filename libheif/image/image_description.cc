@@ -149,9 +149,7 @@ void ImageDescription::copy_metadata_from(const ImageDescription& other)
 
   m_sample_duration = other.m_sample_duration;
 
-#if HEIF_WITH_OMAF
   m_omaf_image_projection = other.m_omaf_image_projection;
-#endif
 }
 
 
@@ -235,7 +233,6 @@ std::shared_ptr<Box_colr> ImageDescription::create_colr_box_icc() const
   return colr;
 }
 
-#if HEIF_WITH_OMAF
 std::shared_ptr<Box_prfr> ImageDescription::create_prfr_box() const
 {
   if (!has_omaf_image_projection()) {
@@ -249,7 +246,6 @@ std::shared_ptr<Box_prfr> ImageDescription::create_prfr_box() const
 
   return prfr;
 }
-#endif
 
 std::vector<std::shared_ptr<Box>> ImageDescription::generate_property_boxes(bool generate_colr_boxes) const
 {
@@ -313,13 +309,11 @@ std::vector<std::shared_ptr<Box>> ImageDescription::generate_property_boxes(bool
     }
   }
 
-#if HEIF_WITH_OMAF
   if (has_omaf_image_projection()) {
     auto prfr = std::make_shared<Box_prfr>();
     prfr->set_image_projection(get_omaf_image_projection());
     properties.push_back(prfr);
   }
-#endif
 
 #if WITH_UNCOMPRESSED_CODEC
   if (has_component_content_ids()) {
