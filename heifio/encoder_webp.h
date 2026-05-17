@@ -43,7 +43,10 @@ public:
 
   heif_chroma chroma(bool has_alpha, int bit_depth) const override
   {
-    return quality_ == 100 ? heif_chroma_interleaved_RGBA : heif_chroma_420;
+    if (quality_ == 100) {
+      return has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB;
+    }
+    return heif_chroma_420;
   }
 
   bool supports_alpha() const override { return true; }
