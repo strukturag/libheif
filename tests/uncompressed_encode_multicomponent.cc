@@ -253,7 +253,7 @@ static heif_image* create_and_fill_image(heif_component_datatype datatype, int b
   for (uint32_t c = 0; c < kNumComponents; c++) {
     uint32_t id = 0;
     err = heif_image_add_component(image, kWidth, kHeight,
-                                   heif_unci_component_type_monochrome, datatype, bit_depth, &id);
+                                   heif_cmpd_component_type_monochrome, datatype, bit_depth, &id);
     REQUIRE(err.code == heif_error_Ok);
     //REQUIRE(idx == c);
 
@@ -316,7 +316,7 @@ static void verify_image_data(const heif_image* image)
   for (uint32_t c : components) {
     REQUIRE(heif_image_get_component_width(image, c) == kWidth);
     REQUIRE(heif_image_get_component_height(image, c) == kHeight);
-    REQUIRE(heif_image_get_component_type(image, c) == heif_unci_component_type_monochrome);
+    REQUIRE(heif_image_get_component_type(image, c) == heif_cmpd_component_type_monochrome);
 
     size_t stride = 0;
     const T* data = get_component_ptr_readonly<T>(image, c, &stride);
@@ -456,13 +456,13 @@ TEST_CASE("Mixed bpp: 16-bit and 14-bit components")
 
   // Add 16-bit component (byte-aligned)
   uint32_t idx0 = 0;
-  err = heif_image_add_component(image, kW, kH, heif_unci_component_type_monochrome,
+  err = heif_image_add_component(image, kW, kH, heif_cmpd_component_type_monochrome,
                                  heif_component_datatype_unsigned_integer, kBpp16, &idx0);
   REQUIRE(err.code == heif_error_Ok);
 
   // Add 14-bit component (non-byte-aligned)
   uint32_t idx1 = 0;
-  err = heif_image_add_component(image, kW, kH, heif_unci_component_type_monochrome,
+  err = heif_image_add_component(image, kW, kH, heif_cmpd_component_type_monochrome,
                                  heif_component_datatype_unsigned_integer, kBpp14, &idx1);
   REQUIRE(err.code == heif_error_Ok);
 

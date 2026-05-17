@@ -39,7 +39,7 @@ class Box_snuc;
 class Box_cloc;
 class HeifPixelImage;
 
-heif_unci_component_type heif_channel_to_component_type(heif_channel channel);
+heif_cmpd_component_type heif_channel_to_component_type(heif_channel channel);
 
 heif_uncompressed_component_format to_unc_component_format(heif_component_datatype channel_datatype);
 

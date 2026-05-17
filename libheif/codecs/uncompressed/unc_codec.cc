@@ -88,27 +88,27 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
     uint32_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
-    if (component_type > heif_unci_component_type_max_valid) {
+    if (component_type > heif_cmpd_component_type_max_valid) {
       std::stringstream sstr;
-      sstr << "a component_type > " << heif_unci_component_type_max_valid << " is not supported";
+      sstr << "a component_type > " << heif_cmpd_component_type_max_valid << " is not supported";
       return {heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, sstr.str()};
     }
-    if (component_type == heif_unci_component_type_padded) {
+    if (component_type == heif_cmpd_component_type_padded) {
       // not relevant for determining chroma
       continue;
     }
     componentSet |= (1 << component_type);
   }
 
-  *out_has_alpha = (componentSet & (1 << heif_unci_component_type_alpha)) != 0;
+  *out_has_alpha = (componentSet & (1 << heif_cmpd_component_type_alpha)) != 0;
 
-  if (componentSet == ((1 << heif_unci_component_type_red) | (1 << heif_unci_component_type_green) | (1 << heif_unci_component_type_blue)) ||
-      componentSet == ((1 << heif_unci_component_type_red) | (1 << heif_unci_component_type_green) | (1 << heif_unci_component_type_blue) | (1 << heif_unci_component_type_alpha))) {
+  if (componentSet == ((1 << heif_cmpd_component_type_red) | (1 << heif_cmpd_component_type_green) | (1 << heif_cmpd_component_type_blue)) ||
+      componentSet == ((1 << heif_cmpd_component_type_red) | (1 << heif_cmpd_component_type_green) | (1 << heif_cmpd_component_type_blue) | (1 << heif_cmpd_component_type_alpha))) {
     *out_chroma = heif_chroma_444;
     *out_colourspace = heif_colorspace_RGB;
   }
 
-  if (componentSet == ((1 << heif_unci_component_type_Y) | (1 << heif_unci_component_type_Cb) | (1 << heif_unci_component_type_Cr))) {
+  if (componentSet == ((1 << heif_cmpd_component_type_Y) | (1 << heif_cmpd_component_type_Cb) | (1 << heif_cmpd_component_type_Cr))) {
     switch (uncC->get_sampling_type()) {
       case sampling_mode_no_subsampling:
         *out_chroma = heif_chroma_444;
@@ -123,14 +123,14 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
     *out_colourspace = heif_colorspace_YCbCr;
   }
 
-  if (componentSet == (1 << heif_unci_component_type_monochrome) || componentSet == ((1 << heif_unci_component_type_monochrome) | (1 << heif_unci_component_type_alpha)) ||
-      componentSet == (1 << heif_unci_component_type_Y) || componentSet == ((1 << heif_unci_component_type_Y) | (1 << heif_unci_component_type_alpha))) {
+  if (componentSet == (1 << heif_cmpd_component_type_monochrome) || componentSet == ((1 << heif_cmpd_component_type_monochrome) | (1 << heif_cmpd_component_type_alpha)) ||
+      componentSet == (1 << heif_cmpd_component_type_Y) || componentSet == ((1 << heif_cmpd_component_type_Y) | (1 << heif_cmpd_component_type_alpha))) {
     // mono or mono + alpha input, mono output.
     *out_chroma = heif_chroma_monochrome;
     *out_colourspace = heif_colorspace_monochrome;
   }
 
-  if (componentSet == (1 << heif_unci_component_type_filter_array)) {
+  if (componentSet == (1 << heif_cmpd_component_type_filter_array)) {
     // TODO - we should look up the components
     *out_chroma = heif_chroma_planar;
     *out_colourspace = heif_colorspace_filter_array;
@@ -257,8 +257,8 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       auto component_type = components[component.component_index].component_type;
       uint32_t plane_w = width;
       uint32_t plane_h = height;
-      if (component_type == heif_unci_component_type_Cb ||
-          component_type == heif_unci_component_type_Cr) {
+      if (component_type == heif_cmpd_component_type_Cb ||
+          component_type == heif_cmpd_component_type_Cr) {
         plane_w = width / chroma_h_subsampling(chroma);
         plane_h = height / chroma_v_subsampling(chroma);
       }
@@ -464,7 +464,7 @@ Error UncompressedImageCodec::check_header_validity(std::optional<const std::sha
       }
 
       uint16_t component_type = cmpd->get_components()[comp.component_index].component_type;
-      if (component_type > 7 && component_type != heif_unci_component_type_padded && component_type != heif_unci_component_type_filter_array) {
+      if (component_type > 7 && component_type != heif_cmpd_component_type_padded && component_type != heif_cmpd_component_type_filter_array) {
         std::stringstream sstr;
         sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
         return {heif_error_Unsupported_feature,

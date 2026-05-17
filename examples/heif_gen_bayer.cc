@@ -50,7 +50,7 @@ struct PatternDefinition
   std::string name;
   uint16_t width;
   uint16_t height;
-  std::vector<heif_unci_component_type> cpat;
+  std::vector<heif_cmpd_component_type> cpat;
 };
 
 
@@ -61,10 +61,10 @@ static const PatternDefinition patterns[] = {
   {
     "rggb", 2, 2,
     {
-      heif_unci_component_type_red,
-      heif_unci_component_type_green,
-      heif_unci_component_type_green,
-      heif_unci_component_type_blue,
+      heif_cmpd_component_type_red,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_blue,
     }
   },
 
@@ -77,25 +77,25 @@ static const PatternDefinition patterns[] = {
   {
     "rgbw", 4, 4,
     {
-      heif_unci_component_type_Y,
-      heif_unci_component_type_green,
-      heif_unci_component_type_Y,
-      heif_unci_component_type_red,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_red,
 
-      heif_unci_component_type_green,
-      heif_unci_component_type_Y,
-      heif_unci_component_type_blue,
-      heif_unci_component_type_Y,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_Y,
 
-      heif_unci_component_type_Y,
-      heif_unci_component_type_blue,
-      heif_unci_component_type_Y,
-      heif_unci_component_type_green,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_green,
 
-      heif_unci_component_type_red,
-      heif_unci_component_type_Y,
-      heif_unci_component_type_green,
-      heif_unci_component_type_Y,
+      heif_cmpd_component_type_red,
+      heif_cmpd_component_type_Y,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_Y,
     }
   },
 
@@ -107,25 +107,25 @@ static const PatternDefinition patterns[] = {
   {
     "qbc", 4, 4,
     {
-      heif_unci_component_type_green,
-      heif_unci_component_type_green,
-      heif_unci_component_type_red,
-      heif_unci_component_type_red,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_red,
+      heif_cmpd_component_type_red,
 
-      heif_unci_component_type_green,
-      heif_unci_component_type_green,
-      heif_unci_component_type_red,
-      heif_unci_component_type_red,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_red,
+      heif_cmpd_component_type_red,
 
-      heif_unci_component_type_blue,
-      heif_unci_component_type_blue,
-      heif_unci_component_type_green,
-      heif_unci_component_type_green,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_green,
 
-      heif_unci_component_type_blue,
-      heif_unci_component_type_blue,
-      heif_unci_component_type_green,
-      heif_unci_component_type_green,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_blue,
+      heif_cmpd_component_type_green,
+      heif_cmpd_component_type_green,
     }
   },
 };
@@ -153,14 +153,14 @@ static std::optional<PatternDefinition> parse_pattern_string(const char* str)
   }
 
   uint16_t dim = (len == 4) ? 2 : 4;
-  std::vector<heif_unci_component_type> cpat;
+  std::vector<heif_cmpd_component_type> cpat;
   cpat.reserve(len);
 
   for (char c : s) {
     switch (std::tolower(c)) {
-      case 'r': cpat.push_back(heif_unci_component_type_red); break;
-      case 'g': cpat.push_back(heif_unci_component_type_green); break;
-      case 'b': cpat.push_back(heif_unci_component_type_blue); break;
+      case 'r': cpat.push_back(heif_cmpd_component_type_red); break;
+      case 'g': cpat.push_back(heif_cmpd_component_type_green); break;
+      case 'b': cpat.push_back(heif_cmpd_component_type_blue); break;
       default: return {};
     }
   }
@@ -311,7 +311,7 @@ static heif_image* create_bayer_image_from_png(const char* png_filename,
 
   uint32_t filter_array_component_id;
 
-  err = heif_image_add_component(bayer_img, width, height, heif_unci_component_type_filter_array, heif_component_datatype_unsigned_integer, output_bit_depth, &filter_array_component_id);
+  err = heif_image_add_component(bayer_img, width, height, heif_cmpd_component_type_filter_array, heif_component_datatype_unsigned_integer, output_bit_depth, &filter_array_component_id);
   if (err.code != heif_error_Ok) {
     std::cerr << "Cannot add plane: " << err.message << "\n";
     heif_image_release(bayer_img);
@@ -337,10 +337,10 @@ static heif_image* create_bayer_image_from_png(const char* png_filename,
         auto comp_type = pat->cpat[py * pat->width + px];
 
         switch (comp_type) {
-          case heif_unci_component_type_red:   dst_row[x] = r; break;
-          case heif_unci_component_type_green: dst_row[x] = g; break;
-          case heif_unci_component_type_blue:  dst_row[x] = b; break;
-          case heif_unci_component_type_Y: dst_row[x] = static_cast<uint8_t>((r + g + b) / 3); break;
+          case heif_cmpd_component_type_red:   dst_row[x] = r; break;
+          case heif_cmpd_component_type_green: dst_row[x] = g; break;
+          case heif_cmpd_component_type_blue:  dst_row[x] = b; break;
+          case heif_cmpd_component_type_Y: dst_row[x] = static_cast<uint8_t>((r + g + b) / 3); break;
           default:
             assert(false);
         }
@@ -368,10 +368,10 @@ static heif_image* create_bayer_image_from_png(const char* png_filename,
         auto comp_type = pat->cpat[py * pat->width + px];
 
         switch (comp_type) {
-          case heif_unci_component_type_red:   dst_row[x] = r; break;
-          case heif_unci_component_type_green: dst_row[x] = g; break;
-          case heif_unci_component_type_blue:  dst_row[x] = b; break;
-          case heif_unci_component_type_Y: dst_row[x] = static_cast<uint16_t>((r + g + b) / 3); break;
+          case heif_cmpd_component_type_red:   dst_row[x] = r; break;
+          case heif_cmpd_component_type_green: dst_row[x] = g; break;
+          case heif_cmpd_component_type_blue:  dst_row[x] = b; break;
+          case heif_cmpd_component_type_Y: dst_row[x] = static_cast<uint16_t>((r + g + b) / 3); break;
           default:
             assert(false);
         }

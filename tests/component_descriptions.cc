@@ -119,7 +119,7 @@ TEST_CASE("unci with cpat: handle and decoded image agree on component IDs")
 
   uint32_t fa_id = 0;
   err = heif_image_add_component(image, W, H,
-                                 heif_unci_component_type_filter_array,
+                                 heif_cmpd_component_type_filter_array,
                                  heif_component_datatype_unsigned_integer, 8,
                                  &fa_id);
   REQUIRE(err.code == heif_error_Ok);
@@ -137,9 +137,9 @@ TEST_CASE("unci with cpat: handle and decoded image agree on component IDs")
   // Reference components for R, G, B (one each — G appears twice in the
   // pattern but they share a single cmpd entry).
   uint32_t r_id = 0, g_id = 0, b_id = 0;
-  err = heif_image_add_bayer_component(image, heif_unci_component_type_red,   &r_id); REQUIRE(err.code == heif_error_Ok);
-  err = heif_image_add_bayer_component(image, heif_unci_component_type_green, &g_id); REQUIRE(err.code == heif_error_Ok);
-  err = heif_image_add_bayer_component(image, heif_unci_component_type_blue,  &b_id); REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_bayer_component(image, heif_cmpd_component_type_red,   &r_id); REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_bayer_component(image, heif_cmpd_component_type_green, &g_id); REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_bayer_component(image, heif_cmpd_component_type_blue,  &b_id); REQUIRE(err.code == heif_error_Ok);
 
   // 2x2 RGGB pattern; pixels[1] and pixels[2] both point at g_id.
   heif_bayer_pattern_pixel pattern[4] = {
@@ -186,10 +186,10 @@ TEST_CASE("unci with cpat: handle and decoded image agree on component IDs")
   uint32_t handle_ids[4];
   heif_image_handle_get_used_component_ids(handle, handle_ids);
 
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[0]) == heif_unci_component_type_filter_array);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[1]) == heif_unci_component_type_red);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[2]) == heif_unci_component_type_green);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[3]) == heif_unci_component_type_blue);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[0]) == heif_cmpd_component_type_filter_array);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[1]) == heif_cmpd_component_type_red);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[2]) == heif_cmpd_component_type_green);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[3]) == heif_cmpd_component_type_blue);
 
   REQUIRE(heif_image_handle_get_component_bits_per_pixel(handle, handle_ids[0]) == 8);
 
@@ -235,9 +235,9 @@ TEST_CASE("HEVC YUV 4:2:0 component IDs match between handle and decoded image")
   heif_image_handle_get_used_component_ids(handle, ids);
 
   // Canonical ordering.
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_unci_component_type_Y);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_unci_component_type_Cb);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_unci_component_type_Cr);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_cmpd_component_type_Y);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_cmpd_component_type_Cb);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_cmpd_component_type_Cr);
 
   // 8 bits per channel.
   for (uint32_t id : ids) {
@@ -268,9 +268,9 @@ TEST_CASE("AVIF YUV 4:4:4 component IDs match between handle and decoded image")
   uint32_t ids[3];
   heif_image_handle_get_used_component_ids(handle, ids);
 
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_unci_component_type_Y);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_unci_component_type_Cb);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_unci_component_type_Cr);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_cmpd_component_type_Y);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_cmpd_component_type_Cb);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_cmpd_component_type_Cr);
 
   for (uint32_t id : ids) {
     REQUIRE(heif_image_handle_get_component_bits_per_pixel(handle, id) == 8);
@@ -307,9 +307,9 @@ TEST_CASE("HEIC YUV 4:2:0 (rainbow-451x461) component IDs match")
   uint32_t ids[3];
   heif_image_handle_get_used_component_ids(handle, ids);
 
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_unci_component_type_Y);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_unci_component_type_Cb);
-  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_unci_component_type_Cr);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[0]) == heif_cmpd_component_type_Y);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[1]) == heif_cmpd_component_type_Cb);
+  REQUIRE(heif_image_handle_get_component_type(handle, ids[2]) == heif_cmpd_component_type_Cr);
 
   for (uint32_t id : ids) {
     REQUIRE(heif_image_handle_get_component_bits_per_pixel(handle, id) == 8);
@@ -340,10 +340,10 @@ static void check_alpha_handle_matches_decoded_image(const char* fixture,
   uint32_t handle_ids[4];
   heif_image_handle_get_used_component_ids(handle, handle_ids);
 
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[0]) == heif_unci_component_type_Y);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[1]) == heif_unci_component_type_Cb);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[2]) == heif_unci_component_type_Cr);
-  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[3]) == heif_unci_component_type_alpha);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[0]) == heif_cmpd_component_type_Y);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[1]) == heif_cmpd_component_type_Cb);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[2]) == heif_cmpd_component_type_Cr);
+  REQUIRE(heif_image_handle_get_component_type(handle, handle_ids[3]) == heif_cmpd_component_type_alpha);
 
   // The whole point of this round of fixes: the post-decode image carries
   // the same four IDs the handle reports, including the alpha id.

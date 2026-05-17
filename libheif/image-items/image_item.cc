@@ -577,7 +577,7 @@ void ImageItem::set_alpha_channel(std::shared_ptr<ImageItem> img)
   ComponentDescription desc;
   desc.component_id = mint_component_id();
   desc.channel = heif_channel_Alpha;
-  desc.component_type = heif_unci_component_type_alpha;
+  desc.component_type = heif_cmpd_component_type_alpha;
   desc.datatype = heif_component_datatype_unsigned_integer;
   desc.bit_depth = static_cast<uint16_t>(alpha_bpp);
   desc.width = get_ispe_width();
@@ -632,22 +632,22 @@ void ImageItem::populate_component_descriptions()
 
   switch (colorspace) {
     case heif_colorspace_monochrome:
-      emit(heif_channel_Y, heif_unci_component_type_monochrome, luma_bpp, img_w, img_h);
+      emit(heif_channel_Y, heif_cmpd_component_type_monochrome, luma_bpp, img_w, img_h);
       break;
 
     case heif_colorspace_YCbCr: {
       uint32_t cw = channel_width(img_w, chroma, heif_channel_Cb);
       uint32_t ch_ = channel_height(img_h, chroma, heif_channel_Cb);
-      emit(heif_channel_Y,  heif_unci_component_type_Y,  luma_bpp,   img_w, img_h);
-      emit(heif_channel_Cb, heif_unci_component_type_Cb, chroma_bpp, cw,    ch_);
-      emit(heif_channel_Cr, heif_unci_component_type_Cr, chroma_bpp, cw,    ch_);
+      emit(heif_channel_Y,  heif_cmpd_component_type_Y,  luma_bpp,   img_w, img_h);
+      emit(heif_channel_Cb, heif_cmpd_component_type_Cb, chroma_bpp, cw,    ch_);
+      emit(heif_channel_Cr, heif_cmpd_component_type_Cr, chroma_bpp, cw,    ch_);
       break;
     }
 
     case heif_colorspace_RGB:
-      emit(heif_channel_R, heif_unci_component_type_red,   luma_bpp, img_w, img_h);
-      emit(heif_channel_G, heif_unci_component_type_green, luma_bpp, img_w, img_h);
-      emit(heif_channel_B, heif_unci_component_type_blue,  luma_bpp, img_w, img_h);
+      emit(heif_channel_R, heif_cmpd_component_type_red,   luma_bpp, img_w, img_h);
+      emit(heif_channel_G, heif_cmpd_component_type_green, luma_bpp, img_w, img_h);
+      emit(heif_channel_B, heif_cmpd_component_type_blue,  luma_bpp, img_w, img_h);
       break;
 
     default:

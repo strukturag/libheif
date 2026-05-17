@@ -99,43 +99,43 @@ static std::vector<uint16_t> map_channel_to_component_type(heif_channel channel,
 {
   switch (channel) {
     case heif_channel_Y:
-      return {heif_unci_component_type_Y};
+      return {heif_cmpd_component_type_Y};
     case heif_channel_Cb:
-      return {heif_unci_component_type_Cb};
+      return {heif_cmpd_component_type_Cb};
     case heif_channel_Cr:
-      return {heif_unci_component_type_Cr};
+      return {heif_cmpd_component_type_Cr};
     case heif_channel_R:
-      return {heif_unci_component_type_red};
+      return {heif_cmpd_component_type_red};
     case heif_channel_G:
-      return {heif_unci_component_type_green};
+      return {heif_cmpd_component_type_green};
     case heif_channel_B:
-      return {heif_unci_component_type_blue};
+      return {heif_cmpd_component_type_blue};
     case heif_channel_Alpha:
-      return {heif_unci_component_type_alpha};
+      return {heif_cmpd_component_type_alpha};
     case heif_channel_filter_array:
-      return {heif_unci_component_type_filter_array};
+      return {heif_cmpd_component_type_filter_array};
     case heif_channel_depth:
-      return {heif_unci_component_type_depth};
+      return {heif_cmpd_component_type_depth};
     case heif_channel_disparity:
-      return {heif_unci_component_type_disparity};
+      return {heif_cmpd_component_type_disparity};
     case heif_channel_interleaved:
       switch (chroma) {
         case heif_chroma_interleaved_RGB:
         case heif_chroma_interleaved_RRGGBB_BE:
         case heif_chroma_interleaved_RRGGBB_LE:
           return {
-            heif_unci_component_type_red,
-            heif_unci_component_type_green,
-            heif_unci_component_type_blue
+            heif_cmpd_component_type_red,
+            heif_cmpd_component_type_green,
+            heif_cmpd_component_type_blue
           };
         case heif_chroma_interleaved_RGBA:
         case heif_chroma_interleaved_RRGGBBAA_BE:
         case heif_chroma_interleaved_RRGGBBAA_LE:
           return {
-            heif_unci_component_type_red,
-            heif_unci_component_type_green,
-            heif_unci_component_type_blue,
-            heif_unci_component_type_alpha
+            heif_cmpd_component_type_red,
+            heif_cmpd_component_type_green,
+            heif_cmpd_component_type_blue,
+            heif_cmpd_component_type_alpha
           };
         default:
           assert(false);
@@ -2184,7 +2184,7 @@ uint16_t HeifPixelImage::get_component_type(uint32_t component_id) const
   if (const auto* desc = find_component_description(component_id)) {
     return desc->component_type;
   }
-  return heif_unci_component_type_UNDEFINED;
+  return heif_cmpd_component_type_UNDEFINED;
 }
 
 

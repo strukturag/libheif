@@ -37,25 +37,25 @@
 #include <algorithm>
 
 
-heif_unci_component_type heif_channel_to_component_type(heif_channel channel)
+heif_cmpd_component_type heif_channel_to_component_type(heif_channel channel)
 {
   switch (channel) {
-    case heif_channel_Y: return heif_unci_component_type_Y;
-    case heif_channel_Cb: return heif_unci_component_type_Cb;
-    case heif_channel_Cr: return heif_unci_component_type_Cr;
-    case heif_channel_R: return heif_unci_component_type_red;
-    case heif_channel_G: return heif_unci_component_type_green;
-    case heif_channel_B: return heif_unci_component_type_blue;
-    case heif_channel_Alpha: return heif_unci_component_type_alpha;
+    case heif_channel_Y: return heif_cmpd_component_type_Y;
+    case heif_channel_Cb: return heif_cmpd_component_type_Cb;
+    case heif_channel_Cr: return heif_cmpd_component_type_Cr;
+    case heif_channel_R: return heif_cmpd_component_type_red;
+    case heif_channel_G: return heif_cmpd_component_type_green;
+    case heif_channel_B: return heif_cmpd_component_type_blue;
+    case heif_channel_Alpha: return heif_cmpd_component_type_alpha;
     case heif_channel_interleaved: assert(false);
       break;
-    case heif_channel_filter_array: return heif_unci_component_type_filter_array;
-    case heif_channel_depth: return heif_unci_component_type_depth;
-    case heif_channel_disparity: return heif_unci_component_type_disparity;
-    case heif_channel_unknown: return heif_unci_component_type_padded;
+    case heif_channel_filter_array: return heif_cmpd_component_type_filter_array;
+    case heif_channel_depth: return heif_cmpd_component_type_depth;
+    case heif_channel_disparity: return heif_cmpd_component_type_disparity;
+    case heif_channel_unknown: return heif_cmpd_component_type_padded;
   }
 
-  return heif_unci_component_type_padded;
+  return heif_cmpd_component_type_padded;
 }
 
 

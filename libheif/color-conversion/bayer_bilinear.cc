@@ -65,11 +65,11 @@ Op_bayer_bilinear_to_RGB24_32::state_after_conversion(const ColorState& input_st
 static int component_type_to_rgb_index(uint16_t component_type)
 {
   switch (component_type) {
-    case heif_unci_component_type_red:
+    case heif_cmpd_component_type_red:
       return 0;
-    case heif_unci_component_type_green:
+    case heif_cmpd_component_type_green:
       return 1;
-    case heif_unci_component_type_blue:
+    case heif_cmpd_component_type_blue:
       return 2;
     default:
       return -1;

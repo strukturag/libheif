@@ -64,7 +64,7 @@ public:
 
   const std::vector<Component>& get_components() const { return m_components; }
 
-  bool has_component(heif_unci_component_type) const;
+  bool has_component(heif_cmpd_component_type) const;
 
   uint16_t add_component(const Component& component)
   {

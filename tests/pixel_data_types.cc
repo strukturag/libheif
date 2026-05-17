@@ -206,9 +206,9 @@ TEST_CASE( "interleaved RGB component descriptions" )
   REQUIRE(ids[1] == 2);
   REQUIRE(ids[2] == 3);
 
-  REQUIRE(image.get_component_type(ids[0]) == heif_unci_component_type_red);
-  REQUIRE(image.get_component_type(ids[1]) == heif_unci_component_type_green);
-  REQUIRE(image.get_component_type(ids[2]) == heif_unci_component_type_blue);
+  REQUIRE(image.get_component_type(ids[0]) == heif_cmpd_component_type_red);
+  REQUIRE(image.get_component_type(ids[1]) == heif_cmpd_component_type_green);
+  REQUIRE(image.get_component_type(ids[2]) == heif_cmpd_component_type_blue);
 
   // All three descriptions share channel=interleaved, identical dims/bpp.
   for (uint32_t id : ids) {
@@ -237,10 +237,10 @@ TEST_CASE( "interleaved RGBA component descriptions" )
   REQUIRE(image.get_number_of_used_components() == 4);
   auto ids = image.get_used_component_ids();
   REQUIRE(ids.size() == 4);
-  REQUIRE(image.get_component_type(ids[0]) == heif_unci_component_type_red);
-  REQUIRE(image.get_component_type(ids[1]) == heif_unci_component_type_green);
-  REQUIRE(image.get_component_type(ids[2]) == heif_unci_component_type_blue);
-  REQUIRE(image.get_component_type(ids[3]) == heif_unci_component_type_alpha);
+  REQUIRE(image.get_component_type(ids[0]) == heif_cmpd_component_type_red);
+  REQUIRE(image.get_component_type(ids[1]) == heif_cmpd_component_type_green);
+  REQUIRE(image.get_component_type(ids[2]) == heif_cmpd_component_type_blue);
+  REQUIRE(image.get_component_type(ids[3]) == heif_cmpd_component_type_alpha);
 
   for (uint32_t id : ids) {
     REQUIRE(image.get_component_channel(id) == heif_channel_interleaved);
@@ -260,14 +260,14 @@ TEST_CASE( "Bayer pattern shares component id for same cmpd" )
   image.create(4, 4, heif_colorspace_filter_array, heif_chroma_planar);
 
   // 1) The data plane: a 14-bit filter-array component.
-  auto fa_result = image.add_component(4, 4, heif_unci_component_type_filter_array,
+  auto fa_result = image.add_component(4, 4, heif_cmpd_component_type_filter_array,
                                        heif_component_datatype_unsigned_integer, 14, limits);
   REQUIRE(fa_result.error().error_code == heif_error_Ok);
 
   // 2) Reference (no-data-plane) components for R, G, B.
-  uint32_t r_id = image.add_component_without_data(heif_unci_component_type_red);
-  uint32_t g_id = image.add_component_without_data(heif_unci_component_type_green);
-  uint32_t b_id = image.add_component_without_data(heif_unci_component_type_blue);
+  uint32_t r_id = image.add_component_without_data(heif_cmpd_component_type_red);
+  uint32_t g_id = image.add_component_without_data(heif_cmpd_component_type_green);
+  uint32_t b_id = image.add_component_without_data(heif_cmpd_component_type_blue);
 
   REQUIRE(image.get_number_of_used_components() == 4);
 

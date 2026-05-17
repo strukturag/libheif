@@ -187,7 +187,7 @@ heif_error loadRAW(const char* filename, const RawImageParameters& params, Input
 
   uint32_t component_idx = 0;
   err = heif_image_add_component(image, width, height,
-                                 heif_unci_component_type_monochrome,
+                                 heif_cmpd_component_type_monochrome,
                                  params.datatype, params.bit_depth,
                                  &component_idx);
   if (err.code != heif_error_Ok) {

@@ -26,7 +26,7 @@
 #include <libheif/heif_uncompressed.h>
 
 // Update this when adding new values to heif_uncompressed_component_type.
-#define heif_unci_component_type_max_valid heif_unci_component_type_key_black
+#define heif_cmpd_component_type_max_valid heif_cmpd_component_type_key_black
 
 /**
  * HEIF uncompressed component format.

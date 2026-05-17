@@ -105,12 +105,12 @@ build_image(MetadataFixture& fix, uint32_t& comp1, uint32_t& comp2)
 
   const heif_security_limits* limits = heif_get_global_security_limits();
 
-  auto r1 = img->add_component(8, 4, heif_unci_component_type_monochrome,
+  auto r1 = img->add_component(8, 4, heif_cmpd_component_type_monochrome,
                                heif_component_datatype_unsigned_integer, 8, limits);
   REQUIRE(r1);
   comp1 = *r1;
 
-  auto r2 = img->add_component(8, 4, heif_unci_component_type_monochrome,
+  auto r2 = img->add_component(8, 4, heif_cmpd_component_type_monochrome,
                                heif_component_datatype_unsigned_integer, 8, limits);
   REQUIRE(r2);
   comp2 = *r2;
@@ -221,7 +221,7 @@ static void check_metadata(const std::shared_ptr<HeifPixelImage>& img,
   // them. In both cases the order in m_components is preserved.
   std::vector<std::string> mono_gimi_ids;
   for (const auto& c : img->get_component_descriptions()) {
-    if (c.component_type == heif_unci_component_type_monochrome) {
+    if (c.component_type == heif_cmpd_component_type_monochrome) {
       mono_gimi_ids.push_back(c.gimi_content_id);
     }
   }

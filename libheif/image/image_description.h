@@ -133,7 +133,7 @@ struct ComponentDescription
   uint32_t component_id = 0;             // stable id, matches HeifPixelImage::m_storage ids
 
   heif_channel channel = heif_channel_unknown;
-  uint16_t component_type = 0;           // heif_unci_component_type_*
+  uint16_t component_type = 0;           // heif_cmpd_component_type_*
 
   // The numeric values of heif_component_datatype are aligned with the
   // ISO 23001-17 Table 2 component_format byte (from the uncC box), so on

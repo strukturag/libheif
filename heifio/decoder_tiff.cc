@@ -693,7 +693,7 @@ static heif_error readMonoFloat(TIFF* tif, heif_image** image)
 
   uint32_t component_idx;
   err = heif_image_add_component(*image, (int)width, (int)height,
-                                 heif_unci_component_type_monochrome,
+                                 heif_cmpd_component_type_monochrome,
                                  heif_component_datatype_floating_point, 32, &component_idx);
   if (err.code != heif_error_Ok) {
     heif_image_release(*image);
@@ -740,7 +740,7 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
 
   uint32_t component_idx;
   err = heif_image_add_component(*image, (int)width, (int)height,
-                                 heif_unci_component_type_monochrome,
+                                 heif_cmpd_component_type_monochrome,
                                  heif_component_datatype_signed_integer, bps, &component_idx);
   if (err.code != heif_error_Ok) {
     heif_image_release(*image);
@@ -1032,7 +1032,7 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
 
     uint32_t component_idx;
     err = heif_image_add_component(*out_image, (int)width, (int)height,
-                                   heif_unci_component_type_monochrome,
+                                   heif_cmpd_component_type_monochrome,
                                    heif_component_datatype_floating_point, 32, &component_idx);
     if (err.code != heif_error_Ok) {
       heif_image_release(*out_image);
@@ -1092,7 +1092,7 @@ static heif_error readTiledContiguous(TIFF* tif, uint32_t width, uint32_t height
 
     uint32_t component_idx;
     err = heif_image_add_component(*out_image, (int)width, (int)height,
-                                   heif_unci_component_type_monochrome,
+                                   heif_cmpd_component_type_monochrome,
                                    heif_component_datatype_signed_integer, bps, &component_idx);
     if (err.code != heif_error_Ok) {
       heif_image_release(*out_image);
@@ -1639,7 +1639,7 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
 
     uint32_t component_idx;
     err = heif_image_add_component(*out_image, (int)actual_w, (int)actual_h,
-                                   heif_unci_component_type_monochrome,
+                                   heif_cmpd_component_type_monochrome,
                                    heif_component_datatype_floating_point, 32, &component_idx);
     if (err.code != heif_error_Ok) {
       heif_image_release(*out_image);
@@ -1686,7 +1686,7 @@ heif_error TiledTiffReader::readTile(uint32_t tx, uint32_t ty, int output_bit_de
 
     uint32_t component_idx;
     err = heif_image_add_component(*out_image, (int)actual_w, (int)actual_h,
-                                   heif_unci_component_type_monochrome,
+                                   heif_cmpd_component_type_monochrome,
                                    heif_component_datatype_signed_integer, m_bits_per_sample, &component_idx);
     if (err.code != heif_error_Ok) {
       heif_image_release(*out_image);

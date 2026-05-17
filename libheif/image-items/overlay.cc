@@ -456,9 +456,9 @@ void ImageItem_Overlay::populate_component_descriptions()
     add_component_description(std::move(d));
   };
 
-  emit(heif_channel_R, heif_unci_component_type_red);
-  emit(heif_channel_G, heif_unci_component_type_green);
-  emit(heif_channel_B, heif_unci_component_type_blue);
+  emit(heif_channel_R, heif_cmpd_component_type_red);
+  emit(heif_channel_G, heif_cmpd_component_type_green);
+  emit(heif_channel_B, heif_cmpd_component_type_blue);
 }
 
 

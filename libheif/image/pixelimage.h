@@ -31,7 +31,7 @@
 #include <utility>
 #include <cassert>
 
-constexpr uint16_t heif_unci_component_type_UNDEFINED = 0x7FFF;
+constexpr uint16_t heif_cmpd_component_type_UNDEFINED = 0x7FFF;
 
 
 heif_chroma chroma_from_subsampling(int h, int v);
