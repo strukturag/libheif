@@ -33,7 +33,11 @@ extern "C" {
 #include <libheif/heif_context.h>
 #include <libheif/heif_brands.h>
 #include <libheif/heif_color.h>
-#include <libheif/heif_uncompressed_types.h>
+
+// Forward declaration. The full definition lives in heif_uncompressed.h.
+// heif_encoding_options only stores a pointer, so a forward typedef is enough here
+// and avoids a circular include (heif_uncompressed.h pulls in heif.h, which pulls in this header).
+typedef struct heif_unci_image_parameters heif_unci_image_parameters;
 
 
 // ----- encoder -----

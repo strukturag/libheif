@@ -21,7 +21,6 @@
 #ifndef LIBHEIF_HEIF_UNCOMPRESSED_H
 #define LIBHEIF_HEIF_UNCOMPRESSED_H
 
-#include "libheif/heif_uncompressed_types.h"
 #include "libheif/heif_components.h"
 #include "libheif/heif_properties.h"
 #include "libheif/heif.h"
@@ -44,7 +43,39 @@ extern "C" {
 
 // --- 'unci' images
 
-// heif_unci_compression and heif_unci_image_parameters are defined in heif_uncompressed_types.h.
+// Compression methods for 'unci' (ISO 23001-17) images.
+// This is similar to heif_metadata_compression. We should try to keep the integers compatible, but each enum will just
+// contain the allowed values.
+typedef enum heif_unci_compression
+{
+  heif_unci_compression_off = 0,
+  //heif_unci_compression_auto = 1,
+  //heif_unci_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_unci_compression_deflate = 3,
+  heif_unci_compression_zlib = 4,
+  heif_unci_compression_brotli = 5
+} heif_unci_compression;
+
+
+// --- 'unci' image parameters
+
+typedef struct heif_unci_image_parameters
+{
+  int version;
+
+  // --- version 1
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  heif_unci_compression compression;
+
+  // TODO: interleave type, padding
+} heif_unci_image_parameters;
+
 
 LIBHEIF_API
 heif_unci_image_parameters* heif_unci_image_parameters_alloc(void);

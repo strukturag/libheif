@@ -26,7 +26,6 @@ set(libheif_headers
         api/libheif/heif_tiling.h
         api/libheif/heif_components.h
         api/libheif/heif_uncompressed.h
-        api/libheif/heif_uncompressed_types.h
         api/libheif/heif_text.h
         api/libheif/heif_omaf.h
         api/libheif/heif_cxx.h

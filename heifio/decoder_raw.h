@@ -28,7 +28,7 @@
 #define LIBHEIF_DECODER_RAW_H
 
 #include "decoder.h"
-#include <libheif/heif_uncompressed_types.h>
+#include <libheif/heif_components.h>
 #include <string>
 
 struct RawImageParameters {

@@ -25,7 +25,7 @@
 #include <cstddef>
 
 #include <error.h>
-#include <libheif/heif_uncompressed_types.h>
+#include <libheif/heif_uncompressed.h>
 
 /**
  * Convert heif_unci_compression enum to a fourcc code.
