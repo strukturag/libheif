@@ -75,8 +75,8 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
   bool high_bit_depth_flag = false;
   if (m_float_flag)
   {
-    uint8_t bit_depth_log2 = bits.get_bits8(2) + 4; // [4;7]
-    m_bit_depth = (uint8_t)powl(2, (bit_depth_log2)); // [16,32,64,128]
+    uint8_t bit_depth_log2 = bits.get_bits8(2) + 4; // [4;6] (7 is reserved)
+    m_bit_depth = (uint8_t)powl(2, (bit_depth_log2)); // [16,32,64]
   }
   else
   {
@@ -94,16 +94,13 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
 
   if (m_explicit_cicp_flag)
   {
+    // Per ISO/IEC 23008-12 Annex O.3.2, matrix_coefficients is always
+    // present (8 bits) when explicit_cicp_flag is set, irrespective of
+    // chroma_subsampling. The chroma_subsampling==0 ⇒ MC=2 default is
+    // only used in the non-explicit branch (Table O.3, row 1).
     m_colour_primaries = bits.get_bits8(8);
     m_transfer_characteristics = bits.get_bits8(8);
-    if (m_chroma_subsampling != 0)
-    {
-      m_matrix_coefficients = bits.get_bits8(8);
-    }
-    else
-    {
-      m_matrix_coefficients = 2;
-    }
+    m_matrix_coefficients = bits.get_bits8(8);
   }
   else
   {
@@ -123,8 +120,15 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
     m_gainmap_flag = bits.get_flag();
     if (m_gainmap_flag)
     {
-      m_gainmap_width = bits.get_bits32(large_dimensions_flag ? 15 : 7) + 1;
-      m_gainmap_height = bits.get_bits32(large_dimensions_flag ? 15 : 7) + 1;
+      bool gainmap_dimension_same_as_main_item_flag = bits.get_flag();
+      if (gainmap_dimension_same_as_main_item_flag) {
+        m_gainmap_width = m_width;
+        m_gainmap_height = m_height;
+      }
+      else {
+        m_gainmap_width = bits.get_bits32(large_dimensions_flag ? 15 : 7) + 1;
+        m_gainmap_height = bits.get_bits32(large_dimensions_flag ? 15 : 7) + 1;
+      }
 
       m_gainmap_matrix_coefficients = bits.get_bits8(8);
       m_gainmap_full_range_flag = bits.get_flag();
@@ -467,7 +471,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
     m_alpha_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bytes(m_alpha_item_data_size);
   }
-  if (m_alpha_flag && m_gainmap_flag && m_gainmap_item_data_size > 0)
+  if (m_hdr_flag && m_gainmap_flag && m_gainmap_item_data_size > 0)
   {
     m_gainmap_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bytes(m_gainmap_item_data_size);
@@ -874,11 +878,11 @@ Error Box_mini::write(StreamWriter& writer) const
 
   // CICP
   if (m_explicit_cicp_flag) {
+    // matrix_coefficients is always 8 bits in the explicit branch
+    // (ISO/IEC 23008-12 Annex O.3.2).
     bits.write_bits8(static_cast<uint8_t>(m_colour_primaries), 8);
     bits.write_bits8(static_cast<uint8_t>(m_transfer_characteristics), 8);
-    if (m_chroma_subsampling != 0) {
-      bits.write_bits8(static_cast<uint8_t>(m_matrix_coefficients), 8);
-    }
+    bits.write_bits8(static_cast<uint8_t>(m_matrix_coefficients), 8);
   }
 
   // Explicit codec types
@@ -892,8 +896,13 @@ Error Box_mini::write(StreamWriter& writer) const
     bits.write_flag(m_gainmap_flag);
 
     if (m_gainmap_flag) {
-      bits.write_bits32(m_gainmap_width - 1, large_dimensions_flag ? 15 : 7);
-      bits.write_bits32(m_gainmap_height - 1, large_dimensions_flag ? 15 : 7);
+      bool gainmap_dimension_same_as_main_item_flag =
+          (m_gainmap_width == m_width && m_gainmap_height == m_height);
+      bits.write_flag(gainmap_dimension_same_as_main_item_flag);
+      if (!gainmap_dimension_same_as_main_item_flag) {
+        bits.write_bits32(m_gainmap_width - 1, large_dimensions_flag ? 15 : 7);
+        bits.write_bits32(m_gainmap_height - 1, large_dimensions_flag ? 15 : 7);
+      }
       bits.write_bits8(m_gainmap_matrix_coefficients, 8);
       bits.write_flag(m_gainmap_full_range_flag);
       bits.write_bits8(m_gainmap_chroma_subsampling, 2);
