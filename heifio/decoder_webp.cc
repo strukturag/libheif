@@ -194,7 +194,7 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     config.output.is_external_memory = 1;
     config.output.u.RGBA.rgba = ptr;
     config.output.u.RGBA.size = stride * height;
-    config.output.u.RGBA.stride = stride;
+    config.output.u.RGBA.stride = static_cast<int>(stride);
     config.output.width = width;
     config.output.height = height;
     // D) Decode!
@@ -250,17 +250,17 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     }
     config.output.is_external_memory = 1;
     config.output.u.YUVA.y = ptr[0];
-    config.output.u.YUVA.y_stride = stride[0];
+    config.output.u.YUVA.y_stride = static_cast<int>(stride[0]);
     config.output.u.YUVA.y_size = height * stride[0];
     config.output.u.YUVA.u = ptr[1];
-    config.output.u.YUVA.u_stride = stride[1];
+    config.output.u.YUVA.u_stride = static_cast<int>(stride[1]);
     config.output.u.YUVA.u_size = uv_height * stride[1];
     config.output.u.YUVA.v = ptr[2];
-    config.output.u.YUVA.v_stride = stride[2];
+    config.output.u.YUVA.v_stride = static_cast<int>(stride[2]);
     config.output.u.YUVA.v_size = uv_height * stride[2];
     if (config.input.has_alpha) {
       config.output.u.YUVA.a = ptr[3];
-      config.output.u.YUVA.a_stride = stride[3];
+      config.output.u.YUVA.a_stride = static_cast<int>(stride[3]);
       config.output.u.YUVA.a_size = height * stride[3];
     }
     else {

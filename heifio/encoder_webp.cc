@@ -80,7 +80,7 @@ bool WebPEncoder::Encode(const heif_image_handle* handle,
     }
   }
   else {
-    cfg.quality = quality_;
+    cfg.quality = static_cast<float>(quality_);
     cfg.alpha_quality = quality_;
   }
   cfg.thread_level = 1;
@@ -121,9 +121,9 @@ bool WebPEncoder::Encode(const heif_image_handle* handle,
     assert(rgba);
     heif_chroma format = heif_image_get_chroma_format(image);
     if(format == heif_chroma_interleaved_RGBA)
-      ok = WebPPictureImportRGBA(&webp, rgba, rgba_stride);
+      ok = WebPPictureImportRGBA(&webp, rgba, static_cast<int>(rgba_stride));
     else if(format == heif_chroma_interleaved_RGB)
-      ok = WebPPictureImportRGB(&webp, rgba, rgba_stride);
+      ok = WebPPictureImportRGB(&webp, rgba, static_cast<int>(rgba_stride));
     else
       ok = 0;
     if (!ok) {
