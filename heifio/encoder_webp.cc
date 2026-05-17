@@ -90,6 +90,10 @@ bool WebPEncoder::Encode(const heif_image_handle* handle,
     fprintf(stderr, "libwebp init failed!\n");
     return false;
   }
+  // WebPPictureFree is a no-op on a picture that owns no internal buffers
+  // (i.e. the lossy path where y/u/v/a point to libheif planes), so this
+  // RAII guard is safe in both modes.
+  std::unique_ptr<WebPPicture, void(*)(WebPPicture*)> webp_deleter(&webp, &WebPPictureFree);
   webp.width = width;
   webp.height = height;
   if (!islossless) { // Lossy
@@ -132,12 +136,8 @@ bool WebPEncoder::Encode(const heif_image_handle* handle,
   webp.writer = WebPWriter;
   if (!WebPEncode(&cfg, &webp)) {
     fprintf(stderr, "Error while encoding image\n");
-    if (islossless)
-      WebPPictureFree(&webp);
     return false;
   }
-  if (islossless)
-    WebPPictureFree(&webp);
 
   FILE* fp = fopen(filename.c_str(), "wb");
   if (!fp) {
