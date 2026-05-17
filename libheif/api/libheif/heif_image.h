@@ -105,7 +105,6 @@ typedef enum heif_colorspace
   // Images of this type are always planar and use heif_chroma_planar.
   heif_colorspace_custom = 3,
 
-  //NEWAPI
   // Images of this type are filter-array (CFA / Bayer) mosaics. The single
   // mosaicked plane is described as heif_chroma_planar.
   heif_colorspace_filter_array = 4
@@ -126,7 +125,6 @@ typedef enum heif_channel
   heif_channel_filter_array = 11,
   heif_channel_depth = 12,
   heif_channel_disparity = 13,
-  //NEWAPI
   heif_channel_unknown = 65535
 } heif_channel;
 

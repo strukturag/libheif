@@ -25,7 +25,7 @@
 
 
 heif_security_limits global_security_limits{
-    .version = 5,
+    .version = 4,
 
     // --- version 1
 
@@ -55,16 +55,16 @@ heif_security_limits global_security_limits{
 
     .max_sequence_frames = 18'000'000,  // 100 hours at 50 fps
     .max_number_of_file_brands = 1000,
+
+    // --- version 4
+
     .max_bad_pixels = 1000,
-
-    // --- version 5
-
     .parent = nullptr
 };
 
 
 heif_security_limits disabled_security_limits{
-    .version = 5,
+    .version = 4,
     .parent = nullptr
 };
 
@@ -95,8 +95,8 @@ heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limit
   // registered context so MemoryHandle::alloc() can still find the entry in
   // sMemoryUsage for total-memory accounting. If base is itself derived, walk
   // to the root so we keep the parent chain at one hop.
-  result.parent = (base->version >= 5 && base->parent) ? base->parent : base;
-  result.version = 5;
+  result.parent = (base->version >= 4 && base->parent) ? base->parent : base;
+  result.version = 4;
 
   if (ispe_width == 0 || ispe_height == 0) {
     return result;
@@ -218,7 +218,7 @@ Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limi
   // The passed-in limits may be a stack-local derived copy (e.g. tightened for
   // ispe) whose `parent` points back to the registered context.
   const heif_security_limits* root_limits = limits_context;
-  while (root_limits->version >= 5 && root_limits->parent) {
+  while (root_limits->version >= 4 && root_limits->parent) {
     root_limits = root_limits->parent;
   }
 
