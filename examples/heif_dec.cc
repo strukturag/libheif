@@ -66,6 +66,10 @@
 #include "heifio/encoder_tiff.h"
 #endif
 
+#if HAVE_LIBWEBP
+#include "heifio/encoder_webp.h"
+#endif
+
 #include "../heifio/encoder_y4m.h"
 #include "common.h"
 #include "common_utils.h"
@@ -771,6 +775,19 @@ int main(int argc, char** argv)
       fprintf(stderr, "TIFF support has not been compiled in.\n");
       return 1;
 #endif  // HAVE_LIBTIFF
+    }
+
+    if (suffix_lowercase == "webp") {
+#if HAVE_LIBWEBP
+      static const int kDefaultWebpQuality = 75;
+      if (quality == -1) {
+        quality = kDefaultWebpQuality;
+      }
+      encoder.reset(new WebpEncoder(quality));
+#else
+      fprintf(stderr, "WEBP support has not been compiled in.\n");
+      return 1;
+#endif  // HAVE_LIBWEBP
     }
 
     if (suffix_lowercase == "y4m") {
