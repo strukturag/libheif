@@ -67,18 +67,18 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
   }
   std::vector<uint8_t> bitstream;
   fseek(infile, 0, SEEK_END);
-  auto fsize = _ftelli64(infile);
-  if (fsize >= INT_MAX) {
+  long fsize = ftell(infile);
+  if (fsize <= 0) {
     fclose(infile);
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = "WEBP file is too large" };
+      .message = "WEBP file is empty or unreadable" };
     return err;
   }
   fseek(infile, 0, SEEK_SET);
-  bitstream.resize(fsize);
-  fread(bitstream.data(), 1, fsize, infile);
+  bitstream.resize(static_cast<size_t>(fsize));
+  fread(bitstream.data(), 1, static_cast<size_t>(fsize), infile);
   fclose(infile);
 
   // initialize decompressor
