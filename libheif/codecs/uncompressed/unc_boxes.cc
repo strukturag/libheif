@@ -292,6 +292,17 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
       if (!is_valid_component_format(component.component_format)) {
         return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
       }
+
+      // When component_align_size != 0, the component is padded up to that many bytes.
+      // It therefore must be large enough to hold the component's bit depth; otherwise
+      // the decoder computes a negative pad-bits count and shifts by a negative amount.
+      if (component.component_align_size != 0 &&
+          uint32_t(component.component_align_size) * 8 < component.component_bit_depth) {
+        std::stringstream sstr;
+        sstr << "Component alignment (" << int(component.component_align_size)
+             << " bytes) is too small for component bit depth (" << component.component_bit_depth << " bits)";
+        return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, sstr.str()};
+      }
     }
 
     m_sampling_type = range.read8();
