@@ -589,7 +589,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
 {
   uint32_t idx = ty * m_grid_spec.get_columns() + tx;
 
-  assert(idx < m_grid_tile_ids.size());
+  if (idx >= m_grid_tile_ids.size()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Missing_grid_images,
+                 "Grid tile coordinate out of range"};
+  }
 
   heif_item_id tile_id = m_grid_tile_ids[idx];
   std::shared_ptr<const ImageItem> tile_item = get_context()->get_image(tile_id, true);
