@@ -167,7 +167,7 @@ Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFil
 
   if (m_contiguous_and_constant_size) {
     size = m_saiz->get_sample_size(0);
-    offset = m_singleChunk_offset + sample_idx * size;
+    offset = m_singleChunk_offset + uint64_t{sample_idx} * size;
   }
   else {
     size = m_saiz->get_sample_size(sample_idx);
