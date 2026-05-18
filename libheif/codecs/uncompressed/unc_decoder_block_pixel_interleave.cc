@@ -40,11 +40,15 @@ unc_decoder_block_pixel_interleave::unc_decoder_block_pixel_interleave(
 }
 
 
-std::vector<uint64_t> unc_decoder_block_pixel_interleave::get_tile_data_sizes() const
+Result<std::vector<uint64_t>> unc_decoder_block_pixel_interleave::get_tile_data_sizes() const
 {
   uint32_t pixel_size = m_uncC->get_pixel_size();
   assert(pixel_size > 0);
 
+  if (m_tile_width > UINT32_MAX / pixel_size) {
+    return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                 "uncompressed tile row size exceeds 32-bit range"};
+  }
   uint32_t bytes_per_row = m_tile_width * pixel_size;
   skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
@@ -53,7 +57,7 @@ std::vector<uint64_t> unc_decoder_block_pixel_interleave::get_tile_data_sizes() 
     skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
   }
 
-  return {tile_size};
+  return std::vector<uint64_t>{tile_size};
 }
 
 

@@ -40,7 +40,7 @@ unc_decoder_bytealign_component_interleave::unc_decoder_bytealign_component_inte
 }
 
 
-std::vector<uint64_t> unc_decoder_bytealign_component_interleave::get_tile_data_sizes() const
+Result<std::vector<uint64_t>> unc_decoder_bytealign_component_interleave::get_tile_data_sizes() const
 {
   uint64_t total_tile_size = 0;
 
@@ -50,6 +50,10 @@ std::vector<uint64_t> unc_decoder_bytealign_component_interleave::get_tile_data_
       skip_to_alignment(bytes_per_sample, component.component_align_size);
     }
 
+    if (bytes_per_sample != 0 && m_tile_width > UINT32_MAX / bytes_per_sample) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                   "uncompressed tile row size exceeds 32-bit range"};
+    }
     uint32_t bytes_per_row = bytes_per_sample * m_tile_width;
     skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
@@ -60,7 +64,7 @@ std::vector<uint64_t> unc_decoder_bytealign_component_interleave::get_tile_data_
     skip_to_alignment(total_tile_size, m_uncC->get_tile_align_size());
   }
 
-  return {total_tile_size};
+  return std::vector<uint64_t>{total_tile_size};
 }
 
 

@@ -74,6 +74,11 @@ typedef struct heif_security_limits
 
   uint32_t max_bad_pixels;
 
+  // Upper bound (in bytes) on the pixel_size field of an uncompressed (ISO 23001-17)
+  // uncC box. Caps the byte stride between adjacent pixels and prevents pathological
+  // padding values from blowing up tile-size arithmetic.
+  uint32_t max_iso23001_17_pixel_size_bytes;
+
   // Internal: when libheif derives a limits struct from another one (e.g. to
   // tighten the maximum image size for a specific decode), this points back to
   // the registered context whose total-memory budget the allocation should be

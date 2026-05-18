@@ -315,6 +315,17 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     m_pixel_size = range.read32();
 
+    if (limits->version >= 4 &&
+        limits->max_iso23001_17_pixel_size_bytes != 0 &&
+        m_pixel_size > limits->max_iso23001_17_pixel_size_bytes) {
+      std::stringstream sstr;
+      sstr << "uncC pixel_size (" << m_pixel_size << " bytes) exceeds security limit of "
+           << limits->max_iso23001_17_pixel_size_bytes << " bytes";
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
     m_row_align_size = range.read32();
 
     m_tile_align_size = range.read32();

@@ -26,37 +26,34 @@
 #include <vector>
 
 
-std::vector<uint64_t> unc_decoder_mixed_interleave::get_tile_data_sizes() const
+Result<std::vector<uint64_t>> unc_decoder_mixed_interleave::get_tile_data_sizes() const
 {
   uint64_t tile_size = 0;
 
   for (const ChannelListEntry& entry : channelList) {
-    if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
-      uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
-      bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
-
-      tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
+    uint32_t bits_per_component = entry.bits_per_component_sample;
+    if (entry.channel != heif_channel_Cb && entry.channel != heif_channel_Cr
+        && entry.component_alignment > 0) {
+      uint32_t bytes_per_component = (bits_per_component + 7) / 8;
+      skip_to_alignment(bytes_per_component, entry.component_alignment);
+      bits_per_component = bytes_per_component * 8;
     }
-    else {
-      uint32_t bits_per_component = entry.bits_per_component_sample;
-      if (entry.component_alignment > 0) {
-        uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-        skip_to_alignment(bytes_per_component, entry.component_alignment);
-        bits_per_component = bytes_per_component * 8;
-      }
 
-      uint32_t bits_per_row = bits_per_component * entry.tile_width;
-      bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
-
-      tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
+    if (bits_per_component != 0 && entry.tile_width > UINT32_MAX / bits_per_component) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                   "uncompressed tile row size exceeds 32-bit range"};
     }
+    uint32_t bits_per_row = bits_per_component * entry.tile_width;
+    bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
+
+    tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
   }
 
   if (m_uncC->get_tile_align_size() != 0) {
     skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
   }
 
-  return {tile_size};
+  return std::vector<uint64_t>{tile_size};
 }
 
 

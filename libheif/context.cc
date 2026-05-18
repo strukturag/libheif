@@ -201,6 +201,7 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
 
   if (src->version >= 4) {
     dst->max_bad_pixels = src->max_bad_pixels;
+    dst->max_iso23001_17_pixel_size_bytes = src->max_iso23001_17_pixel_size_bytes;
   }
 
   // `parent` is an internal field; user-supplied limits are always treated as

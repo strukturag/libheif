@@ -68,7 +68,11 @@ Error unc_decoder::fetch_tile_data(const DataExtent& dataExtent,
     return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: unc_decoder tile dimensions are 0"};
   }
 
-  auto sizes = get_tile_data_sizes();
+  auto sizesResult = get_tile_data_sizes();
+  if (sizesResult.is_error()) {
+    return sizesResult.error();
+  }
+  const auto& sizes = *sizesResult;
   uint32_t tileIdx = tile_x + tile_y * (m_width / m_tile_width);
 
   if (sizes.size() == 1) {

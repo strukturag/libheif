@@ -59,6 +59,9 @@ heif_security_limits global_security_limits{
     // --- version 4
 
     .max_bad_pixels = 1000,
+
+    .max_iso23001_17_pixel_size_bytes = 256,
+
     .parent = nullptr
 };
 

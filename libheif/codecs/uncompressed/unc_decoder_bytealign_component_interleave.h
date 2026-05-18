@@ -34,7 +34,7 @@ public:
                                               std::shared_ptr<const Box_uncC> uncC,
                                               const std::vector<uint32_t>& uncC_index_to_comp_ids);
 
-  std::vector<uint64_t> get_tile_data_sizes() const override;
+  Result<std::vector<uint64_t>> get_tile_data_sizes() const override;
 
   Error decode_tile(const std::vector<uint8_t>& tile_data,
                     std::shared_ptr<HeifPixelImage>& img,

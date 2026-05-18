@@ -65,7 +65,7 @@ protected:
               const std::shared_ptr<const Box_uncC>& uncC,
               const std::vector<uint32_t>& uncC_index_to_comp_ids);
 
-  virtual std::vector<uint64_t> get_tile_data_sizes() const = 0;
+  virtual Result<std::vector<uint64_t>> get_tile_data_sizes() const = 0;
 
   const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
                                                      const UncompressedImageCodec::unci_properties& properties,
