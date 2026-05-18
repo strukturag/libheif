@@ -436,6 +436,21 @@ Error ImageItem_uncompressed::initialize_decoder()
                  "No 'ispe' box found for uncompressed image item."};
   }
 
+  // libheif's pixel allocation and processing (rotate/mirror) only support
+  // bit depths up to 128 per component. Reject larger values up front so they
+  // surface as a clean Unsupported_feature error rather than failing inside
+  // HeifPixelImage::ComponentStorage::alloc().
+  for (const auto& component : uncC->get_components()) {
+    if (component.component_bit_depth > 128) {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with " << component.component_bit_depth
+           << " bits per component is not supported.";
+      return Error{heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_bit_depth,
+                   sstr.str()};
+    }
+  }
+
   m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
   return Error::Ok;
