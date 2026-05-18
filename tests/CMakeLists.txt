@@ -57,6 +57,7 @@ endif()
 # --- tests that only access the public API
 
 add_libheif_test(encode)
+add_libheif_test(entity_groups)
 add_libheif_test(extended_type)
 add_libheif_test(region)
 add_libheif_test(tai)
