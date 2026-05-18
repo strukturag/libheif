@@ -47,6 +47,10 @@ Result<std::vector<uint64_t>> unc_decoder_row_interleave::get_tile_data_sizes() 
     if (m_uncC->get_row_align_size() != 0) {
       uint32_t bytes_this_row = (bits_per_component * m_tile_width + 7) / 8;
       skip_to_alignment(bytes_this_row, m_uncC->get_row_align_size());
+      if (bytes_this_row > UINT32_MAX / 8) {
+        return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                     "uncompressed tile row size exceeds 32-bit range"};
+      }
       row_bits = bytes_this_row * 8;
     }
     else {
@@ -59,6 +63,10 @@ Result<std::vector<uint64_t>> unc_decoder_row_interleave::get_tile_data_sizes() 
     }
     bits_per_row += row_bits;
 
+    if (bits_per_row > UINT32_MAX - 7) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                   "uncompressed tile row size exceeds 32-bit range"};
+    }
     bits_per_row = (bits_per_row + 7) & ~7U;
   }
 
