@@ -651,10 +651,16 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
 
 void ImageItem_Grid::get_tile_size(uint32_t& w, uint32_t& h) const
 {
-  heif_item_id first_tile_id = get_grid_tiles()[0];
-  auto tile = get_context()->get_image(first_tile_id, true);
-  if (tile->get_item_error()) {
+  const auto& tile_ids = get_grid_tiles();
+  if (tile_ids.empty() || tile_ids[0] == 0) {
     w = h = 0;
+    return;
+  }
+
+  auto tile = get_context()->get_image(tile_ids[0], true);
+  if (tile == nullptr || tile->get_item_error()) {
+    w = h = 0;
+    return;
   }
 
   w = tile->get_width();
