@@ -310,7 +310,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   int progress_counter = 0;
   bool cancelled = false;
   std::shared_ptr<std::vector<Error> > warnings(new std::vector<Error>());
-  std::vector<FailedTile> failed_tiles;
 
   for (uint32_t y = 0; y < grid.get_rows() && !cancelled; y++) {
     uint32_t x0 = 0;
@@ -327,7 +326,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
             heif_error_Invalid_input,
             heif_suberror_Missing_grid_images,
           });
-          failed_tiles.push_back({x0, y0});
           reference_idx++;
           x0 += tile_width;
           continue;
@@ -341,7 +339,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
         if (!options.strict_decoding && reference_idx != 0) {
           // Skip missing tiles (unless it's the first one).
           warnings->push_back(error);
-          failed_tiles.push_back({x0, y0});
           reference_idx++;
           x0 += tile_width;
           continue;
@@ -391,7 +388,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
           }
         }
 
-        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings, failed_tiles, processed_ids);
+        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings, processed_ids);
         if (err) {
           return err;
         }
@@ -439,7 +436,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
                                 data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
-                                std::ref(progress_counter), warnings, std::ref(failed_tiles), processed_ids));
+                                std::ref(progress_counter), warnings, processed_ids));
     }
 
     // check for decoding errors in remaining tiles
@@ -464,9 +461,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   }
 
   if (img) {
-    for (const auto& tile : failed_tiles) {
-      img->zero_region(tile.x0, tile.y0, tile_width, tile_height);
-    }
     img->add_warnings(*warnings.get());
   }
 
@@ -490,26 +484,24 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
                                                   const heif_decoding_options& options,
                                                   int& progress_counter,
                                                   std::shared_ptr<std::vector<Error> > warnings,
-                                                  std::vector<FailedTile>& failed_tiles,
                                                   std::set<heif_item_id> processed_ids) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 #if ENABLE_PARALLEL_TILE_DECODING
-  static std::mutex failedTilesMutex;
+  static std::mutex warningsMutex;
 #endif
 
   auto tileItem = get_context()->get_image(tileID, true);
   if (!tileItem && !options.strict_decoding) {
-    // We ignore missing images.
+    // We ignore missing images. The un-pasted canvas region stays zero from calloc().
 #if ENABLE_PARALLEL_TILE_DECODING
-    std::lock_guard<std::mutex> lock(failedTilesMutex);
+    std::lock_guard<std::mutex> lock(warningsMutex);
 #endif
     warnings->emplace_back(
       heif_error_Invalid_input,
       heif_suberror_Missing_grid_images,
       "Missing grid image"
     );
-    failed_tiles.push_back({x0, y0});
     return progress_and_return_ok(options, progress_counter);
   }
 
@@ -521,12 +513,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   auto decodeResult = tileItem->decode_image(options, false, 0, 0, processed_ids);
   if (!decodeResult) {
     if (!options.strict_decoding) {
-      // We ignore broken tiles.
+      // We ignore broken tiles. The un-pasted canvas region stays zero from calloc().
 #if ENABLE_PARALLEL_TILE_DECODING
-      std::lock_guard<std::mutex> lock(failedTilesMutex);
+      std::lock_guard<std::mutex> lock(warningsMutex);
 #endif
       warnings->push_back(decodeResult.error());
-      failed_tiles.push_back({x0, y0});
       return progress_and_return_ok(options, progress_counter);
     }
 
