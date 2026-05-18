@@ -357,8 +357,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
         return err;
       }
 
-      if (src_width < grid.get_width() / grid.get_columns() ||
-          src_height < grid.get_height() / grid.get_rows()) {
+      // Integer division would let e.g. 9 tiles of 11px each "cover" a 107px canvas
+      // (107/9 == 11), leaving an 8-pixel gap inside the visible image area.
+      if (static_cast<uint64_t>(src_width) * grid.get_columns() < grid.get_width() ||
+          static_cast<uint64_t>(src_height) * grid.get_rows() < grid.get_height()) {
         return Error{heif_error_Invalid_input,
                      heif_suberror_Invalid_grid_data,
                      "Grid tiles do not cover whole image"};

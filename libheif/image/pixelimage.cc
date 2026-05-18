@@ -24,6 +24,7 @@
 #include "security_limits.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 #include <utility>
 #include <limits>
@@ -156,7 +157,7 @@ static std::vector<uint16_t> map_channel_to_component_type(heif_channel channel,
 HeifPixelImage::~HeifPixelImage()
 {
   for (auto& component : m_storage) {
-    delete[] component.allocated_mem;
+    std::free(component.allocated_mem);
   }
 }
 
@@ -459,7 +460,9 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
 
     // --- allocate memory
 
-  allocated_mem = new (std::nothrow) uint8_t[allocation_size];
+  // Must zero-initialize: padding regions (stride, rounded_size(), alignment slack) are not
+  // written by decoders, so uninitialized contents would leak across decoded images.
+  allocated_mem = static_cast<uint8_t*>(std::calloc(1, allocation_size));
   if (allocated_mem == nullptr) {
     std::stringstream sstr;
     sstr << "Allocating " << allocation_size << " bytes failed";
@@ -540,7 +543,7 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
       // --- release the old plane before replacing it with the reallocated plane
 
       m_memory_handle.free(component.allocation_size);
-      delete[] component.allocated_mem;
+      std::free(component.allocated_mem);
 
       component = newPlane;
     }
@@ -631,7 +634,7 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
       // --- release the old plane before replacing it with the reallocated plane
 
       m_memory_handle.free(component.allocation_size);
-      delete[] component.allocated_mem;
+      std::free(component.allocated_mem);
 
       component = newPlane;
     }
