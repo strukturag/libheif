@@ -430,6 +430,12 @@ Error ImageItem_uncompressed::initialize_decoder()
                  "No 'uncC' box found."};
   }
 
+  if (!ispe) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "No 'ispe' box found for uncompressed image item."};
+  }
+
   m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
   return Error::Ok;
