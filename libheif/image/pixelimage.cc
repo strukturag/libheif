@@ -57,7 +57,7 @@ uint32_t chroma_width(uint32_t w, heif_chroma chroma)
   switch (chroma) {
     case heif_chroma_420:
     case heif_chroma_422:
-      return (w+1)/2;
+      return w/2 + (w & 1); // note: prevents integer overflow
     default:
       return w;
   }
@@ -67,7 +67,7 @@ uint32_t chroma_height(uint32_t h, heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_420:
-      return (h+1)/2;
+      return h/2 + (h & 1); // note: prevents integer overflow
     default:
       return h;
   }
