@@ -125,14 +125,17 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
   switch (format_4cc) {
     case fourcc("hvc1"): {
       auto hvcC = item->get_property<Box_hvcC>();
+      if (!hvcC) return nullptr;
       return std::make_shared<Decoder_HEVC>(hvcC);
     }
     case fourcc("av01"): {
       auto av1C = item->get_property<Box_av1C>();
+      if (!av1C) return nullptr;
       return std::make_shared<Decoder_AVIF>(av1C);
     }
     case fourcc("avc1"): {
       auto avcC = item->get_property<Box_avcC>();
+      if (!avcC) return nullptr;
       return std::make_shared<Decoder_AVC>(avcC);
     }
     case fourcc("j2k1"): {
@@ -141,6 +144,7 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     }
     case fourcc("vvc1"): {
       auto vvcC = item->get_property<Box_vvcC>();
+      if (!vvcC) return nullptr;
       return std::make_shared<Decoder_VVC>(vvcC);
     }
     case fourcc("jpeg"): {
@@ -180,21 +184,25 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
   switch (sampleType) {
     case fourcc("hvc1"): {
       auto hvcC = sample_description_box->get_child_box<Box_hvcC>();
+      if (!hvcC) return nullptr;
       return std::make_shared<Decoder_HEVC>(hvcC);
     }
 
     case fourcc("av01"): {
       auto av1C = sample_description_box->get_child_box<Box_av1C>();
+      if (!av1C) return nullptr;
       return std::make_shared<Decoder_AVIF>(av1C);
     }
 
     case fourcc("vvc1"): {
       auto vvcC = sample_description_box->get_child_box<Box_vvcC>();
+      if (!vvcC) return nullptr;
       return std::make_shared<Decoder_VVC>(vvcC);
     }
 
     case fourcc("avc1"): {
       auto avcC = sample_description_box->get_child_box<Box_avcC>();
+      if (!avcC) return nullptr;
       return std::make_shared<Decoder_AVC>(avcC);
     }
 

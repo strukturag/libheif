@@ -397,7 +397,15 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       }
       else {
         // use a new decoder
-        chunk->set_decoder(Decoder::alloc_for_sequence_sample_description_box(visualSampleDescription));
+        auto decoder = Decoder::alloc_for_sequence_sample_description_box(visualSampleDescription);
+        if (!decoder) {
+          return {
+            heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Sample description has unsupported codec or is missing the codec configuration box."
+          };
+        }
+        chunk->set_decoder(decoder);
       }
     }
 
