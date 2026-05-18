@@ -201,9 +201,11 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == fourcc("iden")) {
     return std::make_shared<ImageItem_iden>(ctx, id);
   }
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   else if (item_type == fourcc("tili")) {
     return std::make_shared<ImageItem_Tiled>(ctx, id);
   }
+#endif
   else {
     // This item has an unknown type. It could be an image or anything else.
     // Do not process the item.

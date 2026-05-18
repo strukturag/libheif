@@ -47,19 +47,20 @@ Result<uint64_t> number_of_tiles(const heif_tiled_image_parameters& params, cons
 {
   uint64_t nTiles = nTiles_h(params) * static_cast<uint64_t>(nTiles_v(params));
 
+  // Enforce the limit before the extra-dimensions loop so it is checked
+  // even when number_of_extra_dimensions == 0.
+  if (limits && limits->max_number_of_tiles && nTiles > limits->max_number_of_tiles) {
+    return Error{
+      heif_error_Unsupported_filetype,
+      heif_suberror_Security_limit_exceeded,
+      "Number of tiles exceeds security limit"
+    };
+  }
+
   for (int i = 0; i < params.number_of_extra_dimensions; i++) {
     // We only support up to 8 extra dimensions
     if (i == 8) {
       break;
-    }
-
-    if (params.extra_dimensions[i] != 0 &&
-        nTiles > UINT64_MAX / params.extra_dimensions[i]) {
-        return Error{
-          heif_error_Unsupported_filetype,
-          heif_suberror_Unspecified,
-          "Number of tiles exceeds uint64 maximum."
-        };
     }
 
     if (params.extra_dimensions[i] == 0) {
@@ -70,9 +71,17 @@ Result<uint64_t> number_of_tiles(const heif_tiled_image_parameters& params, cons
       };
     }
 
+    if (nTiles > UINT64_MAX / params.extra_dimensions[i]) {
+      return Error{
+        heif_error_Unsupported_filetype,
+        heif_suberror_Unspecified,
+        "Number of tiles exceeds uint64 maximum."
+      };
+    }
+
     nTiles *= params.extra_dimensions[i];
 
-    if (limits && nTiles > limits->max_number_of_tiles) {
+    if (limits && limits->max_number_of_tiles && nTiles > limits->max_number_of_tiles) {
       return Error{
         heif_error_Unsupported_filetype,
         heif_suberror_Security_limit_exceeded,
@@ -87,13 +96,18 @@ Result<uint64_t> number_of_tiles(const heif_tiled_image_parameters& params, cons
 
 uint32_t nTiles_h(const heif_tiled_image_parameters& params)
 {
-  return (params.image_width + params.tile_width - 1) / params.tile_width;
+  // 64-bit arithmetic prevents wrap-around when image_width + tile_width - 1
+  // exceeds UINT32_MAX. The quotient is bounded by image_width, so the
+  // narrowing cast is safe. Callers are responsible for ensuring tile_width > 0.
+  return static_cast<uint32_t>(
+      (static_cast<uint64_t>(params.image_width) + params.tile_width - 1) / params.tile_width);
 }
 
 
 uint32_t nTiles_v(const heif_tiled_image_parameters& params)
 {
-  return (params.image_height + params.tile_height - 1) / params.tile_height;
+  return static_cast<uint32_t>(
+      (static_cast<uint64_t>(params.image_height) + params.tile_height - 1) / params.tile_height);
 }
 
 
