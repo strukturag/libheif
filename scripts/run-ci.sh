@@ -282,6 +282,7 @@ fi
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     ./fuzzing/color_conversion_fuzzer ./fuzzing/data/corpus/*color-conversion-fuzzer*
     ./fuzzing/file_fuzzer ./fuzzing/data/corpus/*.heic
+    ./fuzzing/tile_fuzzer ./fuzzing/data/corpus/*.heic
 
     echo "Running color conversion fuzzer ..."
     ./fuzzing/color_conversion_fuzzer -max_total_time=120
@@ -289,7 +290,10 @@ if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     # Do not run encoder_fuzzer because it will just find errors in x265...
     #echo "Running encoder fuzzer ..."
     #./fuzzing/encoder_fuzzer -max_total_time=120
-    
+
     echo "Running file fuzzer ..."
     ./fuzzing/file_fuzzer -dict=./fuzzing/data/dictionary.txt -max_total_time=120
+
+    echo "Running tile fuzzer ..."
+    ./fuzzing/tile_fuzzer -dict=./fuzzing/data/dictionary.txt -max_total_time=120
 fi
