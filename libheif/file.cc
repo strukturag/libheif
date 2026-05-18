@@ -830,17 +830,47 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
 
 Error HeifFile::append_data_from_file_range(std::vector<uint8_t>& out_data, uint64_t offset, uint32_t size) const
 {
-  bool success = m_input_stream->seek(offset);
-  if (!success) {
-    // TODO: error
+  auto old_size = out_data.size();
+
+  // --- check that the requested range does not exceed the file size
+
+  uint64_t end_pos = offset + size;
+  if (m_input_stream->wait_for_file_size(end_pos) != StreamReader::grow_status::size_reached) {
+    std::stringstream sstr;
+    sstr << "File range " << offset << ".." << end_pos << " is beyond end of file.";
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            sstr.str()};
   }
 
-  auto old_size = out_data.size();
+  // --- check security limit on resulting buffer size
+
+  if (m_limits) {
+    auto max_memory_block_size = m_limits->max_memory_block_size;
+    if (max_memory_block_size && max_memory_block_size - old_size < size) {
+      std::stringstream sstr;
+      sstr << "Sample data of " << size << " bytes would grow total buffer to "
+           << (old_size + size) << " bytes, exceeding the security limit of "
+           << max_memory_block_size << " bytes.";
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+  }
+
+  if (!m_input_stream->seek(offset)) {
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            "Cannot seek to sample data offset."};
+  }
+
   out_data.resize(old_size + size);
 
-  success = m_input_stream->read(out_data.data() + old_size, size);
-  if (!success) {
-    // TODO: error
+  if (!m_input_stream->read(out_data.data() + old_size, size)) {
+    out_data.resize(old_size);
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            "Failed to read sample data from file."};
   }
 
   return {};

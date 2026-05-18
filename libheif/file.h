@@ -68,6 +68,8 @@ public:
   // You have to make sure that the pointer points to a valid object as long as the HeifFile is used.
   void set_security_limits(const heif_security_limits* limits) { m_limits = limits; }
 
+  const heif_security_limits* get_security_limits() const { return m_limits; }
+
   Error read(const std::shared_ptr<StreamReader>& reader);
 
   Error read_from_file(const char* input_filename);

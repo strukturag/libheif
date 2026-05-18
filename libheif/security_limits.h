@@ -92,8 +92,27 @@ public:
 
   const heif_security_limits* get_security_limits() const { return m_limits_context; }
 
-  void operator=(const MemoryHandle&) = delete;
   MemoryHandle(const MemoryHandle&) = delete;
+  MemoryHandle& operator=(const MemoryHandle&) = delete;
+
+  MemoryHandle(MemoryHandle&& other) noexcept
+      : m_limits_context(other.m_limits_context), m_memory_amount(other.m_memory_amount)
+  {
+    other.m_limits_context = nullptr;
+    other.m_memory_amount = 0;
+  }
+
+  MemoryHandle& operator=(MemoryHandle&& other) noexcept
+  {
+    if (this != &other) {
+      free();
+      m_limits_context = other.m_limits_context;
+      m_memory_amount = other.m_memory_amount;
+      other.m_limits_context = nullptr;
+      other.m_memory_amount = 0;
+    }
+    return *this;
+  }
 
 private:
   const heif_security_limits* m_limits_context = nullptr;

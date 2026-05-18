@@ -247,7 +247,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       // --- Find the data extent that stores the compressed frame data.
 
       DataExtent extent = chunk->get_data_extent_for_sample(sample_idx_in_chunk);
-      decoder->set_data_extent(extent);
+      decoder->set_data_extent(std::move(extent));
 
       // std::cout << "PUSH chunk " << chunk_idx << " sample " << sample_idx << " (" << extent.m_size << " bytes)\n";
 
