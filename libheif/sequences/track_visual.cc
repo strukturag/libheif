@@ -21,6 +21,7 @@
 #include "track_visual.h"
 
 #include <memory>
+#include <utility>
 #include "codecs/decoder.h"
 #include "codecs/encoder.h"
 #include "chunk.h"
