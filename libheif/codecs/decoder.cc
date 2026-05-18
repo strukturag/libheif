@@ -461,6 +461,14 @@ Result<std::shared_ptr<HeifPixelImage> > Decoder::get_decoded_frame(const heif_d
     return pluginErr;
   }
 
+  // The plugin's per-decoder context is created lazily on the first push of
+  // compressed data. If a caller polls for a frame before any data was pushed
+  // (e.g. when a sequence advances into a new chunk that uses a freshly-
+  // allocated decoder), there is nothing buffered yet — return nullptr.
+  if (!m_decoder) {
+    return {nullptr};
+  }
+
   heif_image* decoded_img = nullptr;
 
   heif_error err;
