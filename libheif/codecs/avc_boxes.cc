@@ -441,6 +441,13 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
     return invalidUVLC;
   }
 
+  if (pic_width_in_mbs_minus1 > (UINT32_MAX / 16) - 1 ||
+      pic_height_in_mbs_minus1 > (UINT32_MAX / 16) - 1) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_image_size,
+            "AVC SPS image size too large"};
+  }
+
   *width = (pic_width_in_mbs_minus1 + 1) * 16;
   *height = (pic_height_in_mbs_minus1 + 1) * 16;
 
@@ -464,8 +471,16 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
       return invalidUVLC;
     }
 
-    *width -= left + right;
-    *height -= top + bottom;
+    uint64_t crop_horizontal = static_cast<uint64_t>(left) + right;
+    uint64_t crop_vertical = static_cast<uint64_t>(top) + bottom;
+    if (crop_horizontal > *width || crop_vertical > *height) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_image_size,
+              "AVC SPS cropping exceeds image size"};
+    }
+
+    *width -= static_cast<uint32_t>(crop_horizontal);
+    *height -= static_cast<uint32_t>(crop_vertical);
   }
 
   return {};
