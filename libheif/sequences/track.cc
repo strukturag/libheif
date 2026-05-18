@@ -1038,11 +1038,15 @@ Error Track::init_sample_timing_table()
     while (current_chunk < m_chunks.size() &&
            i > m_chunks[current_chunk]->last_sample_number()) {
       current_chunk++;
-      current_sample_in_chunk_idx=0;
+      current_sample_in_chunk_idx = 0;
+    }
 
-      if (current_chunk > m_chunks.size()) {
-        timing.chunkIdx = 0; // TODO: error
-      }
+    if (current_chunk >= m_chunks.size()) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Sample not covered by any chunk."
+      };
     }
 
     timing.chunkIdx = current_chunk;
