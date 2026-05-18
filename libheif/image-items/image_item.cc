@@ -747,29 +747,52 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
     return propertiesResult.error();
   }
 
+  // The caller's (tile_x, tile_y) are in the *displayed* tile grid, so they
+  // must be validated against the displayed dimensions, not the in-file ones.
+  // For rotations of 90°/270° the displayed grid has its columns and rows
+  // swapped relative to the file. Using the file dims (as before) both let
+  // out-of-range coordinates through and produced unsigned underflows inside
+  // the inverse-rotation formulas (e.g. `num_rows - 1 - tile_x` with
+  // `tile_x >= num_rows`).
   heif_image_tiling tiling = get_heif_image_tiling();
+  if (Error err = process_image_transformations_on_tiling(tiling)) {
+    return err;
+  }
 
-  //for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
+  if (tile_x >= tiling.num_columns || tile_y >= tiling.num_rows) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Tile coordinate out of range for displayed image"};
+  }
+
+  // Walk the property chain in reverse, undoing each transformation as we go.
+  // Track the current (intermediate) tile-grid dimensions so each inverse uses
+  // the right extent and so 90°/270° rotations swap dims for subsequent steps.
+  uint32_t cur_cols = tiling.num_columns;
+  uint32_t cur_rows = tiling.num_rows;
+
   for (auto propIter = propertiesResult->rbegin(); propIter != propertiesResult->rend(); propIter++) {
     if (auto irot = std::dynamic_pointer_cast<Box_irot>(*propIter)) {
       switch (irot->get_rotation_ccw()) {
         case 90: {
-          uint32_t tx0 = tiling.num_columns - 1 - tile_y;
+          uint32_t tx0 = cur_rows - 1 - tile_y;
           uint32_t ty0 = tile_x;
-          tile_y = ty0;
           tile_x = tx0;
+          tile_y = ty0;
+          std::swap(cur_cols, cur_rows);
           break;
         }
         case 270: {
           uint32_t tx0 = tile_y;
-          uint32_t ty0 = tiling.num_rows - 1 - tile_x;
-          tile_y = ty0;
+          uint32_t ty0 = cur_cols - 1 - tile_x;
           tile_x = tx0;
+          tile_y = ty0;
+          std::swap(cur_cols, cur_rows);
           break;
         }
         case 180: {
-          tile_x = tiling.num_columns - 1 - tile_x;
-          tile_y = tiling.num_rows - 1 - tile_y;
+          tile_x = cur_cols - 1 - tile_x;
+          tile_y = cur_rows - 1 - tile_y;
           break;
         }
         case 0:
@@ -783,10 +806,10 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
     if (auto imir = std::dynamic_pointer_cast<Box_imir>(*propIter)) {
       switch (imir->get_mirror_direction()) {
         case heif_transform_mirror_direction_horizontal:
-          tile_x = tiling.num_columns - 1 - tile_x;
+          tile_x = cur_cols - 1 - tile_x;
           break;
         case heif_transform_mirror_direction_vertical:
-          tile_y = tiling.num_rows - 1 - tile_y;
+          tile_y = cur_rows - 1 - tile_y;
           break;
         default:
           assert(false);

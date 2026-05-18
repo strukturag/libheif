@@ -71,16 +71,23 @@ heif_error heif_image_handle_get_grid_image_tile_id(const heif_image_handle* han
   }
 
   const ImageGrid& gridspec = gridItem->get_grid_spec();
-  if (tile_x >= gridspec.get_columns() || tile_y >= gridspec.get_rows()) {
+
+  if (process_image_transformations) {
+    // transform_requested_tile_position_to_original_tile_position() validates
+    // (tile_x, tile_y) against the *displayed* tile-grid dimensions (which may
+    // differ from the file's dimensions when a 90°/270° rotation is present)
+    // before mapping the coordinates back to the in-file grid.
+    Error err = gridItem->transform_requested_tile_position_to_original_tile_position(tile_x, tile_y);
+    if (err) {
+      return err.error_struct(handle->context.get());
+    }
+  }
+  else if (tile_x >= gridspec.get_columns() || tile_y >= gridspec.get_rows()) {
     return {
       heif_error_Usage_error,
       heif_suberror_Unspecified,
       "Grid tile index out of range"
     };
-  }
-
-  if (process_image_transformations) {
-    gridItem->transform_requested_tile_position_to_original_tile_position(tile_x, tile_y);
   }
 
   *tile_item_id = gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
