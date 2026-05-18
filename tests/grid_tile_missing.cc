@@ -213,3 +213,39 @@ TEST_CASE("grid: missing tile reference returns error instead of crashing") {
   heif_image_handle_release(handle);
   heif_context_free(ctx);
 }
+
+
+// Regression for PR #1808 / OOB read in ImageItem_Grid::decode_grid_tile
+// when the caller passes (tile_x, tile_y) coordinates outside the grid's
+// declared (columns, rows). The previous assert() was a no-op in Release
+// builds and the indexing then read past m_grid_tile_ids.
+TEST_CASE("grid: out-of-range tile coordinate returns error instead of OOB") {
+  // Reuses the same 1x1 grid built for the prior test. Coordinates (1, 0)
+  // are outside its (cols=1, rows=1) bounds.
+  auto data = build_heif_with_missing_grid_tile();
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_error err = heif_context_read_from_memory_without_copy(
+      ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+
+  heif_image* tile = nullptr;
+  err = heif_image_handle_decode_image_tile(handle, &tile,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_420,
+                                            nullptr, /*tile_x=*/1, /*tile_y=*/0);
+
+  REQUIRE(err.code == heif_error_Invalid_input);
+  REQUIRE(err.subcode == heif_suberror_Missing_grid_images);
+  REQUIRE(tile == nullptr);
+
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
