@@ -460,7 +460,10 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
 
       bool gci_present_flag = reader.get_bits(1);
       if (gci_present_flag) {
-        assert(false);
+        // TODO
+        return {heif_error_Unsupported_feature,
+                heif_suberror_Unsupported_data_version,
+                "VVC SPS with general_constraints_info is not supported yet"};
       }
       else {
         ptl.num_bytes_constraint_info = 1;
@@ -563,7 +566,10 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
 
   bool sps_subpic_info_present_flag = reader.get_bits(1);
   if (sps_subpic_info_present_flag) {
-    assert(false); // TODO
+    // TODO
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            "VVC SPS with subpicture info is not supported yet"};
   }
 
   uint32_t bitDepth_minus8;
