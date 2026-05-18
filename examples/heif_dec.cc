@@ -98,7 +98,23 @@ static void show_help(const char* argv0)
             << "Usage: " << filename << " [options]  <input-image> [output-image]\n"
             << "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: jpg, jpeg, png, tif, tiff, webp, y4m. If no output filename is specified, 'jpg' is used.\n"
+               "These suffixes are recognized: ";
+
+#if HAVE_LIBJPEG
+  std::cerr << "jpeg, jpeg, ";
+#endif
+#if HAVE_LIBPNG
+  std::cerr << "png, ";
+#endif
+#if HAVE_LIBTIFF
+  std::cerr << "tif, tiff, ";
+#endif
+#if HAVE_LIBWEBP
+  std::cerr << "webp, ";
+#endif
+  std::cerr << "y4m";
+
+  std::cerr << ". If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
