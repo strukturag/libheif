@@ -98,7 +98,7 @@ static void show_help(const char* argv0)
             << "Usage: " << filename << " [options]  <input-image> [output-image]\n"
             << "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: jpg, jpeg, png, tif, tiff, y4m. If no output filename is specified, 'jpg' is used.\n"
+               "These suffixes are recognized: jpg, jpeg, png, tif, tiff, webp, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
