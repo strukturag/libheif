@@ -346,8 +346,8 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     // The field is stored as `count - 1`, so 0xFFFFFFFF would mean 2^32 tiles,
     // which we cannot represent in our uint32 m_num_tile_cols/rows. Reject this
-    // unconditionally; the security-limit check below is policy and may be
-    // disabled by the user, but this representation limit must always hold.
+    // before the security-limit check so that disabling the security limit does
+    // not silently turn this into a divide-by-zero in get_heif_image_tiling().
     if (num_tile_cols_minus_one == 0xFFFFFFFF || num_tile_rows_minus_one == 0xFFFFFFFF) {
       return {heif_error_Unsupported_feature,
               heif_suberror_Invalid_parameter_value,

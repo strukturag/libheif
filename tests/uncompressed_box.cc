@@ -326,8 +326,8 @@ TEST_CASE("uncC_parse_excess_tile_cols") {
   std::shared_ptr<Box> box;
   Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(range.error() == 0);
-  REQUIRE(error.error_code == 6);
-  REQUIRE(error.sub_error_code == 1000);
+  REQUIRE(error.error_code == heif_error_Unsupported_feature);
+  REQUIRE(error.sub_error_code == heif_suberror_Invalid_parameter_value);
 }
 
 TEST_CASE("uncC_parse_excess_tile_rows") {
@@ -348,8 +348,8 @@ TEST_CASE("uncC_parse_excess_tile_rows") {
   std::shared_ptr<Box> box;
   Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(range.error() == 0);
-  REQUIRE(error.error_code == 6);
-  REQUIRE(error.sub_error_code == 1000);
+  REQUIRE(error.error_code == heif_error_Unsupported_feature);
+  REQUIRE(error.sub_error_code == heif_suberror_Invalid_parameter_value);
 }
 
 TEST_CASE("cmpC_defl") {
