@@ -1060,11 +1060,17 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
   // make sure NCLX profile is deleted at end of function
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
+  // A slide-show-style image sequence is treated like a still image (favor
+  // perceptual quality / AOM_TUNE_IQ when supported); only true video content
+  // keeps SSIM-tuned encoding.
+  bool tune_as_video = (image_sequence &&
+                        options &&
+                        options->version >= 3 &&
+                        options->content_kind == heif_sequence_content_kind_video);
+
   aom_tune_metric effective_tune = encoder->tune;
   if (encoder->tune_auto) {
-    if (image_sequence) {
-      // TODO: we might add a flag to differentiate "image_sequences" (slide show) vs. video.
-      //       Then we could use AOM_TUNE_IQ for slide show sequences and SSIM for video.
+    if (tune_as_video) {
       effective_tune = AOM_TUNE_SSIM;
     }
     else if (input_class == heif_image_input_class_alpha) {

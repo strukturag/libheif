@@ -392,6 +392,23 @@ typedef enum heif_sequence_gop_structure
 } heif_sequence_gop_structure;
 
 
+// Describes the intent of the encoded sequence content. Encoder plugins may
+// use this to choose different default tunings (e.g. perceptual quality vs.
+// rate-distortion) for slide-show-style image sequences vs. video.
+//
+// Pass `_auto` to let libheif pick a value. Today libheif derives the kind
+// from the track's handler type (`pict` -> image_sequence, `vide` -> video);
+// in the future it may use additional input signals (e.g. frame rate or
+// frame-to-frame similarity). Plugins never see `_auto`: libheif resolves it
+// to a concrete kind before passing the options to the encoder plugin.
+typedef enum heif_sequence_content_kind
+{
+  heif_sequence_content_kind_auto = 0,
+  heif_sequence_content_kind_image_sequence = 1,
+  heif_sequence_content_kind_video = 2
+} heif_sequence_content_kind;
+
+
 typedef struct heif_sequence_encoding_options
 {
   uint8_t version;
@@ -411,11 +428,31 @@ typedef struct heif_sequence_encoding_options
   int keyframe_distance_max; // 0 - undefined
 
   int save_alpha_channel;
+
+  // version 3 options
+
+  // Intent of the encoded content. Encoder plugins may use this to choose
+  // different tunings for slide-show-style image sequences vs. video.
+  // Set to `_auto` (the default) to let libheif pick. libheif resolves the
+  // value to a concrete kind before passing the options to the encoder
+  // plugin, so plugins never see `_auto`.
+  enum heif_sequence_content_kind content_kind;
 } heif_sequence_encoding_options;
 
 
 LIBHEIF_API
 heif_sequence_encoding_options* heif_sequence_encoding_options_alloc(void);
+
+/**
+ * Copy fields from `src` into `dst`, respecting both structs' version numbers.
+ * Only fields present in `min(dst->version, src->version)` are copied, so this
+ * is safe when libheif and the caller were built against different header
+ * versions of `heif_sequence_encoding_options`. Pass NULL `src` to leave `dst`
+ * unchanged.
+ */
+LIBHEIF_API
+void heif_sequence_encoding_options_copy(heif_sequence_encoding_options* dst,
+                                         const heif_sequence_encoding_options* src);
 
 LIBHEIF_API
 void heif_sequence_encoding_options_release(heif_sequence_encoding_options*);
