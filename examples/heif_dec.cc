@@ -101,7 +101,7 @@ static void show_help(const char* argv0)
                "These suffixes are recognized: ";
 
 #if HAVE_LIBJPEG
-  std::cerr << "jpeg, jpeg, ";
+  std::cerr << "jpeg, jpg, ";
 #endif
 #if HAVE_LIBPNG
   std::cerr << "png, ";
