@@ -208,7 +208,11 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     return false;
   }
 
-  if (uncC->get_block_size() > 8) {
+  // The decoder packs each block into a uint64_t, so the effective block size
+  // (block_size, or pixel_size when block_size is 0) must fit in 8 bytes.
+  const uint32_t effective_block_size = uncC->get_block_size() != 0 ? uncC->get_block_size()
+                                                                    : uncC->get_pixel_size();
+  if (effective_block_size > 8) {
     return false;
   }
 
