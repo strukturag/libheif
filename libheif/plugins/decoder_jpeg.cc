@@ -320,9 +320,6 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 
       memcpy(py + (cinfo.output_scanline - 1) * y_stride, *buffer, cinfo.output_width);
     }
-
-    *out_img = heif_img;
-    heif_img = nullptr;  // pass ownership to caller, don't delete it in the plugin during any subsequent error
   }
   else {
     cinfo.out_color_space = JCS_YCbCr;
@@ -426,9 +423,6 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
         }
       }
     }
-
-    *out_img = heif_img;
-    heif_img = nullptr; // pass ownership to caller (see similar comment above)
   }
 
   if (out_user_data) {
@@ -443,6 +437,13 @@ heif_error jpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
 //  free(iccBuffer);
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
+
+  // Transfer ownership to the caller only after all libjpeg operations have
+  // completed. jpeg_finish_decompress() can still raise a fatal error (longjmp)
+  // on corrupt trailing data; until then heif_img must stay owned locally so the
+  // setjmp error handler can release it.
+  *out_img = heif_img;
+  heif_img = nullptr;
 
   decoder->data.clear();
 
