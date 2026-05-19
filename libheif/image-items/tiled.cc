@@ -1009,9 +1009,9 @@ ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
   // --- decode
 
   DataExtent extent;
-  extent.m_raw = data;
+  extent.m_raw = std::move(data);
 
-  return extent;
+  return std::move(extent);
 }
 
 
