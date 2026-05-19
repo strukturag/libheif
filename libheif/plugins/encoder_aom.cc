@@ -1063,6 +1063,8 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
   aom_tune_metric effective_tune = encoder->tune;
   if (encoder->tune_auto) {
     if (image_sequence) {
+      // TODO: we might add a flag to differentiate "image_sequences" (slide show) vs. video.
+      //       Then we could use AOM_TUNE_IQ for slide show sequences and SSIM for video.
       effective_tune = AOM_TUNE_SSIM;
     }
     else if (input_class == heif_image_input_class_alpha) {
