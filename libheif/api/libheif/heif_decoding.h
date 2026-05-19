@@ -118,6 +118,13 @@ typedef struct heif_decoding_options
 
   int num_library_threads; // 0 = let libheif decide (TODO, currently ignored)
   int num_codec_threads; // 0 = use decoder default
+
+  // version 9 options
+
+  // If enabled, libheif will attempt to work around known broken-input quirks
+  // (e.g. Sony HIF files where the NCLX `colr` box disagrees with the HEVC VUI
+  // on the YCbCr range flag). Default: false (strict spec-conformant behavior).
+  uint8_t autocorrect_broken_input;
 } heif_decoding_options;
 
 

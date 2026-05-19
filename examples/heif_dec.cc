@@ -137,6 +137,7 @@ static void show_help(const char* argv0)
                "      --transparency-composition-mode MODE  Controls how transparent images are rendered when the output format\n"
                "                                            support transparency. MODE must be one of: white, black, checkerboard.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n"
+               "      --auto-correct             work around known broken-input quirks (e.g. Sony HIF full-range flag mismatch)\n"
                "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n"
             << "      --tile-threads #           max number of tiles to decode in parallel (default = " << default_tile_threads << ")\n"
             << "      --extract-mime-item TYPE   extract the MIME item with the given content type into a file (mime-item.data)\n";
@@ -169,6 +170,7 @@ int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
 int option_output_tiles = 0;
 int option_disable_limits = 0;
+int option_auto_correct = 0;
 int option_sequence = 0;
 int option_ignore_editlist = 0;
 int option_num_codec_threads = 0;
@@ -205,6 +207,7 @@ static option long_options[] = {
     {(char* const) "transparency-composition-mode", required_argument, 0,  OPTION_TRANSPARENCY_COMPOSITION_MODE},
     {(char* const) "version",          no_argument,       0,                        'v'},
     {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
+    {(char* const) "auto-correct",   no_argument, &option_auto_correct,   1},
     {(char* const) "ignore-editlist", no_argument, &option_ignore_editlist, 1},
     {(char* const) "codec-threads", required_argument, 0,                     OPTION_CODEC_THREADS},
     {(char* const) "tile-threads",  required_argument, 0,                     OPTION_TILE_THREADS},
@@ -920,6 +923,7 @@ int main(int argc, char** argv)
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
     decode_options->num_codec_threads = option_num_codec_threads;
+    decode_options->autocorrect_broken_input = (option_auto_correct != 0);
 
     heif_track* track = heif_context_get_track(ctx, 0);
 
@@ -1044,6 +1048,7 @@ int main(int argc, char** argv)
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
     decode_options->num_codec_threads = option_num_codec_threads;
+    decode_options->autocorrect_broken_input = (option_auto_correct != 0);
 
     if (!option_quiet) {
       decode_options->start_progress = start_progress;

@@ -1061,30 +1061,38 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   // If there is an NCLX profile in the HEIF/AVIF metadata, use this for the color conversion.
   // Otherwise, use the profile that is stored in the image stream itself and then set the
   // (non-NCLX) profile later.
-  auto nclx = get_color_profile_nclx();
-  if (!nclx.is_undefined()) {
+  const auto heif_nclx = get_color_profile_nclx();
+  if (heif_nclx.is_defined()) {
+
+    // Since we have a HEIF colr box, we overwrite the bitstream's CICP parameter
+    // with that parameter from the colr box.
+    nclx_profile consolidated_nclx = heif_nclx;
+
     // If the decoder plugin populated an NCLX profile from the bitstream's
     // color signalling (e.g. HEVC SPS VUI, AV1 sequence header), compare it
     // against the colr box. Per ISO/IEC 14496-12 and ISO/IEC 23000-22 (MIAF)
     // the colr box overrides the bitstream, but a mismatch is a strong
-    // indication of a muxer bug (e.g. some Sony cameras mis-tag full_range_flag
-    // in colr while the bitstream VUI is correct, see issue #1770) and is
-    // worth surfacing as a warning.
-    auto bitstream_nclx = img->get_color_profile_nclx();
-    if (!bitstream_nclx.is_undefined()) {
+    // indication of a muxer bug.
+    const auto bitstream_nclx = img->get_color_profile_nclx();
+    if (bitstream_nclx.is_defined()) {
+
+      // Check whether there is a CICP mismatch between the HEIF colr box and the compressed bitstream
+      // If yes, output a warning.
+
       auto cicp_mismatch = [](uint16_t bs, uint16_t cr) {
         return bs != 2 /*unspecified*/ && cr != 2 && bs != cr;
       };
-      if (cicp_mismatch(bitstream_nclx.m_colour_primaries,        nclx.m_colour_primaries)        ||
-          cicp_mismatch(bitstream_nclx.m_transfer_characteristics, nclx.m_transfer_characteristics) ||
-          cicp_mismatch(bitstream_nclx.m_matrix_coefficients,     nclx.m_matrix_coefficients)     ||
-          bitstream_nclx.m_full_range_flag != nclx.m_full_range_flag) {
+
+      if (cicp_mismatch(bitstream_nclx.m_colour_primaries,        heif_nclx.m_colour_primaries)        ||
+          cicp_mismatch(bitstream_nclx.m_transfer_characteristics, heif_nclx.m_transfer_characteristics) ||
+          cicp_mismatch(bitstream_nclx.m_matrix_coefficients,     heif_nclx.m_matrix_coefficients)     ||
+          bitstream_nclx.m_full_range_flag != heif_nclx.m_full_range_flag) {
         std::stringstream msg;
         msg << "colr box NCLX ("
-            << nclx.m_colour_primaries << "/"
-            << nclx.m_transfer_characteristics << "/"
-            << nclx.m_matrix_coefficients << "/"
-            << (nclx.m_full_range_flag ? "full" : "limited")
+            << heif_nclx.m_colour_primaries << "/"
+            << heif_nclx.m_transfer_characteristics << "/"
+            << heif_nclx.m_matrix_coefficients << "/"
+            << (heif_nclx.m_full_range_flag ? "full" : "limited")
             << ") disagrees with bitstream signalling ("
             << bitstream_nclx.m_colour_primaries << "/"
             << bitstream_nclx.m_transfer_characteristics << "/"
@@ -1095,8 +1103,29 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
                               heif_suberror_NCLX_colr_VUI_mismatch,
                               msg.str()});
       }
+
+      // Fix full-range flag in images that are probably broken.
+
+      if (options.version >= 9 && options.autocorrect_broken_input) {
+
+        // Some Sony cameras mis-tag full_range_flag=0 in colr while the bitstream VUI is correct (full_range_flag=1), see issue #1770.
+        // Rationale for the fix: if the bitstream explicitly says full_range=1, it probably does with for a reason.
+        // Thus, we keep the full-range flag.
+
+        if (bitstream_nclx.get_full_range_flag() == true &&
+            heif_nclx.get_full_range_flag() == false) {
+          add_decoding_warning({
+                                 heif_error_Invalid_input,
+                                 heif_suberror_NCLX_colr_VUI_mismatch,
+                                 "Autocorrecting full-range flag to ON (colr=limited, bitstream=full)"
+                               });
+
+          consolidated_nclx.set_full_range_flag(true);
+        }
+      }
     }
-    img->set_color_profile_nclx(nclx);
+
+    img->set_color_profile_nclx(consolidated_nclx);
   }
 
   auto icc = get_color_profile_icc();
