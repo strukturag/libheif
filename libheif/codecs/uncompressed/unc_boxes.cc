@@ -344,6 +344,16 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
     uint32_t num_tile_cols_minus_one = range.read32();
     uint32_t num_tile_rows_minus_one = range.read32();
 
+    // The field is stored as `count - 1`, so 0xFFFFFFFF would mean 2^32 tiles,
+    // which we cannot represent in our uint32 m_num_tile_cols/rows. Reject this
+    // unconditionally; the security-limit check below is policy and may be
+    // disabled by the user, but this representation limit must always hold.
+    if (num_tile_cols_minus_one == 0xFFFFFFFF || num_tile_rows_minus_one == 0xFFFFFFFF) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Invalid_parameter_value,
+              "uncC num_tile_cols/rows_minus_one of 0xFFFFFFFF (2^32 tiles) exceeds the supported range"};
+    }
+
     if (limits->max_number_of_tiles &&
         static_cast<uint64_t>(num_tile_cols_minus_one) + 1 > limits->max_number_of_tiles / (static_cast<uint64_t>(num_tile_rows_minus_one) + 1)) {
       std::stringstream sstr;
