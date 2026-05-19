@@ -14,7 +14,7 @@ if(UNIX OR MINGW)
 
     target_link_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_LIBRARY_DIRS})
 
-    target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} heif)
+    target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} heif m)
 
     install(TARGETS pixbufloader-heif DESTINATION ${GDKPIXBUF2_MODULE_DIR})
   endif()
