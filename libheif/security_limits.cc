@@ -105,8 +105,16 @@ heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limit
     return result;
   }
 
-  uint64_t allowed = (static_cast<uint64_t>(ispe_width)  + coding_unit_size) *
-                     (static_cast<uint64_t>(ispe_height) + coding_unit_size);
+  uint64_t padded_w = static_cast<uint64_t>(ispe_width)  + coding_unit_size;
+  uint64_t padded_h = static_cast<uint64_t>(ispe_height) + coding_unit_size;
+
+  // Skip tightening if the padded dimensions would overflow uint64_t when multiplied.
+  // The image is already absurdly large; check_for_valid_image_size will reject it.
+  if (padded_w != 0 && padded_h > std::numeric_limits<uint64_t>::max() / padded_w) {
+    return result;
+  }
+
+  uint64_t allowed = padded_w * padded_h;
 
   if (result.max_image_size_pixels == 0 || allowed < result.max_image_size_pixels) {
     result.max_image_size_pixels = allowed;
