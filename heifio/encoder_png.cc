@@ -140,7 +140,10 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
     if (exifdata) {
       if (exifsize > 4) {
         uint32_t skip = four_bytes_to_uint32(exifdata[0], exifdata[1], exifdata[2], exifdata[3]);
-        if (skip < (exifsize - 4)) {
+        if (skip > (exifsize - 4)) {
+          fprintf(stderr, "Invalid EXIF data (offset too large)\n");
+        }
+        else {
           skip += 4;
           uint8_t* ptr = exifdata + skip;
           size_t size = exifsize - skip;
