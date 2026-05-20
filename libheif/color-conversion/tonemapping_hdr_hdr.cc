@@ -183,7 +183,7 @@ Op_tonemapping_hdr_to_hdr::convert_colorspace(const std::shared_ptr<const HeifPi
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
-  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, target_state.bits_per_pixel, limits)) {
+  if (auto err = outimg->add_channel(heif_channel_interleaved, width, height, target_state.bits_per_pixel, limits)) {
     return err;
   }
 
@@ -193,15 +193,16 @@ Op_tonemapping_hdr_to_hdr::convert_colorspace(const std::shared_ptr<const HeifPi
 
   const uint16_t* p_in[4];
   size_t stride_in, stride_in2;
-  p_in[0] = input->get_channel<uint16_t>(heif_channel_R, &stride_in);
-  p_in[1] = input->get_channel<uint16_t>(heif_channel_G, &stride_in2);
+  p_in[0] = input->get_channel_memory<uint16_t>(heif_channel_R, &stride_in);
+  p_in[1] = input->get_channel_memory<uint16_t>(heif_channel_G, &stride_in2);
   assert(stride_in2 == stride_in);
-  p_in[2] = input->get_channel<uint16_t>(heif_channel_B, &stride_in2);
+  p_in[2] = input->get_channel_memory<uint16_t>(heif_channel_B, &stride_in2);
   assert(stride_in2 == stride_in);
   if (has_alpha) {
-    p_in[3] = input->get_channel<uint16_t>(heif_channel_Alpha, &stride_in2);
+    p_in[3] = input->get_channel_memory<uint16_t>(heif_channel_Alpha, &stride_in2);
     assert(stride_in2 == stride_in);
   }
+  stride_in /= 2;
   int shift_alpha = 0;
   if (want_alpha) {
     shift_alpha = input_state.alpha_bits_per_pixel - target_state.alpha_bits_per_pixel;
@@ -210,7 +211,7 @@ Op_tonemapping_hdr_to_hdr::convert_colorspace(const std::shared_ptr<const HeifPi
 
   uint16_t* p_out;
   size_t stride_out;
-  p_out = outimg->get_channel<uint16_t>(heif_channel_interleaved, &stride_out);
+  p_out = outimg->get_channel_memory<uint16_t>(heif_channel_interleaved, &stride_out);
 
   int out_scale = (1 << target_state.bits_per_pixel) - 1;
 
@@ -399,7 +400,7 @@ Op_tonemapping_hdr_constant_luminance_to_hdr::convert_colorspace(const std::shar
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
-  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, target_state.bits_per_pixel, limits)) {
+  if (auto err = outimg->add_channel(heif_channel_interleaved, width, height, target_state.bits_per_pixel, limits)) {
     return err;
   }
 
@@ -408,15 +409,16 @@ Op_tonemapping_hdr_constant_luminance_to_hdr::convert_colorspace(const std::shar
 
   const uint16_t* p_in[4];
   size_t stride_in, stride_in2;
-  p_in[0] = input->get_channel<uint16_t>(heif_channel_Y, &stride_in);
-  p_in[1] = input->get_channel<uint16_t>(heif_channel_Cb, &stride_in2);
+  p_in[0] = input->get_channel_memory<uint16_t>(heif_channel_Y, &stride_in);
+  p_in[1] = input->get_channel_memory<uint16_t>(heif_channel_Cb, &stride_in2);
   assert(stride_in2 == stride_in);
-  p_in[2] = input->get_channel<uint16_t>(heif_channel_Cr, &stride_in2);
+  p_in[2] = input->get_channel_memory<uint16_t>(heif_channel_Cr, &stride_in2);
   assert(stride_in2 == stride_in);
   if (has_alpha) {
-    p_in[3] = input->get_channel<uint16_t>(heif_channel_Alpha, &stride_in2);
+    p_in[3] = input->get_channel_memory<uint16_t>(heif_channel_Alpha, &stride_in2);
     assert(stride_in2 == stride_in);
   }
+  stride_in /= 2;
   int shift_alpha = 0;
   if (want_alpha) {
     shift_alpha = input_state.alpha_bits_per_pixel - target_state.alpha_bits_per_pixel;
@@ -425,7 +427,8 @@ Op_tonemapping_hdr_constant_luminance_to_hdr::convert_colorspace(const std::shar
 
   uint16_t* p_out;
   size_t stride_out;
-  p_out = outimg->get_channel<uint16_t>(heif_channel_interleaved, &stride_out);
+  p_out = outimg->get_channel_memory<uint16_t>(heif_channel_interleaved, &stride_out);
+  stride_out /= 2;
   float input_y_range_bias = 16 << (input_state.bits_per_pixel - 8);
   float input_y_range_scale = 219 * (1 << (input_state.bits_per_pixel - 8));
   float input_c_range_bias = 128 << (input_state.bits_per_pixel - 8);
@@ -668,20 +671,20 @@ Op_tonemapping_hdr_to_hdr_constant_luminance::convert_colorspace(const std::shar
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
-  if (auto err = outimg->add_plane(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
+  if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
     return err;
   }
-  if (auto err = outimg->add_plane(heif_channel_Cb, width, height, target_state.bits_per_pixel, limits)) {
+  if (auto err = outimg->add_channel(heif_channel_Cb, width, height, target_state.bits_per_pixel, limits)) {
     return err;
   }
-  if (auto err = outimg->add_plane(heif_channel_Cr, width, height, target_state.bits_per_pixel, limits)) {
+  if (auto err = outimg->add_channel(heif_channel_Cr, width, height, target_state.bits_per_pixel, limits)) {
     return err;
   }
 
   bool has_alpha = input->has_channel(heif_channel_Alpha);
   bool want_alpha = target_state.has_alpha;
   if (want_alpha) {
-    if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Alpha, width, height, target_state.bits_per_pixel, limits)) {
       return err;
     }
   }
@@ -689,15 +692,16 @@ Op_tonemapping_hdr_to_hdr_constant_luminance::convert_colorspace(const std::shar
 
   const uint16_t* p_in[4];
   size_t stride_in, stride_in2;
-  p_in[0] = input->get_channel<uint16_t>(heif_channel_R, &stride_in);
-  p_in[1] = input->get_channel<uint16_t>(heif_channel_G, &stride_in2);
+  p_in[0] = input->get_channel_memory<uint16_t>(heif_channel_R, &stride_in);
+  p_in[1] = input->get_channel_memory<uint16_t>(heif_channel_G, &stride_in2);
   assert(stride_in2 == stride_in);
-  p_in[2] = input->get_channel<uint16_t>(heif_channel_B, &stride_in2);
+  p_in[2] = input->get_channel_memory<uint16_t>(heif_channel_B, &stride_in2);
   assert(stride_in2 == stride_in);
   if (has_alpha) {
-    p_in[3] = input->get_channel<uint16_t>(heif_channel_Alpha, &stride_in2);
+    p_in[3] = input->get_channel_memory<uint16_t>(heif_channel_Alpha, &stride_in2);
     assert(stride_in2 == stride_in);
   }
+  stride_in /= 2;
   int shift_alpha = 0;
   if (want_alpha) {
     shift_alpha = input_state.alpha_bits_per_pixel - target_state.alpha_bits_per_pixel;
@@ -706,10 +710,14 @@ Op_tonemapping_hdr_to_hdr_constant_luminance::convert_colorspace(const std::shar
 
   uint16_t* p_out[4];
   size_t stride_out[4];
-  p_out[0] = outimg->get_channel<uint16_t>(heif_channel_Y, &stride_out[0]);
-  p_out[1] = outimg->get_channel<uint16_t>(heif_channel_Cb, &stride_out[1]);
-  p_out[2] = outimg->get_channel<uint16_t>(heif_channel_Cr, &stride_out[2]);
-  p_out[3] = outimg->get_channel<uint16_t>(heif_channel_Alpha, &stride_out[3]);
+  p_out[0] = outimg->get_channel_memory<uint16_t>(heif_channel_Y, &stride_out[0]);
+  p_out[1] = outimg->get_channel_memory<uint16_t>(heif_channel_Cb, &stride_out[1]);
+  p_out[2] = outimg->get_channel_memory<uint16_t>(heif_channel_Cr, &stride_out[2]);
+  p_out[3] = outimg->get_channel_memory<uint16_t>(heif_channel_Alpha, &stride_out[3]);
+  stride_out[0] /= 2;
+  stride_out[1] /= 2;
+  stride_out[2] /= 2;
+  stride_out[3] /= 2;
   float target_y_range_bias, target_y_range_scale, target_c_range_bias, target_c_range_scale;
   if (target_state.nclx.get_full_range_flag() == 1) {
     target_y_range_bias = -1.0f;
