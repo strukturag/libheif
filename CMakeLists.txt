@@ -642,6 +642,8 @@ if (CMAKE_CXX_COMPILER MATCHES "clang\\+\\+$")
     add_compile_options(-Wno-tautological-constant-out-of-range-compare)
 endif()
 
+add_subdirectory (third-party/zimg)
+
 add_subdirectory (libheif)
 
 if (WITH_GDK_PIXBUF)
