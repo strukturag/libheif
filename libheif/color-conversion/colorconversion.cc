@@ -42,6 +42,7 @@
 #include "bayer_bilinear.h"
 #include "tonemapping_hdr_sdr.h"
 #include "tonemapping_hdr_hdr.h"
+#include "tonemapping_zimg.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 
@@ -282,6 +283,7 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_hdr>());
   ops.emplace_back(std::make_shared<Op_tonemapping_hdr_constant_luminance_to_hdr>());
   ops.emplace_back(std::make_shared<Op_tonemapping_hdr_to_hdr_constant_luminance>());
+  ops.emplace_back(std::make_shared<Op_zimg>());
 }
 
 
