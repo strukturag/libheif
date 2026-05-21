@@ -1,0 +1,3 @@
+[submodule "third-party/zimg"]
+	path = third-party/zimg
+	url = https://github.com/torusrxxx/zimg.git

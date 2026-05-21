@@ -393,8 +393,8 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
             "Image size too large for memory alignment"};
   }
 
-  // use 16 byte alignment (enough for 128 bit data-types). Every row is an integer number of data-elements.
-  uint16_t alignment = 16; // must be power of two
+  // use 32 byte alignment (zimg requirement). Every row is an integer number of data-elements.
+  uint16_t alignment = 32; // must be power of two
 
   m_width = width;
   m_height = height;
