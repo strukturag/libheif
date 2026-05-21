@@ -1,5 +1,12 @@
-# Needed to find libheif/heif_version.h while compiling the library
-include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
+# When building against the in-tree library, we need the source/binary dirs to find the public
+# API headers and the generated libheif/heif_version.h. When building against a system libheif
+# (WITH_LIBHEIF_FROM_SYSTEM), the public headers come from the installed package (transitively via
+# the imported `heif` target); we only keep the repository root so the "heifio/..." includes resolve.
+if (WITH_LIBHEIF_FROM_SYSTEM)
+    include_directories(${libheif_SOURCE_DIR})
+else ()
+    include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
+endif ()
 
 if (MSVC)
     set(getopt_sources

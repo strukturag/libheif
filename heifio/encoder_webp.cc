@@ -26,6 +26,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
+#include <cassert>
 #include <memory>
 #include <vector>
 #include "webp/mux.h"
@@ -33,7 +34,7 @@
 
 #include "encoder_webp.h"
 
-#include "common_utils.h"
+#include "helper_funcs.h"
 #include "exif.h"
 
 WebPEncoder::WebPEncoder(int quality) : quality_(quality)

@@ -1,5 +1,9 @@
-# Needed to find libheif/heif_version.h while compiling the library
-include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
+# When building against the in-tree library, we need the source/binary dirs to find the public
+# API headers and the generated libheif/heif_version.h. When building against a system libheif
+# (WITH_LIBHEIF_FROM_SYSTEM), those headers come transitively from the imported `heif` target.
+if (NOT WITH_LIBHEIF_FROM_SYSTEM)
+    include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
+endif ()
 
 add_library(heifio STATIC
         decoder.h

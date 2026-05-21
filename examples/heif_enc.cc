@@ -59,7 +59,6 @@
 #include "benchmark.h"
 #include "common.h"
 #include "SAI_datafile.h"
-#include "libheif/api_structs.h"
 #include "libheif/heif_experimental.h"
 #include "libheif/heif_sequences.h"
 #include "libheif/heif_uncompressed.h"

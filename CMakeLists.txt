@@ -64,6 +64,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+# When enabled, the library itself is not built. Instead, only the command-line tools (and the
+# 'heifio' helper) are compiled and linked against an already installed system libheif. This lets
+# users rebuild the tools (e.g. to add the TIFF reader) without recompiling or replacing the
+# system library package.
+option(WITH_LIBHEIF_FROM_SYSTEM
+       "Build only the command-line tools against an installed system libheif (do not build the library)" OFF)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
 if (has_potentially_evaluated_expression)
@@ -76,6 +83,8 @@ LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 include (TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
 add_compile_definitions(IS_BIG_ENDIAN=${IS_BIG_ENDIAN})
+
+if (NOT WITH_LIBHEIF_FROM_SYSTEM)
 
 # --- codec plugins
 
@@ -535,6 +544,61 @@ configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
+else ()
+
+    # --- Build the tools against an already installed system libheif.
+    # Prefer the installed CMake config package (provides the `heif` target); fall back to
+    # pkg-config (libheif.pc). Either way we end up with a target named `heif` that the tools and
+    # the 'heifio' helper link against unchanged.
+
+    find_package(libheif CONFIG QUIET)
+    if (TARGET heif)
+        message(STATUS "libheif: using system library via CMake config package (version ${libheif_VERSION})")
+    else ()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(SYSTEM_LIBHEIF QUIET IMPORTED_TARGET libheif)
+        if (TARGET PkgConfig::SYSTEM_LIBHEIF)
+            add_library(heif ALIAS PkgConfig::SYSTEM_LIBHEIF)
+            message(STATUS "libheif: using system library via pkg-config (version ${SYSTEM_LIBHEIF_VERSION})")
+        else ()
+            # The .pc file could not be fully resolved -- this typically happens when its
+            # Requires.private lists codec packages (a build with built-in codecs) whose .pc files
+            # are not installed. For linking against the shared library we only need libheif's own
+            # include directory and -lheif, so query those directly (this does not recurse into the
+            # private requirements).
+            pkg_get_variable(_heif_includedir libheif includedir)
+            pkg_get_variable(_heif_libdir libheif libdir)
+            if (NOT _heif_includedir OR NOT _heif_libdir)
+                message(FATAL_ERROR "WITH_LIBHEIF_FROM_SYSTEM: could not locate an installed libheif "
+                                    "(no CMake config package and no usable libheif.pc found).")
+            endif ()
+            find_library(SYSTEM_LIBHEIF_LIBRARY NAMES heif HINTS "${_heif_libdir}")
+            if (NOT SYSTEM_LIBHEIF_LIBRARY)
+                message(FATAL_ERROR "WITH_LIBHEIF_FROM_SYSTEM: libheif.pc was found but the heif "
+                                    "library could not be located in ${_heif_libdir}.")
+            endif ()
+            add_library(heif UNKNOWN IMPORTED)
+            set_target_properties(heif PROPERTIES
+                    IMPORTED_LOCATION "${SYSTEM_LIBHEIF_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${_heif_includedir}")
+            message(STATUS "libheif: using system library via pkg-config variables (${SYSTEM_LIBHEIF_LIBRARY})")
+        endif ()
+    endif ()
+
+    # Follow the experimental-feature setting of the installed library so that the tools enable
+    # exactly the code paths (and helper sources, e.g. vmt.cc) that the linked library supports.
+    # The CMake config package advertises this via the public HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    # compile definition; the pkg-config path does not carry it (experimental stays off).
+    get_target_property(_heif_interface_defs heif INTERFACE_COMPILE_DEFINITIONS)
+    if (_heif_interface_defs MATCHES "HEIF_ENABLE_EXPERIMENTAL_FEATURES")
+        set(ENABLE_EXPERIMENTAL_FEATURES ON)
+        message(STATUS "libheif: system library was built with experimental features enabled")
+    else ()
+        set(ENABLE_EXPERIMENTAL_FEATURES OFF)
+    endif ()
+
+endif ()
+
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
@@ -611,8 +675,10 @@ endif()
 option(BUILD_TESTING "" ON)
 set(CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 include(CTest)
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT WITH_LIBHEIF_FROM_SYSTEM)
     # TODO: fix tests on windows.
+    # The unit tests require access to internal library symbols, so they cannot be built against an
+    # installed system libheif (WITH_LIBHEIF_FROM_SYSTEM).
     add_subdirectory (tests)
 endif()
 
@@ -642,13 +708,15 @@ if (CMAKE_CXX_COMPILER MATCHES "clang\\+\\+$")
     add_compile_options(-Wno-tautological-constant-out-of-range-compare)
 endif()
 
-add_subdirectory (libheif)
+if (NOT WITH_LIBHEIF_FROM_SYSTEM)
+    add_subdirectory (libheif)
 
-if (WITH_GDK_PIXBUF)
-  add_subdirectory (gdk-pixbuf)
-endif()
+    if (WITH_GDK_PIXBUF)
+      add_subdirectory (gdk-pixbuf)
+    endif()
 
-add_subdirectory (gnome)
+    add_subdirectory (gnome)
+endif ()
 
 
 # --- packaging (source code)

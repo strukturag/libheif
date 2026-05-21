@@ -22,7 +22,7 @@
 #include <cstdio>
 #include "exif.h"
 
-#include "common_utils.h"
+#include "helper_funcs.h"
 
 #define EXIF_TYPE_SHORT 3
 #define EXIF_TYPE_LONG 4

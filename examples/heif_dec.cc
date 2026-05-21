@@ -72,7 +72,6 @@
 
 #include "../heifio/encoder_y4m.h"
 #include "common.h"
-#include "common_utils.h"
 
 #if defined(_MSC_VER)
 #include "getopt.h"
@@ -488,7 +487,7 @@ int decode_single_image(heif_image_handle* handle,
                 return 1;
               }
 
-              offset = four_bytes_to_uint32(exif[0], exif[1], exif[2], exif[3]);
+              offset = heif_examples::four_bytes_to_uint32(exif[0], exif[1], exif[2], exif[3]);
               offset += 4;
 
               if (offset >= exifSize) {

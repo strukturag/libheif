@@ -161,6 +161,12 @@ There are CMake presets to cover the most frequent use cases.
   A single library is built with support for HEIC and AVIF.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
 * `fuzzing`: all codecs like in release build, but configured into a self-contained library with enabled fuzzers. The library should not distributed.
+* `tools-only`: builds only the command-line tools (`heif-enc`, `heif-dec`, ...) and links them against an
+  *already installed* system libheif instead of rebuilding the library. This is useful, for example, to get a
+  `heif-enc` with the TIFF reader enabled while keeping the distribution's libheif package. The library is located
+  via its CMake config package, or via `pkg-config` (`libheif.pc`) as a fallback. Check out the libheif source
+  matching your installed library version. Note that features relying on the experimental API are only available
+  if the installed library was built with experimental features enabled.
 
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.

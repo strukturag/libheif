@@ -28,11 +28,22 @@
 #define LIBHEIF_COMMON_H
 
 #include <libheif/heif.h>
+#include <cinttypes>
 #include <string>
 
 namespace heif_examples {
 // Note: the same function is also exists in common_utils.h, but is not in the public API.
   std::string fourcc_to_string(uint32_t fourcc);
+
+// Note: also exists in the libheif-internal common_utils.h, but is duplicated here so that the
+// command-line tools do not depend on any non-public libheif header.
+  constexpr uint32_t four_bytes_to_uint32(uint8_t msb, uint8_t b, uint8_t c, uint8_t lsb)
+  {
+    return (static_cast<uint32_t>(msb << 24) |
+            static_cast<uint32_t>(b << 16) |
+            static_cast<uint32_t>(c << 8) |
+            static_cast<uint32_t>(lsb));
+  }
 
   void show_version();
 

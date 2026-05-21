@@ -32,8 +32,6 @@
 #include <vector>
 #include <algorithm>
 
-#include "common_utils.h"
-
 namespace heif_examples {
   void show_version()
   {
