@@ -475,10 +475,16 @@ heif_error svt_get_parameter_integer(void* encoder_raw, const char* name, int* v
   else if (strcmp(name, heif_encoder_parameter_name_lossless) == 0) {
     return svt_get_parameter_lossless(encoder, value);
   }
+  else if (strcmp(name, kParam_qp) == 0) {
+    if (!encoder->qp_set) {
+      return heif_error_unsupported_parameter;
+    }
+    *value = encoder->qp;
+    return heif_error_ok;
+  }
 
   get_value(kParam_min_q, min_q);
   get_value(kParam_max_q, max_q);
-  get_value(kParam_qp, qp); // TODO: what if qp was not set ?
   get_value(kParam_threads, threads);
   get_value(kParam_speed, speed);
   get_value("tile-rows", tile_rows);
