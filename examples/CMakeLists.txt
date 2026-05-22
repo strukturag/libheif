@@ -39,18 +39,6 @@ if(WIN32)
 endif()
 target_link_libraries(heif-dec PRIVATE heif heifio)
 target_include_directories(heif-dec PRIVATE ${libheif_SOURCE_DIR})
-
-# When the TIFF reader loads libtiff at runtime (WITH_LIBTIFF_DLOPEN), heifio no longer links
-# libtiff. The TIFF writer (TiffEncoder) used by heif-dec still calls libtiff directly, so its
-# symbols are resolved by linking libtiff into heif-dec itself. heif-enc, which only reads TIFF,
-# stays libtiff-free. In the default (direct-link) mode, heifio already propagates the libtiff link.
-if (WITH_LIBTIFF_DLOPEN AND NOT WIN32)
-    find_package(TIFF QUIET)
-    if (TARGET TIFF::TIFF)
-        target_link_libraries(heif-dec PRIVATE TIFF::TIFF)
-    endif ()
-endif ()
-
 install(TARGETS heif-dec RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-dec.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 

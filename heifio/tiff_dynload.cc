@@ -98,6 +98,7 @@ bool load_libtiff()
   ok &= load_symbol(h, g_fns.TIFFReadScanline, "TIFFReadScanline");
   ok &= load_symbol(h, g_fns.TIFFReadEncodedStrip, "TIFFReadEncodedStrip");
   ok &= load_symbol(h, g_fns.TIFFReadEncodedTile, "TIFFReadEncodedTile");
+  ok &= load_symbol(h, g_fns.TIFFWriteScanline, "TIFFWriteScanline");
   ok &= load_symbol(h, g_fns.TIFFIsTiled, "TIFFIsTiled");
   ok &= load_symbol(h, g_fns.TIFFIsByteSwapped, "TIFFIsByteSwapped");
   ok &= load_symbol(h, g_fns.TIFFSwabShort, "TIFFSwabShort");
@@ -155,6 +156,7 @@ const TiffFns g_fns = {
     &::TIFFReadScanline,
     &::TIFFReadEncodedStrip,
     &::TIFFReadEncodedTile,
+    &::TIFFWriteScanline,
     &::TIFFIsTiled,
     &::TIFFIsByteSwapped,
     &::TIFFSwabShort,

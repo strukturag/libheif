@@ -36,9 +36,9 @@ if (TIFF_FOUND)
     target_include_directories(heifio PRIVATE ${TIFF_INCLUDE_DIRS})
     target_compile_definitions(heifio PUBLIC HAVE_LIBTIFF=1)
 
-    # When enabled (POSIX only), the TIFF reader loads libtiff at runtime via dlopen() instead of
-    # linking it, so heif-enc has no hard libtiff dependency and gains TIFF input whenever libtiff
-    # is installed. Default is to link libtiff directly.
+    # When enabled (POSIX only), the TIFF reader and writer load libtiff at runtime via dlopen()
+    # instead of linking it, so heif-enc/heif-dec have no hard libtiff dependency and gain TIFF
+    # support whenever libtiff is installed. Default is to link libtiff directly.
     option(WITH_LIBTIFF_DLOPEN "Load libtiff at runtime via dlopen() instead of linking it" OFF)
     if (WITH_LIBTIFF_DLOPEN AND NOT WIN32)
         target_compile_definitions(heifio PRIVATE TIFF_VIA_DLOPEN=1)
@@ -149,7 +149,7 @@ else ()
 endif ()
 if (TIFF_FOUND)
     if (WITH_LIBTIFF_DLOPEN AND NOT WIN32)
-        message("TIFF: active (libtiff loaded at runtime via dlopen; heif-enc has no hard libtiff dependency)")
+        message("TIFF: active (libtiff loaded at runtime via dlopen; no hard libtiff dependency)")
     else ()
         message("TIFF: active")
     endif ()

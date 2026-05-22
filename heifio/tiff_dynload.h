@@ -54,6 +54,7 @@ struct TiffFns
   decltype(&::TIFFReadScanline)        TIFFReadScanline;
   decltype(&::TIFFReadEncodedStrip)    TIFFReadEncodedStrip;
   decltype(&::TIFFReadEncodedTile)     TIFFReadEncodedTile;
+  decltype(&::TIFFWriteScanline)       TIFFWriteScanline;     // used by the TIFF writer (heif-dec)
   decltype(&::TIFFIsTiled)             TIFFIsTiled;
   decltype(&::TIFFIsByteSwapped)       TIFFIsByteSwapped;
   decltype(&::TIFFSwabShort)           TIFFSwabShort;

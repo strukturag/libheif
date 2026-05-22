@@ -24,19 +24,32 @@
   SOFTWARE.
 */
 #include <cerrno>
-#include <tiff.h>
+#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <vector>
 
 #include "encoder_tiff.h"
-#include <tiffio.h>
+#include "tiff_dynload.h"   // pulls in <tiff.h>/<tiffio.h> and the runtime function table
+
+// Route the writer's libtiff calls through the runtime-loaded function table (see tiff_dynload.h),
+// so that with WITH_LIBTIFF_DLOPEN the writer has no link dependency on libtiff either. Defined
+// after the libtiff headers so their declarations are untouched; only this .cc sees these macros.
+#define TIFFOpen          (::heifio_tiff::tiff_fns()->TIFFOpen)
+#define TIFFClose         (::heifio_tiff::tiff_fns()->TIFFClose)
+#define TIFFSetField      (::heifio_tiff::tiff_fns()->TIFFSetField)
+#define TIFFWriteScanline (::heifio_tiff::tiff_fns()->TIFFWriteScanline)
 
 TiffEncoder::TiffEncoder() = default;
 
 bool TiffEncoder::Encode(const struct heif_image_handle *handle,
                          const struct heif_image *image, const std::string &filename)
 {
+    if (!::heifio_tiff::tiff_fns()) {
+        fprintf(stderr, "%s\n", ::heifio_tiff::tiff_load_error());
+        return false;
+    }
+
     TIFF *tif = TIFFOpen(filename.c_str(), "w");
 
     // For now we write interleaved
