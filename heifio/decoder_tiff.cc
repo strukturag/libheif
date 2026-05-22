@@ -1368,6 +1368,11 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
 }
 
 
+bool tiff_available() {
+  return ::heifio_tiff::tiff_fns() != nullptr;
+}
+
+
 heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *input_image) {
   if (!::heifio_tiff::tiff_fns()) {
     return {heif_error_Unsupported_feature, heif_suberror_Unspecified, ::heifio_tiff::tiff_load_error()};

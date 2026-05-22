@@ -580,6 +580,29 @@ void show_help(const char* argv0)
             << "omnidirectional imagery:\n"
             << "      --omaf-image-projection PROJ    set the image projection (equirectangular, cube-map)\n"
             ;
+
+  std::cerr << "\n"
+               "supported input formats (selected by filename suffix):\n"
+               "  heif, heic, hif, avif, avifs\n"
+               "  y4m\n"
+               "  raw, img (with --raw* options)\n";
+#if HAVE_LIBJPEG
+  std::cerr << "  jpeg, jpg\n";
+#endif
+#if HAVE_LIBPNG
+  std::cerr << "  png\n";
+#endif
+#if HAVE_LIBTIFF
+  if (tiff_available()) {
+    std::cerr << "  tif, tiff\n";
+  }
+  else {
+    std::cerr << "  tif, tiff    (disabled: libtiff could not be loaded at runtime)\n";
+  }
+#endif
+#if HAVE_LIBWEBP
+  std::cerr << "  webp\n";
+#endif
 }
 
 

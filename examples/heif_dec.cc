@@ -64,6 +64,7 @@
 
 #if HAVE_LIBTIFF
 #include "heifio/encoder_tiff.h"
+#include "heifio/decoder_tiff.h"   // for tiff_available()
 #endif
 
 #if HAVE_LIBWEBP
@@ -98,23 +99,28 @@ static void show_help(const char* argv0)
             << "Usage: " << filename << " [options]  <input-image> [output-image]\n"
             << "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: ";
+               "Supported output formats (selected by filename suffix):\n";
 
 #if HAVE_LIBJPEG
-  std::cerr << "jpeg, jpg, ";
+  std::cerr << "  jpeg, jpg\n";
 #endif
 #if HAVE_LIBPNG
-  std::cerr << "png, ";
+  std::cerr << "  png\n";
 #endif
 #if HAVE_LIBTIFF
-  std::cerr << "tif, tiff, ";
+  if (tiff_available()) {
+    std::cerr << "  tif, tiff\n";
+  }
+  else {
+    std::cerr << "  tif, tiff    (disabled: libtiff could not be loaded at runtime)\n";
+  }
 #endif
 #if HAVE_LIBWEBP
-  std::cerr << "webp, ";
+  std::cerr << "  webp\n";
 #endif
-  std::cerr << "y4m";
+  std::cerr << "  y4m\n";
 
-  std::cerr << ". If no output filename is specified, 'jpg' is used.\n"
+  std::cerr << "If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"

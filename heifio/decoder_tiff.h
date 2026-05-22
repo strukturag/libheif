@@ -42,6 +42,11 @@ struct YCbCrInfo {
 LIBHEIF_API
 heif_error loadTIFF(const char *filename, int output_bit_depth, InputImage *input_image);
 
+// Whether TIFF can actually be used right now. Always true when libtiff is linked directly; in the
+// dlopen build (WITH_LIBTIFF_DLOPEN) it returns false when libtiff cannot be loaded at runtime.
+LIBHEIF_API
+bool tiff_available();
+
 class LIBHEIF_API TiledTiffReader {
 public:
   ~TiledTiffReader();
