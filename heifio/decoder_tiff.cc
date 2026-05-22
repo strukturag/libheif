@@ -32,10 +32,7 @@
 #include <algorithm>
 #include <limits>
 
-extern "C" {
-#include <tiff.h>
-#include <tiffio.h>
-}
+#include "tiff_dynload.h"   // pulls in <tiff.h>/<tiffio.h> and the runtime function table
 
 #if HAVE_GEOTIFF
 #include <geotiff/geotiff.h>
@@ -46,6 +43,39 @@ extern "C" {
 
 #include "decoder_tiff.h"
 #include "libheif/heif_uncompressed.h"
+
+// Route every direct libtiff call in this file through the runtime-loaded function table (see
+// tiff_dynload.h). These macros are defined *after* the libtiff headers were parsed, so the
+// declarations there are untouched; the preprocessor does not re-expand the member name in the
+// replacement, so e.g. TIFFOpen(a,b) becomes (heifio_tiff::tiff_fns()->TIFFOpen)(a,b).
+// The two public entry points (loadTIFF, TiledTiffReader::open) check tiff_fns() != nullptr before
+// any TIFF call, so the table is always valid by the time these macros are used.
+#define TIFFOpen                (::heifio_tiff::tiff_fns()->TIFFOpen)
+#define TIFFClose               (::heifio_tiff::tiff_fns()->TIFFClose)
+#define TIFFGetField            (::heifio_tiff::tiff_fns()->TIFFGetField)
+#define TIFFGetFieldDefaulted   (::heifio_tiff::tiff_fns()->TIFFGetFieldDefaulted)
+#define TIFFSetField            (::heifio_tiff::tiff_fns()->TIFFSetField)
+#define TIFFSetWarningHandler   (::heifio_tiff::tiff_fns()->TIFFSetWarningHandler)
+#define TIFFReadScanline        (::heifio_tiff::tiff_fns()->TIFFReadScanline)
+#define TIFFReadEncodedStrip    (::heifio_tiff::tiff_fns()->TIFFReadEncodedStrip)
+#define TIFFReadEncodedTile     (::heifio_tiff::tiff_fns()->TIFFReadEncodedTile)
+#define TIFFIsTiled             (::heifio_tiff::tiff_fns()->TIFFIsTiled)
+#define TIFFIsByteSwapped       (::heifio_tiff::tiff_fns()->TIFFIsByteSwapped)
+#define TIFFSwabShort           (::heifio_tiff::tiff_fns()->TIFFSwabShort)
+#define TIFFSwabLong            (::heifio_tiff::tiff_fns()->TIFFSwabLong)
+#define TIFFScanlineSize        (::heifio_tiff::tiff_fns()->TIFFScanlineSize)
+#define TIFFStripSize           (::heifio_tiff::tiff_fns()->TIFFStripSize)
+#define TIFFTileSize            (::heifio_tiff::tiff_fns()->TIFFTileSize)
+#define TIFFNumberOfStrips      (::heifio_tiff::tiff_fns()->TIFFNumberOfStrips)
+#define TIFFNumberOfDirectories (::heifio_tiff::tiff_fns()->TIFFNumberOfDirectories)
+#define TIFFSetDirectory        (::heifio_tiff::tiff_fns()->TIFFSetDirectory)
+#define TIFFComputeTile         (::heifio_tiff::tiff_fns()->TIFFComputeTile)
+#define TIFFDataWidth           (::heifio_tiff::tiff_fns()->TIFFDataWidth)
+#define TIFFGetSeekProc         (::heifio_tiff::tiff_fns()->TIFFGetSeekProc)
+#define TIFFGetReadProc         (::heifio_tiff::tiff_fns()->TIFFGetReadProc)
+#define TIFFClientdata          (::heifio_tiff::tiff_fns()->TIFFClientdata)
+#define _TIFFmalloc             (::heifio_tiff::tiff_fns()->_TIFFmalloc)
+#define _TIFFfree               (::heifio_tiff::tiff_fns()->_TIFFfree)
 
 static heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
@@ -1339,6 +1369,10 @@ static heif_error readTiledSeparate(TIFF* tif, uint32_t width, uint32_t height,
 
 
 heif_error loadTIFF(const char* filename, int output_bit_depth, InputImage *input_image) {
+  if (!::heifio_tiff::tiff_fns()) {
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified, ::heifio_tiff::tiff_load_error()};
+  }
+
   TIFFSetWarningHandler(suppress_warnings);
 
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
@@ -1453,6 +1487,11 @@ void TiledTiffReader::TiffCloser::operator()(void* tif) const {
 
 std::unique_ptr<TiledTiffReader> TiledTiffReader::open(const char* filename, heif_error* out_err)
 {
+  if (!::heifio_tiff::tiff_fns()) {
+    *out_err = {heif_error_Unsupported_feature, heif_suberror_Unspecified, ::heifio_tiff::tiff_load_error()};
+    return nullptr;
+  }
+
   TIFFSetWarningHandler(suppress_warnings);
 
   TIFF* tif = TIFFOpen(filename, "r");

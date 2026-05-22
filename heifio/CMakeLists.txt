@@ -31,9 +31,21 @@ target_compile_definitions(heifio
 
 find_package(TIFF)
 if (TIFF_FOUND)
-    target_sources(heifio PRIVATE decoder_tiff.cc decoder_tiff.h encoder_tiff.h encoder_tiff.cc)
-    target_link_libraries(heifio PRIVATE TIFF::TIFF)
+    target_sources(heifio PRIVATE decoder_tiff.cc decoder_tiff.h encoder_tiff.h encoder_tiff.cc
+                                  tiff_dynload.cc tiff_dynload.h)
+    target_include_directories(heifio PRIVATE ${TIFF_INCLUDE_DIRS})
     target_compile_definitions(heifio PUBLIC HAVE_LIBTIFF=1)
+
+    # When enabled (POSIX only), the TIFF reader loads libtiff at runtime via dlopen() instead of
+    # linking it, so heif-enc has no hard libtiff dependency and gains TIFF input whenever libtiff
+    # is installed. Default is to link libtiff directly.
+    option(WITH_LIBTIFF_DLOPEN "Load libtiff at runtime via dlopen() instead of linking it" OFF)
+    if (WITH_LIBTIFF_DLOPEN AND NOT WIN32)
+        target_compile_definitions(heifio PRIVATE TIFF_VIA_DLOPEN=1)
+        target_link_libraries(heifio PRIVATE ${CMAKE_DL_LIBS})
+    else ()
+        target_link_libraries(heifio PRIVATE TIFF::TIFF)
+    endif ()
 
     option(WITH_GEOTIFF "Print GeoTIFF metadata when encoding tiled TIFFs (requires libgeotiff)" OFF)
     if (WITH_GEOTIFF)
@@ -136,7 +148,11 @@ else ()
     message("WEBP:  ------ (libwebp not found)")
 endif ()
 if (TIFF_FOUND)
-    message("TIFF: active")
+    if (WITH_LIBTIFF_DLOPEN AND NOT WIN32)
+        message("TIFF: active (libtiff loaded at runtime via dlopen; heif-enc has no hard libtiff dependency)")
+    else ()
+        message("TIFF: active")
+    endif ()
     if (NOT WITH_GEOTIFF)
         message("GeoTIFF: ------ (WITH_GEOTIFF=OFF)")
     elseif (GEOTIFF_FOUND)
