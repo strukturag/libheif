@@ -213,6 +213,11 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     return Error::InternalError;
   }
   // alignment of all images should be 32 bytes
+  MemoryHandle limiter;
+  Error alloc_error = limiter.alloc(tmp_size, limits, "zimg temporary buffer");
+  if (alloc_error.error_code != 0) {
+    return alloc_error;
+  }
   void* tmp = _aligned_malloc(tmp_size, 32); // TODO: MSVC
   if(!tmp)
     return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
@@ -226,9 +231,9 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
       descriptor_in.plane[0].data = input->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_in.plane[0].stride);
       descriptor_in.plane[0].mask = zimg_select_buffer_mask(height);
       descriptor_in.plane[1].data = input->get_channel_memory(heif_channel_Cb, (size_t*)&descriptor_in.plane[1].stride);
-      descriptor_in.plane[1].mask = zimg_select_buffer_mask(chroma_height(height, target_state.chroma));
+      descriptor_in.plane[1].mask = zimg_select_buffer_mask(chroma_height(height, input_state.chroma));
       descriptor_in.plane[2].data = input->get_channel_memory(heif_channel_Cr, (size_t*)&descriptor_in.plane[2].stride);
-      descriptor_in.plane[2].mask = zimg_select_buffer_mask(chroma_height(height, target_state.chroma));
+      descriptor_in.plane[2].mask = zimg_select_buffer_mask(chroma_height(height, input_state.chroma));
     break;
   case heif_colorspace_RGB:
     if (input->get_chroma_format() == heif_chroma_444) {
