@@ -114,6 +114,15 @@ if(WEBP_FOUND)
     target_link_libraries(heifio PRIVATE WebP::webp)
     target_link_libraries(heifio PRIVATE WebP::libwebpmux)
 
+    # libwebp uses pthreads internally, but depending on how it was built
+    # (e.g. autotools, where libtool may drop '-pthread') its shared object can
+    # lack a DT_NEEDED entry for libpthread. On systems where pthread is not
+    # part of libc (glibc < 2.34) linking against libwebp then fails with
+    # unresolved 'pthread_create'/'pthread_join'. Link Threads defensively so
+    # the symbols are always satisfied; this is a no-op where pthread is in libc.
+    find_package(Threads REQUIRED)
+    target_link_libraries(heifio PRIVATE Threads::Threads)
+
     target_sources(heifio PRIVATE encoder_webp.cc encoder_webp.h)
     target_sources(heifio PRIVATE decoder_webp.cc decoder_webp.h)
 endif()
