@@ -49,6 +49,12 @@ extern "C" {
 //  1.19           6            7             2             1            1            1
 //  1.20           7            7             2             1            1            1
 
+// TODO (v1.23.0): factor the LIBHEIF_API export macro out into its own tiny,
+// dependency-free header (e.g. heif_export.h) and include it from both this
+// header and heif_error.h. Currently heif_error.h is not self-contained: it
+// uses LIBHEIF_API but cannot include heif_library.h because the two headers
+// are mutually dependent (heif_library.h needs the heif_error type). Breaking
+// this cycle would let every public header compile standalone as C.
 #if (defined(_WIN32) || defined __CYGWIN__) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
 #define LIBHEIF_API __declspec(dllexport)
@@ -169,7 +175,7 @@ typedef enum heif_plugin_type
 typedef struct heif_plugin_info
 {
   int version; // version of this info struct
-  enum heif_plugin_type type;
+  heif_plugin_type type;
   const void* plugin;
   void* internal_handle; // for internal use only
 } heif_plugin_info;

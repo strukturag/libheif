@@ -26,6 +26,20 @@ jobs:
       run: |
         ./scripts/run-ci.sh
 
+  c-api-headers:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install compilers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc clang
+
+    - name: Check that public headers are valid C
+      run: |
+        ./scripts/check-c-headers.sh
+
   licenses:
     env:
       CHECK_LICENSES: 1
