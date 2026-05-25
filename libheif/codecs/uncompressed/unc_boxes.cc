@@ -849,10 +849,11 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     unitInfo.unit_size = range.read_uint(unit_size_bits);
 
-    if (unitInfo.unit_size >= UINT64_MAX - implied_offset) {
+    // Reject unit_offset + unit_size wrapping past the 64 bit range.
+    if (unitInfo.unit_size >= UINT64_MAX - unitInfo.unit_offset) {
       return {heif_error_Invalid_input,
               heif_suberror_Invalid_parameter_value,
-              "cumulative offsets too large for 64 bit file size"};
+              "icef unit offset + size exceeds 64 bit range"};
     }
 
     implied_offset += unitInfo.unit_size;
