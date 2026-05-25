@@ -32,6 +32,7 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <utility>
 #include <array>
 #include "decoder_webp.h"
 #include "exif.h"
