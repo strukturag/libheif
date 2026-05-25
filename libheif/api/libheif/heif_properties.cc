@@ -506,10 +506,10 @@ heif_error heif_image_add_bayer_component(heif_image* image,
 }
 
 
-int heif_image_has_bayer_pattern(const heif_image* image,
-                                 uint32_t bayer_component_id,
-                                 uint16_t* out_pattern_width,
-                                 uint16_t* out_pattern_height)
+int heif_image_get_bayer_pattern_size(const heif_image* image,
+                                      uint32_t bayer_component_id,
+                                      uint16_t* out_pattern_width,
+                                      uint16_t* out_pattern_height)
 {
   if (image == nullptr || !image->image->has_bayer_pattern(bayer_component_id)) {
     if (out_pattern_width) {
