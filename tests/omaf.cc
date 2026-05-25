@@ -47,10 +47,8 @@ static void do_encode(heif_image* input_image, const char* filename, heif_omaf_i
   REQUIRE(input_image != nullptr);
   heif_init(nullptr);
   heif_context *ctx = heif_context_alloc();
-  heif_encoder *encoder;
   heif_error err;
-  err = heif_context_get_encoder_for_format(ctx, heif_compression_HEVC, &encoder);
-  REQUIRE(err.code == heif_error_Ok);
+  heif_encoder* encoder = get_encoder_or_skip_test(heif_compression_HEVC);
 
   heif_encoding_options *options = set_encoding_options();
 
@@ -101,10 +99,8 @@ static void do_encode_via_image(heif_image* input_image, const char* filename, h
   REQUIRE(heif_image_get_omaf_image_projection(input_image) == projection);
 
   heif_context *ctx = heif_context_alloc();
-  heif_encoder *encoder;
   heif_error err;
-  err = heif_context_get_encoder_for_format(ctx, heif_compression_HEVC, &encoder);
-  REQUIRE(err.code == heif_error_Ok);
+  heif_encoder* encoder = get_encoder_or_skip_test(heif_compression_HEVC);
 
   heif_encoding_options *options = set_encoding_options();
 

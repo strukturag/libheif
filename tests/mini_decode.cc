@@ -49,6 +49,10 @@ void check_image_handle_size(struct heif_context *&context) {
 }
 
 TEST_CASE("check image handle size") {
+  if (!heif_have_decoder_for_format(heif_compression_AV1)) {
+     SKIP("AV1 decoder not available, skipping test");
+  }
+
   auto file = GENERATE(MINI_FILES);
   auto context = get_context_for_test_file(file);
   INFO("file name: " << file);
@@ -103,6 +107,10 @@ void check_image_size_heif_mini(struct heif_context *&context) {
 }
 
 TEST_CASE("check image size HEIF mini") {
+  if (!heif_have_decoder_for_format(heif_compression_HEVC)) {
+    SKIP("HEVC decoder not available, skipping test");
+  }
+
   auto context = get_context_for_test_file("lightning_mini.heif");
   check_image_size_heif_mini(context);
   heif_context_free(context);
