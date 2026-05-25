@@ -53,6 +53,9 @@ static const int WEBP_FORMAT_LOSSLESS  = 2;
 heif_error loadWEBP(const char* filename, InputImage* input_image)
 {
   struct heif_image* image = nullptr;
+  // Owns the image locally so that any early error return releases it.
+  // Only handed to input_image->image once decoding fully succeeds.
+  std::shared_ptr<heif_image> image_ptr;
   struct heif_error err = heif_error_ok;
 
   // open input file
@@ -184,6 +187,9 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     }
     if (err.code)
       return err;
+    // Take ownership now so that any later error return releases the image.
+    image_ptr = std::shared_ptr<heif_image>(image,
+      [](heif_image* img) { heif_image_release(img); });
 
     err = heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height, 8);
     if (err.code)
@@ -218,12 +224,18 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
 
     const int width = config.input.width;
     const int height = config.input.height;
+
     err = heif_image_create((int)width, (int)height,
       heif_colorspace_YCbCr,
       heif_chroma_420,
       &image);
     if (err.code)
       return err;
+
+    // Take ownership now so that any later error return releases the image.
+    image_ptr = std::shared_ptr<heif_image>(image,
+      [](heif_image* img) { heif_image_release(img); });
+
     size_t stride[4] = {};
     uint8_t* ptr[4] = {};
     const int uv_width = (width + 1) / 2;
@@ -308,7 +320,6 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
   // by WebPDecode().
   WebPFreeDecBuffer(&config.output);
 
-  input_image->image = std::shared_ptr<heif_image>(image,
-    [](heif_image* img) { heif_image_release(img); });
+  input_image->image = std::move(image_ptr);
   return err;
 }
