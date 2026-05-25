@@ -840,7 +840,7 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_unit_infos.resize(num_compressed_units);
 
   for (uint32_t r = 0; r < num_compressed_units; r++) {
-    struct CompressedUnitInfo unitInfo;
+    CompressedUnitInfo unitInfo;
     if (unit_offset_code == 0) {
       unitInfo.unit_offset = implied_offset;
     } else {
@@ -856,7 +856,11 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
               "icef unit offset + size exceeds 64 bit range"};
     }
 
-    implied_offset += unitInfo.unit_size;
+    // implied_offset is only used as unit_offset when unit_offset_code==0.
+    // Accumulating it for other offset codes would be unused and could overflow, so only do it if needed.
+    if (unit_offset_code == 0) {
+      implied_offset += unitInfo.unit_size;
+    }
 
     if (range.get_error() != Error::Ok) {
       return range.get_error();
