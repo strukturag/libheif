@@ -40,6 +40,20 @@ jobs:
       run: |
         ./scripts/check-c-headers.sh
 
+  api-symbols:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++
+
+    - name: Check that all declared API functions are defined in the library
+      run: |
+        ./scripts/check-api-symbols.sh
+
   licenses:
     env:
       CHECK_LICENSES: 1
