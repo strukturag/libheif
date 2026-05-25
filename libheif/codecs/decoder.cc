@@ -113,6 +113,17 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
   std::vector<uint8_t> data;
 
   if (!m_raw.empty()) {
+    // No caller currently reaches this cached path with an out-of-range request, so
+    // hitting it indicates an internal logic error rather than malformed input. Guard
+    // it defensively anyway. The subtraction form avoids a uint64_t wrap in
+    // 'offset + size' that would otherwise allow an out-of-bounds read below.
+    // TODO: this would be better reported as an internal error; change it once we have
+    //       a dedicated error code for that.
+    if (offset > m_raw.size() || size > m_raw.size() - offset) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_End_of_data,
+                   "Requested data range exceeds the cached extent buffer"};
+    }
     data.insert(data.begin(), m_raw.begin() + offset, m_raw.begin() + offset + size);
     return data;
   }
