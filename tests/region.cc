@@ -715,3 +715,86 @@ TEST_CASE("create inline mask region from image") {
   heif_image_handle_release(readbackHandle);
   heif_context_free(readbackCtx);
 }
+
+
+TEST_CASE("inline mask region from oversized image is cropped") {
+  // Regression test for GHSA-5hqq-636x-r3cr: when the source mask image is
+  // larger than the declared region, the old code sized the destination mask
+  // buffer from the region dimensions but indexed writes by the source image
+  // dimensions, causing a heap out-of-bounds write. Per the documented API
+  // contract the source image must be cropped to the region instead.
+  struct heif_error err;
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc;
+  err = heif_context_get_encoder_for_format(ctx, heif_compression_AV1, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  uint32_t input_width = 64;
+  uint32_t input_height = 64;
+  heif_image* img;
+  heif_image_create(input_width, input_height, heif_colorspace_YCbCr,
+                    heif_chroma_420, &img);
+  fill_new_plane(img, heif_channel_Y, input_width, input_height);
+  fill_new_plane(img, heif_channel_Cb, (input_width + 1) / 2, (input_height + 1) / 2);
+  fill_new_plane(img, heif_channel_Cr, (input_width + 1) / 2, (input_height + 1) / 2);
+
+  heif_image_handle* handle;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+
+  struct heif_region_item* region_item;
+  err = heif_image_handle_add_region_item(handle, input_width, input_height, &region_item);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // Source mask image (64x64) much larger than the declared region (8x2).
+  // With the bug this writes ~4 KiB into a 2-byte buffer.
+  heif_image* mask_image;
+  heif_image_create(64, 64, heif_colorspace_monochrome, heif_chroma_monochrome, &mask_image);
+  err = heif_image_add_plane(mask_image, heif_channel_Y, 64, 64, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  int stride;
+  uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
+  memset(p, 0, 64 * stride);
+  p[0] = 0x80;              // region pixel (0,0) -> set
+  p[7] = 0x80;              // region pixel (7,0) -> set
+  p[stride + 0] = 0x80;     // region pixel (0,1) -> set
+  // Pixels outside the 8x2 region must be cropped away. With the old code these
+  // would corrupt the in-bounds result (p[10]) or write out of bounds (p[2*stride]):
+  p[10] = 0x80;             // (10,0) beyond declared width
+  p[2 * stride + 0] = 0x80; // (0,2) beyond declared height
+
+  heif_region* out_region = nullptr;
+  err = heif_region_item_add_region_inline_mask(region_item, 20, 50, 8, 2, mask_image, &out_region);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(out_region != nullptr);
+
+  size_t data_len = heif_region_get_inline_mask_data_len(out_region);
+  REQUIRE(data_len == 2); // (8*2+7)/8 = 2 bytes
+
+  std::vector<uint8_t> mask_data_in(data_len);
+  int32_t x, y;
+  uint32_t width, height;
+  err = heif_region_get_inline_mask_data(out_region, &x, &y, &width, &height, mask_data_in.data());
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(x == 20);
+  REQUIRE(y == 50);
+  REQUIRE(width == 8);
+  REQUIRE(height == 2);
+  // Destination bits, row-major over the 8x2 region:
+  //   (0,0)=index0 -> 0x80, (7,0)=index7 -> 0x01  => byte0 = 0x81
+  //   (0,1)=index8 -> 0x80                         => byte1 = 0x80
+  // The cropped-away pixels (10,0) and (0,2) must not appear. The old code
+  // would instead set byte1 = 0x20 (from the source pixel at x=10) and write
+  // the region's second row out of bounds.
+  REQUIRE(mask_data_in[0] == 0x81);
+  REQUIRE(mask_data_in[1] == 0x80);
+
+  heif_region_release(out_region);
+  heif_image_release(mask_image);
+  heif_region_item_release(region_item);
+  heif_image_handle_release(handle);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+  heif_image_release(img);
+}

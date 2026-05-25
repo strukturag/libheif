@@ -717,14 +717,20 @@ heif_error heif_region_item_add_region_inline_mask(heif_region_item* item,
   uint32_t mask_width = mask_image->image->get_width();
   size_t stride;
   uint8_t* p = heif_image_get_plane2(mask_image, heif_channel_Y, &stride);
-  uint64_t pixel_index = 0;
 
-  for (uint32_t y = 0; y < mask_height; y++) {
-    for (uint32_t x = 0; x < mask_width; x++) {
+  // The destination mask buffer is sized for the declared region (width x height).
+  // If the source image is larger than the region, crop it; if it is smaller, the
+  // remaining destination bits stay zero (zero-filled by the memset above).
+  // The destination bit index is computed from the declared 'width' so that each
+  // source row maps to the correct region row.
+  uint32_t copy_width = std::min(width, mask_width);
+  uint32_t copy_height = std::min(height, mask_height);
+
+  for (uint32_t y = 0; y < copy_height; y++) {
+    for (uint32_t x = 0; x < copy_width; x++) {
       uint8_t mask_bit = p[y * stride + x] & 0x80; // use high-order bit of the 8-bit mask value as binary mask value
+      uint64_t pixel_index = static_cast<uint64_t>(y) * width + x;
       region->mask_data.data()[pixel_index / 8] |= uint8_t(mask_bit >> (pixel_index % 8));
-
-      pixel_index++;
     }
   }
 
