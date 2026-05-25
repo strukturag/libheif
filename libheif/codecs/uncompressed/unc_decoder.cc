@@ -165,7 +165,11 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
-      if (unit_info.unit_offset + unit_info.unit_size > compressed_bytes.size()) {
+      // Use subtraction form to avoid a uint64_t wrap in 'unit_offset + unit_size',
+      // which could otherwise pass this check and lead to an out-of-bounds read when
+      // constructing the iterators below (GHSA-r7qj-cg5r-r6vf).
+      if (unit_info.unit_offset > compressed_bytes.size() ||
+          unit_info.unit_size > compressed_bytes.size() - unit_info.unit_offset) {
         return Error{
           heif_error_Invalid_input,
           heif_suberror_Unspecified,
