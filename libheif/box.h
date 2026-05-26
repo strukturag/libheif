@@ -1041,6 +1041,38 @@ private:
 };
 
 
+class Box_rref : public FullBox
+{
+public:
+  Box_rref()
+  {
+    set_short_type(fourcc("rref"));
+  }
+
+  bool is_essential() const override { return true; }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Required Reference Types"; }
+
+  const std::vector<uint32_t>& get_reference_types() const { return m_reference_types; }
+
+  bool all_reference_types_supported() const;
+
+  Error reference_types_supported_error() const;
+
+  void add_reference_type(uint32_t type) { m_reference_types.push_back(type); }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  std::vector<uint32_t> m_reference_types;
+};
+
+
 class Box_idat : public Box
 {
 public:

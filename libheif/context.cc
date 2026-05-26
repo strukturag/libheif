@@ -679,6 +679,16 @@ Error HeifContext::interpret_heif_file_images()
     }
 
 
+    // --- Are there any `rref` reference types that we do not process
+
+    auto rrefBox = m_heif_file->get_property_for_item<Box_rref>(pair.first);
+    if (rrefBox) {
+      if (Error err = rrefBox->reference_types_supported_error()) {
+        return err;
+      }
+    }
+
+
     // --- Are there any parse errors in optional properties? Attach the errors as warnings to the images.
 
     bool ignore_nonfatal_parse_errors = false; // TODO: this should be a user option. Where should we put this (heif_decoding_options, or while creating the context) ?

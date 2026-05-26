@@ -534,6 +534,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_iref>();
       break;
 
+    case fourcc("rref"):
+      box = std::make_shared<Box_rref>();
+      break;
+
     case fourcc("hvcC"):
       box = std::make_shared<Box_hvcC>();
       break;
@@ -3991,6 +3995,142 @@ void Box_iref::overwrite_reference(heif_item_id from_id, uint32_t type, uint32_t
   }
 
   assert(false); // reference was not found
+}
+
+
+Error Box_rref::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 1) {
+    return unsupported_version_error("rref");
+  }
+
+  size_t remainingBytes = range.get_remaining_bytes();
+
+  // The number of reference types should be stored in uint(8), but the
+  // common test images C043, C044 store them as uint(32).
+  // Let us detect this case by the number of data bytes in this box.
+  bool cnt_as_uint32 = (remainingBytes > 0 && remainingBytes % 4 == 0);
+
+  uint8_t nRefTypes;
+  if (cnt_as_uint32) {
+    // fix broken C043, C044 files
+    // TODO: remove me when the files have been corrected as the above check can misfire when there is extra padding
+    nRefTypes = (uint8_t)range.read32();
+  }
+  else {
+    nRefTypes = range.read8();
+  }
+
+  for (uint8_t i = 0; i < nRefTypes; i++) {
+    uint32_t refType = range.read32();
+
+    if (range.error()) {
+      std::stringstream sstr;
+      sstr << "rref box should contain " << ((int)nRefTypes) << " reference types, but we can only read " << m_reference_types.size() << " reference types.";
+
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_End_of_data,
+        sstr.str()
+      };
+    }
+
+    m_reference_types.push_back(refType);
+  }
+
+  return range.get_error();
+}
+
+
+static constexpr std::array supported_reference_types{
+  fourcc("thmb"),
+  fourcc("base"),
+  fourcc("cdsc"),
+  fourcc("dimg"),
+  fourcc("auxl"),
+  fourcc("prem")
+};
+
+
+bool Box_rref::all_reference_types_supported() const
+{
+  return std::ranges::all_of(m_reference_types, [](uint32_t t) {
+    return std::ranges::find(supported_reference_types, t) != supported_reference_types.end();
+  });
+}
+
+
+Error Box_rref::reference_types_supported_error() const
+{
+  std::vector<uint32_t> unsupported_types;
+
+  for (uint32_t refType : m_reference_types) {
+    if (std::ranges::find(supported_reference_types, refType) == supported_reference_types.end()) {
+      unsupported_types.push_back(refType);
+    }
+  }
+
+  if (unsupported_types.empty()) {
+    return Error::Ok;
+  }
+
+  std::stringstream sstr;
+
+  sstr << "Unsupported reference types: ";
+  for (size_t i = 0; i < unsupported_types.size(); i++) {
+    if (i > 0) {
+      sstr << ", ";
+    }
+    sstr << fourcc_to_string(unsupported_types[i]);
+  }
+
+  return {
+    heif_error_Unsupported_feature,
+    heif_suberror_Unspecified,
+    sstr.str()
+  };
+}
+
+
+Error Box_rref::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_reference_types.size() > std::numeric_limits<uint8_t>::max()) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Too many rref reference types."
+    };
+  }
+
+  writer.write8(static_cast<uint8_t>(m_reference_types.size()));
+
+  for (uint32_t refType : m_reference_types) {
+    writer.write32(refType);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_rref::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "reference types: ";
+  for (size_t i = 0; i < m_reference_types.size(); i++) {
+    if (i > 0) sstr << ", ";
+    sstr << fourcc_to_string(m_reference_types[i]);
+  }
+  sstr << "\n";
+
+  return sstr.str();
 }
 
 
