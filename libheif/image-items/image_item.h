@@ -76,7 +76,12 @@ public:
 
   bool is_property_essential(const std::shared_ptr<Box>& property) const;
 
-  virtual Error get_item_error() const { return Error::Ok; }
+  virtual Error get_item_error() const { return m_item_error; }
+
+  // Mark this item as undecodable. The file still loads and other items remain
+  // usable, but decoding this item (or listing it as a non-error image) will
+  // surface this error.
+  void set_item_error(const Error& err) { m_item_error = err; }
 
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
 
@@ -445,6 +450,8 @@ public:
 private:
   HeifContext* m_heif_context;
   std::vector<std::shared_ptr<Box>> m_properties;
+
+  Error m_item_error;  // if set, this item cannot be decoded (e.g. unsupported required reference types)
 
   heif_item_id m_id = 0;
   uint32_t m_width = 0, m_height = 0;  // after all transformations have been applied

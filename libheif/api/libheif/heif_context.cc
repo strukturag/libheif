@@ -166,8 +166,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
     return err.error_struct(ctx->context.get());
   }
 
-  if (auto errImage = std::dynamic_pointer_cast<ImageItem_Error>(primary_image)) {
-    Error error = errImage->get_item_error();
+  if (Error error = primary_image->get_item_error()) {
     return error.error_struct(ctx->context.get());
   }
 
@@ -189,15 +188,14 @@ heif_error heif_context_get_image_handle(heif_context* ctx,
 
   auto image = ctx->context->get_image(id, true);
 
-  if (auto errImage = std::dynamic_pointer_cast<ImageItem_Error>(image)) {
-    Error error = errImage->get_item_error();
-    return error.error_struct(ctx->context.get());
-  }
-
   if (!image) {
     *imgHdl = nullptr;
 
     return {heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced, ""};
+  }
+
+  if (Error error = image->get_item_error()) {
+    return error.error_struct(ctx->context.get());
   }
 
   *imgHdl = new heif_image_handle();

@@ -679,12 +679,15 @@ Error HeifContext::interpret_heif_file_images()
     }
 
 
-    // --- Are there any `rref` reference types that we do not process
+    // --- Are there any `rref` reference types that we do not process.
+    // This only makes the affected item undecodable; other items in the file
+    // can still be decoded, so we do not abort the whole load.
 
     auto rrefBox = m_heif_file->get_property_for_item<Box_rref>(pair.first);
     if (rrefBox) {
       if (Error err = rrefBox->reference_types_supported_error()) {
-        return err;
+        image->set_item_error(err);
+        continue;
       }
     }
 

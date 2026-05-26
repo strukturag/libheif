@@ -881,6 +881,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
                  "'iref' has cyclic references"};
   }
 
+  if (m_item_error) {
+    return m_item_error;
+  }
+
   std::lock_guard<std::mutex> lock(m_decode_mutex);
 
   // --- check whether image size (according to 'ispe') exceeds maximum
