@@ -509,9 +509,6 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
 {
   auto* encoder = (encoder_struct_rav1e*) encoder_raw;
 
-  // an encoder instance must only be used once
-  assert(encoder->rav1eContextRaw == nullptr);
-
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
   RaChromaSampling chromaSampling;

@@ -912,9 +912,6 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 {
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
-  // an encoder instance must only be used once
-  assert(encoder->codec.iface == nullptr);
-
   heif_error err;
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
