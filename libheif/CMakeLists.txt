@@ -31,6 +31,22 @@ set(libheif_headers
         api/libheif/heif_cxx.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
+# Modern C++ API headers (installed into a 'cxx' subdirectory). Kept separate
+# from libheif_headers because install(FILES) flattens paths.
+set(libheif_cxx_headers
+        api/libheif/cxx/heif.hpp
+        api/libheif/cxx/version.hpp
+        api/libheif/cxx/fwd.hpp
+        api/libheif/cxx/error.hpp
+        api/libheif/cxx/color_profile.hpp
+        api/libheif/cxx/image_base.hpp
+        api/libheif/cxx/image.hpp
+        api/libheif/cxx/image_handle.hpp
+        api/libheif/cxx/encoder_parameter.hpp
+        api/libheif/cxx/encoder.hpp
+        api/libheif/cxx/encoder_descriptor.hpp
+        api/libheif/cxx/context.hpp)
+
 set(libheif_sources
         bitstream.cc
         bitstream.h
@@ -352,6 +368,8 @@ install(TARGETS heif EXPORT ${PROJECT_NAME}-config
         )
 
 install(FILES ${libheif_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+
+install(FILES ${libheif_cxx_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/cxx)
 
 install(EXPORT ${PROJECT_NAME}-config DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
