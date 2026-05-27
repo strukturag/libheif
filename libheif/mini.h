@@ -133,10 +133,12 @@ public:
   void set_mdcv(std::shared_ptr<Box_mdcv> box) { m_mdcv = std::move(box); }
   void set_cclv(std::shared_ptr<Box_cclv> box) { m_cclv = std::move(box); }
   void set_amve(std::shared_ptr<Box_amve> box) { m_amve = std::move(box); }
+  void set_ndwt(std::shared_ptr<Box_ndwt> box) { m_ndwt = std::move(box); }
   void set_tmap_clli(std::shared_ptr<Box_clli> box) { m_tmap_clli = std::move(box); }
   void set_tmap_mdcv(std::shared_ptr<Box_mdcv> box) { m_tmap_mdcv = std::move(box); }
   void set_tmap_cclv(std::shared_ptr<Box_cclv> box) { m_tmap_cclv = std::move(box); }
   void set_tmap_amve(std::shared_ptr<Box_amve> box) { m_tmap_amve = std::move(box); }
+  void set_tmap_ndwt(std::shared_ptr<Box_ndwt> box) { m_tmap_ndwt = std::move(box); }
 
   std::string dump(Indent &) const override;
 
@@ -208,22 +210,20 @@ private:
   bool m_tmap_full_range_flag = false;
 
   bool m_reve_flag = false;
-  bool m_ndwt_flag = false;
   std::shared_ptr<Box_clli> m_clli;
   std::shared_ptr<Box_mdcv> m_mdcv;
   std::shared_ptr<Box_cclv> m_cclv;
   std::shared_ptr<Box_amve> m_amve;
   // std::shared_ptr<Box_reve> m_reve;
-  // std::shared_ptr<Box_ndwt> m_ndwt;
+  std::shared_ptr<Box_ndwt> m_ndwt;
 
   bool m_tmap_reve_flag = false;
-  bool m_tmap_ndwt_flag = false;
   std::shared_ptr<Box_clli> m_tmap_clli;
   std::shared_ptr<Box_mdcv> m_tmap_mdcv;
   std::shared_ptr<Box_cclv> m_tmap_cclv;
   std::shared_ptr<Box_amve> m_tmap_amve;
   // std::shared_ptr<Box_reve> m_tmap_reve;
-  // std::shared_ptr<Box_ndwt> m_tmap_ndwt;
+  std::shared_ptr<Box_ndwt> m_tmap_ndwt;
 
   std::vector<uint8_t> m_alpha_item_codec_config;
   std::vector<uint8_t> m_gainmap_item_codec_config;

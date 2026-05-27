@@ -204,7 +204,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
     bool cclv_flag = bits.get_flag();
     bool amve_flag = bits.get_flag();
     m_reve_flag = bits.get_flag();
-    m_ndwt_flag = bits.get_flag();
+    bool ndwt_flag = bits.get_flag();
 
     if (clli_flag)
     {
@@ -280,10 +280,10 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       bits.skip_bits(16);
     }
 
-    if (m_ndwt_flag)
+    if (ndwt_flag)
     {
-      // TODO: NominalDiffuseWhite isn't published yet
-      bits.skip_bits(32);
+      m_ndwt = std::make_shared<Box_ndwt>();
+      m_ndwt->set_diffuse_white_luminance(bits.get_bits32(32));
     }
 
     if (m_gainmap_flag)
@@ -293,7 +293,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       bool tmap_cclv_flag = bits.get_flag();
       bool tmap_amve_flag = bits.get_flag();
       m_tmap_reve_flag = bits.get_flag();
-      m_tmap_ndwt_flag = bits.get_flag();
+      bool tmap_ndwt_flag = bits.get_flag();
 
       if (tmap_clli_flag)
       {
@@ -369,10 +369,10 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         bits.skip_bits(16);
       }
 
-      if (m_tmap_ndwt_flag)
+      if (tmap_ndwt_flag)
       {
-        // TODO: NominalDiffuseWhite isn't published yet
-        bits.skip_bits(32);
+        m_tmap_ndwt = std::make_shared<Box_ndwt>();
+        m_tmap_ndwt->set_diffuse_white_luminance(bits.get_bits32(32));
       }
     }
   }
@@ -704,15 +704,17 @@ std::string Box_mini::dump(Indent &indent) const
     }
 
     sstr << indent << "reve_flag: " << m_reve_flag << "\n";
-    sstr << indent << "ndwt_flag: " << m_ndwt_flag << "\n";
 
     if (m_reve_flag)
     {
       // TODO - this isn't published yet
     }
-    if (m_ndwt_flag)
+    if (m_ndwt)
     {
-      // TODO - this isn't published yet
+      sstr << indent << "ndwt.diffuse_white_luminance: " << m_ndwt->get_diffuse_white_luminance() << "\n";
+    }
+    else {
+      sstr << indent << "ndwt: ---\n";
     }
 
     if (m_gainmap_flag)
@@ -782,15 +784,17 @@ std::string Box_mini::dump(Indent &indent) const
       }
 
       sstr << indent << "tmap_reve_flag: " << m_tmap_reve_flag << "\n";
-      sstr << indent << "tmap_ndwt_flag: " << m_tmap_ndwt_flag << "\n";
 
       if (m_tmap_reve_flag)
       {
         // TODO - this isn't published yet
       }
-      if (m_tmap_ndwt_flag)
+      if (m_tmap_ndwt)
       {
-        // TODO - this isn't published yet
+        sstr << indent << "tmap_ndwt.diffuse_white_luminance: " << m_tmap_ndwt->get_diffuse_white_luminance() << "\n";
+      }
+      else {
+        sstr << indent << "tmap_ndwt: ---\n";
       }
     }
   }
@@ -1018,7 +1022,7 @@ Error Box_mini::write(StreamWriter& writer) const
     bits.write_flag(m_cclv != nullptr);
     bits.write_flag(m_amve != nullptr);
     bits.write_flag(m_reve_flag);
-    bits.write_flag(m_ndwt_flag);
+    bits.write_flag(m_ndwt != nullptr);
 
     if (m_clli) {
       bits.write_bits16(m_clli->clli.max_content_light_level, 16);
@@ -1056,9 +1060,8 @@ Error Box_mini::write(StreamWriter& writer) const
       bits.write_bits16(0, 16);
     }
 
-    if (m_ndwt_flag) {
-      // TODO: NominalDiffuseWhite isn't published yet — write zero
-      bits.write_bits32(0, 32);
+    if (m_ndwt) {
+      bits.write_bits32(m_ndwt->get_diffuse_white_luminance(), 32);
     }
 
     // Tmap HDR metadata (if gainmap)
@@ -1068,7 +1071,7 @@ Error Box_mini::write(StreamWriter& writer) const
       bits.write_flag(m_tmap_cclv != nullptr);
       bits.write_flag(m_tmap_amve != nullptr);
       bits.write_flag(m_tmap_reve_flag);
-      bits.write_flag(m_tmap_ndwt_flag);
+      bits.write_flag(m_tmap_ndwt != nullptr);
 
       if (m_tmap_clli) {
         bits.write_bits16(m_tmap_clli->clli.max_content_light_level, 16);
@@ -1105,8 +1108,8 @@ Error Box_mini::write(StreamWriter& writer) const
         bits.write_bits16(0, 16);
       }
 
-      if (m_tmap_ndwt_flag) {
-        bits.write_bits32(0, 32);
+      if (m_tmap_ndwt) {
+        bits.write_bits32(m_tmap_ndwt->get_diffuse_white_luminance(), 32);
       }
     }
   }

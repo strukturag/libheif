@@ -838,6 +838,13 @@ void ImageItem::set_mdcv(const heif_mastering_display_colour_volume& mdcv)
 }
 
 
+void ImageItem::set_nominal_diffuse_white_luminance(uint32_t luminance)
+{
+  ImageDescription::set_nominal_diffuse_white_luminance(luminance);
+  add_property(create_ndwt_box(), false);
+}
+
+
 void ImageItem::set_pixel_ratio(uint32_t h, uint32_t v)
 {
   ImageDescription::set_pixel_ratio(h, v);
@@ -1156,6 +1163,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     auto mdcv = get_property<Box_mdcv>();
     if (mdcv) {
       img->set_mdcv(mdcv->mdcv);
+    }
+
+    // NDWT
+
+    auto ndwt = get_property<Box_ndwt>();
+    if (ndwt) {
+      img->set_nominal_diffuse_white_luminance(ndwt->get_diffuse_white_luminance());
     }
 
     // PASP

@@ -630,6 +630,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_amve>();
       break;
 
+    case fourcc("ndwt"):
+      box = std::make_shared<Box_ndwt>();
+      break;
+
     case fourcc("cmin"):
       box = std::make_shared<Box_cmin>();
       break;
@@ -2909,6 +2913,43 @@ Error Box_amve::write(StreamWriter& writer) const
   writer.write32(amve.ambient_illumination);
   writer.write16(amve.ambient_light_x);
   writer.write16(amve.ambient_light_y);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_ndwt::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("ndwt");
+  }
+
+  m_diffuse_white_luminance = range.read32();
+
+  return range.get_error();
+}
+
+
+std::string Box_ndwt::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "diffuse_white_luminance: " << m_diffuse_white_luminance << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_ndwt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_diffuse_white_luminance);
 
   prepend_header(writer, box_start);
 

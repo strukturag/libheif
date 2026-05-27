@@ -349,6 +349,34 @@ LIBHEIF_API
 void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle*, const heif_mastering_display_colour_volume* in);
 
 
+// --- nominal diffuse white ---
+
+// Nominal diffuse white luminance (ISO/IEC 23008-12 'ndwt' box). The luminance
+// is given in units of 0.0001 candelas per square metre. A value of 0 is valid
+// and selects the default definition of ISO/TS 22028-5.
+
+// If the image has no 'nominal diffuse white' information, the getter returns 0,
+// which is indistinguishable from a stored luminance of 0. Use the has_ function
+// to disambiguate.
+LIBHEIF_API
+int heif_image_has_nominal_diffuse_white_luminance(const heif_image*);
+
+LIBHEIF_API
+uint32_t heif_image_get_nominal_diffuse_white_luminance(const heif_image*);
+
+LIBHEIF_API
+void heif_image_set_nominal_diffuse_white_luminance(const heif_image*, uint32_t luminance);
+
+LIBHEIF_API
+int heif_image_handle_has_nominal_diffuse_white_luminance(const heif_image_handle*);
+
+LIBHEIF_API
+uint32_t heif_image_handle_get_nominal_diffuse_white_luminance(const heif_image_handle*);
+
+LIBHEIF_API
+void heif_image_handle_set_nominal_diffuse_white_luminance(const heif_image_handle*, uint32_t luminance);
+
+
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the
 // normalized values, collected in heif_decoded_mastering_display_colour_volume.
 // Values that are out-of-range are decoded to 0, indicating an undefined value (as specified in ISO/IEC 23008-2).

@@ -1432,6 +1432,36 @@ protected:
 };
 
 
+class Box_ndwt : public FullBox
+{
+public:
+  Box_ndwt()
+  {
+    set_short_type(fourcc("ndwt"));
+  }
+
+  // Nominal diffuse white luminance in units of 0.0001 cd/m^2.
+  // A value of 0 means the default definition of ISO/TS 22028-5 should be used.
+  uint32_t get_diffuse_white_luminance() const { return m_diffuse_white_luminance; }
+
+  void set_diffuse_white_luminance(uint32_t luminance) { m_diffuse_white_luminance = luminance; }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Nominal Diffuse White"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_diffuse_white_luminance = 0;
+};
+
+
 class Box_cclv : public Box
 {
 public:

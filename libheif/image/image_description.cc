@@ -130,6 +130,7 @@ void ImageDescription::copy_metadata_from(const ImageDescription& other)
 
   m_clli = other.m_clli;
   m_mdcv = other.m_mdcv;
+  m_nominal_diffuse_white_luminance = other.m_nominal_diffuse_white_luminance;
 
   heif_tai_timestamp_packet_release(m_tai_timestamp);
   m_tai_timestamp = nullptr;
@@ -193,6 +194,19 @@ std::shared_ptr<Box_mdcv> ImageDescription::create_mdcv_box() const
   mdcv->mdcv = get_mdcv();
 
   return mdcv;
+}
+
+
+std::shared_ptr<Box_ndwt> ImageDescription::create_ndwt_box() const
+{
+  if (!has_nominal_diffuse_white()) {
+    return {};
+  }
+
+  auto ndwt = std::make_shared<Box_ndwt>();
+  ndwt->set_diffuse_white_luminance(get_nominal_diffuse_white_luminance());
+
+  return ndwt;
 }
 
 
@@ -275,6 +289,13 @@ std::vector<std::shared_ptr<Box>> ImageDescription::generate_property_boxes(bool
     mdcv->mdcv = get_mdcv();
 
     properties.push_back(mdcv);
+  }
+
+
+  // --- write NDWT property
+
+  if (has_nominal_diffuse_white()) {
+    properties.push_back(create_ndwt_box());
   }
 
 

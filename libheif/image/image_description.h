@@ -239,6 +239,23 @@ public:
 
   void unset_mdcv() { m_mdcv.reset(); }
 
+  // --- ndwt (nominal diffuse white)
+
+  // Note: a luminance of 0 is a valid value (it selects the ISO/TS 22028-5
+  // default), so presence is tracked separately from the value via std::optional.
+
+  bool has_nominal_diffuse_white() const { return m_nominal_diffuse_white_luminance.has_value(); }
+
+  // Nominal diffuse white luminance in units of 0.0001 cd/m^2.
+  uint32_t get_nominal_diffuse_white_luminance() const { return m_nominal_diffuse_white_luminance.value_or(0); }
+
+  virtual void set_nominal_diffuse_white_luminance(uint32_t luminance)
+  {
+    m_nominal_diffuse_white_luminance = luminance;
+  }
+
+  void unset_nominal_diffuse_white() { m_nominal_diffuse_white_luminance.reset(); }
+
   virtual Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
     delete m_tai_timestamp;
 
@@ -437,6 +454,7 @@ private:
   uint32_t m_PixelAspectRatio_v = 1;
   heif_content_light_level m_clli{};
   std::optional<heif_mastering_display_colour_volume> m_mdcv;
+  std::optional<uint32_t> m_nominal_diffuse_white_luminance;
 
   heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
 
@@ -470,6 +488,8 @@ protected:
   std::shared_ptr<Box_clli> create_clli_box() const;
 
   std::shared_ptr<Box_mdcv> create_mdcv_box() const;
+
+  std::shared_ptr<Box_ndwt> create_ndwt_box() const;
 
   std::shared_ptr<Box_pasp> create_pasp_box() const;
 

@@ -518,6 +518,46 @@ void heif_image_handle_set_mastering_display_colour_volume(const heif_image_hand
 }
 
 
+// --- nominal diffuse white ---
+
+
+int heif_image_has_nominal_diffuse_white_luminance(const heif_image* image)
+{
+  return image->image->has_nominal_diffuse_white();
+}
+
+
+uint32_t heif_image_get_nominal_diffuse_white_luminance(const heif_image* image)
+{
+  return image->image->get_nominal_diffuse_white_luminance();
+}
+
+
+void heif_image_set_nominal_diffuse_white_luminance(const heif_image* image, uint32_t luminance)
+{
+  image->image->set_nominal_diffuse_white_luminance(luminance);
+}
+
+
+int heif_image_handle_has_nominal_diffuse_white_luminance(const heif_image_handle* handle)
+{
+  return handle->image->get_property<Box_ndwt>() ? 1 : 0;
+}
+
+
+uint32_t heif_image_handle_get_nominal_diffuse_white_luminance(const heif_image_handle* handle)
+{
+  auto ndwt = handle->image->get_property<Box_ndwt>();
+  return ndwt ? ndwt->get_diffuse_white_luminance() : 0;
+}
+
+
+void heif_image_handle_set_nominal_diffuse_white_luminance(const heif_image_handle* handle, uint32_t luminance)
+{
+  handle->image->set_nominal_diffuse_white_luminance(luminance);
+}
+
+
 float mdcv_coord_decode_x(uint16_t coord)
 {
   // check for unspecified value
