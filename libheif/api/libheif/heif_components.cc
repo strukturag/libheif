@@ -47,57 +47,57 @@ void heif_image_get_used_component_ids(const heif_image* image, uint32_t* out_co
 }
 
 
-heif_channel heif_image_get_component_channel(const heif_image* image, uint32_t component_idx)
+heif_channel heif_image_get_component_channel(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return heif_channel_Y;
   }
-  return image->image->get_component_channel(component_idx);
+  return image->image->get_component_channel(component_id);
 }
 
 
-uint32_t heif_image_get_component_width(const heif_image* image, uint32_t component_idx)
+uint32_t heif_image_get_component_width(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return 0;
   }
-  return image->image->get_component_width(component_idx);
+  return image->image->get_component_width(component_id);
 }
 
 
-uint32_t heif_image_get_component_height(const heif_image* image, uint32_t component_idx)
+uint32_t heif_image_get_component_height(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return 0;
   }
-  return image->image->get_component_height(component_idx);
+  return image->image->get_component_height(component_id);
 }
 
 
-int heif_image_get_component_bits_per_pixel(const heif_image* image, uint32_t component_idx)
+int heif_image_get_component_bits_per_pixel(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return 0;
   }
-  return image->image->get_component_bits_per_pixel(component_idx);
+  return image->image->get_component_bits_per_pixel(component_id);
 }
 
 
-uint16_t heif_image_get_component_type(const heif_image* image, uint32_t component_idx)
+uint16_t heif_image_get_component_type(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return 0;
   }
-  return image->image->get_component_type(component_idx);
+  return image->image->get_component_type(component_id);
 }
 
 
-heif_component_datatype heif_image_get_component_datatype(const heif_image* image, uint32_t component_idx)
+heif_component_datatype heif_image_get_component_datatype(const heif_image* image, uint32_t component_id)
 {
   if (!image || !image->image) {
     return heif_component_datatype_undefined;
   }
-  return image->image->get_component_datatype(component_idx);
+  return image->image->get_component_datatype(component_id);
 }
 
 
@@ -172,7 +172,7 @@ heif_error heif_image_add_component(heif_image* image,
                                     uint16_t component_type,
                                     heif_component_datatype datatype,
                                     int bit_depth,
-                                    uint32_t* out_component_idx)
+                                    uint32_t* out_component_id)
 {
   if (!image || !image->image) {
     return heif_error_null_pointer_argument;
@@ -183,8 +183,8 @@ heif_error heif_image_add_component(heif_image* image,
     return result.error_struct(image->image.get());
   }
 
-  if (out_component_idx) {
-    *out_component_idx = *result;
+  if (out_component_id) {
+    *out_component_id = *result;
   }
 
   return heif_error_success;
@@ -193,23 +193,23 @@ heif_error heif_image_add_component(heif_image* image,
 
 // --- untyped uint8 accessors
 
-const uint8_t* heif_image_get_component_readonly(const heif_image* image, uint32_t component_idx, size_t* out_stride)
+const uint8_t* heif_image_get_component_readonly(const heif_image* image, uint32_t component_id, size_t* out_stride)
 {
   if (!image || !image->image) {
     if (out_stride) *out_stride = 0;
     return nullptr;
   }
-  return image->image->get_component(component_idx, out_stride);
+  return image->image->get_component(component_id, out_stride);
 }
 
 
-uint8_t* heif_image_get_component(heif_image* image, uint32_t component_idx, size_t* out_stride)
+uint8_t* heif_image_get_component(heif_image* image, uint32_t component_id, size_t* out_stride)
 {
   if (!image || !image->image) {
     if (out_stride) *out_stride = 0;
     return nullptr;
   }
-  return image->image->get_component(component_idx, out_stride);
+  return image->image->get_component(component_id, out_stride);
 }
 
 
@@ -219,7 +219,7 @@ uint8_t* heif_image_get_component(heif_image* image, uint32_t component_idx, siz
 // (<= 16 bytes), so the division is always exact.
 #define heif_image_get_component_X(name, type) \
 const type* heif_image_get_component_ ## name ## _readonly(const struct heif_image* image, \
-                                                            uint32_t component_idx, \
+                                                            uint32_t component_id, \
                                                             size_t* out_row_elements) \
 {                                                            \
   if (!image || !image->image) {                             \
@@ -227,13 +227,13 @@ const type* heif_image_get_component_ ## name ## _readonly(const struct heif_ima
     return nullptr;                                          \
   }                                                          \
   size_t byte_stride = 0;                                    \
-  const type* p = image->image->get_component_memory<type>(component_idx, &byte_stride); \
+  const type* p = image->image->get_component_memory<type>(component_id, &byte_stride); \
   if (out_row_elements) *out_row_elements = byte_stride / sizeof(type); \
   return p;                                                  \
 }                                                            \
                                                              \
 type* heif_image_get_component_ ## name (struct heif_image* image, \
-                                         uint32_t component_idx,  \
+                                         uint32_t component_id,  \
                                          size_t* out_row_elements) \
 {                                                            \
   if (!image || !image->image) {                             \
@@ -241,7 +241,7 @@ type* heif_image_get_component_ ## name (struct heif_image* image, \
     return nullptr;                                          \
   }                                                          \
   size_t byte_stride = 0;                                    \
-  type* p = image->image->get_component_memory<type>(component_idx, &byte_stride); \
+  type* p = image->image->get_component_memory<type>(component_id, &byte_stride); \
   if (out_row_elements) *out_row_elements = byte_stride / sizeof(type); \
   return p;                                                  \
 }
