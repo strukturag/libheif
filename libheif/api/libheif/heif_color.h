@@ -291,6 +291,8 @@ LIBHEIF_API
 void heif_image_get_content_light_level(const heif_image*, heif_content_light_level* out);
 
 // Returns whether the image has 'content light level' information. If 0 is returned, the output is not filled.
+// TODO: provide consistent API between heif_image and heif_image_handle. Add a _handle_has_content_light_level and
+//       return int from _image_get_content_light_level.
 LIBHEIF_API
 int heif_image_handle_get_content_light_level(const heif_image_handle*, heif_content_light_level* out);
 
