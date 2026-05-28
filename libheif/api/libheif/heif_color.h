@@ -356,6 +356,29 @@ LIBHEIF_API
 void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle*, const heif_mastering_display_colour_volume* in);
 
 
+// --- ambient viewing environment ---
+
+LIBHEIF_API
+int heif_image_has_ambient_viewing_environment(const heif_image*);
+
+LIBHEIF_API
+int heif_image_handle_has_ambient_viewing_environment(const heif_image_handle*);
+
+// Returns whether the image has 'ambient viewing environment' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_get_ambient_viewing_environment(const heif_image*, heif_ambient_viewing_environment* out);
+
+// Returns whether the image has 'ambient viewing environment' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_ambient_viewing_environment(const heif_image_handle*, heif_ambient_viewing_environment* out);
+
+LIBHEIF_API
+void heif_image_set_ambient_viewing_environment(const heif_image*, const heif_ambient_viewing_environment* in);
+
+LIBHEIF_API
+void heif_image_handle_set_ambient_viewing_environment(const heif_image_handle*, const heif_ambient_viewing_environment* in);
+
+
 // --- nominal diffuse white ---
 
 // Nominal diffuse white luminance (ISO/IEC 23008-12 'ndwt' box). The luminance

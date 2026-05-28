@@ -530,6 +530,65 @@ void heif_image_handle_set_mastering_display_colour_volume(const heif_image_hand
 }
 
 
+// --- ambient viewing environment ---
+
+int heif_image_has_ambient_viewing_environment(const heif_image* image)
+{
+  return image->image->has_amve();
+}
+
+
+int heif_image_handle_has_ambient_viewing_environment(const heif_image_handle* handle)
+{
+  return handle->image->get_property<Box_amve>() ? 1 : 0;
+}
+
+
+int heif_image_get_ambient_viewing_environment(const heif_image* image, heif_ambient_viewing_environment* out)
+{
+  if (!image->image->has_amve()) {
+    return 0;
+  }
+
+  if (out) {
+    *out = image->image->get_amve();
+  }
+
+  return 1;
+}
+
+
+int heif_image_handle_get_ambient_viewing_environment(const heif_image_handle* handle, heif_ambient_viewing_environment* out)
+{
+  auto amve = handle->image->get_property<Box_amve>();
+  if (out && amve) {
+    *out = amve->amve;
+  }
+
+  return amve ? 1 : 0;
+}
+
+
+void heif_image_set_ambient_viewing_environment(const heif_image* image, const heif_ambient_viewing_environment* in)
+{
+  if (in == nullptr) {
+    return;
+  }
+
+  image->image->set_amve(*in);
+}
+
+
+void heif_image_handle_set_ambient_viewing_environment(const heif_image_handle* handle, const heif_ambient_viewing_environment* in)
+{
+  if (in == nullptr) {
+    return;
+  }
+
+  handle->image->set_amve(*in);
+}
+
+
 // --- nominal diffuse white ---
 
 

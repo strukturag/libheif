@@ -239,6 +239,19 @@ public:
 
   void unset_mdcv() { m_mdcv.reset(); }
 
+  // --- amve (ambient viewing environment)
+
+  bool has_amve() const { return m_amve.has_value(); }
+
+  heif_ambient_viewing_environment get_amve() const { return *m_amve; }
+
+  virtual void set_amve(const heif_ambient_viewing_environment& amve)
+  {
+    m_amve = amve;
+  }
+
+  void unset_amve() { m_amve.reset(); }
+
   // --- ndwt (nominal diffuse white)
 
   // Note: a luminance of 0 is a valid value (it selects the ISO/TS 22028-5
@@ -454,6 +467,7 @@ private:
   uint32_t m_PixelAspectRatio_v = 1;
   heif_content_light_level m_clli{};
   std::optional<heif_mastering_display_colour_volume> m_mdcv;
+  std::optional<heif_ambient_viewing_environment> m_amve;
   std::optional<uint32_t> m_nominal_diffuse_white_luminance;
 
   heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
@@ -488,6 +502,8 @@ protected:
   std::shared_ptr<Box_clli> create_clli_box() const;
 
   std::shared_ptr<Box_mdcv> create_mdcv_box() const;
+
+  std::shared_ptr<Box_amve> create_amve_box() const;
 
   std::shared_ptr<Box_ndwt> create_ndwt_box() const;
 
