@@ -232,12 +232,23 @@ heif_error heif_context_add_grid_image(heif_context* ctx,
     };
   }
 
+  // Fall back to default options when the caller passes nullptr.
+  // add_new_grid_item() copies these into ImageItem_Grid::m_tile_encoding_options,
+  // so the fallback struct only needs to live for the duration of the call.
+  heif_encoding_options* default_options = nullptr;
+  if (!encoding_options) {
+    default_options = heif_encoding_options_alloc();
+    encoding_options = default_options;
+  }
+
   auto generateGridItemResult = ImageItem_Grid::add_new_grid_item(ctx->context.get(),
                                                                   image_width,
                                                                   image_height,
                                                                   static_cast<uint16_t>(tile_rows),
                                                                   static_cast<uint16_t>(tile_columns),
                                                                   encoding_options);
+  heif_encoding_options_free(default_options);
+
   if (!generateGridItemResult) {
     return generateGridItemResult.error_struct(ctx->context.get());
   }

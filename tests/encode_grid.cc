@@ -398,18 +398,14 @@ TEST_CASE("grid encoding tile-by-tile - uncompressed YCbCr 4:2:0 (extract_area e
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
 
-  // Build the grid item with an explicit overall image size — this path
-  // sidesteps the heif_context_encode_grid limitation of reading tile size
-  // via get_width(heif_channel_interleaved) (which would be 0 for planar
-  // YCbCr tiles).
-  heif_encoding_options* enc_options = heif_encoding_options_alloc();
-  REQUIRE(enc_options != nullptr);
-
+  // Build the grid item with an explicit overall image size. Pass nullptr
+  // for encoding_options to also regression-check that heif_context_add_grid_image
+  // falls back to default options rather than dereferencing a null pointer.
   heif_image_handle* grid_handle = nullptr;
   REQUIRE(heif_context_add_grid_image(ctx,
                                       kCols * kTileSize, kRows * kTileSize,
                                       kCols, kRows,
-                                      enc_options, &grid_handle).code == heif_error_Ok);
+                                      nullptr, &grid_handle).code == heif_error_Ok);
   REQUIRE(grid_handle != nullptr);
 
   for (uint32_t ty = 0; ty < kRows; ++ty) {
@@ -424,7 +420,6 @@ TEST_CASE("grid encoding tile-by-tile - uncompressed YCbCr 4:2:0 (extract_area e
   REQUIRE(heif_context_write_to_file(ctx, out_path.c_str()).code == heif_error_Ok);
 
   heif_image_handle_release(grid_handle);
-  heif_encoding_options_free(enc_options);
   for (heif_image* t : tiles) {
     heif_image_release(t);
   }
