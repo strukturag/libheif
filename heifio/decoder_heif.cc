@@ -81,7 +81,10 @@ heif_error loadHEIF(const char* filename, InputImage* input_image)
   // during decode (default ignore_transformations=0), so the resulting pixels are
   // already in display orientation and input_image->orientation stays 'normal'.
 
+  heif_color_profile_nclx *nclx = nullptr;
+  heif_image_handle_get_nclx_color_profile(handle, &nclx);
   heif_decoding_options* opts = heif_decoding_options_alloc();
+  opts->output_image_nclx_profile = nclx;
 
   heif_image* image = nullptr;
   err = heif_decode_image(handle, &image,
@@ -89,6 +92,8 @@ heif_error loadHEIF(const char* filename, InputImage* input_image)
                           opts);
 
   heif_decoding_options_free(opts);
+  if(nclx)
+    heif_nclx_color_profile_free(nclx);
 
   if (err.code != heif_error_Ok) {
     heif_error stable = stable_error(err);
