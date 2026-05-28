@@ -433,6 +433,12 @@ int heif_image_has_content_light_level(const heif_image* image)
 }
 
 
+int heif_image_handle_has_content_light_level(const heif_image_handle* handle)
+{
+  return handle->image->get_property<Box_clli>() ? 1 : 0;
+}
+
+
 void heif_image_get_content_light_level(const heif_image* image, heif_content_light_level* out)
 {
   if (out) {
@@ -478,6 +484,12 @@ void heif_image_handle_set_content_light_level(const heif_image_handle* handle, 
 int heif_image_has_mastering_display_colour_volume(const heif_image* image)
 {
   return image->image->has_mdcv();
+}
+
+
+int heif_image_handle_has_mastering_display_colour_volume(const heif_image_handle* handle)
+{
+  return handle->image->get_property<Box_mdcv>() ? 1 : 0;
 }
 
 
