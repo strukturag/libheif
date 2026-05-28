@@ -196,6 +196,27 @@ size_t TotalMemoryTracker::get_max_total_memory_used() const
 }
 
 
+Error MemoryHandle::alloc(size_t count, size_t element_size,
+                          const heif_security_limits* limits_context,
+                          const char* reason_description)
+{
+  if (element_size != 0 && count > SIZE_MAX / element_size) {
+    std::stringstream sstr;
+    if (reason_description) {
+      sstr << "Allocation size overflow computing " << count << " * " << element_size
+           << " for " << reason_description;
+    }
+    else {
+      sstr << "Allocation size overflow computing " << count << " * " << element_size;
+    }
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+  return alloc(count * element_size, limits_context, reason_description);
+}
+
+
 Error MemoryHandle::alloc(size_t memory_amount, const heif_security_limits* limits_context,
                           const char* reason_description)
 {

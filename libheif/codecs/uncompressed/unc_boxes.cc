@@ -1345,14 +1345,7 @@ Error Box_snuc::parse(BitstreamRange& range, const heif_security_limits* limits)
             "snuc image dimensions exceed security limit."};
   }
 
-  // Prevent size_t overflow when computing alloc size (matters on 32-bit systems)
-  if (std::numeric_limits<size_t>::max() / num_pixels < 2 * sizeof(float)) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Security_limit_exceeded,
-            "snuc image memory size exceeds max integer size."};
-  }
-
-  Error err = m_memory_handle.alloc(2 * sizeof(float) * num_pixels, limits, "snuc box");
+  Error err = m_memory_handle.alloc(num_pixels, 2 * sizeof(float), limits, "snuc box");
   if (err) {
     return err;
   }

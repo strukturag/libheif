@@ -561,7 +561,7 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(TimeToSample),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(TimeToSample),
                                        limits, "the 'stts' table")) {
     return err;
   }
@@ -693,7 +693,7 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(OffsetToSample),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(OffsetToSample),
                                        limits, "the 'ctts' table")) {
     return err;
   }
@@ -871,7 +871,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(SampleToChunk),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(SampleToChunk),
                                        limits, "the 'stsc' table")) {
     return err;
   }
@@ -1086,8 +1086,8 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   if (m_fixed_sample_size == 0) {
     // check required memory
 
-    uint64_t mem_size = m_sample_count * sizeof(uint32_t);
-    if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
+    if (auto err = m_memory_handle.alloc(m_sample_count, sizeof(uint32_t),
+                                         limits, "the 'stsz' table")) {
       return err;
     }
 
@@ -1194,8 +1194,8 @@ Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // check required memory
 
-  uint64_t mem_size = sample_count * sizeof(uint32_t);
-  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stss' table")) {
+  if (auto err = m_memory_handle.alloc(sample_count, sizeof(uint32_t),
+                                       limits, "the 'stss' table")) {
     return err;
   }
 
@@ -1611,7 +1611,7 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t count = range.read32();
-  if (auto err = m_memory_handle.alloc(count * sizeof(Entry),
+  if (auto err = m_memory_handle.alloc(count, sizeof(Entry),
                                        limits, "the 'sample to group' table")) {
     return err;
   }
@@ -1750,7 +1750,7 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   }
 
-  if (auto err = m_memory_handle.alloc(static_cast<uint64_t>(entry_count) * sizeof(Entry),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(Entry),
                                        limits, "the 'sgpd' table")) {
     return err;
   }
@@ -2131,10 +2131,8 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  // check required memory
-  uint64_t mem_size = num_chunks * sizeof(uint64_t);
-
-  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'saio' table")) {
+  if (auto err = m_memory_handle.alloc(num_chunks, sizeof(uint64_t),
+                                       limits, "the 'saio' table")) {
     return err;
   }
 

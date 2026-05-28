@@ -358,7 +358,7 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
     };
   }
 
-  if (auto err = m_memory_handle.alloc(numPoints * sizeof(Point), limits, "region polygon")) {
+  if (auto err = m_memory_handle.alloc(numPoints, sizeof(Point), limits, "region polygon")) {
     return err;
   }
 
