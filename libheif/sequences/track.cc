@@ -321,6 +321,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
+  m_ctts = stbl->get_child_box<Box_ctts>();
+
   // --- check that number of samples in various boxes are consistent
 
   if (m_stts->get_number_of_samples() != m_stsz->num_samples()) {
@@ -508,15 +510,23 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
             box->get_item_uri_type() == "urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73") {
           heif_item_id id = box->get_item_ID();
 
+          if (!iloc) {
+            return {
+              heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Track meta references item content-id but file has no 'iloc' box."
+            };
+          }
+
           std::vector<uint8_t> data;
           Error err = iloc->read_data(id, m_heif_context->get_heif_file()->get_reader(), idat, &data, m_heif_context->get_security_limits());
           if (err) {
-            // TODO
+            return err;
           }
 
-          Result contentIdResult = vector_to_string(data);
+          Result<std::string> contentIdResult = vector_to_string(data);
           if (!contentIdResult) {
-            // TODO
+            return contentIdResult.error();
           }
 
           m_track_info.gimi_track_content_id = *contentIdResult;
