@@ -114,6 +114,8 @@ public:
 
   size_t get_header_size() const;
 
+  size_t get_num_tiles() const { return m_offsets.size(); }
+
   uint64_t get_tile_offset(uint32_t idx) const { return m_offsets[idx].offset; }
 
   uint32_t get_tile_size(uint32_t idx) const { return m_offsets[idx].size; }
