@@ -530,6 +530,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_clap>();
       break;
 
+    case fourcc("iscl"):
+      box = std::make_shared<Box_iscl>();
+      break;
+
     case fourcc("iref"):
       box = std::make_shared<Box_iref>();
       break;
@@ -3567,6 +3571,57 @@ std::string Box_imir::dump(Indent& indent) const
       sstr << "invalid\n";
       break;
   }
+
+  return sstr.str();
+}
+
+
+Error Box_iscl::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("iscl");
+  }
+
+  m_target_width_numerator = range.read16();
+  m_target_width_denominator = range.read16();
+  m_target_height_numerator = range.read16();
+  m_target_height_denominator = range.read16();
+
+  if (m_target_width_numerator == 0 || m_target_width_denominator == 0 ||
+      m_target_height_numerator == 0 || m_target_height_denominator == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_fractional_number,
+            "iscl property has zero numerator or denominator"};
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_iscl::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write16(m_target_width_numerator);
+  writer.write16(m_target_width_denominator);
+  writer.write16(m_target_height_numerator);
+  writer.write16(m_target_height_denominator);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_iscl::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << FullBox::dump(indent);
+
+  sstr << indent << "horizontal scaling factor: " << m_target_width_numerator << " / " << m_target_width_denominator << "\n";
+  sstr << indent << "vertical scaling factor:   " << m_target_height_numerator << " / " << m_target_height_denominator << "\n";
 
   return sstr.str();
 }

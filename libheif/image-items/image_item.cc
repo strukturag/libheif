@@ -1009,6 +1009,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
           img = *cropResult;
         }
       }
+
+
+      if (auto iscl = std::dynamic_pointer_cast<Box_iscl>(property)) {
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unspecified,
+                     "Image scaling (iscl) transformative property is not yet supported");
+      }
     }
   }
 
@@ -1470,6 +1477,14 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
       right_excess += right;
       top_excess += top;
       bottom_excess += bottom;
+    }
+
+    // --- scaling (not supported yet)
+
+    if (auto iscl = std::dynamic_pointer_cast<Box_iscl>(property)) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unspecified,
+              "Image scaling (iscl) transformative property is not yet supported"};
     }
   }
 
