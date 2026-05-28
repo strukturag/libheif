@@ -114,6 +114,15 @@ typedef struct heif_decoding_options
   // If enabled, it will decode the media timeline, ignoring the sequence tracks edit-list.
   int ignore_sequence_editlist; // bool
 
+  // Requested NCLX color profile of the decoded output image. If the input
+  // image's NCLX differs, libheif will color-convert the pixels accordingly
+  // (e.g. YCbCr matrix, primaries, range) so the result matches what is
+  // requested here.
+  //
+  // When set to NULL, the behavior depends on the flag
+  // output_image_nclx_profile_passthrough below: by default NULL means
+  // "convert to sRGB"; with the passthrough flag enabled, NULL means
+  // "keep the input image's NCLX".
   heif_color_profile_nclx* output_image_nclx_profile;
 
   int num_library_threads; // 0 = let libheif decide (TODO, currently ignored)
@@ -125,6 +134,27 @@ typedef struct heif_decoding_options
   // (e.g. Sony HIF files where the NCLX `colr` box disagrees with the HEVC VUI
   // on the YCbCr range flag). Default: false (strict spec-conformant behavior).
   uint8_t autocorrect_broken_input;
+
+  // version 10 options
+
+  // Controls the meaning of output_image_nclx_profile == NULL.
+  //
+  // When false (default), a NULL output_image_nclx_profile means "convert the
+  // decoded image to sRGB" (BT.709 primaries, sRGB transfer, BT.601 matrix,
+  // full-range). For HDR inputs (e.g. BT.2100 PQ) this silently discards the
+  // original color volume.
+  //
+  // When true, a NULL output_image_nclx_profile means "keep the input image's
+  // NCLX". The decoded image carries the input file's primaries / transfer /
+  // matrix / range, and no extra color-space conversion is performed solely
+  // because the output NCLX was unspecified. If a YCbCr<->RGB colorspace
+  // conversion fires for another reason, the input NCLX is used to drive that
+  // conversion (so the result is tagged consistently with the source).
+  //
+  // Although this flag is off by default to preserve historical behavior, new
+  // code that wants to preserve HDR through decode should generally enable it.
+  // Setting output_image_nclx_profile to a non-NULL value overrides this flag.
+  uint8_t output_image_nclx_profile_passthrough;
 } heif_decoding_options;
 
 

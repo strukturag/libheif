@@ -82,6 +82,7 @@ heif_error loadHEIF(const char* filename, InputImage* input_image)
   // already in display orientation and input_image->orientation stays 'normal'.
 
   heif_decoding_options* opts = heif_decoding_options_alloc();
+  opts->output_image_nclx_profile_passthrough = true;
 
   heif_image* image = nullptr;
   err = heif_decode_image(handle, &image,
