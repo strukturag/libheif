@@ -321,6 +321,62 @@ heif_image* create_source_image_YCbCr_420()
 
 }  // namespace
 
+TEST_CASE("heif_context_encode_grid roundtrip - uncompressed YCbCr 4:2:0 planar",
+          "[heif_context_encode_grid]")
+{
+  // Regression for heif_context_encode_grid()'s output-size computation,
+  // which read tile dimensions via tiles[0]->get_width(heif_channel_interleaved)
+  // — that channel does not exist on planar YCbCr tiles, so the call returned
+  // 0 and the produced grid had a 0x0 ispe ("Zero image width or height" on
+  // decode). The fix uses HeifPixelImage::get_width() / get_height() (the
+  // logical image dims) which work for any channel layout.
+
+  heif_encoder* encoder = get_encoder_or_skip_test(heif_compression_uncompressed);
+  REQUIRE(encoder != nullptr);
+
+  heif_image* src = create_source_image_YCbCr_420();
+  REQUIRE(src != nullptr);
+
+  std::vector<heif_image*> tiles = extract_tiles(src);
+  REQUIRE(tiles.size() == static_cast<size_t>(kRows) * kCols);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_image_handle* grid_handle = nullptr;
+  REQUIRE(heif_context_encode_grid(ctx, tiles.data(),
+                                   kRows, kCols,
+                                   encoder, nullptr, &grid_handle).code == heif_error_Ok);
+  REQUIRE(grid_handle != nullptr);
+
+  std::string out_path = get_tests_output_file_path("encode_grid_ycbcr_planar.heif");
+  REQUIRE(heif_context_write_to_file(ctx, out_path.c_str()).code == heif_error_Ok);
+
+  heif_image_handle_release(grid_handle);
+  for (heif_image* t : tiles) {
+    heif_image_release(t);
+  }
+  heif_encoder_release(encoder);
+  heif_context_free(ctx);
+  heif_image_release(src);
+
+  // Pre-fix the grid was written with ispe=0x0; read_from_file would parse
+  // it but heif_decode_image would reject it as invalid input.
+  heif_context* rctx = heif_context_alloc();
+  REQUIRE(heif_context_read_from_file(rctx, out_path.c_str(), nullptr).code == heif_error_Ok);
+
+  heif_image_handle* rhandle = nullptr;
+  REQUIRE(heif_context_get_primary_image_handle(rctx, &rhandle).code == heif_error_Ok);
+
+  // The decoded grid must have the correct dimensions (kCols*kTileSize x kRows*kTileSize).
+  REQUIRE(heif_image_handle_get_width(rhandle)  == static_cast<int>(kCols * kTileSize));
+  REQUIRE(heif_image_handle_get_height(rhandle) == static_cast<int>(kRows * kTileSize));
+
+  heif_image_handle_release(rhandle);
+  heif_context_free(rctx);
+}
+
+
 TEST_CASE("grid encoding tile-by-tile - uncompressed YCbCr 4:2:0 (extract_area edge padding)",
           "[heif_context_encode_grid][heif_context_add_image_tile]")
 {
