@@ -1719,6 +1719,15 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   m_grouping_type = range.read32();
 
+  // Readers are expected to ignore sgpd boxes with grouping_types they don't
+  // understand. Skip parsing of unknown types to avoid allocating Entry objects
+  // for entries whose payload we wouldn't read anyway (and which, with
+  // version==1 + default_length!=0 or version>=2, would consume zero bytes per
+  // iteration and allow unbounded allocation from a tiny box).
+  if (m_grouping_type != fourcc("refs")) {
+    return Error::Ok;
+  }
+
   if (get_version() == 1) {
     m_default_length = range.read32();
   }
@@ -1739,6 +1748,11 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
             heif_suberror_Security_limit_exceeded,
             sstr.str()};
 
+  }
+
+  if (auto err = m_memory_handle.alloc(static_cast<uint64_t>(entry_count) * sizeof(Entry),
+                                       limits, "the 'sgpd' table")) {
+    return err;
   }
 
   for (uint32_t i = 0; i < entry_count; i++) {
