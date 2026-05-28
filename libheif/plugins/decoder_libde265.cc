@@ -24,6 +24,7 @@
 #include <cassert>
 #include <memory>
 #include <cstring>
+#include <limits>
 #include <string>
 
 #include <libde265/de265.h>
@@ -178,6 +179,25 @@ heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options* 
   heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
   decoder->ctx = de265_new_decoder();
+
+#if LIBDE265_NUMERIC_VERSION >= 0x01010000
+  // Pass libheif's max_image_size_pixels through to libde265 so the decoder
+  // rejects bitstreams whose SPS declares an image far larger than what the
+  // surrounding HEIF file claims. libheif tightens this limit per-decode to
+  // ispe + one coding-unit margin (see tighten_image_size_limit_for_ispe),
+  // so the padding margin is already baked into the value we see here.
+  {
+    const heif_security_limits* limits = options->limits ? options->limits : heif_get_global_security_limits();
+    de265_security_limits* de265_limits = de265_get_security_limits(decoder->ctx);
+    if (limits->max_image_size_pixels > std::numeric_limits<uint32_t>::max()) {
+      de265_limits->max_image_size_pixels = 0;
+    }
+    else {
+      de265_limits->max_image_size_pixels = static_cast<uint32_t>(limits->max_image_size_pixels);
+    }
+  }
+#endif
+
 #if defined(__EMSCRIPTEN__)
   // Speed up decoding from JavaScript.
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_DEBLOCKING, 1);
