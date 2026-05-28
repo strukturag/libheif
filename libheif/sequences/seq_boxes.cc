@@ -985,9 +985,18 @@ Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
+  // Note: test against maximum number of frames (upper limit) since we have no limit on maximum number of chunks
+  if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of chunks in 'stco' box exceeds security limits of maximum number of frames."
+    };
+  }
+
   // check required memory
 
-  uint64_t mem_size = entry_count * sizeof(uint32_t);
+  uint64_t mem_size = static_cast<uint64_t>(entry_count) * sizeof(uint32_t);
   if (auto err = m_memory_handle.alloc(mem_size,
                                        limits, "the 'stco' table")) {
     return err;
