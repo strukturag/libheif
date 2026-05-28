@@ -663,6 +663,15 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
 
     component.m_width = subsampled_width;
     component.m_height = subsampled_height;
+
+    // Keep ComponentDescriptions in sync with the resized plane so that
+    // get_component_width/height stays consistent with get_width(channel).
+    for (uint32_t id : component.m_component_ids) {
+      if (auto* desc = find_component_description(id)) {
+        desc->width = subsampled_width;
+        desc->height = subsampled_height;
+      }
+    }
   }
 
   // modify the logical image size
@@ -1996,8 +2005,15 @@ Error HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const
     m_storage.push_back(plane);
   }
 
-  set_component_descriptions(source->get_component_descriptions(),
-                             source->peek_next_component_id());
+  // The source's descriptions carry the source's geometry; the planes above
+  // were allocated at the new (w,h) size, so descriptions must be resized to
+  // match — otherwise get_component_width/height returns stale source dims.
+  auto descs = source->get_component_descriptions();
+  for (auto& desc : descs) {
+    desc.width = channel_width(w, chroma, desc.channel);
+    desc.height = channel_height(h, chroma, desc.channel);
+  }
+  set_component_descriptions(std::move(descs), source->peek_next_component_id());
 
   copy_metadata_from(*source);
 
