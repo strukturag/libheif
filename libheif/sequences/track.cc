@@ -312,6 +312,19 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
+  // Enforce the sequence-frame limit before allocating any per-chunk state below.
+  // Box_stsz::parse already applies this when parsing from a file, but check again
+  // here so the invariant holds even if m_stsz was built another way.
+  const auto* limits = m_heif_context->get_security_limits();
+  if (limits->max_sequence_frames > 0 &&
+      m_stsz->num_samples() > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   m_stts = stbl->get_child_box<Box_stts>();
   if (!m_stts) {
     return {
@@ -533,18 +546,6 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
         }
       }
     }
-  }
-
-
-  // --- security checks
-
-  if (m_heif_context->get_security_limits()->max_sequence_frames > 0 &&
-      m_stsz->num_samples() > m_heif_context->get_security_limits()->max_sequence_frames) {
-    return {
-      heif_error_Memory_allocation_error,
-      heif_suberror_Security_limit_exceeded,
-      "Security limit for maximum number of sequence frames exceeded"
-    };
   }
 
 
