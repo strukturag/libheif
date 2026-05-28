@@ -377,7 +377,7 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       }
     }
 
-    if (current_sample_idx + sampleToChunk.samples_per_chunk > m_stsz->num_samples()) {
+    if (static_cast<uint64_t>(current_sample_idx) + sampleToChunk.samples_per_chunk > m_stsz->num_samples()) {
       return {
         heif_error_Invalid_input,
         heif_suberror_Unspecified,

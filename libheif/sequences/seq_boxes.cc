@@ -1066,16 +1066,16 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_fixed_sample_size = range.read32();
   m_sample_count = range.read32();
 
+  if (limits->max_sequence_frames > 0 && m_sample_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   if (m_fixed_sample_size == 0) {
     // check required memory
-
-    if (limits->max_sequence_frames > 0 && m_sample_count > limits->max_sequence_frames) {
-      return {
-        heif_error_Memory_allocation_error,
-        heif_suberror_Security_limit_exceeded,
-        "Security limit for maximum number of sequence frames exceeded"
-      };
-    }
 
     uint64_t mem_size = m_sample_count * sizeof(uint32_t);
     if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
