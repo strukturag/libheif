@@ -31,14 +31,6 @@ set -e
 # catching C++-isms, testing headers independently also verifies they are
 # self-contained (pull in their own dependencies). Any header that fails to
 # parse as C is reported and the script exits non-zero.
-#
-# Exception: heif_error.h is currently NOT self-contained -- it uses the
-# LIBHEIF_API macro but cannot include heif_library.h, because the two headers
-# are mutually dependent. It is therefore tested with the <libheif/heif.h>
-# umbrella prelude instead of standalone.
-# TODO (v1.23.0): once the LIBHEIF_API macro is factored out into its own
-# dependency-free header (see the TODO in heif_library.h), remove this
-# exception so heif_error.h is checked standalone like every other header.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 API_DIR="$ROOT/libheif/api/libheif"
@@ -47,8 +39,8 @@ API_DIR="$ROOT/libheif/api/libheif"
 CXX_ONLY="heif_cxx.h heif_emscripten.h"
 
 # Headers that are not (yet) self-contained and must be tested with the
-# <libheif/heif.h> umbrella prelude instead of standalone. See the TODO above.
-NEEDS_PRELUDE="heif_error.h"
+# <libheif/heif.h> umbrella prelude instead of standalone.
+NEEDS_PRELUDE=""
 
 # C standards to validate against. C99 is intentionally excluded: the headers
 # legitimately repeat identical typedefs (e.g. heif_image_handle), which C11
