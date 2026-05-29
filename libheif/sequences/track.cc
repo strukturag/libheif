@@ -312,6 +312,19 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
     };
   }
 
+  // Enforce the sequence-frame limit before allocating any per-chunk state below.
+  // Box_stsz::parse already applies this when parsing from a file, but check again
+  // here so the invariant holds even if m_stsz was built another way.
+  const auto* limits = m_heif_context->get_security_limits();
+  if (limits->max_sequence_frames > 0 &&
+      m_stsz->num_samples() > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   m_stts = stbl->get_child_box<Box_stts>();
   if (!m_stts) {
     return {
@@ -320,6 +333,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       "Track has no 'stts' box."
     };
   }
+
+  m_ctts = stbl->get_child_box<Box_ctts>();
 
   // --- check that number of samples in various boxes are consistent
 
@@ -377,7 +392,7 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       }
     }
 
-    if (current_sample_idx + sampleToChunk.samples_per_chunk > m_stsz->num_samples()) {
+    if (static_cast<uint64_t>(current_sample_idx) + sampleToChunk.samples_per_chunk > m_stsz->num_samples()) {
       return {
         heif_error_Invalid_input,
         heif_suberror_Unspecified,
@@ -385,10 +400,18 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       };
     }
 
-    auto chunk = std::make_shared<Chunk>(m_heif_context, m_id,
-                                         current_sample_idx, sampleToChunk.samples_per_chunk,
-                                         m_stco->get_offsets()[chunk_idx],
-                                         m_stsz);
+    auto chunk = Chunk::create(m_heif_context, m_id,
+                               current_sample_idx, sampleToChunk.samples_per_chunk,
+                               m_stco->get_offsets()[chunk_idx],
+                               m_stsz);
+
+    if (!chunk) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Chunk file offset overflows 64-bit range."
+      };
+    }
 
     if (auto visualSampleDescription = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description)) {
       if (chunk_idx > 0 && (int32_t) sampleToChunk.sample_description_index == previous_sample_description_index) {
@@ -508,33 +531,29 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
             box->get_item_uri_type() == "urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73") {
           heif_item_id id = box->get_item_ID();
 
+          if (!iloc) {
+            return {
+              heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Track meta references item content-id but file has no 'iloc' box."
+            };
+          }
+
           std::vector<uint8_t> data;
           Error err = iloc->read_data(id, m_heif_context->get_heif_file()->get_reader(), idat, &data, m_heif_context->get_security_limits());
           if (err) {
-            // TODO
+            return err;
           }
 
-          Result contentIdResult = vector_to_string(data);
+          Result<std::string> contentIdResult = vector_to_string(data);
           if (!contentIdResult) {
-            // TODO
+            return contentIdResult.error();
           }
 
           m_track_info.gimi_track_content_id = *contentIdResult;
         }
       }
     }
-  }
-
-
-  // --- security checks
-
-  if (m_heif_context->get_security_limits()->max_sequence_frames > 0 &&
-      m_stsz->num_samples() > m_heif_context->get_security_limits()->max_sequence_frames) {
-    return {
-      heif_error_Memory_allocation_error,
-      heif_suberror_Security_limit_exceeded,
-      "Security limit for maximum number of sequence frames exceeded"
-    };
   }
 
 

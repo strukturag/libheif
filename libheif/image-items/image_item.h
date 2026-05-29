@@ -329,6 +329,8 @@ public:
 
   void set_mdcv(const heif_mastering_display_colour_volume& mdcv) override;
 
+  void set_amve(const heif_ambient_viewing_environment& amve) override;
+
   void set_nominal_diffuse_white_luminance(uint32_t luminance) override;
 
   void set_pixel_ratio(uint32_t h, uint32_t v) override;

@@ -561,7 +561,7 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(TimeToSample),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(TimeToSample),
                                        limits, "the 'stts' table")) {
     return err;
   }
@@ -693,7 +693,7 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(OffsetToSample),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(OffsetToSample),
                                        limits, "the 'ctts' table")) {
     return err;
   }
@@ -871,7 +871,7 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-  if (auto err = m_memory_handle.alloc(entry_count * sizeof(SampleToChunk),
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(SampleToChunk),
                                        limits, "the 'stsc' table")) {
     return err;
   }
@@ -985,9 +985,18 @@ Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   uint32_t entry_count = range.read32();
 
+  // Note: test against maximum number of frames (upper limit) since we have no limit on maximum number of chunks
+  if (limits->max_sequence_frames > 0 && entry_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Number of chunks in 'stco' box exceeds security limits of maximum number of frames."
+    };
+  }
+
   // check required memory
 
-  uint64_t mem_size = entry_count * sizeof(uint32_t);
+  uint64_t mem_size = static_cast<uint64_t>(entry_count) * sizeof(uint32_t);
   if (auto err = m_memory_handle.alloc(mem_size,
                                        limits, "the 'stco' table")) {
     return err;
@@ -1066,19 +1075,19 @@ Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_fixed_sample_size = range.read32();
   m_sample_count = range.read32();
 
+  if (limits->max_sequence_frames > 0 && m_sample_count > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Security limit for maximum number of sequence frames exceeded"
+    };
+  }
+
   if (m_fixed_sample_size == 0) {
     // check required memory
 
-    if (limits->max_sequence_frames > 0 && m_sample_count > limits->max_sequence_frames) {
-      return {
-        heif_error_Memory_allocation_error,
-        heif_suberror_Security_limit_exceeded,
-        "Security limit for maximum number of sequence frames exceeded"
-      };
-    }
-
-    uint64_t mem_size = m_sample_count * sizeof(uint32_t);
-    if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stsz' table")) {
+    if (auto err = m_memory_handle.alloc(m_sample_count, sizeof(uint32_t),
+                                         limits, "the 'stsz' table")) {
       return err;
     }
 
@@ -1185,8 +1194,8 @@ Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // check required memory
 
-  uint64_t mem_size = sample_count * sizeof(uint32_t);
-  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'stss' table")) {
+  if (auto err = m_memory_handle.alloc(sample_count, sizeof(uint32_t),
+                                       limits, "the 'stss' table")) {
     return err;
   }
 
@@ -1602,7 +1611,7 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t count = range.read32();
-  if (auto err = m_memory_handle.alloc(count * sizeof(Entry),
+  if (auto err = m_memory_handle.alloc(count, sizeof(Entry),
                                        limits, "the 'sample to group' table")) {
     return err;
   }
@@ -1710,6 +1719,15 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   m_grouping_type = range.read32();
 
+  // Readers are expected to ignore sgpd boxes with grouping_types they don't
+  // understand. Skip parsing of unknown types to avoid allocating Entry objects
+  // for entries whose payload we wouldn't read anyway (and which, with
+  // version==1 + default_length!=0 or version>=2, would consume zero bytes per
+  // iteration and allow unbounded allocation from a tiny box).
+  if (m_grouping_type != fourcc("refs")) {
+    return Error::Ok;
+  }
+
   if (get_version() == 1) {
     m_default_length = range.read32();
   }
@@ -1730,6 +1748,11 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
             heif_suberror_Security_limit_exceeded,
             sstr.str()};
 
+  }
+
+  if (auto err = m_memory_handle.alloc(entry_count, sizeof(Entry),
+                                       limits, "the 'sgpd' table")) {
+    return err;
   }
 
   for (uint32_t i = 0; i < entry_count; i++) {
@@ -2108,10 +2131,8 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits* limits)
     };
   }
 
-  // check required memory
-  uint64_t mem_size = num_chunks * sizeof(uint64_t);
-
-  if (auto err = m_memory_handle.alloc(mem_size, limits, "the 'saio' table")) {
+  if (auto err = m_memory_handle.alloc(num_chunks, sizeof(uint64_t),
+                                       limits, "the 'saio' table")) {
     return err;
   }
 

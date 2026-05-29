@@ -86,6 +86,12 @@ public:
 
   Error alloc(size_t memory_amount, const heif_security_limits* limits_context, const char* reason_description);
 
+  // calloc-style overload: checks `count * element_size` for size_t overflow before allocating.
+  // Use this when allocating an array whose total size is count*element_size, to avoid silent
+  // truncation on 32-bit builds when count is near UINT32_MAX.
+  Error alloc(size_t count, size_t element_size,
+              const heif_security_limits* limits_context, const char* reason_description);
+
   void free();
 
   void free(size_t memory_amount);

@@ -276,11 +276,24 @@ heif_error heif_image_set_nclx_color_profile(heif_image* image,
 
 // --- content light level ---
 
-// Note: a value of 0 for any of these values indicates that the value is undefined.
-// The unit of these values is Candelas per square meter.
+// Semantics follow the H.265 'Content light level information' SEI message
+// (ITU-T H.265 Annex D.3.35). Identifies upper bounds for the nominal
+// target brightness light level of the pictures. The bounds are defined
+// against samples in a 4:4:4 RGB representation in the linear light domain,
+// in units of candelas per square metre (cd/m^2 = nits). A field value
+// of 0 means "no upper bound indicated" (i.e. undefined).
 typedef struct heif_content_light_level
 {
+  // Upper bound on the maximum light level among all individual linear-light
+  // 4:4:4 RGB samples across the sequence, in cd/m^2 (= field).
+  // Also called MaxCLL.
   uint16_t max_content_light_level;
+
+  // Upper bound on the maximum per-picture average light level among the
+  // linear-light 4:4:4 RGB samples (averaged over any individual picture),
+  // in cd/m^2 (= field). Also called MaxFALL (or MaxPALL).
+  // For letterboxed content the average is expected to be taken only over
+  // the visually relevant region (H.265 D.3.35 NOTE 3).
   uint16_t max_pic_average_light_level;
 } heif_content_light_level;
 
@@ -288,11 +301,13 @@ LIBHEIF_API
 int heif_image_has_content_light_level(const heif_image*);
 
 LIBHEIF_API
+int heif_image_handle_has_content_light_level(const heif_image_handle*);
+
+// TODO: this function should also return 'int' to be consistent to heif_image_handle_get_content_light_level.
+LIBHEIF_API
 void heif_image_get_content_light_level(const heif_image*, heif_content_light_level* out);
 
 // Returns whether the image has 'content light level' information. If 0 is returned, the output is not filled.
-// TODO: provide consistent API between heif_image and heif_image_handle. Add a _handle_has_content_light_level and
-//       return int from _image_get_content_light_level.
 LIBHEIF_API
 int heif_image_handle_get_content_light_level(const heif_image_handle*, heif_content_light_level* out);
 
@@ -305,13 +320,43 @@ void heif_image_handle_set_content_light_level(const heif_image_handle*, const h
 
 // --- mastering display colour volume ---
 
-// Note: color coordinates are defined according to the CIE 1931 definition of x as specified in ISO 11664-1 (see also ISO 11664-3 and CIE 15).
+// Semantics follow the H.265 'Mastering display colour volume' SEI message
+// (ITU-T H.265 Annex D.3.28) and SMPTE ST 2086. Identifies the colour
+// volume (primaries, white point, luminance range) of the mastering display
+// for the associated content. CIE 1931 chromaticity coordinates are defined
+// by ISO 11664-1 (see also ISO 11664-3 and CIE 15).
+//
+// For RGB mastering displays, H.265 suggests the index order
+//   [0]=green, [1]=blue, [2]=red
+// (see H.265 Annex E, Table E.3).
 typedef struct heif_mastering_display_colour_volume
 {
+  // CIE 1931 chromaticity coordinates of the three colour primaries, in
+  // normalized increments of 0.00002 (CIE value = field / 50000).
+  // Valid ranges per H.265: x in 5..37000, y in 5..42000 inclusive; values
+  // outside indicate "unknown / unspecified".
+  // Note: SMPTE ST 2086 uses four-decimal-place coordinates, i.e. multiples
+  // of 5 in this encoding.
   uint16_t display_primaries_x[3];
   uint16_t display_primaries_y[3];
+
+  // CIE 1931 chromaticity coordinates of the mastering display's white
+  // point, in normalized increments of 0.00002. Valid ranges as for the
+  // primaries (x in 5..37000, y in 5..42000).
+  // Note: ANSI/CTA 861-G uses (0,0) to indicate that the white point
+  // chromaticity is unknown.
   uint16_t white_point_x;
   uint16_t white_point_y;
+
+  // Nominal maximum / minimum display luminance of the mastering display,
+  // in units of 0.0001 candelas per square metre (cd/m^2 = field / 10000).
+  // Valid ranges per H.265:
+  //   max in 50000..100000000  (5..10000 cd/m^2)
+  //   min in     1..50000      (0.0001..5 cd/m^2)
+  // When max == 50000, min shall not equal 50000.
+  // Note: ANSI/CTA 861-G uses 0 to indicate "unknown".
+  // Note: SMPTE ST 2086 (2018) specifies max as a multiple of 1 cd/m^2, i.e.
+  // a multiple of 10000 in this encoding.
   uint32_t max_display_mastering_luminance;
   uint32_t min_display_mastering_luminance;
 } heif_mastering_display_colour_volume;
@@ -327,15 +372,33 @@ typedef struct heif_decoded_mastering_display_colour_volume
   double min_display_mastering_luminance;
 } heif_decoded_mastering_display_colour_volume;
 
+// Semantics follow the H.265 'Ambient viewing environment' SEI message
+// (ITU-T H.265 Annex D.3.39). Identifies the nominal ambient viewing
+// environment intended for display of the associated content.
 typedef struct heif_ambient_viewing_environment
 {
+  // Environmental illuminance of the ambient viewing environment, in units
+  // of 0.0001 lux (i.e. lux = value / 10000). In H.265 this field is called
+  // 'ambient_illuminance' and is required to be non-zero; 0 is treated here
+  // as "undefined".
   uint32_t ambient_illumination;
+
+  // Normalized CIE 1931 chromaticity coordinates of the environmental
+  // ambient light, in units of 0.00002 (i.e. CIE x = value / 50000).
+  // Valid range per H.265 is 0..50000 inclusive. CIE 1931 x/y are defined
+  // by ISO 11664-1 (see also ISO 11664-3 and CIE 15).
+  //
+  // Example (Rec. ITU-R BT.2035, D65 background): ambient_illumination=100000,
+  // ambient_light_x=15635, ambient_light_y=16450.
   uint16_t ambient_light_x;
   uint16_t ambient_light_y;
 } heif_ambient_viewing_environment;
 
 LIBHEIF_API
 int heif_image_has_mastering_display_colour_volume(const heif_image*);
+
+LIBHEIF_API
+int heif_image_handle_has_mastering_display_colour_volume(const heif_image_handle*);
 
 LIBHEIF_API
 void heif_image_get_mastering_display_colour_volume(const heif_image*, heif_mastering_display_colour_volume* out);
@@ -349,6 +412,29 @@ void heif_image_set_mastering_display_colour_volume(const heif_image*, const hei
 
 LIBHEIF_API
 void heif_image_handle_set_mastering_display_colour_volume(const heif_image_handle*, const heif_mastering_display_colour_volume* in);
+
+
+// --- ambient viewing environment ---
+
+LIBHEIF_API
+int heif_image_has_ambient_viewing_environment(const heif_image*);
+
+LIBHEIF_API
+int heif_image_handle_has_ambient_viewing_environment(const heif_image_handle*);
+
+// Returns whether the image has 'ambient viewing environment' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_get_ambient_viewing_environment(const heif_image*, heif_ambient_viewing_environment* out);
+
+// Returns whether the image has 'ambient viewing environment' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_ambient_viewing_environment(const heif_image_handle*, heif_ambient_viewing_environment* out);
+
+LIBHEIF_API
+void heif_image_set_ambient_viewing_environment(const heif_image*, const heif_ambient_viewing_environment* in);
+
+LIBHEIF_API
+void heif_image_handle_set_ambient_viewing_environment(const heif_image_handle*, const heif_ambient_viewing_environment* in);
 
 
 // --- nominal diffuse white ---

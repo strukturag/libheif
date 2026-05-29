@@ -244,14 +244,13 @@ Error ImageItem_Overlay::read_overlay_spec()
 
   m_overlay_image_ids = iref_box->get_references(get_id(), fourcc("dimg"));
 
-  /* TODO: probably, it is valid that an iovl image has no references ?
-
-  if (image_references.empty()) {
+  // An overlay with no input images is degenerate: ISO/IEC 23008-12 image-overlay
+  // derivation places "one or more" input images onto the canvas.
+  if (m_overlay_image_ids.empty()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Missing_grid_images,
-                 "'iovl' image with more than one reference image");
+                 "'iovl' image has no referenced input images");
   }
-  */
 
 
   auto overlayDataResult = heif_file->get_uncompressed_item_data(get_id());

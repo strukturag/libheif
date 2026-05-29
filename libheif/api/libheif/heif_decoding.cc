@@ -52,7 +52,7 @@ int heif_have_decoder_for_format(heif_compression_format format)
 
 static void fill_default_decoding_options(heif_decoding_options& options)
 {
-  options.version = 9;
+  options.version = 10;
 
   options.ignore_transformations = false;
 
@@ -98,6 +98,10 @@ static void fill_default_decoding_options(heif_decoding_options& options)
   // version 9
 
   options.autocorrect_broken_input = false;
+
+  // version 10
+
+  options.output_image_nclx_profile_passthrough = false;
 }
 
 
@@ -122,6 +126,9 @@ void heif_decoding_options_copy(heif_decoding_options* dst,
   int min_version = std::min(dst->version, src->version);
 
   switch (min_version) {
+    case 10:
+      dst->output_image_nclx_profile_passthrough = src->output_image_nclx_profile_passthrough;
+      [[fallthrough]];
     case 9:
       dst->autocorrect_broken_input = src->autocorrect_broken_input;
       [[fallthrough]];

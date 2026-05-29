@@ -838,6 +838,13 @@ void ImageItem::set_mdcv(const heif_mastering_display_colour_volume& mdcv)
 }
 
 
+void ImageItem::set_amve(const heif_ambient_viewing_environment& amve)
+{
+  ImageDescription::set_amve(amve);
+  add_property(create_amve_box(), false);
+}
+
+
 void ImageItem::set_nominal_diffuse_white_luminance(uint32_t luminance)
 {
   ImageDescription::set_nominal_diffuse_white_luminance(luminance);
@@ -1002,6 +1009,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
           img = *cropResult;
         }
       }
+
+
+      if (auto iscl = std::dynamic_pointer_cast<Box_iscl>(property)) {
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unspecified,
+                     "Image scaling (iscl) transformative property is not yet supported");
+      }
     }
   }
 
@@ -1163,6 +1177,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     auto mdcv = get_property<Box_mdcv>();
     if (mdcv) {
       img->set_mdcv(mdcv->mdcv);
+    }
+
+    // AMVE
+
+    auto amve = get_property<Box_amve>();
+    if (amve) {
+      img->set_amve(amve->amve);
     }
 
     // NDWT
@@ -1456,6 +1477,14 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
       right_excess += right;
       top_excess += top;
       bottom_excess += bottom;
+    }
+
+    // --- scaling (not supported yet)
+
+    if (auto iscl = std::dynamic_pointer_cast<Box_iscl>(property)) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unspecified,
+              "Image scaling (iscl) transformative property is not yet supported"};
     }
   }
 

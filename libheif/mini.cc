@@ -1478,6 +1478,33 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   // TODO: replace this placeholder with pixi box version 1 once that is supported
   ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 8
 
+  // HDR metadata: expand the parsed mini-bitstream fields into separate ipco
+  // property boxes so the standard property-walk machinery (and the public
+  // heif_image*_has/get_content_light_level / mastering_display_colour_volume
+  // / ambient_viewing_environment / nominal_diffuse_white APIs) sees them.
+  uint16_t hdr_clli_prop_index = 0;
+  uint16_t hdr_mdcv_prop_index = 0;
+  uint16_t hdr_cclv_prop_index = 0;
+  uint16_t hdr_amve_prop_index = 0;
+  uint16_t hdr_ndwt_prop_index = 0;
+  // append_child_box() returns the 0-based child index; ipma uses 1-based
+  // property indices.
+  if (m_clli) {
+    hdr_clli_prop_index = static_cast<uint16_t>(ipco_box->append_child_box(m_clli) + 1);
+  }
+  if (m_mdcv) {
+    hdr_mdcv_prop_index = static_cast<uint16_t>(ipco_box->append_child_box(m_mdcv) + 1);
+  }
+  if (m_cclv) {
+    hdr_cclv_prop_index = static_cast<uint16_t>(ipco_box->append_child_box(m_cclv) + 1);
+  }
+  if (m_amve) {
+    hdr_amve_prop_index = static_cast<uint16_t>(ipco_box->append_child_box(m_amve) + 1);
+  }
+  if (m_ndwt) {
+    hdr_ndwt_prop_index = static_cast<uint16_t>(ipco_box->append_child_box(m_ndwt) + 1);
+  }
+
   auto ipma_box = std::make_shared<Box_ipma>();
   file->set_ipma_box(ipma_box);
   ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(1)});
@@ -1492,7 +1519,26 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(7)});
     ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(8)});
   }
-  // TODO: will need more once we support HDR / gainmap representation
+
+  // Associate HDR-metadata properties with the primary item (non-essential —
+  // matches what ImageItem::set_clli/set_mdcv/set_amve/set_ndwt emit on
+  // the write path).
+  if (hdr_clli_prop_index) {
+    ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, hdr_clli_prop_index});
+  }
+  if (hdr_mdcv_prop_index) {
+    ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, hdr_mdcv_prop_index});
+  }
+  if (hdr_cclv_prop_index) {
+    ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, hdr_cclv_prop_index});
+  }
+  if (hdr_amve_prop_index) {
+    ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, hdr_amve_prop_index});
+  }
+  if (hdr_ndwt_prop_index) {
+    ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, hdr_ndwt_prop_index});
+  }
+  // TODO: gainmap (tmap) HDR metadata expansion is still missing.
 
   // Append irot/imir (only as needed) and associate them with the items.
   // mini's orientation field uses standard EXIF orientation values 1..8,
@@ -1780,6 +1826,11 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
   std::shared_ptr<Box_colr> colr_nclx;
   std::shared_ptr<Box_colr> colr_icc;
   std::shared_ptr<Box> codec_config;
+  std::shared_ptr<Box_clli> clli_box;
+  std::shared_ptr<Box_mdcv> mdcv_box;
+  std::shared_ptr<Box_cclv> cclv_box;
+  std::shared_ptr<Box_amve> amve_box;
+  std::shared_ptr<Box_ndwt> ndwt_box;
 
   for (auto& prop : properties) {
     if (auto p = std::dynamic_pointer_cast<Box_ispe>(prop)) {
@@ -1798,6 +1849,21 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
     }
     else if (std::dynamic_pointer_cast<Box_av1C>(prop) || std::dynamic_pointer_cast<Box_hvcC>(prop)) {
       codec_config = prop;
+    }
+    else if (auto p = std::dynamic_pointer_cast<Box_clli>(prop)) {
+      clli_box = p;
+    }
+    else if (auto p = std::dynamic_pointer_cast<Box_mdcv>(prop)) {
+      mdcv_box = p;
+    }
+    else if (auto p = std::dynamic_pointer_cast<Box_cclv>(prop)) {
+      cclv_box = p;
+    }
+    else if (auto p = std::dynamic_pointer_cast<Box_amve>(prop)) {
+      amve_box = p;
+    }
+    else if (auto p = std::dynamic_pointer_cast<Box_ndwt>(prop)) {
+      ndwt_box = p;
     }
   }
 
@@ -2037,8 +2103,17 @@ std::shared_ptr<Box_mini> Box_mini::create_from_heif_file(HeifFile* file)
     }
   }
 
-  // HDR / gainmap: not yet implemented for conversion
-  mini->set_hdr_flag(false);
+  // HDR metadata on the primary item (clli/mdcv/cclv/amve/ndwt). The mini
+  // bitstream gates these via hdr_flag — set it whenever at least one of
+  // those property boxes is present.
+  // Gainmap (tmap) conversion is still TODO; m_gainmap_flag stays false here.
+  bool has_hdr_metadata = clli_box || mdcv_box || cclv_box || amve_box || ndwt_box;
+  mini->set_hdr_flag(has_hdr_metadata);
+  if (clli_box) mini->set_clli(clli_box);
+  if (mdcv_box) mini->set_mdcv(mdcv_box);
+  if (cclv_box) mini->set_cclv(cclv_box);
+  if (amve_box) mini->set_amve(amve_box);
+  if (ndwt_box) mini->set_ndwt(ndwt_box);
 
   return mini;
 }

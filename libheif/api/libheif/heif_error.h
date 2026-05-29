@@ -28,6 +28,8 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include <libheif/heif_export.h>
+
 
 typedef enum heif_error_code
 {

@@ -130,6 +130,7 @@ void ImageDescription::copy_metadata_from(const ImageDescription& other)
 
   m_clli = other.m_clli;
   m_mdcv = other.m_mdcv;
+  m_amve = other.m_amve;
   m_nominal_diffuse_white_luminance = other.m_nominal_diffuse_white_luminance;
 
   heif_tai_timestamp_packet_release(m_tai_timestamp);
@@ -194,6 +195,19 @@ std::shared_ptr<Box_mdcv> ImageDescription::create_mdcv_box() const
   mdcv->mdcv = get_mdcv();
 
   return mdcv;
+}
+
+
+std::shared_ptr<Box_amve> ImageDescription::create_amve_box() const
+{
+  if (!has_amve()) {
+    return {};
+  }
+
+  auto amve = std::make_shared<Box_amve>();
+  amve->amve = get_amve();
+
+  return amve;
 }
 
 
@@ -289,6 +303,13 @@ std::vector<std::shared_ptr<Box>> ImageDescription::generate_property_boxes(bool
     mdcv->mdcv = get_mdcv();
 
     properties.push_back(mdcv);
+  }
+
+
+  // --- write AMVE property
+
+  if (has_amve()) {
+    properties.push_back(create_amve_box());
   }
 
 

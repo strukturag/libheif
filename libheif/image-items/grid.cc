@@ -870,8 +870,8 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   ImageGrid grid;
   grid.set_num_tiles(columns, rows);
-  uint32_t tile_width = tiles[0]->get_width(heif_channel_interleaved);
-  uint32_t tile_height = tiles[0]->get_height(heif_channel_interleaved);
+  uint32_t tile_width = tiles[0]->get_width();
+  uint32_t tile_height = tiles[0]->get_height();
   grid.set_output_size(tile_width * columns, tile_height * rows);
   std::vector<uint8_t> grid_data = grid.write();
 

@@ -463,9 +463,18 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 {
   encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
-  // an encoder instance must only be used once
-  assert(encoder->kvzencoder == nullptr);
-  assert(encoder->config == nullptr);
+  // close the encoder if it was already initialized
+  // (e.g. when the encoder is reused for alpha encoding after being used for YUV encoding)
+  if (encoder->api) {
+    if (encoder->kvzencoder) {
+      encoder->api->encoder_close(encoder->kvzencoder);
+      encoder->kvzencoder = nullptr;
+    }
+    if (encoder->config) {
+      encoder->api->config_destroy(encoder->config);
+      encoder->config = nullptr;
+    }
+  }
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 

@@ -702,13 +702,17 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
                                                      bool image_sequence)
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
-
-  // an encoder instance must only be used once
-  assert(encoder->svt_encoder == nullptr);
-
   encoder->input_class = input_class;
   EbErrorType res = EB_ErrorNone;
   heif_error err;
+
+  // deinit the encoder if it was already initialized
+  // (e.g. when the encoder is reused for alpha encoding after being used for YUV encoding)
+  if (encoder->svt_encoder) {
+    svt_av1_enc_deinit(encoder->svt_encoder);
+    svt_av1_enc_deinit_handle(encoder->svt_encoder);
+    encoder->svt_encoder = nullptr;
+  }
 
   // encoder->compressed_data.clear();
 

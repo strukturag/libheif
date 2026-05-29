@@ -809,6 +809,7 @@ private:
   };
 
   std::vector<Entry> m_entries;
+  MemoryHandle m_memory_handle;
 };
 
 // Bitrate
