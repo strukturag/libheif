@@ -1547,16 +1547,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
       output_profile = img_nclx;
     }
     else {
-      if (options.convert_hdr_to_8bit) {
-        output_profile.set_sRGB_defaults();
-      }
-      else {
-        // Preserve input HDR
-        output_profile.set_matrix_coefficients(target_colorspace == heif_colorspace_RGB ? heif_matrix_coefficients_RGB_GBR : img_nclx.get_matrix_coefficients());
-        output_profile.set_colour_primaries(img_nclx.get_colour_primaries());
-        output_profile.set_full_range_flag(img_nclx.get_full_range_flag());
-        output_profile.set_transfer_characteristics(img_nclx.get_transfer_characteristics());
-      }
+      output_profile.set_sRGB_defaults();
     }
 
     return convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
