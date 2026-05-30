@@ -181,10 +181,6 @@ set(libheif_sources
         color-conversion/chroma_sampling.h
         color-conversion/bayer_bilinear.cc
         color-conversion/bayer_bilinear.h
-        color-conversion/tonemapping_hdr_sdr.cc
-        color-conversion/tonemapping_hdr_sdr.h
-        color-conversion/tonemapping_hdr_hdr.cc
-        color-conversion/tonemapping_hdr_hdr.h
         color-conversion/tonemapping_zimg.cc
         color-conversion/tonemapping_zimg.h
         sequences/seq_boxes.h
