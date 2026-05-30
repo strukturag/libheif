@@ -491,8 +491,13 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
     // remove icc after lossy tone mapping
     if (m_tonemapping_remove_icc) {
       out->set_color_profile_icc(nullptr);
-      out->set_clli({ 0, 0 });
       out->unset_mdcv();
+      out->unset_amve();
+      out->unset_nominal_diffuse_white();
+    }
+    // delete CLL if the output transfer characteristic is not PQ
+    if (step.output_state.nclx.get_transfer_characteristics() != heif_transfer_characteristic_ITU_R_BT_2100_0_PQ) {
+      out->set_clli({ 0, 0 });
     }
 
     const auto& warnings = in->get_warnings();
