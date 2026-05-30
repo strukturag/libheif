@@ -19,8 +19,18 @@
  */
 
 #include <cassert>
+#include <set>
 #include "tonemapping_zimg.h"
 #include "zimg.h"
+// Enable multithreaded tonemapping
+#ifdef ENABLE_PARALLEL_TILE_DECODING
+#define ENABLE_PARALLEL_ZIMG ENABLE_PARALLEL_TILE_DECODING
+#endif
+
+#ifdef ENABLE_PARALLEL_ZIMG
+#include <deque>
+#include <future>
+#endif
 
 void convert_zimg_chroma(zimg_image_format& zimg_fmt, heif_chroma chroma) {
   // Color space
@@ -129,6 +139,69 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   return states;
 }
 
+static Error run_zimg(const zimg_filter_graph* pipeline, const zimg_image_buffer_const* img_buf_in, zimg_image_buffer* img_buf_out, size_t offset, size_t chroma_offset_in, size_t chroma_offset_out, const heif_security_limits* limits) {
+  size_t tmp_size = 0;
+  if (zimg_filter_graph_get_tmp_size(pipeline, &tmp_size) != ZIMG_ERROR_SUCCESS) {
+    return Error::InternalError;
+  }
+  zimg_image_buffer_const descriptor_in;
+  zimg_image_buffer descriptor_out;
+  descriptor_in = *img_buf_in;
+  descriptor_out = *img_buf_out;
+  if(descriptor_in.plane[0].data) {
+    descriptor_in.plane[0].data = (const char*)descriptor_in.plane[0].data + offset * descriptor_in.plane[0].stride;
+    descriptor_out.plane[0].data = (char*)descriptor_out.plane[0].data + offset * descriptor_out.plane[0].stride;
+  }
+  if(descriptor_in.plane[1].data) {
+    descriptor_in.plane[1].data = (const char*)descriptor_in.plane[1].data + chroma_offset_in * descriptor_in.plane[1].stride;
+    descriptor_out.plane[1].data = (char*)descriptor_out.plane[1].data + chroma_offset_out * descriptor_out.plane[1].stride;
+  }
+  if(descriptor_in.plane[2].data) {
+    descriptor_in.plane[2].data = (const char*)descriptor_in.plane[2].data + chroma_offset_in * descriptor_in.plane[2].stride;
+    descriptor_out.plane[2].data = (char*)descriptor_out.plane[2].data + chroma_offset_out * descriptor_out.plane[2].stride;
+  }
+  if(descriptor_in.plane[3].data) {
+    descriptor_in.plane[3].data = (const char*)descriptor_in.plane[3].data + offset * descriptor_in.plane[3].stride;
+    descriptor_out.plane[3].data = (char*)descriptor_out.plane[3].data + offset * descriptor_out.plane[3].stride;
+  }
+  // alignment of all images should be 32 bytes
+  MemoryHandle limiter;
+  Error alloc_error = limiter.alloc(tmp_size, limits, "zimg temporary buffer");
+  if (alloc_error.error_code != 0) {
+    return alloc_error;
+  }
+  void* tmp = _aligned_malloc(tmp_size, 32); // TODO: MSVC
+  if (!tmp)
+      return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
+  std::unique_ptr<void, void(*)(void*)> tmp_free(tmp, &_aligned_free);
+  switch (zimg_filter_graph_process(pipeline, &descriptor_in, &descriptor_out, tmp, nullptr, nullptr, nullptr, nullptr)) {
+  case ZIMG_ERROR_SUCCESS:
+    return Error::Ok;
+  case ZIMG_ERROR_OUT_OF_MEMORY:
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
+  case ZIMG_ERROR_COLOR_FAMILY_MISMATCH:
+  case ZIMG_ERROR_GREYSCALE_SUBSAMPLING:
+  case ZIMG_ERROR_UNSUPPORTED_OPERATION:
+  case ZIMG_ERROR_UNSUPPORTED_SUBSAMPLING:
+  case ZIMG_ERROR_NO_COLORSPACE_CONVERSION:
+    return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion, "");
+  default:
+    return Error::InternalError;
+  }
+}
+
+#ifdef ENABLE_PARALLEL_ZIMG
+static void wait_for_jobs(std::deque<std::future<Error>>* jobs) {
+  if (jobs->empty()) {
+    return;
+  }
+
+  while (!jobs->empty()) {
+    jobs->front().get();
+    jobs->pop_front();
+  }
+}
+#endif
 
 Result<std::shared_ptr<HeifPixelImage>>
 Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
@@ -140,15 +213,30 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
 {
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
-
+#ifdef ENABLE_PARALLEL_ZIMG
+  // TODO: zimg can't modify slice height after pipeline is constructed, so the size must exactly divide.
+  int threads = 1;
+  uint32_t slice_height;
+  if (width >= 1000 && height >= 1000) { // Don't use multithreading for small images
+    for (int i = std::thread::hardware_concurrency(); i >= 1; i--) { // Try each thread number to see if it divides evenly. Must terminate when i=1
+      if((height % (i * 2)) == 0 && height / i >= 128) { // Each thread process 128 lines at least and don't break chroma subsampling
+        threads = i;
+        break;
+      }
+    }
+  }
+  slice_height = height / threads;
+#else
+  uint32_t slice_height = height;
+#endif
   zimg_filter_graph* graph;
   zimg_image_format image_format_in;
   zimg_image_format_default(&image_format_in, ZIMG_API_VERSION);
   // Alpha
   image_format_in.alpha = input->has_alpha() ? (input->is_premultiplied_alpha() ? ZIMG_ALPHA_PREMULTIPLIED : ZIMG_ALPHA_STRAIGHT) : ZIMG_ALPHA_NONE;
   // Size
-  image_format_in.width = input->get_width();
-  image_format_in.height = input->get_height();
+  image_format_in.width = width;
+  image_format_in.height = slice_height;
   // Bit depth
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
@@ -161,6 +249,10 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   // NCLX
   nclx_profile input_profile = input->get_color_profile_nclx_with_fallback();
   convert_zimg_nclx(image_format_in, input_profile);
+  // chroma location
+  if (input->has_chroma_location()) {
+    image_format_in.chroma_location = (zimg_chroma_location_e)input->get_chroma_location(); // TODO: Validate
+  }
 
   zimg_image_format image_format_out;
   image_format_out = image_format_in;
@@ -182,6 +274,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     target_profile_copy.set_transfer_characteristics(input_profile.get_transfer_characteristics());
   convert_zimg_nclx(image_format_out, target_profile_copy);
 
+  // conversion options
   zimg_graph_builder_params opt;
   zimg_graph_builder_params_default(&opt, ZIMG_API_VERSION);
   switch (options.preferred_chroma_upsampling_algorithm) {
@@ -198,28 +291,15 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     opt.nominal_peak_luminance = cll.max_content_light_level; // TODO: image appears very dark
   }
 
+  // create color conversion pipeline (TODO: 0.01 seconds, but cannot be moved to state_after_conversion because computations made there might not used.
   std::unique_ptr<zimg_filter_graph, void(*)(zimg_filter_graph*)> pipeline(zimg_filter_graph_build(&image_format_in, &image_format_out, &opt), &zimg_filter_graph_free);
   if (!pipeline) {
-      return Error::InternalError;
-  }
-  size_t tmp_size = 0;
-  if (zimg_filter_graph_get_tmp_size(pipeline.get(), &tmp_size) != ZIMG_ERROR_SUCCESS) {
     return Error::InternalError;
   }
-  // alignment of all images should be 32 bytes
-  MemoryHandle limiter;
-  Error alloc_error = limiter.alloc(tmp_size, limits, "zimg temporary buffer");
-  if (alloc_error.error_code != 0) {
-    return alloc_error;
-  }
-  void* tmp = _aligned_malloc(tmp_size, 32); // TODO: MSVC
-  if(!tmp)
-    return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
-  std::unique_ptr<void, void(*)(void*)> tmp_free(tmp, &_aligned_free);
   zimg_image_buffer_const descriptor_in;
   zimg_image_buffer descriptor_out;
   descriptor_in.version = ZIMG_API_VERSION;
-  descriptor_out.version = ZIMG_API_VERSION;
+  // Input buffer descriptor
   switch (input->get_colorspace()) {
   case heif_colorspace_YCbCr:
       descriptor_in.plane[0].data = input->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_in.plane[0].stride);
@@ -243,10 +323,12 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     }
   }
   auto outimg = std::make_shared<HeifPixelImage>();
+  // Output image and descriptor setup
   outimg->create(input->get_width(),
     input->get_height(),
     target_state.colorspace,
     target_state.chroma);
+  descriptor_out.version = ZIMG_API_VERSION;
   switch (target_state.colorspace) {
   case heif_colorspace_YCbCr:
     if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
@@ -318,20 +400,38 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     descriptor_out.plane[3].mask = 0;
     descriptor_out.plane[3].stride = 0;
   }
-
-  switch (zimg_filter_graph_process(pipeline.get(), &descriptor_in, &descriptor_out, tmp, nullptr, nullptr, nullptr, nullptr)) {
-  case ZIMG_ERROR_SUCCESS:
-    break;
-  case ZIMG_ERROR_OUT_OF_MEMORY:
-    return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
-  case ZIMG_ERROR_COLOR_FAMILY_MISMATCH:
-  case ZIMG_ERROR_GREYSCALE_SUBSAMPLING:
-  case ZIMG_ERROR_UNSUPPORTED_OPERATION:
-  case ZIMG_ERROR_UNSUPPORTED_SUBSAMPLING:
-  case ZIMG_ERROR_NO_COLORSPACE_CONVERSION:
-    return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion, "");
-  default:
-    return Error::InternalError;
+#ifdef ENABLE_PARALLEL_ZIMG
+  // Multithreaded color conversion
+  std::deque<std::future<Error>> errs;
+  for (int thread = 0; thread < threads; thread++) {
+    size_t offset = slice_height * thread;
+    size_t chroma_offset_in, chroma_offset_out;
+    if (input->get_chroma_format() == heif_chroma_420) {
+      chroma_offset_in = offset / 2;
+    }else{
+      chroma_offset_in = offset;
+    }
+    if (target_state.chroma == heif_chroma_420) {
+      chroma_offset_out = offset / 2;
+    }else{
+      chroma_offset_out = offset;
+    }
+    errs.push_back(std::async(std::launch::async,
+        &run_zimg, pipeline.get(), &descriptor_in, &descriptor_out, offset, chroma_offset_in, chroma_offset_out, limits));
   }
+  while (!errs.empty()) {
+    Error e = errs.front().get();
+    errs.pop_front();
+    if (e) {
+      wait_for_jobs(&errs);
+      return e;
+    }
+  }
+#else
+  // Singlethreaded color conversion
+  Error err = run_zimg(pipeline.get(), &descriptor_in, &descriptor_out, 0, 0, 0, limits);
+  if (err.error_code != 0)
+    return err;
+#endif
   return outimg;
 }
