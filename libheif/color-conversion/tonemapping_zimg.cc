@@ -124,13 +124,8 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   output_state.nclx.m_full_range_flag = target_state.nclx.get_full_range_flag();
 
   states.emplace_back(output_state, SpeedCosts_OptimizedSoftware, islossy);
-
-  if (target_state.bits_per_pixel != 12) {
-    // Also allow up conversion to 12-bit per pixel
-    output_state.bits_per_pixel = 12;
-    output_state.alpha_bits_per_pixel = hasalpha ? 12 : 0;
-    states.emplace_back(output_state, SpeedCosts_OptimizedSoftware, islossy);
-  }
+  
+  // TODO: check whether it is useful to use up to 16-bit internal precision
   return states;
 }
 
@@ -203,13 +198,12 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     opt.nominal_peak_luminance = cll.max_content_light_level; // TODO: image appears very dark
   }
 
-  zimg_filter_graph* pipeline = zimg_filter_graph_build(&image_format_in, &image_format_out, &opt);
+  std::unique_ptr<zimg_filter_graph, void(*)(zimg_filter_graph*)> pipeline(zimg_filter_graph_build(&image_format_in, &image_format_out, &opt), &zimg_filter_graph_free);
   if (!pipeline) {
-    return Error::InternalError;
+      return Error::InternalError;
   }
-  std::unique_ptr<zimg_filter_graph, void(*)(zimg_filter_graph*)> pipeline_deleter(pipeline, &zimg_filter_graph_free);
   size_t tmp_size = 0;
-  if (zimg_filter_graph_get_tmp_size(pipeline, &tmp_size) != ZIMG_ERROR_SUCCESS) {
+  if (zimg_filter_graph_get_tmp_size(pipeline.get(), &tmp_size) != ZIMG_ERROR_SUCCESS) {
     return Error::InternalError;
   }
   // alignment of all images should be 32 bytes
@@ -325,7 +319,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     descriptor_out.plane[3].stride = 0;
   }
 
-  switch (zimg_filter_graph_process(pipeline, &descriptor_in, &descriptor_out, tmp, nullptr, nullptr, nullptr, nullptr)) {
+  switch (zimg_filter_graph_process(pipeline.get(), &descriptor_in, &descriptor_out, tmp, nullptr, nullptr, nullptr, nullptr)) {
   case ZIMG_ERROR_SUCCESS:
     break;
   case ZIMG_ERROR_OUT_OF_MEMORY:
