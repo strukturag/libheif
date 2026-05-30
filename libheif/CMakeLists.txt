@@ -4,6 +4,7 @@ configure_file(api/libheif/heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_ve
 
 set(libheif_headers
         api/libheif/heif.h
+        api/libheif/heif_export.h
         api/libheif/heif_library.h
         api/libheif/heif_image.h
         api/libheif/heif_color.h

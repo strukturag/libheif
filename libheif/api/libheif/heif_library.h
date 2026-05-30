@@ -48,28 +48,14 @@ extern "C" {
 //  1.18           5            7             1             1            1            1
 //  1.19           6            7             2             1            1            1
 //  1.20           7            7             2             1            1            1
+//  1.21           8            7             2             1            1            1
+//  1.22           9            8             2             1            1            1
+//  1.23          10            8             2             1            1            1
 
-// TODO (v1.23.0): factor the LIBHEIF_API export macro out into its own tiny,
-// dependency-free header (e.g. heif_export.h) and include it from both this
-// header and heif_error.h. Currently heif_error.h is not self-contained: it
-// uses LIBHEIF_API but cannot include heif_library.h because the two headers
-// are mutually dependent (heif_library.h needs the heif_error type). Breaking
-// this cycle would let every public header compile standalone as C.
-#if (defined(_WIN32) || defined __CYGWIN__) && !defined(LIBHEIF_STATIC_BUILD)
-#ifdef LIBHEIF_EXPORTS
-#define LIBHEIF_API __declspec(dllexport)
-#else
-#define LIBHEIF_API __declspec(dllimport)
-#endif
-#elif defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
-#ifdef LIBHEIF_EXPORTS
-#define LIBHEIF_API __attribute__((__visibility__("default")))
-#else
-#define LIBHEIF_API
-#endif
-#else
-#define LIBHEIF_API
-#endif
+// The LIBHEIF_API export macro is defined in its own dependency-free header so
+// that heif_error.h (which is needed by this header) can use it without
+// creating an include cycle.
+#include <libheif/heif_export.h>
 
 /**
  * Build a 32 bit integer from a 4-character code.

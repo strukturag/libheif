@@ -428,6 +428,13 @@ uint32_t TiledHeader::get_offset_table_entry_size() const
 
 std::pair<uint32_t, uint32_t> TiledHeader::get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const
 {
+  // Defense in depth: callers are expected to validate idx, but if they don't,
+  // returning an empty range prevents the subsequent read_offset_table_range
+  // from writing past m_offsets.
+  if (idx >= m_offsets.size()) {
+    return {0, 0};
+  }
+
   uint32_t start = idx;
   uint32_t end = idx+1;
 
@@ -959,7 +966,7 @@ ImageItem_Tiled::decode_compressed_image(const heif_decoding_options& options,
 Error ImageItem_Tiled::append_compressed_tile_data(std::vector<uint8_t>& data, uint32_t tx, uint32_t ty) const
 {
   uint64_t idx64 = static_cast<uint64_t>(ty) * nTiles_h(m_tild_header.get_parameters()) + tx;
-  if (idx64 > std::numeric_limits<uint32_t>::max()) {
+  if (idx64 >= m_tild_header.get_num_tiles()) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "Tile index out of range."};

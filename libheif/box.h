@@ -950,6 +950,50 @@ private:
 };
 
 
+class Box_iscl : public FullBox
+{
+public:
+  Box_iscl()
+  {
+    set_short_type(fourcc("iscl"));
+  }
+
+  bool is_essential() const override { return true; }
+
+  bool is_transformative_property() const override { return true; }
+
+  uint16_t get_target_width_numerator() const { return m_target_width_numerator; }
+  uint16_t get_target_width_denominator() const { return m_target_width_denominator; }
+  uint16_t get_target_height_numerator() const { return m_target_height_numerator; }
+  uint16_t get_target_height_denominator() const { return m_target_height_denominator; }
+
+  void set_scale(uint16_t w_num, uint16_t w_den, uint16_t h_num, uint16_t h_den)
+  {
+    m_target_width_numerator = w_num;
+    m_target_width_denominator = w_den;
+    m_target_height_numerator = h_num;
+    m_target_height_denominator = h_den;
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Image Scaling"; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  uint16_t m_target_width_numerator = 1;
+  uint16_t m_target_width_denominator = 1;
+  uint16_t m_target_height_numerator = 1;
+  uint16_t m_target_height_denominator = 1;
+};
+
+
 class Box_clap : public Box
 {
 public:

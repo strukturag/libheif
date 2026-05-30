@@ -400,10 +400,18 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       };
     }
 
-    auto chunk = std::make_shared<Chunk>(m_heif_context, m_id,
-                                         current_sample_idx, sampleToChunk.samples_per_chunk,
-                                         m_stco->get_offsets()[chunk_idx],
-                                         m_stsz);
+    auto chunk = Chunk::create(m_heif_context, m_id,
+                               current_sample_idx, sampleToChunk.samples_per_chunk,
+                               m_stco->get_offsets()[chunk_idx],
+                               m_stsz);
+
+    if (!chunk) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Chunk file offset overflows 64-bit range."
+      };
+    }
 
     if (auto visualSampleDescription = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description)) {
       if (chunk_idx > 0 && (int32_t) sampleToChunk.sample_description_index == previous_sample_description_index) {

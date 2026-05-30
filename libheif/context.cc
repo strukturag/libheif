@@ -1523,7 +1523,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
   uint8_t converted_output_bpp = (options.convert_hdr_to_8bit && img_bpp > 8) ? 8 : 0 /* keep input depth */;
 
   nclx_profile img_nclx = img->get_color_profile_nclx_with_fallback();
-  bool different_nclx = !nclx_color_profile_equal(img_nclx, options.output_image_nclx_profile);
+  const bool nclx_passthrough = (options.output_image_nclx_profile == nullptr &&
+                                 options.output_image_nclx_profile_passthrough);
+  const bool different_nclx = !nclx_passthrough &&
+                              !nclx_color_profile_equal(img_nclx, options.output_image_nclx_profile);
 
   if (different_chroma ||
       different_colorspace ||
@@ -1537,6 +1540,11 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
       output_profile.set_colour_primaries(options.output_image_nclx_profile->color_primaries);
       output_profile.set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
       output_profile.set_transfer_characteristics(options.output_image_nclx_profile->transfer_characteristics);
+    }
+    else if (nclx_passthrough) {
+      // Keep input image's NCLX as the conversion target so a chroma/colorspace
+      // change does not silently re-tag the pixels with sRGB.
+      output_profile = img_nclx;
     }
     else {
       if (options.convert_hdr_to_8bit) {
