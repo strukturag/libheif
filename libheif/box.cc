@@ -5219,7 +5219,7 @@ Error Box_taic::write(StreamWriter& writer) const {
   writer.write64(m_info.time_uncertainty);
   writer.write32(m_info.clock_resolution);
   writer.write32(m_info.clock_drift_rate);
-  writer.write8(m_info.clock_type << 6);
+  writer.write8(static_cast<uint8_t>(m_info.clock_type << 6));
 
   prepend_header(writer, box_start);
 
