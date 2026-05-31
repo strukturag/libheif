@@ -66,6 +66,9 @@ public:
 
   bool supports_alpha() const override { return true; }
 
+  void UpdateDecodingOptions(const heif_image_handle* handle,
+      heif_decoding_options* options) const;
+
   bool Encode(const heif_image_handle* handle,
               const heif_image* image, const std::string& filename) override;
 
