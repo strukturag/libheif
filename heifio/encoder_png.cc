@@ -37,6 +37,14 @@
 PngEncoder::PngEncoder() = default;
 
 
+void PngEncoder::UpdateDecodingOptions(const heif_image_handle* handle,
+    heif_decoding_options* options) const
+{
+#ifdef PNG_cICP_SUPPORTED
+  options->output_image_nclx_profile_passthrough = true;
+#endif
+}
+
 bool PngEncoder::Encode(const heif_image_handle* handle,
                         const heif_image* image, const std::string& filename)
 {
@@ -118,9 +126,9 @@ bool PngEncoder::Encode(const heif_image_handle* handle,
     }
 
 #ifdef PNG_cICP_SUPPORTED
-    if (heif_image_handle_get_color_profile_type(handle) == heif_color_profile_type_nclx) {
+    if (heif_image_get_color_profile_type(image) == heif_color_profile_type_nclx) {
       heif_color_profile_nclx* nclx = nullptr;
-      heif_image_handle_get_nclx_color_profile(handle, &nclx);
+      heif_image_get_nclx_color_profile(image, &nclx);
       if (nclx) {
         // Setting matrix coefficients to 0 (RGB) and full range flag to 1 (full range)
         // because data is converted into RGB specified by PngEncoder::colorspace (heif_colorspace_RGB)
