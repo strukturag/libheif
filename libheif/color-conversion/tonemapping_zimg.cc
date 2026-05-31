@@ -213,30 +213,40 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
 {
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
-#ifdef ENABLE_PARALLEL_ZIMG
-  // TODO: zimg can't modify slice height after pipeline is constructed, so the size must exactly divide.
-  int threads = 1;
-  uint32_t slice_height;
-  if (width >= 1000 && height >= 1000) { // Don't use multithreading for small images
-    for (int i = std::thread::hardware_concurrency(); i >= 1; i--) { // Try each thread number to see if it divides evenly. Must terminate when i=1
-      if((height % (i * 2)) == 0 && height / i >= 128) { // Each thread process 128 lines at least and don't break chroma subsampling
-        threads = i;
-        break;
-      }
-    }
-  }
-  slice_height = height / threads;
-#else
-  uint32_t slice_height = height;
-#endif
-  zimg_filter_graph* graph;
   zimg_image_format image_format_in;
   zimg_image_format_default(&image_format_in, ZIMG_API_VERSION);
   // Alpha
   image_format_in.alpha = input->has_alpha() ? (input->is_premultiplied_alpha() ? ZIMG_ALPHA_PREMULTIPLIED : ZIMG_ALPHA_STRAIGHT) : ZIMG_ALPHA_NONE;
   // Size
   image_format_in.width = width;
+  image_format_in.height = height;
+  if (input->get_colorspace() == heif_colorspace_YCbCr && (input->get_chroma_format() == heif_chroma_420 || input->get_chroma_format() == heif_chroma_422)) {
+    // TODO: zimg can't convert it, so we increase width or height based on assumption that HeifPixelImage allocated the padding by rounded_size()
+    if(input->has_odd_width()) {
+      image_format_in.width += 1;
+    }
+    if(input->has_odd_height()) {
+      image_format_in.height += 1;
+    }
+  }
+#ifdef ENABLE_PARALLEL_ZIMG
+  // TODO: zimg can't modify slice height after pipeline is constructed, so the size must exactly divide.
+  int threads = 1;
+  uint32_t slice_height;
+  if (image_format_in.width >= 1000 && image_format_in.height >= 1000) { // Don't use multithreading for small images
+    for (int i = std::thread::hardware_concurrency(); i >= 1; i--) { // Try each thread number to see if it divides evenly. Must terminate when i=1
+      if((image_format_in.height % (i * 2)) == 0 && image_format_in.height / i >= 128) { // Each thread process 128 lines at least and don't break chroma subsampling
+        threads = i;
+        break;
+      }
+    }
+  }
+  slice_height = image_format_in.height / threads;
   image_format_in.height = slice_height;
+#else
+  uint32_t slice_height = image_format_in.height;
+#endif
+  zimg_filter_graph* graph;
   // Bit depth
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
@@ -402,36 +412,38 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   }
 #ifdef ENABLE_PARALLEL_ZIMG
   // Multithreaded color conversion
-  std::deque<std::future<Error>> errs;
-  for (int thread = 0; thread < threads; thread++) {
-    size_t offset = slice_height * thread;
-    size_t chroma_offset_in, chroma_offset_out;
-    if (input->get_chroma_format() == heif_chroma_420) {
-      chroma_offset_in = offset / 2;
-    }else{
-      chroma_offset_in = offset;
+  if (threads > 1) {
+    std::deque<std::future<Error>> errs;
+    for (int thread = 0; thread < threads; thread++) {
+      size_t offset = slice_height * thread;
+      size_t chroma_offset_in, chroma_offset_out;
+      if (input->get_chroma_format() == heif_chroma_420) {
+        chroma_offset_in = offset / 2;
+      }else{
+        chroma_offset_in = offset;
+      }
+      if (target_state.chroma == heif_chroma_420) {
+        chroma_offset_out = offset / 2;
+      }else{
+        chroma_offset_out = offset;
+      }
+      errs.push_back(std::async(std::launch::async,
+          &run_zimg, pipeline.get(), &descriptor_in, &descriptor_out, offset, chroma_offset_in, chroma_offset_out, limits));
     }
-    if (target_state.chroma == heif_chroma_420) {
-      chroma_offset_out = offset / 2;
-    }else{
-      chroma_offset_out = offset;
+    while (!errs.empty()) {
+      Error e = errs.front().get();
+      errs.pop_front();
+      if (e) {
+        wait_for_jobs(&errs);
+        return e;
+      }
     }
-    errs.push_back(std::async(std::launch::async,
-        &run_zimg, pipeline.get(), &descriptor_in, &descriptor_out, offset, chroma_offset_in, chroma_offset_out, limits));
+    return outimg;
   }
-  while (!errs.empty()) {
-    Error e = errs.front().get();
-    errs.pop_front();
-    if (e) {
-      wait_for_jobs(&errs);
-      return e;
-    }
-  }
-#else
+#endif
   // Singlethreaded color conversion
   Error err = run_zimg(pipeline.get(), &descriptor_in, &descriptor_out, 0, 0, 0, limits);
   if (err.error_code != 0)
     return err;
-#endif
   return outimg;
 }
