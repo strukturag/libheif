@@ -19,7 +19,6 @@
  */
 
 #include <cassert>
-#include <set>
 #include "tonemapping_zimg.h"
 #include "zimg.h"
 // Enable multithreaded tonemapping
@@ -32,23 +31,27 @@
 #include <future>
 #endif
 
-void convert_zimg_chroma(zimg_image_format& zimg_fmt, heif_chroma chroma) {
+// TODO: This was copied from zimg/common/alloc.h
+#ifdef _WIN32
+#include <malloc.h>
+inline void* zimg_x_aligned_malloc(size_t size, size_t alignment) { return _aligned_malloc(size, alignment); }
+inline void zimg_x_aligned_free(void* ptr) { _aligned_free(ptr); }
+#else
+#include <stdlib.h>
+inline void* zimg_x_aligned_malloc(size_t size, size_t alignment) { void* p; if (posix_memalign(&p, alignment, size)) return nullptr; else return p; }
+inline void zimg_x_aligned_free(void* ptr) { free(ptr); }
+#endif
+
+void convert_zimg_chroma(zimg_image_format& zimg_fmt, heif_colorspace colorspace, heif_chroma chroma) {
   // Color space
-  switch (chroma) {
-  case heif_chroma_420:
-  case heif_chroma_422:
-  case heif_chroma_444:
+  switch (colorspace) {
+  case heif_colorspace_YCbCr:
     zimg_fmt.color_family = ZIMG_COLOR_YUV;
     break;
-  case heif_chroma_interleaved_RGB:
-  case heif_chroma_interleaved_RGBA:
-  case heif_chroma_interleaved_RRGGBBAA_BE:
-  case heif_chroma_interleaved_RRGGBBAA_LE:
-  case heif_chroma_interleaved_RRGGBB_BE:
-  case heif_chroma_interleaved_RRGGBB_LE:
+  case heif_colorspace_RGB:
     zimg_fmt.color_family = ZIMG_COLOR_RGB;
     break;
-  case heif_chroma_planar:
+  case heif_colorspace_monochrome:
   default:
     zimg_fmt.color_family = ZIMG_COLOR_GREY;
     break;
@@ -89,7 +92,7 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   const heif_color_conversion_options& options,
   const heif_color_conversion_options_ext& options_ext) const
 {
-  if (input_state.bits_per_pixel > 16 || input_state.bits_per_pixel <= 8) {
+  if (input_state.bits_per_pixel > 16 || input_state.bits_per_pixel < 8) {
     return {};
   }
 
@@ -132,10 +135,13 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   output_state.nclx.m_colour_primaries = target_state.nclx.m_colour_primaries;
   output_state.nclx.m_matrix_coefficients = target_state.nclx.m_matrix_coefficients;
   output_state.nclx.m_full_range_flag = target_state.nclx.get_full_range_flag();
+  if (output_state.nclx.m_matrix_coefficients == heif_matrix_coefficients_RGB_GBR) {
+    output_state.colorspace = heif_colorspace_RGB;
+  }
 
-  states.emplace_back(output_state, SpeedCosts_OptimizedSoftware, islossy);
+  states.emplace_back(output_state, SpeedCosts_Slow, islossy);
   
-  // TODO: check whether it is useful to use up to 16-bit internal precision
+  // TODO: Sometimes low-quality conversion. Check whether it is useful to use up to 16-bit internal precision
   return states;
 }
 
@@ -170,10 +176,10 @@ static Error run_zimg(const zimg_filter_graph* pipeline, const zimg_image_buffer
   if (alloc_error.error_code != 0) {
     return alloc_error;
   }
-  void* tmp = _aligned_malloc(tmp_size, 32); // TODO: MSVC
+  void* tmp = zimg_x_aligned_malloc(tmp_size, 32);
   if (!tmp)
-      return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
-  std::unique_ptr<void, void(*)(void*)> tmp_free(tmp, &_aligned_free);
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
+  std::unique_ptr<void, void(*)(void*)> tmp_free(tmp, &zimg_x_aligned_free);
   switch (zimg_filter_graph_process(pipeline, &descriptor_in, &descriptor_out, tmp, nullptr, nullptr, nullptr, nullptr)) {
   case ZIMG_ERROR_SUCCESS:
     return Error::Ok;
@@ -248,12 +254,11 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
 #endif
   zimg_filter_graph* graph;
   // Bit depth
-  std::set<enum heif_channel> channels = input->get_channel_set();
-  assert(!channels.empty());
-  image_format_in.depth = input->get_bits_per_pixel(*(channels.begin()));
+  image_format_in.depth = input->get_visual_image_bits_per_pixel();
+  assert(image_format_in.depth >= 8 && image_format_in.depth <= 16);
   // Data type
   image_format_in.pixel_type = image_format_in.depth <= 8 ? ZIMG_PIXEL_BYTE : ZIMG_PIXEL_WORD;
-  convert_zimg_chroma(image_format_in, input->get_chroma_format());
+  convert_zimg_chroma(image_format_in, input->get_colorspace(), input->get_chroma_format());
   image_format_in.field_parity = ZIMG_FIELD_PROGRESSIVE;
   // Chop region (none)
   // NCLX
@@ -273,7 +278,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   // Data type
   image_format_out.pixel_type = image_format_out.depth <= 8 ? ZIMG_PIXEL_BYTE : ZIMG_PIXEL_WORD;
   // Color space
-  convert_zimg_chroma(image_format_out, target_state.chroma);
+  convert_zimg_chroma(image_format_out, target_state.colorspace, target_state.chroma);
   // NCLX
   nclx_profile target_profile_copy = target_state.nclx;
   if (target_profile_copy.get_colour_primaries() == heif_color_primaries_unspecified)
@@ -334,10 +339,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   }
   auto outimg = std::make_shared<HeifPixelImage>();
   // Output image and descriptor setup
-  outimg->create(input->get_width(),
-    input->get_height(),
-    target_state.colorspace,
-    target_state.chroma);
+  outimg->create(width, height, target_state.colorspace, target_state.chroma);
   descriptor_out.version = ZIMG_API_VERSION;
   switch (target_state.colorspace) {
   case heif_colorspace_YCbCr:
