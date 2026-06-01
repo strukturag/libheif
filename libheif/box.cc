@@ -5219,7 +5219,7 @@ Error Box_taic::write(StreamWriter& writer) const {
   writer.write64(m_info.time_uncertainty);
   writer.write32(m_info.clock_resolution);
   writer.write32(m_info.clock_drift_rate);
-  writer.write8(m_info.clock_type);
+  writer.write8(static_cast<uint8_t>(m_info.clock_type << 6));
 
   prepend_header(writer, box_start);
 
@@ -5233,7 +5233,7 @@ Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
   m_info.clock_resolution = range.read32();
 
   m_info.clock_drift_rate = range.read32s();
-  m_info.clock_type = range.read8();
+  m_info.clock_type = range.read8() >> 6;
   return range.get_error();
 }
 
