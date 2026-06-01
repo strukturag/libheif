@@ -494,10 +494,16 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
       out->unset_mdcv();
       out->unset_amve();
       out->unset_nominal_diffuse_white();
+      Error warning = { heif_error_Unsupported_feature, heif_suberror_Lossy_Tonemapping, "Stripping HDR metadata and ICC" };
+      out->add_warning(warning);
     }
     // delete CLL if the output transfer characteristic is not PQ
     if (step.output_state.nclx.get_transfer_characteristics() != heif_transfer_characteristic_ITU_R_BT_2100_0_PQ) {
       out->set_clli({ 0, 0 });
+      if (!m_tonemapping_remove_icc) {
+        Error warning = { heif_error_Unsupported_feature, heif_suberror_Lossy_Tonemapping, "Stripping content lighting level from non-PQ transfer characteristics" };
+        out->add_warning(warning);
+      }
     }
 
     const auto& warnings = in->get_warnings();
@@ -580,6 +586,10 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 
   if (output_state.nclx.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
     output_state.nclx.set_matrix_coefficients(input_state.nclx.get_matrix_coefficients());
+  }
+
+  if (output_state.colorspace == heif_colorspace_RGB) {
+    output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR); // Force RGB matrix coefficients for RGB colorspace
   }
 
   if (output_state.nclx.get_colour_primaries() == heif_color_primaries_unspecified) {
