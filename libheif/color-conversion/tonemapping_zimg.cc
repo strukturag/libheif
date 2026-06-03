@@ -150,6 +150,7 @@ static Error run_zimg(const zimg_filter_graph* pipeline, const zimg_image_buffer
   if (zimg_filter_graph_get_tmp_size(pipeline, &tmp_size) != ZIMG_ERROR_SUCCESS) {
     return Error::InternalError;
   }
+  // add y offset to descriptors
   zimg_image_buffer_const descriptor_in;
   zimg_image_buffer descriptor_out;
   descriptor_in = *img_buf_in;
@@ -170,12 +171,13 @@ static Error run_zimg(const zimg_filter_graph* pipeline, const zimg_image_buffer
     descriptor_in.plane[3].data = (const char*)descriptor_in.plane[3].data + offset * descriptor_in.plane[3].stride;
     descriptor_out.plane[3].data = (char*)descriptor_out.plane[3].data + offset * descriptor_out.plane[3].stride;
   }
-  // alignment of all images should be 32 bytes
+  // enforce memory limits
   MemoryHandle limiter;
   Error alloc_error = limiter.alloc(tmp_size, limits, "zimg temporary buffer");
   if (alloc_error.error_code != 0) {
     return alloc_error;
   }
+  // alignment of all images should be 32 bytes
   void* tmp = zimg_x_aligned_malloc(tmp_size, 32);
   if (!tmp)
     return Error(heif_error_Memory_allocation_error, heif_suberror_Unspecified, "");
@@ -318,20 +320,20 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   switch (input->get_colorspace()) {
   case heif_colorspace_YCbCr:
       descriptor_in.plane[0].data = input->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_in.plane[0].stride);
-      descriptor_in.plane[0].mask = zimg_select_buffer_mask(height);
+      descriptor_in.plane[0].mask = zimg_select_buffer_mask(slice_height);
       descriptor_in.plane[1].data = input->get_channel_memory(heif_channel_Cb, (size_t*)&descriptor_in.plane[1].stride);
-      descriptor_in.plane[1].mask = zimg_select_buffer_mask(chroma_height(height, input_state.chroma));
+      descriptor_in.plane[1].mask = zimg_select_buffer_mask(chroma_height(slice_height, input_state.chroma));
       descriptor_in.plane[2].data = input->get_channel_memory(heif_channel_Cr, (size_t*)&descriptor_in.plane[2].stride);
-      descriptor_in.plane[2].mask = zimg_select_buffer_mask(chroma_height(height, input_state.chroma));
+      descriptor_in.plane[2].mask = zimg_select_buffer_mask(chroma_height(slice_height, input_state.chroma));
     break;
   case heif_colorspace_RGB:
     if (input->get_chroma_format() == heif_chroma_444) {
       descriptor_in.plane[0].data = input->get_channel_memory(heif_channel_R, (size_t*)&descriptor_in.plane[0].stride);
-      descriptor_in.plane[0].mask = zimg_select_buffer_mask(height);
+      descriptor_in.plane[0].mask = zimg_select_buffer_mask(slice_height);
       descriptor_in.plane[1].data = input->get_channel_memory(heif_channel_G, (size_t*)&descriptor_in.plane[1].stride);
-      descriptor_in.plane[1].mask = zimg_select_buffer_mask(height);
+      descriptor_in.plane[1].mask = zimg_select_buffer_mask(slice_height);
       descriptor_in.plane[2].data = input->get_channel_memory(heif_channel_B, (size_t*)&descriptor_in.plane[2].stride);
-      descriptor_in.plane[2].mask = zimg_select_buffer_mask(height);
+      descriptor_in.plane[2].mask = zimg_select_buffer_mask(slice_height);
     }
     else {
       return Error::InternalError;
@@ -353,11 +355,11 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_out.plane[0].stride);
-    descriptor_out.plane[0].mask = zimg_select_buffer_mask(height);
+    descriptor_out.plane[0].mask = zimg_select_buffer_mask(slice_height);
     descriptor_out.plane[1].data = outimg->get_channel_memory(heif_channel_Cb, (size_t*)&descriptor_out.plane[1].stride);
-    descriptor_out.plane[1].mask = zimg_select_buffer_mask(chroma_height(height, target_state.chroma));
+    descriptor_out.plane[1].mask = zimg_select_buffer_mask(chroma_height(slice_height, target_state.chroma));
     descriptor_out.plane[2].data = outimg->get_channel_memory(heif_channel_Cr, (size_t*)&descriptor_out.plane[2].stride);
-    descriptor_out.plane[2].mask = zimg_select_buffer_mask(chroma_height(height, target_state.chroma));
+    descriptor_out.plane[2].mask = zimg_select_buffer_mask(chroma_height(slice_height, target_state.chroma));
     break;
   case heif_colorspace_RGB:
     if (auto err = outimg->add_channel(heif_channel_R, width, height, target_state.bits_per_pixel, limits)) {
@@ -370,18 +372,18 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_R, (size_t*)&descriptor_out.plane[0].stride);
-    descriptor_out.plane[0].mask = zimg_select_buffer_mask(height);
+    descriptor_out.plane[0].mask = zimg_select_buffer_mask(slice_height);
     descriptor_out.plane[1].data = outimg->get_channel_memory(heif_channel_G, (size_t*)&descriptor_out.plane[1].stride);
-    descriptor_out.plane[1].mask = zimg_select_buffer_mask(height);
+    descriptor_out.plane[1].mask = zimg_select_buffer_mask(slice_height);
     descriptor_out.plane[2].data = outimg->get_channel_memory(heif_channel_B, (size_t*)&descriptor_out.plane[2].stride);
-    descriptor_out.plane[2].mask = zimg_select_buffer_mask(height);
+    descriptor_out.plane[2].mask = zimg_select_buffer_mask(slice_height);
     break;
   case heif_colorspace_monochrome:
     if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_out.plane[0].stride);
-    descriptor_out.plane[0].mask = zimg_select_buffer_mask(height);
+    descriptor_out.plane[0].mask = zimg_select_buffer_mask(slice_height);
     break;
   default:
     return Error::InternalError;
@@ -394,7 +396,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     }
     if (has_alpha) {
       descriptor_in.plane[3].data = input->get_channel_memory(heif_channel_Alpha, (size_t*) & descriptor_in.plane[3].stride);
-      descriptor_in.plane[3].mask = zimg_select_buffer_mask(height);
+      descriptor_in.plane[3].mask = zimg_select_buffer_mask(slice_height);
     }
     else {
       descriptor_in.plane[3].data = 0;
@@ -420,7 +422,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
       size_t offset = slice_height * thread;
       size_t chroma_offset_in, chroma_offset_out;
       if (input->get_chroma_format() == heif_chroma_420) {
-        chroma_offset_in = offset / 2;
+        chroma_offset_in = offset / 2; // slice_height is an even number
       }else{
         chroma_offset_in = offset;
       }
