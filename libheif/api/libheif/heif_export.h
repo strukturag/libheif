@@ -35,7 +35,8 @@
 #else
 #define LIBHEIF_API __declspec(dllimport)
 #endif
-#elif defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
+#elif (defined(__GNUC__) || defined(__clang__)) && defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
+// GCC-style visibility attributes.
 #ifdef LIBHEIF_EXPORTS
 #define LIBHEIF_API __attribute__((__visibility__("default")))
 #else
