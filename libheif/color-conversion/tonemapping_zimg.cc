@@ -304,9 +304,14 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     break;
   }
   heif_content_light_level cll = input->get_clli();
-  if (cll.max_content_light_level != 0) {
-    opt.nominal_peak_luminance = cll.max_content_light_level; // TODO: image appears very dark
-  }
+  // TODO: zimg doesn't have good HDR to SDR operator.
+  // Don't set peak luminance here. The image appears dark when the peak luminance is too high,
+  // and bright when the peak luminance is too low.
+  // Will need a different HDR to SDR tone mapping operator for higher quality.
+  
+  // if (cll.max_content_light_level != 0) {
+  //   opt.nominal_peak_luminance = cll.max_content_light_level; // TODO: 
+  // }
 
   // create color conversion pipeline (TODO: 0.01 seconds, but cannot be moved to state_after_conversion because computations made there might not used.
   std::unique_ptr<zimg_filter_graph, void(*)(zimg_filter_graph*)> pipeline(zimg_filter_graph_build(&image_format_in, &image_format_out, &opt), &zimg_filter_graph_free);
