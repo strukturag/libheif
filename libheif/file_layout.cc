@@ -135,8 +135,13 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
                 "Cannot read meta box with unspecified size"};
       }
 
-      // TODO: overflow
-      uint64_t end_of_meta_box = meta_box_start + box_header.get_box_size();
+      uint64_t end_of_meta_box = box_header.get_box_size();
+      if (end_of_meta_box > std::numeric_limits<uint64_t>::max() - meta_box_start) {
+        return {heif_error_Invalid_input,
+                heif_suberror_No_meta_box,
+                "Cannot read meta box with invalid size"};
+      }
+      end_of_meta_box += meta_box_start;
       if (m_max_length < end_of_meta_box) {
         m_max_length = m_stream_reader->request_range(meta_box_start, end_of_meta_box);
       }
@@ -168,7 +173,13 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
                 heif_suberror_Invalid_mini_box,
                 "Cannot read mini box with unspecified size"};
       }
-      uint64_t end_of_mini_box = mini_box_start + box_header.get_box_size();
+      uint64_t end_of_mini_box = box_header.get_box_size();
+      if (end_of_mini_box > std::numeric_limits<uint64_t>::max() - mini_box_start) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Invalid_mini_box,
+                "Cannot read mini box with invalid size"};
+      }
+      end_of_mini_box += mini_box_start;
       if (m_max_length < end_of_mini_box) {
         m_max_length = m_stream_reader->request_range(mini_box_start, end_of_mini_box);
       }
@@ -200,8 +211,13 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
                 "Cannot read moov box with unspecified size"};
       }
 
-      // TODO: overflow
-      uint64_t end_of_moov_box = moov_box_start + box_header.get_box_size();
+      uint64_t end_of_moov_box = box_header.get_box_size();
+      if (end_of_moov_box > std::numeric_limits<uint64_t>::max() - moov_box_start) {
+        return {heif_error_Invalid_input,
+                heif_suberror_No_moov_box,
+                "Cannot read moov box with invalid size"};
+      }
+      end_of_moov_box += moov_box_start;
       if (m_max_length < end_of_moov_box) {
         m_max_length = m_stream_reader->request_range(moov_box_start, end_of_moov_box);
       }
