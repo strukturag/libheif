@@ -30,6 +30,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -55,6 +56,11 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
     return range.get_error();
   }
 
+  if (mini_data.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_mini_box,
+            "Payload too large in MinimizedImageBox"};
+  }
   BitReader bits(mini_data.data(), (int)(mini_data.size()));
 
   m_version = bits.get_bits8(2);
@@ -1295,6 +1301,12 @@ static Error parse_codec_config_box(const std::vector<uint8_t>& config_bytes,
                                     std::shared_ptr<Box>* out_box)
 {
   const size_t header_size = 8;
+  if (config_bytes.size() > std::numeric_limits<size_t>::max() - header_size) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_mini_box,
+            "Codec config in MinimizedImageBox is too large"};
+  }
+
   const size_t total_size = header_size + config_bytes.size();
   if (total_size > 0x7FFFFFFFu) {
     return {heif_error_Invalid_input,
