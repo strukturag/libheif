@@ -528,7 +528,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Camera_intrinsic_matrix_undefined", heif_suberror_Camera_intrinsic_matrix_undefined)
     .value("heif_suberror_Camera_extrinsic_matrix_undefined", heif_suberror_Camera_extrinsic_matrix_undefined)
     .value("heif_suberror_Invalid_J2K_codestream", heif_suberror_Invalid_J2K_codestream)
-    .value("heif_suberror_No_icbr_box", heif_suberror_No_icbr_box);
+    .value("heif_suberror_No_icbr_box", heif_suberror_No_icbr_box)
+    .value("heif_suberror_Lossy_Tonemapping", heif_suberror_Lossy_Tonemapping);
 
     emscripten::enum_<heif_compression_format>("heif_compression_format")
     .value("heif_compression_undefined", heif_compression_undefined)

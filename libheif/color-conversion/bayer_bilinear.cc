@@ -53,6 +53,7 @@ Op_bayer_bilinear_to_RGB24_32::state_after_conversion(const ColorState& input_st
   else {
     return {};
   }
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
