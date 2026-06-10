@@ -40,7 +40,9 @@
 #include "hdr_sdr.h"
 #include "chroma_sampling.h"
 #include "bayer_bilinear.h"
+#ifdef WITH_ZIMG
 #include "tonemapping_zimg.h"
+#endif
 
 #if ENABLE_MULTITHREADING_SUPPORT
 
@@ -276,7 +278,9 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint8_t>>());
   ops.emplace_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint16_t>>());
   ops.emplace_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
+#ifdef WITH_ZIMG
   ops.emplace_back(std::make_shared<Op_zimg>());
+#endif
 }
 
 
