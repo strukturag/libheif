@@ -8,6 +8,8 @@ on:
   schedule:
     - cron: "0 2 * * SUN"
 
+permissions: read-all
+
 jobs:
   Fuzzing:
     runs-on: ubuntu-22.04
@@ -25,21 +27,21 @@ jobs:
     steps:
     - name: Build Fuzzers
       id: build
-      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@439b356d09b53fe1161e9fe22ac42536926983db  # master
       with:
         oss-fuzz-project-name: 'libheif'
         dry-run: false
         architecture: ${{ matrix.architecture }}
         sanitizer: ${{ matrix.sanitizer }}
     - name: Run Fuzzers
-      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@439b356d09b53fe1161e9fe22ac42536926983db  # master
       with:
         oss-fuzz-project-name: 'libheif'
         fuzz-seconds: 600
         dry-run: false
         sanitizer: ${{ matrix.sanitizer }}
     - name: Upload Crash
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
       if: failure() && steps.build.outcome == 'success'
       with:
         name: artifacts-${{ matrix.sanitizer }}-${{ matrix.architecture }}
