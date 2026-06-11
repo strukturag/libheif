@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master, coverity ]
 
+permissions:
+  contents: read
+
 jobs:
   scan:
     # TEMPORARILY DISABLED: scan.coverity.com is down and the download step
