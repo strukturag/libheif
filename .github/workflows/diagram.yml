@@ -4,13 +4,15 @@ on:
   push:
     branches:
       - main
+permissions: read-all
+
 jobs:
   get_data:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
       - name: Update diagram
-        uses: githubocto/repo-visualizer@main
+        uses: githubocto/repo-visualizer@a999615bdab757559bf94bda1fe6eef232765f85  # main
         with:
           excluded_paths: "ignore,.github"

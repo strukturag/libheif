@@ -4,6 +4,8 @@ on:
   push:
     branches: [ master, coverity ]
 
+permissions: read-all
+
 jobs:
   scan:
     # TEMPORARILY DISABLED: scan.coverity.com is down and the download step
@@ -20,10 +22,10 @@ jobs:
       WITH_RAV1E: 0
       WITH_X265: 1
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - name: Cache Coverity build tool
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
       with:
         path: |
           coverity_tool.tar.gz
