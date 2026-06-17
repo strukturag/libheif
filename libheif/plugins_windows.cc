@@ -49,6 +49,14 @@ std::vector<std::string> list_all_potential_plugins_in_directory_windows(const c
 {
   std::vector<std::string> result;
 
+  // An empty directory string would build the search pattern "\\*.dll", which makes
+  // FindFirstFile() scan the root of the current drive (e.g. C:\). This happens when
+  // the library is built with an empty PLUGIN_DIRECTORY and no LIBHEIF_PLUGIN_PATH is
+  // set. Skip scanning in that case so that heif_init() does not fail on stray DLLs.
+  if (directory == nullptr || directory[0] == '\0') {
+    return result;
+  }
+
   HANDLE hFind;
   WIN32_FIND_DATA FindFileData;
 

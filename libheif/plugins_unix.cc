@@ -57,6 +57,14 @@ std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char
 {
   std::vector<std::string> result;
 
+  // An empty directory string means there is no plugin directory to scan. This happens
+  // when the library is built with an empty PLUGIN_DIRECTORY and no LIBHEIF_PLUGIN_PATH
+  // is set. opendir("") fails anyway, but skip it explicitly to mirror the Windows path
+  // and avoid building bogus "/plugin.so" filenames.
+  if (directory == nullptr || directory[0] == '\0') {
+    return result;
+  }
+
   DIR* dir = opendir(directory);
   if (dir == nullptr) {
     return {}; // TODO: return error_cannot_read_plugin_directory;
