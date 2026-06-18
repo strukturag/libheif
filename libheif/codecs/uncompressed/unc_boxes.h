@@ -335,6 +335,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   std::vector<CompressedUnitInfo> m_unit_infos;
+  MemoryHandle m_memory_handle;
 
 private:
   const uint8_t get_required_offset_code(uint64_t offset) const;

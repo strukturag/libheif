@@ -833,9 +833,12 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
             sstr.str()};
   }
 
-  // TODO: should we impose some security limit?
-
   // --- read box content
+
+  if (auto err = m_memory_handle.alloc(num_compressed_units, sizeof(CompressedUnitInfo),
+                                       limits, "icef box compressed unit infos")) {
+    return err;
+  }
 
   m_unit_infos.resize(num_compressed_units);
 
