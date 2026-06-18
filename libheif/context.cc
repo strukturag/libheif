@@ -1539,6 +1539,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
       output_profile.set_matrix_coefficients(options.output_image_nclx_profile->matrix_coefficients);
       output_profile.set_colour_primaries(options.output_image_nclx_profile->color_primaries);
       output_profile.set_full_range_flag(options.output_image_nclx_profile->full_range_flag);
+      output_profile.set_transfer_characteristics(options.output_image_nclx_profile->transfer_characteristics);
     }
     else if (nclx_passthrough) {
       // Keep input image's NCLX as the conversion target so a chroma/colorspace
