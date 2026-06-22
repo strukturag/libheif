@@ -333,14 +333,14 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
     valid_pixi = pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Y));
   }
   else if (colorspace == heif_colorspace_YCbCr) {
-    valid_pixi = (pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Y)) ||
-                  pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Cb)) ||
+    valid_pixi = (pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Y)) &&
+                  pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Cb)) &&
                   pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_Cr)));
   }
   else if (colorspace == heif_colorspace_RGB) {
     if (chroma == heif_chroma_444) {
-      valid_pixi = (pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_R)) ||
-                    pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_G)) ||
+      valid_pixi = (pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_R)) &&
+                    pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_G)) &&
                     pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_B)));
     }
     else if (chroma == heif_chroma_interleaved_RGB ||
@@ -350,8 +350,8 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
              chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
              chroma == heif_chroma_interleaved_RRGGBBAA_BE) {
       uint16_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
-      valid_pixi = (pixi->add_channel_bits(bpp) ||
-                    pixi->add_channel_bits(bpp) ||
+      valid_pixi = (pixi->add_channel_bits(bpp) &&
+                    pixi->add_channel_bits(bpp) &&
                     pixi->add_channel_bits(bpp));
     }
   }
