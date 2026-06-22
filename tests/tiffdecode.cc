@@ -33,7 +33,6 @@
 #include "libheif/heif.h"
 #include "libheif/api_structs.h"
 
-#if HAVE_LIBTIFF
 void checkMono(InputImage input_image) {
   REQUIRE(input_image.orientation == heif_orientation_normal);
   REQUIRE(input_image.image != nullptr);
@@ -139,8 +138,3 @@ TEST_CASE("rgba_planar") {
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
 }
-#else
-TEST_CASE("no_tiff dummy") {
-  // Dummy test if we don't have the TIFF library, so that testing does not fail with "No test ran".
-}
-#endif // HAVE_LIBTIFF

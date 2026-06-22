@@ -114,7 +114,15 @@ else()
     message(WARNING "Tests of the 'uncompressed codec' are not compiled because the uncompressed codec is not enabled (WITH_UNCOMPRESSED_CODEC==OFF)")
 endif ()
 
-add_heifio_test(tiffdecode)
+# find_package(TIFF) is called in the heifio subdirectory, but its result
+# variables do not propagate to this sibling directory scope. Query again
+# (the result is cached) so we only build the TIFF test when libtiff is present.
+find_package(TIFF)
+if (TIFF_FOUND)
+    add_heifio_test(tiffdecode)
+else()
+    message(INFO " Disabling the TIFF decoder test because libtiff was not found")
+endif ()
 
 if (ENABLE_PLUGIN_LOADING)
     get_directory_property(ALL_TESTS TESTS)
