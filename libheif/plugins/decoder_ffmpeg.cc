@@ -69,6 +69,11 @@ struct ffmpeg_decoder
   }
 };
 
+// H. 264, H. 265, H. 266 require NAL. Others have no NAL.
+static bool supportsNal(AVCodecID id) {
+  return id == AV_CODEC_ID_H264 || id == AV_CODEC_ID_H265 || id == AV_CODEC_ID_H266;
+}
+
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -78,7 +83,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 
 static const char* ffmpeg_plugin_name()
 {
-  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "FFMPEG AVC/HEVC decoder %s", av_version_info());
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "FFmpeg decoder %s", av_version_info());
   plugin_name[MAX_PLUGIN_NAME_LENGTH - 1] = 0; //null-terminated
 
   return plugin_name;
@@ -99,30 +104,21 @@ static void ffmpeg_deinit_plugin()
 
 static int ffmpeg_does_support_format(heif_compression_format format)
 {
-  // TODO: it should work at least also for AV1 and JPEG. Check why it isn't decoding.
-
-  if (format == heif_compression_HEVC) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-  else if (format == heif_compression_AVC) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-#if 0
-  else if (format == heif_compression_VVC) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-  else if (format == heif_compression_AV1) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-  else if (format == heif_compression_JPEG) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-  else if (format == heif_compression_JPEG2000 ||
-           format == heif_compression_HTJ2K) {
-    return FFMPEG_DECODER_PLUGIN_PRIORITY;
-  }
-#endif
-  else {
+  switch(format) {
+  case heif_compression_HEVC:
+    return avcodec_find_decoder(AV_CODEC_ID_HEVC) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_AVC:
+    return avcodec_find_decoder(AV_CODEC_ID_H264) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_VVC:
+    return avcodec_find_decoder(AV_CODEC_ID_VVC) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_AV1:
+    return avcodec_find_decoder(AV_CODEC_ID_AV1) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_JPEG:
+    return avcodec_find_decoder(AV_CODEC_ID_MJPEG) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_JPEG2000:
+  case heif_compression_HTJ2K:
+    return avcodec_find_decoder(AV_CODEC_ID_JPEG2000) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  default:
     return 0;
   }
 }
@@ -146,7 +142,6 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
     case heif_compression_HEVC:
       decoder->av_codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
       break;
-#if 0
     case heif_compression_VVC:
       decoder->av_codec = avcodec_find_decoder(AV_CODEC_ID_VVC);
       break;
@@ -160,7 +155,6 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
     case heif_compression_HTJ2K:
       decoder->av_codec = avcodec_find_decoder(AV_CODEC_ID_JPEG2000);
       break;
-#endif
     default:
       assert(false);
       return {
@@ -227,36 +221,40 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
   ffmpeg_decoder::Packet pkt;
 
   size_t ptr = 0;
-  while (ptr < size)
-  {
-    if (size - ptr < 4) {
-      return {
-        heif_error_Decoder_plugin_error,
-        heif_suberror_End_of_data,
-        "insufficient data"
-      };
+  if (supportsNal(decoder->av_codec->id)) {
+    while (ptr < size)
+    {
+      if (size - ptr < 4) {
+        return {
+          heif_error_Decoder_plugin_error,
+          heif_suberror_End_of_data,
+          "insufficient data"
+        };
+      }
+
+      uint32_t nal_size = four_bytes_to_uint32(cdata[ptr + 0],
+                                               cdata[ptr + 1],
+                                               cdata[ptr + 2],
+                                               cdata[ptr + 3]);
+      ptr += 4;
+
+      if (nal_size > size - ptr) {
+        return {
+          heif_error_Decoder_plugin_error,
+          heif_suberror_End_of_data,
+          "insufficient data"
+        };
+      }
+
+      pkt.data.push_back(0);
+      pkt.data.push_back(0);
+      pkt.data.push_back(1);
+      pkt.data.insert(pkt.data.end(), cdata + ptr, cdata + ptr + nal_size);
+      ptr += nal_size;
     }
-
-    uint32_t nal_size = four_bytes_to_uint32(cdata[ptr + 0],
-                                             cdata[ptr + 1],
-                                             cdata[ptr + 2],
-                                             cdata[ptr + 3]);
-    ptr += 4;
-
-    if (nal_size > size - ptr) {
-      return {
-        heif_error_Decoder_plugin_error,
-        heif_suberror_End_of_data,
-        "insufficient data"
-      };
-    }
-
-    pkt.data.push_back(0);
-    pkt.data.push_back(0);
-    pkt.data.push_back(1);
-    pkt.data.insert(pkt.data.end(), cdata + ptr, cdata + ptr + nal_size);
-
-    ptr += nal_size;
+  }
+  else {
+    pkt.data.insert(pkt.data.end(), cdata, cdata + size);
   }
 
   pkt.user_data = user_data;
@@ -314,7 +312,7 @@ static int ffmpeg_get_chroma_width(const AVFrame* frame, heif_channel channel, h
     }
     else if (chroma == heif_chroma_420 || chroma == heif_chroma_422)
     {
-        return (frame->width + 1) / 2;
+        return frame->width / 2 + (frame->width & 1); // note: prevents integer overflow( + 1) / 2;
     }
     else
     {
@@ -330,7 +328,7 @@ static int ffmpeg_get_chroma_height(const AVFrame* frame, heif_channel channel, 
     }
     else if (chroma == heif_chroma_420)
     {
-        return (frame->height + 1) / 2;
+        return frame->height / 2 + (frame->height & 1); // note: prevents integer overflow( + 1) / 2;
     }
     else
     {
