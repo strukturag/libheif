@@ -371,3 +371,4 @@ cp ../fuzzing/data/dictionary.txt "$OUT/box-fuzzer.dict"
 cp ../fuzzing/data/dictionary.txt "$OUT/file-fuzzer.dict"
 
 zip -r "$OUT/file-fuzzer_seed_corpus.zip" ../fuzzing/data/corpus/*.heic
+zip -j -r "$OUT/sequence_fuzzer_seed_corpus.zip" ../fuzzing/data/sequence_corpus/*
