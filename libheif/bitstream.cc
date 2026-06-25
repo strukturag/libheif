@@ -537,7 +537,7 @@ void BitstreamRange::skip_without_advancing_file_pos(size_t n)
 }
 
 
-BitReader::BitReader(const uint8_t* buffer, int len)
+BitReader::BitReader(const uint8_t* buffer, size_t len)
   : data_start(buffer),
     data_length(len)
 {

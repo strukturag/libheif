@@ -503,7 +503,7 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
   // TODO: we probably do not need a full BitReader just for the array size.
   // Read this and the NAL size directly on the array data.
 
-  BitReader reader(data.data(), (int) data.size());
+  BitReader reader(data.data(), data.size());
   if (reader.get_bits_remaining() < 32) {
     return {heif_error_Invalid_input,
             heif_suberror_End_of_data,
@@ -516,10 +516,10 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
     // ERROR: read past end of data
   }
 
-  while (reader.get_current_byte_index() < (int) len) {
-    int currPos = reader.get_current_byte_index();
+  while (reader.get_current_byte_index() < len) {
+    size_t currPos = reader.get_current_byte_index();
 
-    BitReader sei_reader(data.data() + currPos, (int) data.size() - currPos);
+    BitReader sei_reader(data.data() + currPos, data.size() - currPos);
 
     if (sei_reader.get_bits_remaining() < 32+8) {
       return {heif_error_Invalid_input,
@@ -604,7 +604,7 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   size = sps_no_emul.size();
 
 
-  BitReader reader(sps, (int) size);
+  BitReader reader(sps, size);
 
   // skip NAL header
   reader.skip_bits(2 * 8);

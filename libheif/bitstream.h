@@ -408,7 +408,7 @@ private:
 class BitReader
 {
 public:
-  BitReader(const uint8_t* buffer, int len);
+  BitReader(const uint8_t* buffer, size_t len);
 
   void reset();
 
@@ -447,7 +447,7 @@ public:
 
   bool get_svlc(int32_t* value);
 
-  int get_current_byte_index() const
+  size_t get_current_byte_index() const
   {
     return data_length - bytes_remaining - nextbits_cnt / 8;
   }
@@ -460,8 +460,8 @@ public:
 private:
   const uint8_t* const data_start;
   const uint8_t* data;
-  const int data_length;
-  int bytes_remaining;
+  const size_t data_length;
+  size_t bytes_remaining;
 
   uint64_t nextbits; // left-aligned bits
   int nextbits_cnt;

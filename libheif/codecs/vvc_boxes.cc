@@ -425,7 +425,7 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
   sps = sps_no_emul.data();
   size = sps_no_emul.size();
 
-  BitReader reader(sps, (int) size);
+  BitReader reader(sps, size);
 
   // skip NAL header
   reader.skip_bits(2 * 8);

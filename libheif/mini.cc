@@ -56,12 +56,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
     return range.get_error();
   }
 
-  if (mini_data.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Invalid_mini_box,
-            "Payload too large in MinimizedImageBox"};
-  }
-  BitReader bits(mini_data.data(), (int)(mini_data.size()));
+  BitReader bits(mini_data.data(), mini_data.size());
 
   m_version = bits.get_bits8(2);
   m_explicit_codec_types_flag = bits.get_flag();

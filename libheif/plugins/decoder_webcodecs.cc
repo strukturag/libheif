@@ -215,7 +215,7 @@ Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
   size = sps_no_emul.size();
 
 
-  BitReader reader(sps, (int) size);
+  BitReader reader(sps, size);
 
   // skip NAL header
   reader.skip_bits(2 * 8);

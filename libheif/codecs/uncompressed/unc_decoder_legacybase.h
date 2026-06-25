@@ -45,7 +45,7 @@
 class UncompressedBitReader : public BitReader
 {
 public:
-  UncompressedBitReader(const std::vector<uint8_t>& data) : BitReader(data.data(), (int) data.size()) {}
+  UncompressedBitReader(const std::vector<uint8_t>& data) : BitReader(data.data(), data.size()) {}
 
   void markPixelStart()
   {
@@ -65,7 +65,7 @@ public:
   inline Error handlePixelAlignment(uint32_t pixel_size)
   {
     if (pixel_size != 0) {
-      uint32_t bytes_in_pixel = get_current_byte_index() - m_pixelStartOffset;
+      uint32_t bytes_in_pixel = static_cast<uint32_t>(get_current_byte_index() - m_pixelStartOffset);
       if (pixel_size > bytes_in_pixel) {
         uint32_t padding = pixel_size - bytes_in_pixel;
         skip_bytes(padding);
@@ -89,7 +89,7 @@ public:
   {
     skip_to_byte_boundary();
     if (alignment != 0) {
-      uint32_t bytes_in_row = get_current_byte_index() - m_rowStartOffset;
+      uint32_t bytes_in_row = static_cast<uint32_t>(get_current_byte_index() - m_rowStartOffset);
       uint32_t residual = bytes_in_row % alignment;
       if (residual != 0) {
         uint32_t padding = alignment - residual;
@@ -101,7 +101,7 @@ public:
   void handleTileAlignment(uint32_t alignment)
   {
     if (alignment != 0) {
-      uint32_t bytes_in_tile = get_current_byte_index() - m_tileStartOffset;
+      uint32_t bytes_in_tile = static_cast<uint32_t>(get_current_byte_index() - m_tileStartOffset);
       uint32_t residual = bytes_in_tile % alignment;
       if (residual != 0) {
         uint32_t tile_padding = alignment - residual;
@@ -111,9 +111,9 @@ public:
   }
 
 private:
-  int m_pixelStartOffset = 0;
-  int m_rowStartOffset = 0;
-  int m_tileStartOffset = 0;
+  size_t m_pixelStartOffset = 0;
+  size_t m_rowStartOffset = 0;
+  size_t m_tileStartOffset = 0;
 };
 
 
