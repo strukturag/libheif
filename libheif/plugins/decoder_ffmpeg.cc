@@ -116,8 +116,15 @@ static int ffmpeg_does_support_format(heif_compression_format format)
   case heif_compression_JPEG:
     return avcodec_find_decoder(AV_CODEC_ID_MJPEG) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
   case heif_compression_JPEG2000:
-  case heif_compression_HTJ2K:
     return avcodec_find_decoder(AV_CODEC_ID_JPEG2000) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+  case heif_compression_HTJ2K:
+    // FFmpeg gained High-Throughput JPEG 2000 (HT block coder) decoding in 7.0
+    // (libavcodec 61). Earlier versions silently misdecode the HT codestream.
+#if LIBAVCODEC_VERSION_MAJOR >= 61
+    return avcodec_find_decoder(AV_CODEC_ID_JPEG2000) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
+#else
+    return 0;
+#endif
   default:
     return 0;
   }
@@ -212,11 +219,69 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
   decoder->strict_decoding = flag;
 }
 
+#if LIBAVCODEC_VERSION_MAJOR < 61
+// Scan a JPEG 2000 codestream main header for the CAP marker (0xFF50), which
+// signals the High-Throughput (HT) block coder (JPEG 2000 Part 15). FFmpeg
+// gained HT decoding only in 7.0 (libavcodec 61); older versions silently
+// misdecode the stream, so we use this to refuse HT input on those.
+static bool jpeg2000_codestream_uses_HT(const uint8_t* data, size_t size)
+{
+  // main header must start with the SOC marker (FF4F)
+  if (size < 2 || data[0] != 0xFF || data[1] != 0x4F) {
+    return false;
+  }
+
+  size_t pos = 2;
+  while (pos + 2 <= size) {
+    if (data[pos] != 0xFF) {
+      break;  // not positioned on a marker -> stop scanning
+    }
+
+    uint16_t marker = (uint16_t(data[pos]) << 8) | data[pos + 1];
+
+    if (marker == 0xFF50) {  // CAP
+      return true;
+    }
+    if (marker == 0xFF90 ||  // SOT  -> main header finished
+        marker == 0xFFD9) {  // EOC
+      break;
+    }
+
+    // All remaining main-header markers carry a 2-byte segment length.
+    if (pos + 4 > size) {
+      break;
+    }
+    uint16_t seg_len = (uint16_t(data[pos + 2]) << 8) | data[pos + 3];
+    if (seg_len < 2) {
+      break;  // malformed
+    }
+    pos += 2 + seg_len;
+  }
+
+  return false;
+}
+#endif
+
+
 static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t size, uintptr_t user_data)
 {
   ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
+
+#if LIBAVCODEC_VERSION_MAJOR < 61
+  // HEIF reports both plain and HT JPEG 2000 as heif_compression_JPEG2000, so an
+  // HT codestream can reach this plugin even though does_support_format() gates
+  // HTJ2K off. Detect it from the codestream and refuse, rather than emit garbage.
+  if (decoder->av_codec->id == AV_CODEC_ID_JPEG2000 &&
+      jpeg2000_codestream_uses_HT(cdata, size)) {
+    return {
+      heif_error_Unsupported_feature,
+      heif_suberror_Unsupported_data_version,
+      "High-Throughput JPEG 2000 decoding requires FFmpeg 7.0 or later"
+    };
+  }
+#endif
 
   ffmpeg_decoder::Packet pkt;
 
