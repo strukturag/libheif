@@ -298,6 +298,24 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     }
 
     auto alphaImage = *alphaResult;
+
+    // The alpha auxiliary track may have a different size than the main track. Nothing in the
+    // standard forbids this. We scale it to the main image size so that downstream consumers can
+    // rely on the alpha plane matching the color planes. This mirrors what the still-image decoder
+    // does in ImageItem (see image_item.cc). As noted there, we may later add a decoding option to
+    // turn this automatic scaling off, but that requires that libheif no longer assumes everywhere
+    // that the alpha channel has the same resolution as the color channels.
+    if (alphaImage->get_width() != image->get_width() ||
+        alphaImage->get_height() != image->get_height()) {
+      std::shared_ptr<HeifPixelImage> scaled_alpha;
+      Error err = alphaImage->scale_nearest_neighbor(scaled_alpha, image->get_width(), image->get_height(),
+                                                     m_heif_context->get_security_limits());
+      if (err) {
+        return err;
+      }
+      alphaImage = std::move(scaled_alpha);
+    }
+
     image->transfer_channel_from_image_as(alphaImage, heif_channel_Y, heif_channel_Alpha);
   }
 
