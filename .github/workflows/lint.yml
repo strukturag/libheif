@@ -12,7 +12,7 @@ jobs:
       CPPLINT: 1
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
@@ -29,7 +29,7 @@ jobs:
   c-api-headers:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install compilers
       run: |
@@ -43,7 +43,7 @@ jobs:
   api-symbols:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install build tools
       run: |
@@ -59,7 +59,7 @@ jobs:
       CHECK_LICENSES: 1
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
