@@ -200,6 +200,9 @@ const char* heif_decoder_descriptor_get_id_name(const heif_decoder_descriptor*);
 //
 // If colorspace or chroma is set to heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
+// Note: for images with matrix_coefficients=0 the "original colorspace" is YCbCr
+// (tagged with matrix_coefficients=0); this is not specified and may change in a future
+// version. See heif_image_handle_get_preferred_decoding_colorspace().
 // Decoding options may be NULL. If you want to supply options, always use
 // heif_decoding_options_alloc() to get the structure.
 LIBHEIF_API

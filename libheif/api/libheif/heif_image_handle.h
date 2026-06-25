@@ -89,6 +89,15 @@ int heif_image_handle_get_chroma_bits_per_pixel(const heif_image_handle*);
 // It may also return *_undefined if the file misses relevant information to determine this without decoding.
 // These are only proposed values that avoid colorspace conversions as much as possible.
 // You can still request the output in your preferred colorspace, but this may involve an internal conversion.
+//
+// Note on matrix_coefficients=0 (H.273 identity, i.e. RGB carried in YCbCr planes):
+// for such images this function proposes RGB. However, heif_decode_image() called with
+// heif_colorspace_undefined currently returns the image still tagged as YCbCr (with
+// matrix_coefficients=0). That tagging is self-consistent. Converting it to RGB applies
+// the identity mapping and yields correct colors, so request heif_colorspace_RGB
+// explicitly if you need RGB output. This exact behavior is not specified and may change.
+// A later version may return RGB directly when decoding with an undefined colorspace.
+// See heif_decode_image().
 LIBHEIF_API
 heif_error heif_image_handle_get_preferred_decoding_colorspace(const heif_image_handle* image_handle,
                                                                heif_colorspace* out_colorspace,
