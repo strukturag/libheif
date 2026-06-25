@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2026 struktur AG, Joachim Bauch <bauch@struktur.de>
+ * Copyright (c) 2026 struktur AG, Arthur SC Chan <arthur.chan@adalogics.com>
  *
  * This file is part of libheif.
  *
