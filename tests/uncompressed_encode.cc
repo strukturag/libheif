@@ -955,3 +955,46 @@ TEST_CASE("Encode tiled YCbCr 4:2:0 unci - chroma placement round-trip")
   heif_image_release(input_image);
   heif_context_free(ctx);
 }
+
+
+// Regression test for the heap OOB write reported as GHSA-xpw3-9rhw-482x
+// (https://github.com/strukturag/libheif/security/advisories/GHSA-xpw3-9rhw-482x).
+// The uncompressed encoder sized its output buffer from the primary image
+// dimensions but copied each component plane using that plane's actual size.
+// A component plane larger than the primary image (e.g. an alpha plane that
+// does not match the color planes, as produced by an image sequence with a
+// mismatched alpha auxiliary track) was memcpy'd past the end of the buffer.
+// The encoder now rejects such inconsistent images instead of overflowing.
+TEST_CASE("Encode rejects oversized component plane")
+{
+  heif_image *image;
+  heif_error err = heif_image_create(2, 2, heif_colorspace_monochrome,
+                                     heif_chroma_monochrome, &image);
+  REQUIRE(err.code == heif_error_Ok);
+
+  err = heif_image_add_plane(image, heif_channel_Y, 2, 2, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // Alpha plane much larger than the 2x2 primary image. heif_image_add_plane
+  // does not validate the plane size against the image size, so this builds the
+  // same inconsistent image that the sequence decoder used to produce.
+  err = heif_image_add_plane(image, heif_channel_Alpha, 256, 256, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_context *ctx = heif_context_alloc();
+  heif_encoder *encoder;
+  err = heif_context_get_encoder_for_format(ctx, heif_compression_uncompressed, &encoder);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle *output_image_handle = nullptr;
+  err = heif_context_encode_image(ctx, image, encoder, nullptr, &output_image_handle);
+  // Must fail cleanly rather than overflow the heap.
+  REQUIRE(err.code != heif_error_Ok);
+
+  if (output_image_handle) {
+    heif_image_handle_release(output_image_handle);
+  }
+  heif_encoder_release(encoder);
+  heif_image_release(image);
+  heif_context_free(ctx);
+}

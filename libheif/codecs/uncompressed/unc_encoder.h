@@ -69,6 +69,11 @@ public:
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<const HeifPixelImage>& src_image,
                                          const heif_encoding_options& options) const;
 
+  // Verify that every component plane has the size implied by the primary image dimensions
+  // (chroma planes may be subsampled). The encoders assume this when sizing their output buffer,
+  // so a mismatched plane would otherwise overflow the buffer during encoding.
+  static Error check_component_sizes(const std::shared_ptr<const HeifPixelImage>& src_image);
+
 protected:
   std::shared_ptr<Box_cmpd> m_cmpd;
   std::shared_ptr<Box_uncC> m_uncC;

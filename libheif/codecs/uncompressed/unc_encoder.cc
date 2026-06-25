@@ -185,9 +185,52 @@ heif_uncompressed_component_format to_unc_component_format(const std::shared_ptr
 }
 
 
+Error unc_encoder::check_component_sizes(const std::shared_ptr<const HeifPixelImage>& src_image)
+{
+  uint32_t image_width = src_image->get_width();
+  uint32_t image_height = src_image->get_height();
+  heif_chroma chroma = src_image->get_chroma_format();
+
+  for (uint32_t id : src_image->get_used_planar_component_ids()) {
+    heif_channel channel = src_image->get_component_channel(id);
+
+    uint32_t expected_width = image_width;
+    uint32_t expected_height = image_height;
+
+    if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
+      if (chroma == heif_chroma_420) {
+        expected_width = (image_width + 1) / 2;
+        expected_height = (image_height + 1) / 2;
+      }
+      else if (chroma == heif_chroma_422) {
+        expected_width = (image_width + 1) / 2;
+      }
+    }
+
+    if (src_image->get_component_width(id) != expected_width ||
+        src_image->get_component_height(id) != expected_height) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Image component plane size does not match the image dimensions"};
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                            const heif_encoding_options& in_options) const
 {
+  // The encoders size their output buffer from the primary image dimensions, but copy each
+  // component plane using that plane's actual size. If a component plane is larger than the primary
+  // image (e.g. an alpha plane that does not match the color planes), this writes out of bounds.
+  // Reject any image whose component planes are inconsistent with the primary size. Chroma (Cb/Cr)
+  // planes are legitimately subsampled, so they are checked against the subsampled size.
+  if (Error err = check_component_sizes(src_image)) {
+    return err;
+  }
+
   auto parameters = std::unique_ptr<heif_unci_image_parameters,
                                     void (*)(heif_unci_image_parameters*)>(heif_unci_image_parameters_alloc(),
                                                                            heif_unci_image_parameters_release);
