@@ -70,7 +70,8 @@ struct encoder_struct_svt
     Tune_PSNR = 1,
     Tune_SSIM = 2,
 #if SVT_AV1_CHECK_VERSION(4, 0, 0)
-    Tune_IQ = 3
+    Tune_IQ = 3,
+    Tune_MS_SSIM = 4
 #endif
   };
 
@@ -118,7 +119,7 @@ static const char* kParam_speed = "speed";
 #if SVT_AV1_CHECK_VERSION(0, 9, 1)
 static const char* kParam_tune = "tune";
 #if SVT_AV1_CHECK_VERSION(4, 0, 0)
-static const char* const kParam_tune_valid_values[] = {"vq", "psnr", "ssim", "iq", nullptr};
+static const char* const kParam_tune_valid_values[] = {"vq", "psnr", "ssim", "iq", "ms-ssim", nullptr};
 #else
 static const char* const kParam_tune_valid_values[] = {"vq", "psnr", "ssim", nullptr};
 #endif
@@ -572,6 +573,10 @@ heif_error svt_set_parameter_string(void* encoder_raw, const char* name, const c
       encoder->tune = encoder_struct_svt::Tune_IQ;
       return heif_error_ok;
     }
+    else if (strcmp(value, "ms-ssim") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_MS_SSIM;
+      return heif_error_ok;
+    }
 #endif
   }
 #endif
@@ -630,6 +635,9 @@ heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
 #if SVT_AV1_CHECK_VERSION(4, 0, 0)
       case encoder_struct_svt::Tune_IQ:
         save_strcpy(value, value_size, "iq");
+        break;
+      case encoder_struct_svt::Tune_MS_SSIM:
+        save_strcpy(value, value_size, "ms-ssim");
         break;
 #endif
       default:
