@@ -390,6 +390,42 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
     *out_user_data = av_frame->pts;
   }
 
+  // FFmpeg's JPEG2000 decoder hands back the codestream's 3 components as packed
+  // "rgb24", but libheif stores them as sYCC (the codestream is tagged sYCC).
+  // De-interleave into YCbCr-444 planes so the container's nclx color conversion
+  // is applied correctly.
+  if (av_dec_ctx->pix_fmt == AV_PIX_FMT_RGB24 &&
+      decoder->av_codec->id == AV_CODEC_ID_JPEG2000) {
+    heif_error err = heif_image_create(av_frame->width, av_frame->height,
+                                       heif_colorspace_YCbCr, heif_chroma_444, image);
+    if (err.code) {
+      return err;
+    }
+    heif_channel planes[3] = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+    uint8_t* dst[3]; size_t dst_stride[3];
+    for (int c = 0; c < 3; c++) {
+      err = heif_image_add_plane_safe(*image, planes[c], av_frame->width, av_frame->height, 8, limits);
+      if (err.code) {
+        decoder->error_message = err.message;
+        err.message = decoder->error_message.c_str();
+        heif_image_release(*image);
+        return err;
+      }
+      dst[c] = heif_image_get_plane2(*image, planes[c], &dst_stride[c]);
+    }
+    const uint8_t* src = av_frame->data[0];
+    int src_stride = av_frame->linesize[0];
+    for (int y = 0; y < av_frame->height; y++) {
+      const uint8_t* row = src + static_cast<size_t>(y) * src_stride;
+      for (int x = 0; x < av_frame->width; x++) {
+        dst[0][y * dst_stride[0] + x] = row[x * 3 + 0];  // Y  <- "R"
+        dst[1][y * dst_stride[1] + x] = row[x * 3 + 1];  // Cb <- "G"
+        dst[2][y * dst_stride[2] + x] = row[x * 3 + 2];  // Cr <- "B"
+      }
+    }
+    return heif_error_success;
+  }
+
   heif_chroma chroma = ffmpeg_get_chroma_format(av_dec_ctx->pix_fmt);
   if (chroma != heif_chroma_undefined) {
     bool is_mono = (chroma == heif_chroma_monochrome);
