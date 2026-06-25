@@ -822,6 +822,15 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // --- check if box is large enough for all the data
 
+  // range.get_remaining_bytes() is bounded by the real file size: Box::read() rejects any box whose
+  // declared size exceeds either the bytes actually available in the file (wait_for_available_bytes())
+  // or the parent box's remaining bytes. So this check already prevents an unbounded allocation:
+  // num_compressed_units cannot exceed the bytes present in the file.
+  // It is, however, not sufficient on its own. With unit_offset_code==0 and unit_size_code==0 a unit
+  // occupies only 1 byte in the file but allocates a 16-byte CompressedUnitInfo, a ~16x amplification
+  // that bypasses the configured memory budget. The alloc() below therefore additionally enforces the
+  // security limits (mirroring Box_snuc).
+
   uint64_t data_size_bytes = static_cast<uint64_t>(num_compressed_units) * (unit_offset_bits + unit_size_bits) / 8;
   if (data_size_bytes > range.get_remaining_bytes()) {
     uint64_t contained_units = range.get_remaining_bytes() / ((unit_offset_bits + unit_size_bits) * 8);
