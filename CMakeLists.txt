@@ -282,6 +282,26 @@ endif()
 plugin_option(FFMPEG_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
 if (WITH_FFMPEG_DECODER)
     find_package(FFMPEG COMPONENTS avcodec avutil)
+
+    if (FFMPEG_avcodec_FOUND)
+        # The set of formats the FFmpeg decoder plugin can handle depends on the
+        # FFmpeg version. HT-J2K (High-Throughput JPEG 2000) decoding was added in
+        # FFmpeg 7.0 (libavcodec 61) and a native VVC decoder in FFmpeg 7.1
+        # (libavcodec 61.19); earlier versions only provide the formats listed below.
+        message(STATUS "FFmpeg decoder (libavcodec ${FFMPEG_avcodec_VERSION}) can decode: HEVC, AVC, AV1, JPEG, JPEG 2000")
+        if (FFMPEG_avcodec_VERSION VERSION_GREATER_EQUAL "61.19")
+            message(STATUS "  FFmpeg also supports VVC and HT-J2K (High-Throughput JPEG 2000) decoding")
+        elseif (FFMPEG_avcodec_VERSION VERSION_GREATER_EQUAL "61")
+            message(STATUS "  FFmpeg also supports HT-J2K (High-Throughput JPEG 2000) decoding")
+            # VVC is detected at runtime (avcodec_find_decoder), not at compile time, and
+            # 7.1 is ABI-compatible with this 7.0 build, so VVC works once the FFmpeg
+            # loaded at runtime is 7.1+ -- no rebuild required.
+            message(STATUS "  VVC decoding additionally needs the FFmpeg at runtime to be 7.1 (libavcodec 61.19) or later")
+        else ()
+            message(STATUS "  HT-J2K decoding needs FFmpeg 7.0 (libavcodec 61) or later")
+            message(STATUS "  VVC decoding needs FFmpeg 7.1 (libavcodec 61.19) or later")
+        endif ()
+    endif ()
 endif ()
 
 # openjph
@@ -400,6 +420,24 @@ endif()
 if (WITH_UNCOMPRESSED_CODEC)
     set(SUPPORTS_UNCOMPRESSED_DECODING TRUE)
     set(SUPPORTS_UNCOMPRESSED_ENCODING TRUE)
+endif()
+
+# The FFmpeg decoder plugin can decode several formats (in addition to the HEIC
+# decoding accounted for above). HEVC/AVC/AV1/JPEG/JPEG2000 work with any supported
+# FFmpeg; HT-J2K needs FFmpeg 7.0 (libavcodec 61) and the native VVC decoder
+# FFmpeg 7.1 (libavcodec 61.19). FFmpeg's SONAME is per-major, so the build-time
+# major version is also the runtime major version.
+if (FFMPEG_avcodec_FOUND)
+    set(SUPPORTS_AVC_DECODING TRUE)
+    set(SUPPORTS_AVIF_DECODING TRUE)
+    set(SUPPORTS_JPEG_DECODING TRUE)
+    set(SUPPORTS_J2K_DECODING TRUE)
+    if (FFMPEG_avcodec_VERSION VERSION_GREATER_EQUAL "61")
+        set(SUPPORTS_J2K_HT_DECODING TRUE)
+    endif()
+    if (FFMPEG_avcodec_VERSION VERSION_GREATER_EQUAL "61.19")
+        set(SUPPORTS_VVC_DECODING TRUE)
+    endif()
 endif()
 
 message("\n=== Supported formats ===")

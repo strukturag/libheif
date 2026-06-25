@@ -103,9 +103,17 @@ function (_ffmpeg_find component headername)
         string(TOUPPER "${component}" component_upper)
         file(STRINGS "${version_header_path}" version
           REGEX "#define  *LIB${component_upper}_VERSION_(MAJOR|MINOR|MICRO) ")
-        string(REGEX REPLACE ".*_MAJOR *\([0-9]*\).*" "\\1" major "${version}")
-        string(REGEX REPLACE ".*_MINOR *\([0-9]*\).*" "\\1" minor "${version}")
-        string(REGEX REPLACE ".*_MICRO *\([0-9]*\).*" "\\1" micro "${version}")
+        # Recent FFmpeg moved LIB<component>_VERSION_MAJOR into a separate
+        # version_major.h, so it may not be present in version.h above.
+        set(version_major_header_path "${FFMPEG_${component}_INCLUDE_DIR}/lib${component}/version_major.h")
+        if (EXISTS "${version_major_header_path}")
+          file(STRINGS "${version_major_header_path}" version_major
+            REGEX "#define  *LIB${component_upper}_VERSION_MAJOR ")
+          list(PREPEND version "${version_major}")
+        endif ()
+        string(REGEX REPLACE ".*_MAJOR *([0-9]+).*" "\\1" major "${version}")
+        string(REGEX REPLACE ".*_MINOR *([0-9]+).*" "\\1" minor "${version}")
+        string(REGEX REPLACE ".*_MICRO *([0-9]+).*" "\\1" micro "${version}")
         if (NOT major STREQUAL "" AND
             NOT minor STREQUAL "" AND
             NOT micro STREQUAL "")
@@ -155,7 +163,7 @@ if (TARGET FFMPEG::avutil)
   if (EXISTS "${_ffmpeg_version_header_path}")
     file(STRINGS "${_ffmpeg_version_header_path}" _ffmpeg_version
       REGEX "FFMPEG_VERSION")
-    string(REGEX REPLACE ".*\"n?\(.*\)\"" "\\1" FFMPEG_VERSION "${_ffmpeg_version}")
+    string(REGEX REPLACE ".*\"n?(.*)\"" "\\1" FFMPEG_VERSION "${_ffmpeg_version}")
     unset(_ffmpeg_version)
   else ()
     set(FFMPEG_VERSION FFMPEG_VERSION-NOTFOUND)
