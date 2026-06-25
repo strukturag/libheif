@@ -3729,6 +3729,12 @@ int Box_clap::left_rounded(uint32_t image_width) const
 
   // left = horizOff + (width-1)/2 - (clapWidth-1)/2
 
+  // Guard against image_width==0: `image_width - 1U` would underflow to
+  // UINT32_MAX and overflow the Fraction (GHSA-jc8f-p23p-5hjg).
+  if (image_width == 0) {
+    return 0;
+  }
+
   Fraction pcX = m_horizontal_offset + Fraction(image_width - 1U, 2U);
   Fraction left = pcX - (m_clean_aperture_width - 1) / 2;
 
@@ -3744,6 +3750,11 @@ int Box_clap::right_rounded(uint32_t image_width) const
 
 int Box_clap::top_rounded(uint32_t image_height) const
 {
+  // Guard against image_height==0 underflowing the Fraction (see left_rounded).
+  if (image_height == 0) {
+    return 0;
+  }
+
   Fraction pcY = m_vertical_offset + Fraction(image_height - 1U, 2U);
   Fraction top = pcY - (m_clean_aperture_height - 1) / 2;
 

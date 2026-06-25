@@ -767,8 +767,16 @@ Error HeifContext::interpret_heif_file_images()
     for (const auto& prop : properties) {
       auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
       if (clap) {
-        image->set_resolution(clap->get_width_rounded(),
-                              clap->get_height_rounded());
+        int clap_width = clap->get_width_rounded();
+        int clap_height = clap->get_height_rounded();
+        if (clap_width <= 0 || clap_height <= 0) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_Invalid_clean_aperture,
+                  "Clean aperture (clap) reduces image to zero size"};
+        }
+
+        image->set_resolution(static_cast<uint32_t>(clap_width),
+                              static_cast<uint32_t>(clap_height));
 
         if (image->has_intrinsic_matrix()) {
           image->get_intrinsic_matrix().apply_clap(clap.get(), image->get_width(), image->get_height());
