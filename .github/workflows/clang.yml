@@ -16,7 +16,7 @@ jobs:
     env: ${{ matrix.env }}
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
@@ -47,7 +47,7 @@ jobs:
       CLANG_TIDY: 1
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
