@@ -358,6 +358,19 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
     bit_depth = 8;
   }
 
+  // The RRGGBB(AA) interleaved formats store each component as 16 bit. A bit depth
+  // of <= 8 would be self-inconsistent: the allocated plane would only hold one byte
+  // per component while readers/writers access the samples as 16-bit values.
+  if ((m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+       m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
+       m_chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
+       m_chroma == heif_chroma_interleaved_RRGGBBAA_LE) &&
+      bit_depth <= 8) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Cannot create a 16-bit interleaved channel with a bit depth of 8 or less"};
+  }
+
   int num_interleaved_pixels = num_interleaved_components_per_plane(m_chroma);
 
   ComponentStorage plane;

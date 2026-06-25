@@ -711,6 +711,73 @@ TEST_CASE("Encode RRRGGBB_BE 16 bit ")
 }
 
 
+// Boundary cases for the RRGGBB block-pixel encoder. 9 bit is the lowest valid
+// depth (m_bytes_per_pixel becomes 4); 13 bit is the highest the block encoder
+// accepts (m_bytes_per_pixel == 5). Both were adjacent to the out-of-bounds write
+// that occurred for the (now rejected) <= 8 bit case (GHSA-46rp-pcq2-rpmr).
+TEST_CASE("Encode RRRGGBB_LE 9 bit")
+{
+  heif_image *input_image = createImage_RRGGBB_interleaved(heif_chroma_interleaved_RRGGBB_LE, 9, true, false);
+  do_encode(input_image, "encode_rrggbb_9_le.heif", false);
+}
+
+
+TEST_CASE("Encode RRRGGBB_BE 9 bit")
+{
+  heif_image *input_image = createImage_RRGGBB_interleaved(heif_chroma_interleaved_RRGGBB_BE, 9, false, false);
+  do_encode(input_image, "encode_rrggbb_9_be.heif", false);
+}
+
+
+TEST_CASE("Encode RRRGGBB_LE 13 bit")
+{
+  heif_image *input_image = createImage_RRGGBB_interleaved(heif_chroma_interleaved_RRGGBB_LE, 13, true, false);
+  do_encode(input_image, "encode_rrggbb_13_le.heif", false);
+}
+
+
+TEST_CASE("Encode RRRGGBB_BE 13 bit")
+{
+  heif_image *input_image = createImage_RRGGBB_interleaved(heif_chroma_interleaved_RRGGBB_BE, 13, false, false);
+  do_encode(input_image, "encode_rrggbb_13_be.heif", false);
+}
+
+
+// Root-cause check: a 16-bit interleaved channel (RRGGBB / RRGGBBAA) with a bit
+// depth of <= 8 is self-inconsistent and must be rejected at image construction,
+// before any encoder can read/write past the under-sized plane.
+TEST_CASE("Reject <=8 bit 16-bit-interleaved channels")
+{
+  const heif_chroma formats[] = {
+    heif_chroma_interleaved_RRGGBB_LE,
+    heif_chroma_interleaved_RRGGBB_BE,
+    heif_chroma_interleaved_RRGGBBAA_LE,
+    heif_chroma_interleaved_RRGGBBAA_BE
+  };
+
+  for (heif_chroma chroma : formats) {
+    for (int bit_depth = 1; bit_depth <= 8; bit_depth++) {
+      heif_image* image;
+      heif_error err = heif_image_create(64, 64, heif_colorspace_RGB, chroma, &image);
+      REQUIRE(err.code == heif_error_Ok);
+
+      err = heif_image_add_plane(image, heif_channel_interleaved, 64, 64, bit_depth);
+      REQUIRE(err.code != heif_error_Ok);
+
+      heif_image_release(image);
+    }
+
+    // The lowest valid depth (9 bit) is still accepted.
+    heif_image* image;
+    heif_error err = heif_image_create(64, 64, heif_colorspace_RGB, chroma, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(image, heif_channel_interleaved, 64, 64, 9);
+    REQUIRE(err.code == heif_error_Ok);
+    heif_image_release(image);
+  }
+}
+
+
 TEST_CASE("Encode RGBA")
 {
   heif_image *input_image = createImage_RGBA_interleaved();
