@@ -4152,8 +4152,13 @@ static constexpr std::array supported_reference_types{
 
 bool Box_rref::all_reference_types_supported() const
 {
-  return std::ranges::all_of(m_reference_types, [](uint32_t t) {
-    return std::ranges::find(supported_reference_types, t) != supported_reference_types.end();
+  // TODO: replace with std::ranges variant once it is widely supported (e.g. on older clang/libc++):
+  //   return std::ranges::all_of(m_reference_types, [](uint32_t t) {
+  //     return std::ranges::find(supported_reference_types, t) != supported_reference_types.end();
+  //   });
+  return std::all_of(m_reference_types.begin(), m_reference_types.end(), [](uint32_t t) {
+    return std::find(supported_reference_types.begin(), supported_reference_types.end(), t)
+           != supported_reference_types.end();
   });
 }
 
@@ -4163,7 +4168,9 @@ Error Box_rref::reference_types_supported_error() const
   std::vector<uint32_t> unsupported_types;
 
   for (uint32_t refType : m_reference_types) {
-    if (std::ranges::find(supported_reference_types, refType) == supported_reference_types.end()) {
+    // TODO: replace with std::ranges variant once it is widely supported (e.g. on older clang/libc++):
+    //   if (std::ranges::find(supported_reference_types, refType) == supported_reference_types.end()) {
+    if (std::find(supported_reference_types.begin(), supported_reference_types.end(), refType) == supported_reference_types.end()) {
       unsupported_types.push_back(refType);
     }
   }
