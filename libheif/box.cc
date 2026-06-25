@@ -1920,10 +1920,13 @@ Error Box_iloc::read_data(heif_item_id item_id,
                 "idat box referenced in iref box is not present in file"};
       }
 
-      idat->read_data(istr,
-                      extent.offset + item->base_offset,
-                      extent.length,
-                      *dest, limits);
+      Error err = idat->read_data(istr,
+                                  extent.offset + item->base_offset,
+                                  extent.length,
+                                  *dest, limits);
+      if (err) {
+        return err;
+      }
 
       size -= extent.length;
     }

@@ -397,6 +397,13 @@ Error TiledHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file
     return err;
   }
 
+  // Make sure we actually received as much data as we are about to parse. The
+  // returned buffer may be shorter than requested (e.g. truncated iloc/idat
+  // extents), and readvec() does not bounds-check its input.
+  if (data.size() < size_to_read) {
+    return eofError;
+  }
+
   size_t idx = 0;
   for (uint64_t i = start; i < end; i++) {
     m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length / 8);
