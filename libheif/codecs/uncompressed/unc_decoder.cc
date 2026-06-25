@@ -190,7 +190,8 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
     }
 
-    if (range_start_offset + range_size > data->size()) {
+    if (range_start_offset > data->size() ||
+        range_size > data->size() - range_start_offset) {
       return {
         heif_error_Invalid_input,
         heif_suberror_Unspecified,
