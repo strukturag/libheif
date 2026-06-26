@@ -2115,7 +2115,14 @@ std::vector<uint32_t> HeifContext::get_track_IDs() const
 
 Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
 {
-  assert(has_sequence());
+  // The caller is expected to have confirmed (via has_sequence()) that there are
+  // sequence tracks before requesting one. Guard against an empty track map anyway,
+  // since this is reachable through the public API (e.g. on a still image file).
+  if (!has_sequence()) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "File contains no sequence tracks"};
+  }
 
   if (track_id != 0) {
     auto iter = m_tracks.find(track_id);
