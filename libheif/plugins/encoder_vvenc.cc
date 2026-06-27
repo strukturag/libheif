@@ -515,6 +515,38 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
     }
   }
 
+  heif_color_profile_nclx* nclx;
+  heif_image_get_nclx_color_profile(image, &nclx);
+  if (nclx) {
+    params.m_HdrMode = VVENC_HDR_USER_DEFINED;
+    params.m_colourDescriptionPresent = true;
+    params.m_colourPrimaries = nclx->color_primaries;
+    params.m_transferCharacteristics = nclx->transfer_characteristics;
+    params.m_matrixCoefficients = nclx->matrix_coefficients;
+    params.m_videoFullRangeFlag = nclx->full_range_flag;
+    heif_nclx_color_profile_free(nclx);
+  }
+  if (heif_image_has_content_light_level(image)) {
+    heif_content_light_level cll;
+    heif_image_get_content_light_level(image, &cll);
+    params.m_contentLightLevel[0] = cll.max_content_light_level;
+    params.m_contentLightLevel[1] = cll.max_pic_average_light_level;
+  }
+  if (heif_image_has_mastering_display_colour_volume(image)) {
+    heif_mastering_display_colour_volume mdcv;
+    heif_image_get_mastering_display_colour_volume(image, &mdcv);
+    params.m_masteringDisplay[0] = mdcv.display_primaries_x[0];
+    params.m_masteringDisplay[1] = mdcv.display_primaries_y[0];
+    params.m_masteringDisplay[2] = mdcv.display_primaries_x[1];
+    params.m_masteringDisplay[3] = mdcv.display_primaries_y[1];
+    params.m_masteringDisplay[4] = mdcv.display_primaries_x[2];
+    params.m_masteringDisplay[5] = mdcv.display_primaries_y[2];
+    params.m_masteringDisplay[6] = mdcv.white_point_x;
+    params.m_masteringDisplay[7] = mdcv.white_point_y;
+    params.m_masteringDisplay[8] = mdcv.max_display_mastering_luminance;
+    params.m_masteringDisplay[9] = mdcv.min_display_mastering_luminance;
+  }
+
   vvencEncoder* vvencoder = encoder->vvencoder = vvenc_encoder_create();
 
   //ret = vvenc_check_config(vvencoder, &params);
