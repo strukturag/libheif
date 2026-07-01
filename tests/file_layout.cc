@@ -44,6 +44,20 @@ TEST_CASE("parse file layout") {
   Error err = file.read(reader, heif_get_global_security_limits());
 
   REQUIRE(err.error_code == heif_error_Ok);
+}
 
-  // TODO: read file where 'meta' box is not the first one after 'ftyp'
+
+TEST_CASE("meta box with size 0 (extends to end of file)") {
+  // The 'meta' box uses a box size of 0, which per ISO/IEC 14496-12 clause 4.2
+  // means it extends to the end of the file (legal for the last box). In this
+  // file 'meta' also appears after the media data rather than first. It must
+  // parse successfully (libavif / Chromium read and render this file).
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/meta_size_zero.avif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+
+  FileLayout file;
+  Error err = file.read(reader, heif_get_global_security_limits());
+
+  REQUIRE(err.error_code == heif_error_Ok);
+  REQUIRE(file.get_meta_box() != nullptr);
 }
