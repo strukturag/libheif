@@ -128,20 +128,29 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
 
     if (box_header.get_short_type() == fourcc("meta")) {
       const uint64_t meta_box_start = next_box_start;
-      if (box_header.get_box_size() == 0) {
-        // TODO: get file-size from stream and compute box size
-        return {heif_error_Invalid_input,
-                heif_suberror_No_meta_box,
-                "Cannot read meta box with unspecified size"};
+      uint64_t end_of_meta_box;
+      if (box_header.get_box_size() == BoxHeader::size_until_end_of_file) {
+        // A box size of 0 means the box extends to the end of the file
+        // (ISO/IEC 14496-12 clause 4.2), which is legal for the last box.
+        // Resolve it to the file size.
+        end_of_meta_box = m_stream_reader->request_range(meta_box_start,
+                                                         std::numeric_limits<uint64_t>::max());
+        m_max_length = end_of_meta_box;
+        if (end_of_meta_box <= meta_box_start) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_No_meta_box,
+                  "Cannot read meta box with unspecified size"};
+        }
       }
-
-      uint64_t end_of_meta_box = box_header.get_box_size();
-      if (end_of_meta_box > std::numeric_limits<uint64_t>::max() - meta_box_start) {
-        return {heif_error_Invalid_input,
-                heif_suberror_No_meta_box,
-                "Cannot read meta box with invalid size"};
+      else {
+        end_of_meta_box = box_header.get_box_size();
+        if (end_of_meta_box > std::numeric_limits<uint64_t>::max() - meta_box_start) {
+          return {heif_error_Invalid_input,
+                  heif_suberror_No_meta_box,
+                  "Cannot read meta box with invalid size"};
+        }
+        end_of_meta_box += meta_box_start;
       }
-      end_of_meta_box += meta_box_start;
       if (m_max_length < end_of_meta_box) {
         m_max_length = m_stream_reader->request_range(meta_box_start, end_of_meta_box);
       }
