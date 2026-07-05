@@ -32,16 +32,16 @@ libheif has support for:
 * streaming of images and video by requesting data from the network through a data-reader interface
 
 Supported codecs:
-| Format       |  Decoders           |  Encoders                    |
-|:-------------|:-------------------:|:----------------------------:|
-| HEIC         | libde265, ffmpeg    | x265, kvazaar                |
-| AVIF         | libaom, dav1d       | libaom, rav1e, svt-av1       |
-| VVC          | vvdec               | vvenc, uvg266                |
-| AVC          | openh264, ffmpeg    | x264                         |
-| JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
-| JPEG2000     | OpenJPEG            | OpenJPEG                     |
-| HTJ2K        | OpenJPEG            | OpenJPH                      |
-| uncompressed | built-in            | built-in                     |
+| Format       |  Decoders               |  Encoders                    |
+|:-------------|:-----------------------:|:----------------------------:|
+| HEIC         | libde265, ffmpeg        | x265, kvazaar                |
+| AVIF         | libaom, dav1d, ffmpeg   | libaom, rav1e, svt-av1       |
+| VVC          | vvdec, ffmpeg           | vvenc, uvg266                |
+| AVC          | openh264, ffmpeg        | x264                         |
+| JPEG         | libjpeg(-turbo), ffmpeg | libjpeg(-turbo)              |
+| JPEG2000     | OpenJPEG, ffmpeg        | OpenJPEG                     |
+| HTJ2K        | OpenJPEG, ffmpeg        | OpenJPH                      |
+| uncompressed | built-in                | built-in                     |
 
 ## Programming API
 
@@ -296,8 +296,8 @@ You can also add plugin directories programmatically.
 ## Usage
 
 libheif comes with a set of command line tools:
-* `heif-dec` for decoding HEIF images to JPEG or PNG. It can also decode image sequences or MP4 video.
-* `heif-enc` for encoding JPEG, PNG, TIFF, or Y4M images to HEIF images, image sequences or MP4 video.
+* `heif-dec` for decoding HEIF images to JPEG, PNG, TIFF, WebP, Y4M. It can also decode image sequences or MP4 video.
+* `heif-enc` for encoding JPEG, PNG, TIFF, WebP, Y4M, or HEIF/AVIF images to HEIF images, image sequences or MP4 video.
 * `heif-info` for getting some overview information about the HEIF file or (using the `-d` option) to dump the full box structure of the file.
 * `heif-view` for displaying HEIF image sequences
 
@@ -353,8 +353,8 @@ This is `libheif` running in JavaScript in your browser.
 ## Example programs
 
 Some example programs are provided in the `examples` directory.
-The program `heif-dec` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
-`heif-enc` lets you convert JPEG files to HEIF/AVIF.
+The program `heif-dec` converts all images stored in an HEIF/AVIF file to JPEG, PNG, TIFF, WebP, Y4M.
+`heif-enc` lets you convert JPEG, PNG, TIFF, WebP, Y4M and HEIF/AVIF files to HEIF/AVIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
 For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
