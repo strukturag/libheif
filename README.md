@@ -295,9 +295,9 @@ You can also add plugin directories programmatically.
 
 ## Usage
 
-libheif comes with a set of command line tools:
+Libheif comes with a set of command line tools:
 * `heif-dec` for decoding HEIF images to JPEG, PNG, TIFF, WebP, Y4M. It can also decode image sequences or MP4 video.
-* `heif-enc` for encoding JPEG, PNG, TIFF, WebP, Y4M, or HEIF/AVIF images to HEIF images, image sequences or MP4 video.
+* `heif-enc` for encoding JPEG, PNG, TIFF, WebP, Y4M, or HEIF/AVIF images to HEIF/AVIF images, image sequences.
 * `heif-info` for getting some overview information about the HEIF file or (using the `-d` option) to dump the full box structure of the file.
 * `heif-view` for displaying HEIF image sequences
 
