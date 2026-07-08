@@ -703,6 +703,10 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   nclx->full_range_flag = (bool)video_full_range_flag;
   heif_image_set_nclx_color_profile(*out_img, nclx);
 
+  heif_image_set_premultiplied_alpha(*out_img, (av_codecParam->alpha_mode == AVALPHA_MODE_PREMULTIPLIED) ? 1 : 0);
+
+  heif_image_set_pixel_aspect_ratio(*out_img, av_codecParam->sample_aspect_ratio.num, av_codecParam->sample_aspect_ratio.den);
+
   return heif_error_ok;
 }
 
