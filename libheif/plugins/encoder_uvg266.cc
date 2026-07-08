@@ -479,6 +479,13 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
   }
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+  if (bit_depth != UVG_BIT_DEPTH) {
+    return {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
+    };
+  }
 
   const uvg_api* api = uvg_api_get(bit_depth);
   if (api == nullptr) {
