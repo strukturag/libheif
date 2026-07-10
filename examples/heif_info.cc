@@ -958,6 +958,7 @@ int main(int argc, char** argv)
         break;
       case heif_omaf_image_projection_cube_map:
         std::cout << "cube-map";
+        break;
       default:
         std::cout << "(unknown)";
         break;
