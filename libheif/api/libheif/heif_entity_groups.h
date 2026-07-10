@@ -35,11 +35,16 @@ typedef uint32_t heif_entity_group_id;
 typedef struct heif_entity_group
 {
   heif_entity_group_id entity_group_id;
-  uint32_t entity_group_type;  // this is a FourCC constant
+  // this is a FourCC constant
+  // "altr" indicates alternative image, starting from the most preferred image; see ISO/IEC 23008-12 Clause 9.4.3
+  // "ster" indicates stereo pair, first is left image, second is right image; see ISO/IEC 23008-12 Clause 9.4.3
+  // "pymd" indicates multi-resolution pyramid
+  uint32_t entity_group_type;
   heif_item_id* entities;
   uint32_t num_entities;
 } heif_entity_group;
 
+// `type_filter` is the wanted FourCC of the entity group type.
 // Use 0 for `type_filter` or `item_filter` to disable the filter.
 // Returns an array of heif_entity_group structs with *out_num_groups entries.
 LIBHEIF_API
