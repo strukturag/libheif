@@ -27,6 +27,31 @@ extern "C" {
 
 #include "libheif/heif_library.h"
 
+// Entity group type FourCC; For complete list of entity group types see https://mp4ra.org/registered-types/entity-groups
+/**
+ * Alternative image.
+ *
+ * The entity group consists of multiple alternative versions, the application should display only one of them. The most preferred image comes first.
+ *
+ * See ISO/IEC 23008-12 Section 9.4.3.
+ */
+#define heif_entity_group_altr   heif_fourcc('a','l','t','r')
+
+/**
+ * Stereo pair.
+ *
+ * The entity group consists of stereoscopic pair. The first image is left image, the second image is right image.
+ *
+ * See ISO/IEC 23008-12 Section 9.4.3.
+ */
+#define heif_entity_group_ster   heif_fourcc('s','t','e','r')
+
+/**
+ * Multi-resolution pyramid.
+ *
+ * The entity group consists of multiple resolution versions. Low resolution image comes first.
+ */
+#define heif_entity_group_pymd   heif_fourcc('p','y','m','d')
 
 // ------------------------- entity groups ------------------------
 
@@ -35,10 +60,7 @@ typedef uint32_t heif_entity_group_id;
 typedef struct heif_entity_group
 {
   heif_entity_group_id entity_group_id;
-  // this is a FourCC constant
-  // "altr" indicates alternative image, starting from the most preferred image; see ISO/IEC 23008-12 Clause 9.4.3
-  // "ster" indicates stereo pair, first is left image, second is right image; see ISO/IEC 23008-12 Clause 9.4.3
-  // "pymd" indicates multi-resolution pyramid
+  // this is a FourCC constant defined above
   uint32_t entity_group_type;
   heif_item_id* entities;
   uint32_t num_entities;
