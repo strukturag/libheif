@@ -33,7 +33,6 @@ extern "C" {
  *
  * The entity group consists of multiple alternative versions, the application should display only one of them. The most preferred image comes first.
  *
- * See ISO/IEC 23008-12:2017 Section 9.4.3.
  * See ISO/IEC 14496-12:2026 Section 8.15.3.1.
  */
 #define heif_entity_group_altr   heif_fourcc('a','l','t','r')
@@ -79,10 +78,19 @@ extern "C" {
  *
  * The entity group consists of a stereoscopic pair of image items. The first image is left image, the second image is right image.
  *
- * See ISO/IEC 23008-12:2017 Section 9.4.3.
  * See ISO/IEC 23008-12:2025 Section 6.8.5.
  */
 #define heif_entity_group_ster   heif_fourcc('s','t','e','r')
+
+/**
+ * Stereo pair with mono fallback.
+ *
+ * The entity group consists of a stereoscopic pair of image items and a monoscopic fallback.
+ * The first image is left image, the second image is right image, the third image is monoscopic image. The monoscopic fallback can be the same as left or right image.
+ *
+ * See ISO/IEC 23008-12:2025/Amd. 1:2025 Section 6.8.11.
+ */
+#define heif_entity_group_stem   heif_fourcc('s','t','e','m')
 
 /**
  * Auto-exposure bracket
