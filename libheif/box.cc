@@ -650,6 +650,18 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_udes>();
       break;
 
+    case fourcc("altt"):
+      box = std::make_shared<Box_altt>();
+      break;
+
+    case fourcc("crtt"):
+      box = std::make_shared<Box_crtt>();
+      break;
+
+    case fourcc("mdft"):
+      box = std::make_shared<Box_mdft>();
+      break;
+
     case fourcc("jpgC"):
       box = std::make_shared<Box_jpgC>();
       break;
@@ -4706,7 +4718,7 @@ std::string Box_udes::dump(Indent& indent) const
   sstr << indent << "lang: " << m_lang << "\n";
   sstr << indent << "name: " << m_name << "\n";
   sstr << indent << "description: " << m_description << "\n";
-  sstr << indent << "tags: " << m_lang << "\n";
+  sstr << indent << "tags: " << m_tags << "\n";
   return sstr.str();
 }
 
@@ -4717,6 +4729,96 @@ Error Box_udes::write(StreamWriter& writer) const
   writer.write(m_name);
   writer.write(m_description);
   writer.write(m_tags);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
+Error Box_altt::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("altt");
+  }
+
+  m_alt_text = range.read_string();
+  m_lang = range.read_string();
+  return range.get_error();
+}
+
+std::string Box_altt::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "lang: " << m_lang << "\n";
+  sstr << indent << "alt text: " << m_alt_text << "\n";
+  return sstr.str();
+}
+
+Error Box_altt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write(m_alt_text);
+  writer.write(m_lang);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
+Error Box_crtt::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("crtt");
+  }
+
+  m_time = range.read64();
+  return range.get_error();
+}
+
+std::string Box_crtt::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "creation timestamp: " << m_time << "\n";
+  return sstr.str();
+}
+
+Error Box_crtt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_time);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
+Error Box_mdft::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("crtt");
+  }
+
+  m_time = range.read64();
+  return range.get_error();
+}
+
+std::string Box_mdft::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "modification timestamp: " << m_time << "\n";
+  return sstr.str();
+}
+
+Error Box_mdft::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_time);
   prepend_header(writer, box_start);
   return Error::Ok;
 }

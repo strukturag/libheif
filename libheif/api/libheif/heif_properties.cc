@@ -209,6 +209,142 @@ void heif_property_user_description_release(heif_property_user_description* udes
 }
 
 
+heif_error heif_item_get_property_alt_text(const heif_context* context,
+  heif_item_id itemId,
+  heif_property_id propertyId,
+  heif_property_alt_text** out)
+{
+  if (!out || !context) {
+    return heif_error_null_pointer_argument;
+  }
+  auto altt = context->context->find_property<Box_altt>(itemId, propertyId);
+  if (!altt) {
+    return altt.error_struct(context->context.get());
+  }
+
+  auto* altt_c = new heif_property_alt_text();
+  altt_c->version = 1;
+  altt_c->alt_lang = create_c_string_copy((*altt)->get_lang());
+  altt_c->alt_text = create_c_string_copy((*altt)->get_alt_text());
+
+  *out = altt_c;
+
+  return heif_error_success;
+}
+
+
+heif_error heif_item_add_property_alt_text(const heif_context* context,
+  heif_item_id itemId,
+  const heif_property_alt_text* description,
+  heif_property_id* out_propertyId)
+{
+  if (!context || !description) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto altt = std::make_shared<Box_altt>();
+  altt->set_lang(description->alt_lang ? description->alt_lang : "");
+  altt->set_alt_text(description->alt_text ? description->alt_text : "");
+
+  heif_property_id id = context->context->add_property(itemId, altt, false);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
+}
+
+
+void heif_property_alt_text_release(heif_property_alt_text* altt)
+{
+  if (altt == nullptr) {
+    return;
+  }
+
+  delete[] altt->alt_lang;
+  delete[] altt->alt_text;
+
+  delete altt;
+}
+
+
+heif_error heif_item_get_property_time(const heif_context* context,
+  heif_item_id itemId,
+  heif_property_id propertyId,
+  uint32_t propertyType,
+  uint64_t* out)
+{
+  if (!out || !context) {
+    return heif_error_null_pointer_argument;
+  }
+
+  switch (propertyType) {
+  case heif_item_property_type_creation_time:
+  {
+    auto crtt = context->context->find_property<Box_crtt>(itemId, propertyId);
+    if (!crtt) {
+      return crtt.error_struct(context->context.get());
+    }
+    *out = (*crtt)->get_time();
+    break;
+  }
+  return heif_error_success;
+  case heif_item_property_type_modification_time:
+  {
+    auto mdft = context->context->find_property<Box_mdft>(itemId, propertyId);
+    if (!mdft) {
+      return mdft.error_struct(context->context.get());
+    }
+    *out = (*mdft)->get_time();
+  }
+  return heif_error_success;
+  default:
+    return heif_error_invalid_parameter_value;
+  }
+}
+
+
+heif_error heif_item_add_property_time(const heif_context* context,
+  heif_item_id itemId,
+  uint32_t propertyType,
+  uint64_t time,
+  heif_property_id* out_propertyId)
+{
+  if (!context) {
+    return heif_error_null_pointer_argument;
+  }
+  std::shared_ptr<FullBox> prop_box;
+
+  switch (propertyType) {
+  case heif_item_property_type_creation_time:
+    {
+      auto crtt = std::make_shared<Box_crtt>();
+      crtt->set_time(time);
+      prop_box = crtt;
+    }
+    break;
+  case heif_item_property_type_modification_time:
+    {
+      auto mdft = std::make_shared<Box_mdft>();
+      mdft->set_time(time);
+      prop_box = mdft;
+    }
+    break;
+  default:
+    return heif_error_invalid_parameter_value;
+  }
+
+  heif_property_id id = context->context->add_property(itemId, prop_box, false);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
+}
+
+
 heif_transform_mirror_direction heif_item_get_property_transform_mirror(const heif_context* context,
                                                                         heif_item_id itemId,
                                                                         heif_property_id propertyId)

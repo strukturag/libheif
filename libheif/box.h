@@ -1805,6 +1805,159 @@ private:
 };
 
 
+/**
+ * Alt Text property.
+ *
+ * Permits the association of items or entity groups with a alt text;
+ * there may be multiple udes properties, each with a different language code.
+ *
+ * See ISO/IEC 23008-12:2025(E) Section 6.5.21.
+ */
+class Box_altt : public FullBox
+{
+public:
+  Box_altt()
+  {
+    set_short_type(fourcc("altt"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Alt Text"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * Language tag.
+   *
+   * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+   * Examples: "en-AU", "de-DE", or "zh-CN“.
+   * When is empty, the language is unknown or not undefined.
+   */
+  std::string get_lang() const { return m_lang; }
+
+  /**
+   * Set the language tag.
+   *
+   * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+   * Examples: "en-AU", "de-DE", or "zh-CN“.
+   */
+  void set_lang(const std::string lang) { m_lang = lang; }
+
+  /**
+   * Alt Text.
+   *
+   * Human readable name for the item or group being described.
+   * May be empty, indicating no name is applicable.
+   */
+  std::string get_alt_text() const { return m_alt_text; }
+
+  /**
+  * Set the name.
+  *
+  * Human readable name for the item or group being described.
+  */
+  void set_alt_text(const std::string alt_text) { m_alt_text = alt_text; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::string m_lang;
+  std::string m_alt_text;
+};
+
+
+/**
+ * Creation Time property.
+ *
+ * Permits the association of items or entity groups with the creation time.
+ *
+ * See ISO/IEC 23008-12:2025 Section 6.5.18.
+ */
+class Box_crtt : public FullBox
+{
+public:
+  Box_crtt()
+  {
+    set_short_type(fourcc("crtt"));
+    m_time = 0;
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Creation Time"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * Creation time.
+   *
+   * The creation time of the item, in microseconds since 1904-01-01 00:00:00 UTC
+   */
+  uint64_t get_time() const { return m_time; }
+
+  /**
+   * Set the creation time.
+   */
+  void set_time(const uint64_t time) { m_time = time; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint64_t m_time;
+};
+
+
+/**
+ * Modification Time property.
+ *
+ * Permits the association of items or entity groups with the modification time.
+ *
+ * See ISO/IEC 23008-12:2025 Section 6.5.19.
+ */
+class Box_mdft : public FullBox
+{
+public:
+  Box_mdft()
+  {
+    set_short_type(fourcc("mdft"));
+    m_time = 0;
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Modification Time"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * Modification time.
+   *
+   * The modification time of the item, in microseconds since 1904-01-01 00:00:00 UTC
+   */
+  uint64_t get_time() const { return m_time; }
+
+  /**
+   * Set the modification time.
+   */
+  void set_time(const uint64_t time) { m_time = time; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint64_t m_time;
+};
+
+
 void initialize_heif_tai_clock_info(heif_tai_clock_info* taic);
 void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai);
 

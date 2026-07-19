@@ -41,7 +41,10 @@ typedef enum heif_item_property_type
   heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd'),
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
   heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
-  heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g')
+  heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g'),
+  heif_item_property_type_creation_time = heif_fourcc('c','r','t','t'),
+  heif_item_property_type_modification_time = heif_fourcc('m','d','f','t'),
+  heif_item_property_type_alt_text = heif_fourcc('a','l','t','t')
 } heif_item_property_type;
 
 // Get the heif_property_id for a heif_item_id.
@@ -78,10 +81,10 @@ typedef struct heif_property_user_description
 
   // version 1
 
-  const char* lang;
-  const char* name;
-  const char* description;
-  const char* tags;
+  const char* lang; // lanuage of user descriptions in IETF language tag
+  const char* name; // name of image in UTF-8
+  const char* description; // description of image in UTF-8
+  const char* tags; // comma-separated tags of image in UTF-8
 } heif_property_user_description;
 
 // Get the "udes" user description property content.
@@ -104,6 +107,56 @@ heif_error heif_item_add_property_user_description(const heif_context* context,
 // Only call for objects that you received from heif_item_get_property_user_description().
 LIBHEIF_API
 void heif_property_user_description_release(heif_property_user_description*);
+
+// The strings are managed by libheif. They will be deleted in heif_property_user_description_release().
+typedef struct heif_property_alt_text
+{
+  int version;
+
+  // version 1
+
+  const char* alt_text; // alternative text for accessiblity in UTF-8
+  const char* alt_lang; // lanuage of alt_text in IETF language tag
+} heif_property_alt_text;
+
+// Get the "altt" alt text property content.
+// Undefined strings are returned as empty strings.
+LIBHEIF_API
+heif_error heif_item_get_property_alt_text(const heif_context* context,
+  heif_item_id itemId,
+  heif_property_id propertyId,
+  heif_property_alt_text** out);
+
+// Add a "altt" alt text property to the item.
+// If any string pointers are NULL, an empty string will be used instead.
+LIBHEIF_API
+heif_error heif_item_add_property_alt_text(const heif_context* context,
+  heif_item_id itemId,
+  const heif_property_alt_text* description,
+  heif_property_id* out_propertyId);
+
+// Release all strings and the object itself.
+// Only call for objects that you received from heif_item_get_property_alt_text().
+LIBHEIF_API
+void heif_property_alt_text_release(heif_property_alt_text*);
+
+// Get the "crtt"/"mdft" creation time and modification time property content.
+// propertyType is the fourcc of property (heif_item_property_type_creation_time or heif_item_property_type_modification_time)
+LIBHEIF_API
+heif_error heif_item_get_property_time(const heif_context* context,
+  heif_item_id itemId,
+  heif_property_id propertyId,
+  uint32_t propertyType,
+  uint64_t* out);
+
+// Set the "crtt"/"mdft" creation time and modification time property content.
+// propertyType is the fourcc of property (heif_item_property_type_creation_time or heif_item_property_type_modification_time)
+LIBHEIF_API
+heif_error heif_item_add_property_time(const heif_context* context,
+  heif_item_id itemId,
+  uint32_t propertyType,
+  uint64_t time,
+  heif_property_id* out_propertyId);
 
 typedef enum heif_transform_mirror_direction
 {
