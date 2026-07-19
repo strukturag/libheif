@@ -161,6 +161,9 @@ heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_
 
 
 std::string property_pitm_description;
+std::string property_pitm_name;
+std::string property_pitm_tags;
+std::string property_pitm_alt_text;
 
 RawImageParameters raw_input_params;
 bool force_raw_input = false;
@@ -238,6 +241,9 @@ const int OPTION_DO_ROTATE = 1046;
 const int OPTION_DO_FLIP_H = 1047;
 const int OPTION_DO_FLIP_V = 1048;
 const int OPTION_MINI = 1049;
+const int OPTION_PITM_NAME = 1050;
+const int OPTION_PITM_TAGS = 1051;
+const int OPTION_PITM_ALT_TEXT = 1052;
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -387,6 +393,9 @@ static option long_options[] = {
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
     {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
+    {(char* const) "pitm-name",                   required_argument, 0,                     OPTION_PITM_NAME},
+    {(char* const) "pitm-tags",                   required_argument, 0,                     OPTION_PITM_TAGS},
+    {(char* const) "pitm-alt",                    required_argument, 0,                     OPTION_PITM_ALT_TEXT},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
@@ -477,7 +486,10 @@ void show_help(const char* argv0)
             << "  -C, --chroma-downsampling ALGO    force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                    (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                   measure encoding time, PSNR, and output file size\n"
-            << "      --pitm-description TEXT       set user description for primary image (experimental)\n"
+            << "      --pitm-description TEXT       set user description for primary image\n"
+            << "      --pitm-name TEXT              set user name for primary image\n"
+            << "      --pitm-tags TEXT              set comma-separated user tags for primary image\n"
+            << "      --pitm-alt TEXT               set alt text for primary image\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
@@ -1574,6 +1586,15 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_PITM_NAME:
+        property_pitm_name = optarg;
+        break;
+      case OPTION_PITM_TAGS:
+        property_pitm_tags = optarg;
+        break;
+      case OPTION_PITM_ALT_TEXT:
+        property_pitm_alt_text = optarg;
+        break;
       case OPTION_USE_HEVC_COMPRESSION:
         force_enc_hevc = true;
         break;
@@ -2564,7 +2585,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     is_primary_image = false;
   }
 
-  if (!property_pitm_description.empty()) {
+  if (!property_pitm_description.empty() || !property_pitm_name.empty() || !property_pitm_tags.empty()) {
     heif_image_handle* primary_image_handle;
     struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
     if (err.code) {
@@ -2578,10 +2599,38 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     udes.lang = nullptr;
     udes.name = nullptr;
     udes.tags = nullptr;
-    udes.description = property_pitm_description.c_str();
+    udes.description = nullptr;
+    if (!property_pitm_name.empty())
+      udes.name = property_pitm_name.c_str();
+    if (!property_pitm_description.empty())
+      udes.description = property_pitm_description.c_str();
+    if (!property_pitm_tags.empty())
+      udes.tags = property_pitm_tags.c_str();
     err = heif_item_add_property_user_description(context, pitm_id, &udes, nullptr);
     if (err.code) {
       std::cerr << "Cannot set user description\n";
+      return 5;
+    }
+
+    heif_image_handle_release(primary_image_handle);
+  }
+
+  if (!property_pitm_alt_text.empty()) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set alt text\n";
+      return 5;
+    }
+
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+
+    heif_property_alt_text altt;
+    altt.alt_lang = nullptr;
+    altt.alt_text = property_pitm_alt_text.c_str();
+    err = heif_item_add_property_alt_text(context, pitm_id, &altt, nullptr);
+    if (err.code) {
+      std::cerr << "Cannot set alt text\n";
       return 5;
     }
 

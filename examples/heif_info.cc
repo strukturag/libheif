@@ -731,6 +731,26 @@ int main(int argc, char** argv)
             heif_property_user_description_release(udes);
           }
         }
+
+        nDescr = heif_item_get_properties_of_type(ctx.get(),
+          region_item_id,
+          heif_item_property_type_alt_text,
+          properties,
+          MAX_PROPERTIES);
+
+        for (int k = 0; k < nDescr; k++) {
+          heif_property_alt_text* alttext;
+          err = heif_item_get_property_alt_text(ctx.get(),
+            region_item_id,
+            properties[k],
+            &alttext);
+          if (err.code == 0) {
+            printf("    alt text:\n");
+            printf("      lang: %s\n", alttext->alt_lang);
+            printf("      alt text: %s\n", alttext->alt_text);
+            heif_property_alt_text_release(alttext);
+          }
+        }
       }
     }
     else {
@@ -794,6 +814,27 @@ int main(int argc, char** argv)
           properties_shown = true;
 
           heif_property_user_description_release(udes);
+        }
+      }
+    }
+
+    count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_alt_text,
+      propertyIds, MAX_PROPERTIES);
+
+    if (count > 0) {
+      for (int p = 0; p < count; p++) {
+        heif_property_alt_text* altt;
+        err = heif_item_get_property_alt_text(ctx.get(), IDs[i], propertyIds[p], &altt);
+        if (err.code) {
+          std::cerr << "Error reading alt text " << IDs[i] << "/" << propertyIds[p] << "\n";
+        }
+        else {
+          printf("  alt text:\n");
+          printf("    lang: %s\n", altt->alt_lang);
+          printf("    alt text: %s\n", altt->alt_text);
+          properties_shown = true;
+
+          heif_property_alt_text_release(altt);
         }
       }
     }
