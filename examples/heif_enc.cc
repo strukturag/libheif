@@ -43,6 +43,7 @@
 #include <map>
 #include <tuple>
 #include <random>
+#include <chrono>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -164,6 +165,7 @@ std::string property_pitm_description;
 std::string property_pitm_name;
 std::string property_pitm_tags;
 std::string property_pitm_alt_text;
+std::optional<std::chrono::time_point<std::chrono::system_clock>> property_pitm_timestamp;
 
 RawImageParameters raw_input_params;
 bool force_raw_input = false;
@@ -181,15 +183,8 @@ std::optional<long> parse_int(const char* s)
 
 // for benchmarking
 
-#if !defined(_MSC_VER)
-#define HAVE_GETTIMEOFDAY 1  // TODO: should be set by CMake
-#endif
-
-#if HAVE_GETTIMEOFDAY
-#include <sys/time.h>
-timeval time_encoding_start;
-timeval time_encoding_end;
-#endif
+std::chrono::time_point<std::chrono::high_resolution_clock> time_encoding_start;
+std::chrono::time_point<std::chrono::high_resolution_clock> time_encoding_end;
 
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
 const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
@@ -244,6 +239,7 @@ const int OPTION_MINI = 1049;
 const int OPTION_PITM_NAME = 1050;
 const int OPTION_PITM_TAGS = 1051;
 const int OPTION_PITM_ALT_TEXT = 1052;
+const int OPTION_PITM_TIMESTAMP = 1053;
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -396,6 +392,7 @@ static option long_options[] = {
     {(char* const) "pitm-name",                   required_argument, 0,                     OPTION_PITM_NAME},
     {(char* const) "pitm-tags",                   required_argument, 0,                     OPTION_PITM_TAGS},
     {(char* const) "pitm-alt",                    required_argument, 0,                     OPTION_PITM_ALT_TEXT},
+    {(char* const) "pitm-timestamp",              no_argument,       0,                     OPTION_PITM_TIMESTAMP},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
@@ -490,6 +487,7 @@ void show_help(const char* argv0)
             << "      --pitm-name TEXT              set user name for primary image\n"
             << "      --pitm-tags TEXT              set comma-separated user tags for primary image\n"
             << "      --pitm-alt TEXT               set alt text for primary image\n"
+            << "      --pitm-timestamp              set timestamp for primary image to current system timestamp\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
@@ -1595,6 +1593,9 @@ int main(int argc, char** argv)
       case OPTION_PITM_ALT_TEXT:
         property_pitm_alt_text = optarg;
         break;
+      case OPTION_PITM_TIMESTAMP:
+        property_pitm_timestamp = std::chrono::system_clock::now();
+        break;
       case OPTION_USE_HEVC_COMPRESSION:
         force_enc_hevc = true;
         break;
@@ -2382,11 +2383,9 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       primary_image = image;
     }
 
-#if HAVE_GETTIMEOFDAY
     if (run_benchmark) {
-      gettimeofday(&time_encoding_start, nullptr);
+      time_encoding_start = std::chrono::high_resolution_clock::now();
     }
-#endif
 
     heif_color_profile_nclx* nclx;
     heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, primary_image,
@@ -2573,16 +2572,38 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       }
     }
 
-#if HAVE_GETTIMEOFDAY
     if (run_benchmark) {
-      gettimeofday(&time_encoding_end, nullptr);
+      time_encoding_end = std::chrono::high_resolution_clock::now();
     }
-#endif
 
     heif_image_handle_release(handle);
     heif_nclx_color_profile_free(nclx);
 
     is_primary_image = false;
+  }
+
+  if (property_pitm_timestamp) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set timestamp\n";
+      return 5;
+    }
+    uint64_t time = std::chrono::duration_cast<std::chrono::microseconds>(property_pitm_timestamp->time_since_epoch()).count();
+    time += heif_property_timestamp_mac_to_unix_epoch_difference;
+
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+    err = heif_item_add_property_time(context, pitm_id, heif_item_property_type_creation_time, time, nullptr);
+    if (err.code) {
+      std::cerr << "Cannot set timestamp\n";
+      return 5;
+    }
+    err = heif_item_add_property_time(context, pitm_id, heif_item_property_type_modification_time, time, nullptr);
+    if (err.code) {
+      std::cerr << "Cannot set timestamp\n";
+      return 5;
+    }
+    heif_image_handle_release(primary_image_handle);
   }
 
   if (!property_pitm_description.empty() || !property_pitm_name.empty() || !property_pitm_tags.empty()) {
@@ -2651,10 +2672,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     double psnr = compute_psnr(primary_image.get(), output_filename);
     std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
 
-#if HAVE_GETTIMEOFDAY
-    double t = (double) (time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double) (time_encoding_end.tv_usec - time_encoding_start.tv_usec) / 1000000.0;
-    std::cout << "time: " << std::setprecision(1) << std::fixed << t << " ";
-#endif
+    std::cout << "time: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_encoding_end - time_encoding_start) << " ";
 
     std::ifstream istr(output_filename.c_str());
     istr.seekg(0, std::ios_base::end);

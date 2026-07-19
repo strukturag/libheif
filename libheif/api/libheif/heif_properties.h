@@ -140,7 +140,12 @@ heif_error heif_item_add_property_alt_text(const heif_context* context,
 LIBHEIF_API
 void heif_property_alt_text_release(heif_property_alt_text*);
 
+// ISO/IEC 23008-12:2025 native timestamp is defined as microseconds since macOS epoch time (1904-01-01 00:00:00 UTC).
+// This constant is the difference in microseconds between macOS epoch and UNIX epoch (1970-01-01), used to convert between timestamps in different epoch
+#define heif_property_timestamp_mac_to_unix_epoch_difference 2082844800000000ull
+
 // Get the "crtt"/"mdft" creation time and modification time property content.
+// Timestamp is in microseconds since 1904-01-01.
 // propertyType is the fourcc of property (heif_item_property_type_creation_time or heif_item_property_type_modification_time)
 LIBHEIF_API
 heif_error heif_item_get_property_time(const heif_context* context,
@@ -150,6 +155,7 @@ heif_error heif_item_get_property_time(const heif_context* context,
   uint64_t* out);
 
 // Set the "crtt"/"mdft" creation time and modification time property content.
+// Timestamp is in microseconds since 1904-01-01.
 // propertyType is the fourcc of property (heif_item_property_type_creation_time or heif_item_property_type_modification_time)
 LIBHEIF_API
 heif_error heif_item_add_property_time(const heif_context* context,

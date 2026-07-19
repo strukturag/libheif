@@ -287,9 +287,8 @@ heif_error heif_item_get_property_time(const heif_context* context,
       return crtt.error_struct(context->context.get());
     }
     *out = (*crtt)->get_time();
-    break;
+    return heif_error_success;
   }
-  return heif_error_success;
   case heif_item_property_type_modification_time:
   {
     auto mdft = context->context->find_property<Box_mdft>(itemId, propertyId);
@@ -297,10 +296,10 @@ heif_error heif_item_get_property_time(const heif_context* context,
       return mdft.error_struct(context->context.get());
     }
     *out = (*mdft)->get_time();
+    return heif_error_success;
   }
-  return heif_error_success;
   default:
-    return heif_error_invalid_parameter_value;
+    return { heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Unsupported propertyType fourcc" };
   }
 }
 
@@ -332,7 +331,7 @@ heif_error heif_item_add_property_time(const heif_context* context,
     }
     break;
   default:
-    return heif_error_invalid_parameter_value;
+    return { heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Unsupported propertyType fourcc" };
   }
 
   heif_property_id id = context->context->add_property(itemId, prop_box, false);
