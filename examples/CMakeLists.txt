@@ -2,6 +2,8 @@
 include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
 
 if (MSVC)
+    # https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+    add_compile_options(/Zc:__cplusplus)
     set(getopt_sources
             ../extra/getopt.c
             ../extra/getopt.h
