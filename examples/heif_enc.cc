@@ -187,7 +187,7 @@ std::optional<long> parse_int(const char* s)
 
 // for benchmarking
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 201103L
 std::chrono::time_point<std::chrono::high_resolution_clock> time_encoding_start;
 std::chrono::time_point<std::chrono::high_resolution_clock> time_encoding_end;
 #endif
@@ -2395,7 +2395,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       primary_image = image;
     }
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 201103L
     if (run_benchmark) {
       time_encoding_start = std::chrono::high_resolution_clock::now();
     }
@@ -2586,7 +2586,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       }
     }
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 201103L
     if (run_benchmark) {
       time_encoding_end = std::chrono::high_resolution_clock::now();
     }
@@ -2689,8 +2689,8 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
     std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
-#if __cplusplus >= 202002L
-    std::cout << "time: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_encoding_end - time_encoding_start) << " ";
+#if __cplusplus >= 201103L
+    std::cout << "time: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_encoding_end - time_encoding_start).count() << "ms ";
 #endif
     std::ifstream istr(output_filename.c_str());
     istr.seekg(0, std::ios_base::end);
