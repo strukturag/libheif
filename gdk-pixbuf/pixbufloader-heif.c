@@ -81,25 +81,29 @@ static gboolean stop_load(gpointer context, GError** error)
 
   err = heif_init(NULL);
   if (err.code != heif_error_Ok) {
-    g_warning("%s", err.message);
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_FAILED,
+                "HEIF decoding failed: %s", err.message);
     goto cleanup;
   }
 
   hc = heif_context_alloc();
   if (!hc) {
-    g_warning("cannot allocate heif_context");
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_INSUFFICIENT_MEMORY,
+                "cannot allocate heif_context");
     goto cleanup;
   }
 
   err = heif_context_read_from_memory_without_copy(hc, hpc->data->data, hpc->data->len, NULL);
   if (err.code != heif_error_Ok) {
-    g_warning("%s", err.message);
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_CORRUPT_IMAGE,
+                "HEIF decoding failed: %s", err.message);
     goto cleanup;
   }
 
   err = heif_context_get_primary_image_handle(hc, &hdl);
   if (err.code != heif_error_Ok) {
-    g_warning("%s", err.message);
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_CORRUPT_IMAGE,
+                "HEIF decoding failed: %s", err.message);
     goto cleanup;
   }
 
@@ -109,7 +113,10 @@ static gboolean stop_load(gpointer context, GError** error)
                           has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
                           NULL);
   if (err.code != heif_error_Ok) {
-    g_warning("%s", err.message);
+    g_set_error(error, GDK_PIXBUF_ERROR,
+                err.code == heif_error_Unsupported_feature ? GDK_PIXBUF_ERROR_UNSUPPORTED_OPERATION
+                                                            : GDK_PIXBUF_ERROR_CORRUPT_IMAGE,
+                "HEIF decoding failed: %s", err.message);
     goto cleanup;
   }
 
