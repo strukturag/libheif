@@ -73,6 +73,12 @@ uint32_t heif_item_get_item_type(const heif_context* ctx, heif_item_id item_id);
 
 #define heif_item_type_mime   heif_fourcc('m','i','m','e')
 #define heif_item_type_uri    heif_fourcc('u','r','i',' ')
+#define heif_item_type_exif   heif_fourcc('E','x','i','f')
+#define heif_item_type_grid   heif_fourcc('g','r','i','d')
+#define heif_item_type_hvc1   heif_fourcc('h','v','c','1')
+#define heif_item_type_unci   heif_fourcc('u','n','c','i')
+#define heif_item_type_av01   heif_fourcc('a','v','0','1')
+#define heif_item_type_avc1   heif_fourcc('a','v','c','1')
 
 LIBHEIF_API
 int heif_item_is_item_hidden(const heif_context* ctx, heif_item_id item_id);
