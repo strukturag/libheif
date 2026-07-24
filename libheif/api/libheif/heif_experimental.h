@@ -178,6 +178,20 @@ void heif_pyramid_layer_info_release(heif_pyramid_layer_info*);
 #endif
 
 
+typedef struct heif_property_accessibility_text
+{
+  const char* alt_text;
+  const char* alt_lang;
+} heif_property_accessibility_text;
+
+// Add a "altt" user description property to the item.
+LIBHEIF_API
+heif_error heif_item_add_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     const heif_property_accessibility_text* altt,
+                                                     heif_property_id* out_propertyId);
+
+
 #ifdef __cplusplus
 }
 #endif

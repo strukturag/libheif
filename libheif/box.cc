@@ -530,6 +530,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_clap>();
       break;
 
+    case fourcc("altt"):
+      box = std::make_shared<Box_altt>();
+      break;
+
     case fourcc("iscl"):
       box = std::make_shared<Box_iscl>();
       break;
@@ -3792,6 +3796,40 @@ void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
 
   m_horizontal_offset = Fraction(-(int32_t) (image_width - clap_width), 2);
   m_vertical_offset = Fraction(-(int32_t) (image_height - clap_height), 2);
+}
+
+
+
+Error Box_altt::parse(BitstreamRange& range, const heif_security_limits*)
+{
+  parse_full_box_header(range);
+
+  m_alt_text = range.read_string();
+  m_alt_lang = range.read_string();
+
+  return range.get_error();
+}
+
+std::string Box_altt::dump(Indent& indent) const
+ {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "alt text: " << m_alt_text << "\n";
+  sstr << indent << "alt lang: " << m_alt_lang << "\n";
+
+  return sstr.str();
+ }
+
+Error Box_altt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_alt_text);
+  writer.write(m_alt_lang);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
 }
 
 

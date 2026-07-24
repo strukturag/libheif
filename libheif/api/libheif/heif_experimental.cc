@@ -370,3 +370,26 @@ heif_error heif_context_add_tiled_image(heif_context* ctx,
   return heif_error_success;
 }
 #endif
+
+
+heif_error heif_item_add_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     const heif_property_accessibility_text* altt,
+                                                     heif_property_id* out_propertyId)
+{
+  if (!context || !altt) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto altt_box = std::make_shared<Box_altt>();
+  altt_box->set_alt_text(altt->alt_text ? altt->alt_text : "");
+  altt_box->set_alt_lang(altt->alt_lang ? altt->alt_lang : "");
+
+  heif_property_id id = context->context->add_property(itemId, altt_box, false);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
+}

@@ -1040,6 +1040,38 @@ private:
 };
 
 
+class Box_altt : public FullBox
+{
+public:
+  Box_altt()
+  {
+    set_short_type(fourcc("altt"));
+  }
+
+  std::string get_alt_text() const { return m_alt_text; }
+
+  std::string get_alt_lang() const { return m_alt_lang; }
+
+  void set_alt_text(const std::string& text) { m_alt_text = text; }
+
+  void set_alt_lang(const std::string& lang) { m_alt_lang = lang; }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Accessibility Text Property"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::string m_alt_text;
+  std::string m_alt_lang;
+
+};
+
+
 class Box_iref : public FullBox
 {
 public:
