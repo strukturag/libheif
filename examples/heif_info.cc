@@ -186,6 +186,35 @@ static const char* matrix_coefficients_name(uint16_t v)
   }
 }
 
+static void print_timestamp(const char* text, uint64_t timestamp)
+{
+  if (timestamp >= heif_property_timestamp_mac_to_unix_epoch_difference)
+  {
+    time_t t = (time_t)(timestamp - heif_property_timestamp_mac_to_unix_epoch_difference) / 1000000ull;
+    struct tm tm;
+
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+
+    printf(
+      "%s: %04d-%02d-%02d %02d:%02d:%02d UTC\n",
+      text,
+      tm.tm_year + 1900,
+      tm.tm_mon + 1,
+      tm.tm_mday,
+      tm.tm_hour,
+      tm.tm_min,
+      tm.tm_sec
+    );
+  }
+  else {
+    printf("%s: before 1970-01-01 00:00:00 UTC\n", text);
+  }
+}
+
 
 int main(int argc, char** argv)
 {
@@ -836,6 +865,38 @@ int main(int argc, char** argv)
 
           heif_property_alt_text_release(altt);
         }
+      }
+    }
+
+    count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_creation_time,
+      propertyIds, 1);
+
+    if (count > 0) {
+      uint64_t creation_time;
+      err = heif_item_get_property_time(ctx.get(), IDs[i], propertyIds[0], heif_item_property_type_creation_time, &creation_time);
+      if (err.code) {
+        std::cerr << "Error reading creation time " << IDs[i] << "/" << propertyIds[0] << "\n";
+      }
+      else {
+        print_timestamp("  creation time", creation_time);
+
+        properties_shown = true;
+      }
+    }
+
+    count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_modification_time,
+      propertyIds, 1);
+
+    if (count > 0) {
+      uint64_t modification_time;
+      err = heif_item_get_property_time(ctx.get(), IDs[i], propertyIds[0], heif_item_property_type_modification_time, &modification_time);
+      if (err.code) {
+        std::cerr << "Error reading modification time " << IDs[i] << "/" << propertyIds[0] << "\n";
+      }
+      else {
+        print_timestamp("  modification time", modification_time);
+
+        properties_shown = true;
       }
     }
 
