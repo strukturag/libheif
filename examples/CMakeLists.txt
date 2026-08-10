@@ -70,6 +70,10 @@ target_include_directories(heif-enc PRIVATE ${libheif_SOURCE_DIR})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
+if (LIBSHARPYUV_FOUND)
+    target_compile_definitions(heif-enc PRIVATE HAVE_LIBSHARPYUV=1)
+endif()
+
 if (WITH_HEADER_COMPRESSION)
     target_compile_definitions(heif-enc PRIVATE WITH_HEADER_COMPRESSION=1)
 endif ()
