@@ -13,7 +13,7 @@ jobs:
     # fails before the build can run. Re-enable by removing this `if` line
     # once the Coverity service is back.
     if: false
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       WITH_AOM: 1

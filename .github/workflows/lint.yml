@@ -13,7 +13,7 @@ jobs:
   cpplint:
     env:
       CPPLINT: 1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v7
 
@@ -30,7 +30,7 @@ jobs:
         ./scripts/run-ci.sh
 
   c-api-headers:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v7
 
@@ -44,7 +44,7 @@ jobs:
         ./scripts/check-c-headers.sh
 
   api-symbols:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v7
 
@@ -60,7 +60,7 @@ jobs:
   licenses:
     env:
       CHECK_LICENSES: 1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v7
 
