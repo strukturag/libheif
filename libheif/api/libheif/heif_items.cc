@@ -317,7 +317,7 @@ heif_error heif_context_add_item(heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result;
+    *out_item_id = *result;
     return heif_error_success;
   }
   else {
@@ -352,7 +352,7 @@ heif_error heif_context_add_precompressed_mime_item(heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_precompressed_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result;
+    *out_item_id = *result;
     return heif_error_success;
   }
   else {
@@ -368,7 +368,7 @@ heif_error heif_context_add_uri_item(heif_context* ctx,
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_uri(item_uri_type, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
-    *out_item_id = result;
+    *out_item_id = *result;
     return heif_error_success;
   }
   else {
