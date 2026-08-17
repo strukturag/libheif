@@ -175,6 +175,22 @@ heif_error heif_item_get_property_raw_data(const heif_context* context,
                                            uint8_t* out_data);
 
 /**
+ * Read an NCLX color profile from a `colr` item property.
+ *
+ * The returned profile is allocated by libheif and must be released with
+ * heif_nclx_color_profile_free().
+ *
+ * @param propertyId the property index (1-based), or 0 to read the first `colr` property
+ * @param out_profile output profile; set to NULL when the call returns an error
+ */
+LIBHEIF_API
+heif_error heif_item_get_property_nclx_color_profile(
+    const heif_context* context,
+    heif_item_id itemId,
+    heif_property_id propertyId,
+    heif_color_profile_nclx** out_profile);
+
+/**
  * Get the extended type for an extended "uuid" box.
  *
  * This provides the UUID for the extended box.

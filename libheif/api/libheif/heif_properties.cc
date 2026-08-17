@@ -23,6 +23,7 @@
 #include "api_structs.h"
 #include "file.h"
 #include "image/pixelimage.h"
+#include "nclx.h"
 
 #include <array>
 #include <cstring>
@@ -346,6 +347,35 @@ heif_error heif_item_get_property_raw_data(const heif_context* context,
   std::copy(data.begin(), data.end(), data_out);
 
   return heif_error_success;
+}
+
+
+heif_error heif_item_get_property_nclx_color_profile(
+    const heif_context* context,
+    heif_item_id itemId,
+    heif_property_id propertyId,
+    heif_color_profile_nclx** out_profile)
+{
+  if (out_profile) {
+    *out_profile = nullptr;
+  }
+  if (!context || !out_profile) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto colr = context->context->find_property<Box_colr>(itemId, propertyId);
+  if (!colr) {
+    return colr.error_struct(context->context.get());
+  }
+
+  auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>((*colr)->get_color_profile());
+  if (!nclx) {
+    return {heif_error_Color_profile_does_not_exist, heif_suberror_Unspecified,
+            "Item property does not contain an NCLX profile"};
+  }
+
+  return nclx->get_nclx_color_profile().get_nclx_color_profile(out_profile)
+      .error_struct(context->context.get());
 }
 
 
