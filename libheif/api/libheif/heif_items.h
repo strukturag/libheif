@@ -77,6 +77,12 @@ uint32_t heif_item_get_item_type(const heif_context* ctx, heif_item_id item_id);
 LIBHEIF_API
 int heif_item_is_item_hidden(const heif_context* ctx, heif_item_id item_id);
 
+// Set or clear the hidden flag of an existing item. The primary image cannot be hidden.
+LIBHEIF_API
+heif_error heif_item_set_item_hidden(heif_context* ctx,
+                                     heif_item_id item_id,
+                                     int hidden);
+
 
 /**
  * Gets the MIME content_type for an item.

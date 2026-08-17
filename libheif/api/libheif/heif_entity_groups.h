@@ -52,6 +52,24 @@ heif_entity_group* heif_context_get_entity_groups(const heif_context*,
 LIBHEIF_API
 void heif_entity_groups_release(heif_entity_group*, int num_groups);
 
+// Create an alternative ('altr') entity group containing the supplied item IDs,
+// preserving their order. Track entities are not currently supported. An item may
+// belong to only one alternative entity group.
+// `out_group_id` may be NULL.
+LIBHEIF_API
+heif_error heif_context_add_alternative_entity_group(heif_context* ctx,
+                                                     const heif_item_id* item_ids,
+                                                     uint32_t num_items,
+                                                     heif_entity_group_id* out_group_id);
+
+// Create a stereo-pair ('ster') entity group. The first image is the left view and
+// the second image is the right view. `out_group_id` may be NULL.
+LIBHEIF_API
+heif_error heif_context_add_stereo_pair_entity_group(heif_context* ctx,
+                                                     heif_item_id left_image_id,
+                                                     heif_item_id right_image_id,
+                                                     heif_entity_group_id* out_group_id);
+
 
 #ifdef __cplusplus
 }
