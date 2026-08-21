@@ -82,3 +82,31 @@ TEST_CASE("avcC") {
   const std::vector<uint8_t> bytes = writer.get_data();
   REQUIRE(bytes == byteArray);
 }
+
+TEST_CASE("Reject invalid chroma format in AVC SPS") {
+  const std::vector<uint8_t> sps{
+      0x20, 0x2c, 0x20, 0x20, 0x00, 0x20, 0x20, 0x00, 0x20, 0x20, 0x20, 0x20,
+      0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+  Box_avcC::configuration configuration;
+  uint32_t width = 0;
+  uint32_t height = 0;
+
+  Error error = parse_sps_for_avcC_configuration(
+      sps.data(), sps.size(), &configuration, &width, &height);
+
+  REQUIRE(error.error_code == heif_error_Invalid_input);
+}
+
+TEST_CASE("Reject invalid code in AVC SPS scaling list") {
+  std::vector<uint8_t> sps{
+      0x67, 0x64, 0x00, 0x1f, 0xad, 0x80, 0x00, 0x00, 0x00, 0x3f};
+  sps.insert(sps.end(), 40, 0xff);
+  Box_avcC::configuration configuration;
+  uint32_t width = 0;
+  uint32_t height = 0;
+
+  Error error = parse_sps_for_avcC_configuration(
+      sps.data(), sps.size(), &configuration, &width, &height);
+
+  REQUIRE(error.error_code == heif_error_Invalid_input);
+}

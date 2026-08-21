@@ -302,7 +302,7 @@ void Box_avcC::append_pps_nal(const uint8_t* data, size_t size)
   m_pps.emplace_back(std::move(vec));
 }
 
-void skip_scaling_list(BitReader& reader, int sizeOfScalingList)
+static bool skip_scaling_list(BitReader& reader, int sizeOfScalingList)
 {
   int lastScale = 8;
   int nextScale = 8;
@@ -314,8 +314,10 @@ void skip_scaling_list(BitReader& reader, int sizeOfScalingList)
   // original version
   for (int j = 0; j < sizeOfScalingList; j++) {
     if (nextScale != 0) {
-      int delta_scale;
-      reader.get_svlc(&delta_scale);
+      int32_t delta_scale;
+      if (!reader.get_svlc(&delta_scale)) {
+        return false;
+      }
       nextScale = (lastScale + delta_scale + 256) % 256;
     }
 
@@ -325,7 +327,9 @@ void skip_scaling_list(BitReader& reader, int sizeOfScalingList)
   // fast version
   for (int j = 0; j < sizeOfScalingList; j++) {
     int32_t delta_scale;
-    reader.get_svlc(&delta_scale);
+    if (!reader.get_svlc(&delta_scale)) {
+      return false;
+    }
     nextScale = (lastScale + delta_scale + 256) % 256;
 
     if (nextScale == 0) {
@@ -335,6 +339,8 @@ void skip_scaling_list(BitReader& reader, int sizeOfScalingList)
     lastScale = nextScale;
   }
 #endif
+
+  return true;
 }
 
 
@@ -376,7 +382,15 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
       return invalidUVLC;
     }
 
-    config->chroma_format = (heif_chroma) value;
+    if (value > heif_chroma_444) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Invalid chroma format in AVC SPS header"
+      };
+    }
+
+    config->chroma_format = static_cast<heif_chroma>(value);
     if (config->chroma_format == heif_chroma_444) {
       reader.skip_bits(1);
     }
@@ -397,11 +411,8 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
       for (int i = 0; i < ((config->chroma_format != heif_chroma_444) ? 8 : 12); i++) {
         int scaling_list_present_flag = reader.get_bits(1);
         if (scaling_list_present_flag) {
-          if (i < 6) {
-            skip_scaling_list(reader, 16);
-          }
-          else {
-            skip_scaling_list(reader, 64);
+          if (!skip_scaling_list(reader, i < 6 ? 16 : 64)) {
+            return invalidUVLC;
           }
         }
       }
