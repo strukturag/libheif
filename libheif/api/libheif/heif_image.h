@@ -269,6 +269,13 @@ uint8_t* heif_image_get_plane(heif_image*,
 // The 'stride' parameter is often multiplied by the image height in the client application.
 // For very large images, this can lead to integer overflows and, consequently, illegal memory accesses.
 // The changed 'stride' parameter type eliminates this common error.
+//
+// Size any copy loop that reads or writes this plane from *this* channel's own
+// heif_image_get_width()/heif_image_get_height() and this 'out_stride' -- never from
+// heif_image_handle_get_width()/heif_image_handle_get_height() (the signalled item size, which
+// is not guaranteed to match the decoded plane) and never by assuming stride equals
+// width * bytes_per_pixel: the row may be padded, so require stride >= bytes_per_pixel * width
+// and use the returned stride for row-to-row offsets.
 LIBHEIF_API
 const uint8_t* heif_image_get_plane_readonly2(const heif_image*,
                                               heif_channel channel,

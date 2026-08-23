@@ -55,12 +55,28 @@ heif_item_id heif_image_handle_get_item_id(const heif_image_handle* handle);
 
 /** Get the image width.
  *
+ * This is the *signalled* size declared for the item, available without decoding. It is not
+ * guaranteed to match the size of the image you get back from heif_decode_image(): do not use
+ * this value to allocate or bound access to a decoded pixel buffer. Once you have decoded the
+ * image, use heif_image_get_width(heif_image*, heif_channel) (or heif_image_get_primary_width())
+ * for the actual plane size, and size any copy loop from that together with the stride returned
+ * by heif_image_get_plane_readonly2() / heif_image_get_plane2() -- never from this handle value
+ * or from width * bytes_per_pixel.
+ *
  * If 'handle' is invalid (NULL) or if the image size exceeds the range of `int`, 0 is returned.
  */
 LIBHEIF_API
 int heif_image_handle_get_width(const heif_image_handle* handle);
 
 /** Get the image height.
+ *
+ * This is the *signalled* size declared for the item, available without decoding. It is not
+ * guaranteed to match the size of the image you get back from heif_decode_image(): do not use
+ * this value to allocate or bound access to a decoded pixel buffer. Once you have decoded the
+ * image, use heif_image_get_height(heif_image*, heif_channel) (or heif_image_get_primary_height())
+ * for the actual plane size, and size any copy loop from that together with the stride returned
+ * by heif_image_get_plane_readonly2() / heif_image_get_plane2() -- never from this handle value
+ * or from height * stride.
  *
  * If 'handle' is invalid (NULL) or if the image size exceeds the range of `int`, 0 is returned.
  */
