@@ -391,8 +391,20 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
                                         const heif_security_limits* limits,
                                         MemoryHandle& memory_handle)
 {
-  assert(bit_depth >= 1);
-  assert(bit_depth <= 128);
+  // bit_depth and num_interleaved_components are exactly as attacker-influenced as width,
+  // height, and the other inputs checked below (e.g. reachable through the public
+  // heif_image_add_plane() API), so they get the same real, non-assert validation.
+  if (bit_depth < 1 || bit_depth > 128) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Invalid bit depth"};
+  }
+
+  if (num_interleaved_components < 1 || num_interleaved_components > 255) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Invalid number of interleaved components"};
+  }
 
   if (width == 0 || height == 0) {
     return {heif_error_Usage_error,
@@ -415,8 +427,6 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
   m_mem_width = rounded_size(width);
   m_mem_height = rounded_size(height);
 
-  assert(num_interleaved_components > 0 && num_interleaved_components <= 255);
-
   m_bit_depth = static_cast<uint8_t>(bit_depth);
   m_num_interleaved_components = static_cast<uint8_t>(num_interleaved_components);
   m_datatype = datatype;
@@ -427,7 +437,19 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
   else if (bit_depth <= 16)  bytes_per_component = 2;
   else if (bit_depth <= 32)  bytes_per_component = 4;
   else if (bit_depth <= 64)  bytes_per_component = 8;
-  else { assert(bit_depth <= 128); bytes_per_component = 16; }
+  else                       bytes_per_component = 16;
+
+  // m_bytes_per_pixel is a uint8_t. bytes_per_component * num_interleaved_components can
+  // exceed 255 even though num_interleaved_components itself is already bounded to <= 255
+  // above (e.g. 16 bytes/component * 16 components = 256) -- check before the narrowing
+  // cast, not after: a silent wrap here wouldn't just misreport bytes-per-pixel, it would
+  // also make the stride/allocation-size computation below undersize the buffer relative
+  // to the real width/height/bit-depth the rest of this object claims to have.
+  if (bytes_per_component * num_interleaved_components > 255) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Number of interleaved components exceeds what can be stored for this bit depth"};
+  }
   m_bytes_per_pixel = static_cast<uint8_t>(bytes_per_component * num_interleaved_components);
 
   int bytes_per_pixel = m_bytes_per_pixel;
@@ -1971,7 +1993,15 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
   int nInterleaved = num_interleaved_components_per_plane(m_chroma);
   if (nInterleaved > 1) {
     const auto* comp = find_storage_for_channel(heif_channel_interleaved);
-    assert(comp != nullptr); // the plane must exist since we have an interleaved chroma format
+    // m_chroma alone decides this branch, not which channels m_storage actually holds -- an
+    // image can have m_chroma set to an interleaved format while carrying separate R/G/B
+    // planes instead (has_standard_plane_sizes() and the allocation above both accept that:
+    // neither one cross-checks the chroma format against which channel was actually added).
+    // Reachable directly through the public API with no decode involved.
+    if (comp == nullptr) {
+      return {heif_error_Invalid_input, heif_suberror_Unspecified,
+              "Interleaved chroma format without an interleaved plane"};
+    }
     const ComponentStorage& plane = *comp;
 
     uint32_t out_w = out_img->get_width(heif_channel_interleaved);
