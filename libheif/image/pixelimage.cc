@@ -2153,6 +2153,18 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
                  "extract_image_area: top-left position is outside the image"};
   }
 
+  // The per-channel copy below clamps against the chroma-mapped *declared*
+  // image extent, not each plane's own actual extent, and xs/ys are also
+  // derived from the declared geometry -- so a plane smaller than that implies
+  // (same enabling condition as crop()/scale_nearest_neighbor()) both reads
+  // past its end and, since xs/ys can then exceed the plane's real bounds,
+  // underflows the unsigned subtraction feeding the memcpy length. Reject the
+  // same inconsistent state crop() now does.
+  if (!has_standard_plane_sizes()) {
+    return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified,
+                 "Extracting an area from an image with non-standard plane sizes is not supported"};
+  }
+
   uint32_t minW = std::min(w, get_width() - x0);
   uint32_t minH = std::min(h, get_height() - y0);
 
