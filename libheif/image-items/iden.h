@@ -68,16 +68,9 @@ public:
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
                                                                   std::set<heif_item_id> processed_ids) const override;
 
-  // iden forwards decoding to the referenced item, which validates its own decoded
-  // size. Re-checking here against this iden's (possibly absent) 'ispe' would be wrong.
-  Error check_decoded_image_size(const HeifPixelImage&, bool, uint32_t, uint32_t) const override
-  {
-    return Error::Ok;
-  }
-
   heif_brand2 get_compatible_brand() const override;
 
-private:
+  // No check_decoded_image_size() override: the base class implementation is correct here too.
 };
 
 
