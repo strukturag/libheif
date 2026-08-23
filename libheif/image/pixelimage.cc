@@ -1030,11 +1030,21 @@ void HeifPixelImage::fill_channel(heif_channel dst_channel, uint16_t value)
 }
 
 
-void HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
+Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                                   heif_channel src_channel,
                                                   heif_channel dst_channel)
 {
-  // TODO: check that dst_channel does not exist yet
+  // A destination image must never end up with two planes for the same channel:
+  // find_storage_for_channel() and every method built on it (get_bits_per_pixel(),
+  // get_channel_memory(), get_width()/get_height()) only ever look at the first
+  // match, so a second, differently-sized/differently-typed plane for the same
+  // channel would silently be invisible to size queries while still being iterated
+  // (and written to) by code that walks m_storage directly, e.g. scale_nearest_neighbor().
+  if (find_storage_for_channel(dst_channel) != nullptr) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Destination image already has a plane for this channel"};
+  }
 
   // Find and remove the component from source
   ComponentStorage plane;
@@ -1085,6 +1095,8 @@ void HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifPi
   m_memory_handle.alloc(plane.allocation_size,
                         source->m_memory_handle.get_security_limits(),
                         "transferred image data");
+
+  return Error::Ok;
 }
 
 
@@ -1656,6 +1668,21 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
 
   bool has_alpha = overlay->has_channel(heif_channel_Alpha);
   //bool has_alpha_me = has_channel(heif_channel_Alpha);
+
+  // The blend loop below indexes the Alpha plane using the extent of each color
+  // channel (in_w/in_h, out_w/out_h), not the Alpha plane's own reported extent.
+  // If the Alpha plane were smaller than the other channels, that would read past
+  // its allocation, so reject that case up front instead of trusting the sizes
+  // to agree.
+  // Note that differently sized Alpha channels are allowed, but we currently do
+  // not support it here (TODO).
+  if (has_alpha &&
+      (overlay->get_width(heif_channel_Alpha) != overlay->get_width() ||
+       overlay->get_height(heif_channel_Alpha) != overlay->get_height())) {
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unspecified,
+            "Overlay image Alpha plane size does not match the other color planes"};
+  }
 
   size_t alpha_stride = 0;
   uint8_t* alpha_p;

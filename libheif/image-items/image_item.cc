@@ -1073,7 +1073,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
       }
       alpha = std::move(scaled_alpha);
     }
-    img->transfer_channel_from_image_as(alpha, channel, heif_channel_Alpha);
+    if (Error err = img->transfer_channel_from_image_as(alpha, channel, heif_channel_Alpha)) {
+      return err;
+    }
 
     if (is_premultiplied_alpha()) {
       img->set_premultiplied_alpha(true);

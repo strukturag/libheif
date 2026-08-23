@@ -268,7 +268,7 @@ public:
 
   Error fill_new_channel(heif_channel dst_channel, uint16_t value, int width, int height, int bpp, const heif_security_limits* limits);
 
-  void transfer_channel_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
+  Error transfer_channel_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                     heif_channel src_channel,
                                     heif_channel dst_channel);
 

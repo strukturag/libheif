@@ -316,7 +316,9 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       alphaImage = std::move(scaled_alpha);
     }
 
-    image->transfer_channel_from_image_as(alphaImage, heif_channel_Y, heif_channel_Alpha);
+    if (Error err = image->transfer_channel_from_image_as(alphaImage, heif_channel_Y, heif_channel_Alpha)) {
+      return err;
+    }
   }
 
 
