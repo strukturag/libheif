@@ -36,8 +36,15 @@ uint8_t chroma_h_subsampling(heif_chroma c)
     case heif_chroma_interleaved_RGB:
     case heif_chroma_interleaved_RGBA:
     default:
-      assert(false);
-      return 0;
+      // Interleaved and undefined chroma have no Cb/Cr subsampling of their own
+      // (a Cb/Cr channel paired with one of these is already an inconsistent
+      // image -- Cb/Cr only exist for planar YCbCr -- which other checks reject
+      // on their own merits). Callers divide by this return value, and this
+      // function is reachable with attacker-controlled chroma through the
+      // public API (heif_image_create() + heif_image_add_plane()), so an
+      // assert() here (compiled out under NDEBUG, i.e. every shipped build)
+      // is not a guard: return the neutral, unsubsampled value instead of 0.
+      return 1;
   }
 }
 
@@ -56,8 +63,8 @@ uint8_t chroma_v_subsampling(heif_chroma c)
     case heif_chroma_interleaved_RGB:
     case heif_chroma_interleaved_RGBA:
     default:
-      assert(false);
-      return 0;
+      // See chroma_h_subsampling().
+      return 1;
   }
 }
 
