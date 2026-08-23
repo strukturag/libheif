@@ -1507,6 +1507,18 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
                  "Invalid crop region"};
   }
 
+  // ComponentStorage::crop() below maps (left,right,top,bottom) -- already bounded
+  // against m_width/m_height above -- into per-plane coordinates via
+  // get_subsampled_size_h/v(), then bulk-memcpy's each row assuming the plane
+  // actually covers that geometry. Verify that first; a plane smaller than
+  // m_width/m_height implies (e.g. from Alpha attached without a size check, or
+  // any other producer that doesn't enforce this) would otherwise be read past
+  // its end.
+  if (!has_standard_plane_sizes()) {
+    return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified,
+                 "Cropping an image with non-standard plane sizes is not supported"};
+  }
+
   // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before cropping
 
   bool need_conversion = false;
