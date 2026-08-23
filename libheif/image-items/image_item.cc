@@ -1065,7 +1065,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     //       It might also be that a specific output format implies that alpha is scaled (RGBA32). That would favor an enum for the scaling filter option + a bool to switch auto-filtering on.
     //       But we can only do this when libheif itself doesn't assume anymore that the alpha channel has the same resolution.
 
-    if ((alpha_image->get_width() != img->get_width()) || (alpha_image->get_height() != img->get_height())) {
+    if ((alpha->get_width() != img->get_width()) || (alpha->get_height() != img->get_height())) {
       std::shared_ptr<HeifPixelImage> scaled_alpha;
       Error err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height(), m_heif_context->get_security_limits());
       if (err) {
