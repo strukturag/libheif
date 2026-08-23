@@ -816,6 +816,9 @@ bool HeifPixelImage::has_standard_plane_sizes() const
       case heif_channel_G:
       case heif_channel_B:
       case heif_channel_interleaved:
+      case heif_channel_filter_array:
+      case heif_channel_depth:
+      case heif_channel_disparity:
         expected_w = m_width;
         expected_h = m_height;
         break;
@@ -827,6 +830,10 @@ bool HeifPixelImage::has_standard_plane_sizes() const
 
       default:
         // Not one of the standard channels this check knows the geometry of.
+        // Notably heif_channel_unknown, used by the uncompressed codec for
+        // padded/unrecognized multi-component data, which has no universal
+        // size rule (and, unlike the channels above, may legitimately appear
+        // more than once per image) -- rejected rather than guessed at.
         return false;
     }
 
