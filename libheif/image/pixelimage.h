@@ -107,6 +107,18 @@ public:
   //   undefined / custom  -> not checked here; returns true
   bool primary_planes_have_size(uint32_t width, uint32_t height) const;
 
+  // Returns true if every plane actually stored in m_storage -- not just the
+  // "primary" ones for the current colorspace -- has the size that plane's
+  // channel is expected to have: m_width x m_height for Y/Alpha/R/G/B/
+  // interleaved, and the chroma-subsampled size (via get_subsampled_size())
+  // for Cb/Cr. Any other channel type fails the check. Unlike
+  // primary_planes_have_size(), this checks each stored component directly
+  // rather than going through get_width(channel)/get_height(channel) (which
+  // only ever sees the first plane for a channel), so it also catches a
+  // same-channel duplicate whose size doesn't match, not just a missing or
+  // undersized single plane.
+  bool has_standard_plane_sizes() const;
+
   heif_chroma get_chroma_format() const { return m_chroma; }
 
   heif_colorspace get_colorspace() const { return m_colorspace; }

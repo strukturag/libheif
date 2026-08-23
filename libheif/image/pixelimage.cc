@@ -804,6 +804,41 @@ bool HeifPixelImage::primary_planes_have_size(uint32_t width, uint32_t height) c
 }
 
 
+bool HeifPixelImage::has_standard_plane_sizes() const
+{
+  for (const auto& component : m_storage) {
+    uint32_t expected_w, expected_h;
+
+    switch (component.m_channel) {
+      case heif_channel_Y:
+      case heif_channel_Alpha:
+      case heif_channel_R:
+      case heif_channel_G:
+      case heif_channel_B:
+      case heif_channel_interleaved:
+        expected_w = m_width;
+        expected_h = m_height;
+        break;
+
+      case heif_channel_Cb:
+      case heif_channel_Cr:
+        get_subsampled_size(m_width, m_height, component.m_channel, m_chroma, &expected_w, &expected_h);
+        break;
+
+      default:
+        // Not one of the standard channels this check knows the geometry of.
+        return false;
+    }
+
+    if (component.m_width != expected_w || component.m_height != expected_h) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
 std::set<heif_channel> HeifPixelImage::get_channel_set() const
 {
   std::set<heif_channel> channels;
@@ -1816,10 +1851,23 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
 }
 
 
+// TODO: rewrite this to handle multi-spectral images.
 Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& out_img,
                                              uint32_t width, uint32_t height,
                                              const heif_security_limits* limits) const
 {
+  // The per-channel loop below indexes each source plane using coordinates
+  // derived from m_width/m_height (or, for Cb/Cr, their chroma-subsampled
+  // size), trusting that the plane actually covers that geometry. Nothing
+  // else in this class enforces that as an invariant (a plane can be added at
+  // any size through add_channel()/copy_new_channel_from()/
+  // transfer_channel_from_image_as()), so verify it explicitly before doing
+  // any work.
+  if (!has_standard_plane_sizes()) {
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Scaling an image with non-standard plane sizes is not supported"};
+  }
+
   out_img = std::make_shared<HeifPixelImage>();
   out_img->create(width, height, m_colorspace, m_chroma);
 
@@ -1886,6 +1934,16 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
         return err;
       }
     }
+  }
+
+  // The per-channel loop below trusts that every source plane has a matching,
+  // correctly-sized destination plane, established by has_channel() checks
+  // per iteration.
+  // This only works for ordinary images. Images with extra planes cannot
+  // currently be scaled (TODO).
+  if (m_storage.size() > out_img->m_storage.size()) {
+    return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+            "Images with extra planes are not supported by scale_nearest_neighbor()."};
   }
 
 
