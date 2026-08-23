@@ -81,7 +81,7 @@ TEST_CASE("overlay rejects an Alpha plane whose size does not match the other ch
   REQUIRE(overlay_img->add_channel(heif_channel_Alpha, 2, 2, 8, limits).error_code == heif_error_Ok);
 
   Error err = base->overlay(overlay_img, 0, 0);
-  REQUIRE(err.error_code == heif_error_Invalid_input);
+  REQUIRE(err.error_code == heif_error_Unsupported_feature);
 }
 
 TEST_CASE("overlay blends normally when the Alpha plane size matches")
