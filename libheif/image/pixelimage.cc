@@ -1048,13 +1048,22 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
 
   // Find and remove the component from source
   ComponentStorage plane;
+  bool source_channel_found = false;
   for (auto it = source->m_storage.begin(); it != source->m_storage.end(); ++it) {
     if (it->m_channel == src_channel) {
       plane = *it;
       source->m_storage.erase(it);
+      source_channel_found = true;
       break;
     }
   }
+
+  if (!source_channel_found) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Channel cannot be transferred because it was not found in the source image."};
+  }
+
   source->m_memory_handle.free(plane.allocation_size);
 
   // Move the matching ComponentDescription(s) from source to destination.
