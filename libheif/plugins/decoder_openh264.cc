@@ -235,7 +235,12 @@ heif_error openh264_decode_next_image2(void* decoder_raw, heif_image** out_img,
         return kError_EOF;
       }
 
-      uint32_t size = ((indata[idx] << 24) | (indata[idx + 1] << 16) | (indata[idx + 2] << 8) | indata[idx + 3]);
+      // Compute in uint32_t. The bytes promote to 'int', so a leading byte >= 0x80
+      // shifted left by 24 lands in the sign bit and the result would be negative.
+      uint32_t size = (static_cast<uint32_t>(indata[idx]) << 24) |
+                      (static_cast<uint32_t>(indata[idx + 1]) << 16) |
+                      (static_cast<uint32_t>(indata[idx + 2]) << 8) |
+                      static_cast<uint32_t>(indata[idx + 3]);
       idx += 4;
 
       if (indata.size() < size || indata.size() - size < idx) {
