@@ -195,9 +195,24 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
     m_bitDepths.push_back(bit_depth);
   }
+  // Number of bytes each palette entry occupies in the box. Used to bound
+  // num_entries by the data actually present, so a small header cannot force
+  // a large allocation (analogous to the 'cdef'/'j2kL' checks).
+  size_t bytes_per_entry = 0;
+  for (uint8_t bd : m_bitDepths) {
+    bytes_per_entry += (bd <= 8) ? 1 : 2;
+  }
+
+  if (bytes_per_entry != 0 &&
+      num_entries > range.get_remaining_bytes() / bytes_per_entry) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data,
+                 "pclr box declares more entries than the box contains");
+  }
+
   for (uint16_t j = 0; j < num_entries; j++) {
     PaletteEntry entry;
-    for (unsigned long int i = 0; i < entry.columns.size(); i++) {
+    for (size_t i = 0; i < m_bitDepths.size(); i++) {
       if (m_bitDepths[i] <= 8) {
         entry.columns.push_back(range.read8());
       }
@@ -205,7 +220,7 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
         entry.columns.push_back(range.read16());
       }
     }
-    m_entries.push_back(entry);
+    m_entries.push_back(std::move(entry));
   }
 
   return range.get_error();
