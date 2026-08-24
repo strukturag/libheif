@@ -28,6 +28,7 @@
 #include "api_structs.h"
 #include <algorithm>
 #include <limits>
+#include <utility>
 
 
 TrackOptions& TrackOptions::operator=(const TrackOptions& src)
