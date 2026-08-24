@@ -1235,3 +1235,74 @@ TEST_CASE("Add tile rejects images that do not match the unci configuration")
     heif_image_release(prototype);
   }
 }
+
+
+// An image can be created without ever adding a pixel plane. The encoders access the planes
+// implied by the colorspace and chroma format, so such an image used to make them dereference
+// a plane that does not exist.
+TEST_CASE("Encoder rejects images without pixel planes")
+{
+  auto try_encode = [](heif_image *image) -> heif_error {
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = 32;
+    params.image_height = 32;
+    params.tile_width = 16;
+    params.tile_height = 16;
+    params.compression = heif_unci_compression_off;
+
+    heif_context *ctx = heif_context_alloc();
+
+    heif_encoding_options *options = heif_encoding_options_alloc();
+    options->macOS_compatibility_workaround_no_nclx_profile = true;
+
+    heif_image_handle *handle = nullptr;
+    heif_error err = heif_context_add_empty_unci_image(ctx, &params, options, image, &handle);
+
+    if (handle) {
+      heif_image_handle_release(handle);
+    }
+    heif_encoding_options_free(options);
+    heif_context_free(ctx);
+
+    return err;
+  };
+
+  const heif_chroma interleaved_formats[] = {heif_chroma_interleaved_RGB,
+                                             heif_chroma_interleaved_RGBA,
+                                             heif_chroma_interleaved_RRGGBB_LE,
+                                             heif_chroma_interleaved_RRGGBBAA_BE};
+
+  for (heif_chroma chroma : interleaved_formats) {
+    heif_image *image;
+    heif_error err = heif_image_create(16, 16, heif_colorspace_RGB, chroma, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    // No heif_image_add_plane() call.
+
+    REQUIRE(try_encode(image).code != heif_error_Ok);
+
+    heif_image_release(image);
+  }
+
+  SECTION("planar image without planes") {
+    heif_image *image;
+    heif_error err = heif_image_create(16, 16, heif_colorspace_YCbCr, heif_chroma_420, &image);
+    REQUIRE(err.code == heif_error_Ok);
+
+    REQUIRE(try_encode(image).code != heif_error_Ok);
+
+    heif_image_release(image);
+  }
+
+  SECTION("a properly allocated image is still accepted") {
+    heif_image *image;
+    heif_error err = heif_image_create(16, 16, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(image, heif_channel_interleaved, 16, 16, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    REQUIRE(try_encode(image).code == heif_error_Ok);
+
+    heif_image_release(image);
+  }
+}

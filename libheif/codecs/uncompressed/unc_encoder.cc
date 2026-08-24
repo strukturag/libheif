@@ -165,6 +165,24 @@ unc_encoder::unc_encoder(const std::shared_ptr<const HeifPixelImage>& image)
 Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder(const std::shared_ptr<const HeifPixelImage>& prototype_image,
                                                                                  const heif_encoding_options& options)
 {
+  // The encoders access the pixel planes implied by the image's colorspace and chroma format.
+  // An image that never received those planes (heif_image_create() without a matching
+  // heif_image_add_plane()) would make them dereference a plane that does not exist, so reject
+  // it before we pick an encoder for it.
+
+  if (num_interleaved_components_per_plane(prototype_image->get_chroma_format()) > 1) {
+    if (!prototype_image->has_channel(heif_channel_interleaved)) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "Image has an interleaved chroma format, but no interleaved pixel plane."};
+    }
+  }
+  else if (prototype_image->get_used_planar_component_ids().empty()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Image has no pixel planes."};
+  }
+
   static unc_encoder_factory_rgb_pixel_interleave enc_rgb_pixel_interleave;
   static unc_encoder_factory_rgb_block_pixel_interleave enc_rgb_block_pixel_interleave;
   static unc_encoder_factory_rgb_bytealign_pixel_interleave enc_rgb_bytealign_pixel_interleave;
