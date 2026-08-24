@@ -285,6 +285,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported essential item property";
     case heif_suberror_Unsupported_track_type:
       return "Unsupported track type";
+    case heif_suberror_Lossy_Tonemapping:
+      return "Lossy tone mapping stripped HDR metadata";
 
       // --- Encoder_plugin_error --
 

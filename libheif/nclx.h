@@ -161,6 +161,8 @@ struct nclx_profile
 
   bool equal_except_transfer_curve(const nclx_profile& b) const;
 
+  bool equal_except_matrix_coefficients(const nclx_profile& b) const;
+
   Error get_nclx_color_profile(heif_color_profile_nclx** out_data) const;
 
   void set_from_heif_color_profile_nclx(const heif_color_profile_nclx* nclx);
