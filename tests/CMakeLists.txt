@@ -49,6 +49,15 @@ else()
     add_libheif_test(avc_box)
     add_libheif_test(file_layout)
     add_libheif_test(image_description_metadata)
+    add_libheif_test(exception_guard)
+
+    # decompression_bomb builds the bomb payload with the library-internal
+    # compress_brotli(), so it needs both Brotli and full symbol visibility.
+    if (Brotli_FOUND)
+        add_libheif_test(decompression_bomb)
+    else()
+        message(INFO " Disabling the decompression bomb test because Brotli was not found")
+    endif ()
 endif()
 
 if (ENABLE_EXPERIMENTAL_FEATURES AND NOT WITH_REDUCED_VISIBILITY)
@@ -73,12 +82,6 @@ add_libheif_test(tai)
 add_libheif_test(text)
 add_libheif_test(cxx_wrapper)
 add_libheif_test(component_descriptions)
-
-if (Brotli_FOUND)
-    add_libheif_test(decompression_bomb)
-else()
-    message(INFO " Disabling the decompression bomb test because Brotli was not found")
-endif ()
 
 if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_HT_ENCODING)
     add_libheif_test(encode_htj2k)

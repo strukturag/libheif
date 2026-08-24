@@ -171,54 +171,56 @@ heif_error heif_track_decode_next_image(heif_track* track_ptr,
     return heif_error_null_pointer_argument;
   }
 
-  // --- get the visual track
+  return exception_guard([&]() -> heif_error {
+    // --- get the visual track
 
-  auto track = track_ptr->track;
+    auto track = track_ptr->track;
 
-  // --- reached end of sequence ?
+    // --- reached end of sequence ?
 
-  if (track->end_of_sequence_reached()) {
-    *out_img = nullptr;
-    return {heif_error_End_of_sequence, heif_suberror_Unspecified, "End of sequence"};
-  }
+    if (track->end_of_sequence_reached()) {
+      *out_img = nullptr;
+      return {heif_error_End_of_sequence, heif_suberror_Unspecified, "End of sequence"};
+    }
 
-  // --- decode next sequence image
+    // --- decode next sequence image
 
-  std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> opts(heif_decoding_options_alloc(), heif_decoding_options_free);
-  heif_decoding_options_copy(opts.get(), options);
-
-
-  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track);
-  if (!visual_track) {
-    return {
-      heif_error_Usage_error,
-      heif_suberror_Invalid_parameter_value,
-      "Cannot get image from non-visual track."
-    };
-  }
-
-  auto decodingResult = visual_track->decode_next_image_sample(*opts);
-  if (!decodingResult) {
-    return decodingResult.error_struct(track_ptr->context.get());
-  }
-
-  std::shared_ptr<HeifPixelImage> img = *decodingResult;
+    std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> opts(heif_decoding_options_alloc(), heif_decoding_options_free);
+    heif_decoding_options_copy(opts.get(), options);
 
 
-  // --- convert to output colorspace
+    auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track);
+    if (!visual_track) {
+      return {
+        heif_error_Usage_error,
+        heif_suberror_Invalid_parameter_value,
+        "Cannot get image from non-visual track."
+      };
+    }
 
-  auto conversion_result = track_ptr->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
-  if (!conversion_result) {
-    return conversion_result.error_struct(track_ptr->context.get());
-  }
-  else {
-    img = *conversion_result;
-  }
+    auto decodingResult = visual_track->decode_next_image_sample(*opts);
+    if (!decodingResult) {
+      return decodingResult.error_struct(track_ptr->context.get());
+    }
 
-  *out_img = new heif_image();
-  (*out_img)->image = std::move(img);
+    std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
-  return {};
+
+    // --- convert to output colorspace
+
+    auto conversion_result = track_ptr->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
+    if (!conversion_result) {
+      return conversion_result.error_struct(track_ptr->context.get());
+    }
+    else {
+      img = *conversion_result;
+    }
+
+    *out_img = new heif_image();
+    (*out_img)->image = std::move(img);
+
+    return {};
+  });
 }
 
 

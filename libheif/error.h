@@ -40,6 +40,11 @@
 
 extern const heif_error heif_error_null_pointer_argument;
 
+// Predefined errors with string-literal messages (static storage, no allocation).
+// Safe to return from a std::bad_alloc handler, where the allocator must not be used.
+extern const heif_error heif_error_out_of_memory;
+extern const heif_error heif_error_internal_exception;
+
 
 class ErrorBuffer
 {

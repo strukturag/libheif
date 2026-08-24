@@ -107,29 +107,32 @@ heif_error heif_image_handle_decode_image_tile(const heif_image_handle* in_handl
     return heif_error_null_pointer_argument;
   }
 
-  heif_item_id id = in_handle->image->get_id();
+  return exception_guard([&]() -> heif_error {
+    heif_item_id id = in_handle->image->get_id();
 
-  heif_decoding_options* dec_options = heif_decoding_options_alloc();
-  heif_decoding_options_copy(dec_options, input_options);
+    // RAII so the options are freed even if decode_image() throws.
+    std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)>
+        dec_options(heif_decoding_options_alloc(), heif_decoding_options_free);
+    heif_decoding_options_copy(dec_options.get(), input_options);
 
-  Result<std::shared_ptr<HeifPixelImage> > decodingResult = in_handle->context->decode_image(id,
-                                                                                             colorspace,
-                                                                                             chroma,
-                                                                                             *dec_options,
-                                                                                             true, x0, y0,
-                                                                                             {});
-  heif_decoding_options_free(dec_options);
+    Result<std::shared_ptr<HeifPixelImage> > decodingResult = in_handle->context->decode_image(id,
+                                                                                               colorspace,
+                                                                                               chroma,
+                                                                                               *dec_options,
+                                                                                               true, x0, y0,
+                                                                                               {});
 
-  if (!decodingResult) {
-    return decodingResult.error_struct(in_handle->image.get());
-  }
+    if (!decodingResult) {
+      return decodingResult.error_struct(in_handle->image.get());
+    }
 
-  std::shared_ptr<HeifPixelImage> img = *decodingResult;
+    std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
-  *out_img = new heif_image();
-  (*out_img)->image = std::move(img);
+    *out_img = new heif_image();
+    (*out_img)->image = std::move(img);
 
-  return Error::Ok.error_struct(in_handle->image.get());
+    return Error::Ok.error_struct(in_handle->image.get());
+  });
 }
 
 

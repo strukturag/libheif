@@ -30,6 +30,18 @@ const heif_error heif_error_null_pointer_argument {
   "NULL argument passed"
 };
 
+const heif_error heif_error_out_of_memory {
+  heif_error_Memory_allocation_error,
+  heif_suberror_Unspecified,
+  "Out of memory"
+};
+
+const heif_error heif_error_internal_exception {
+  heif_error_Usage_error,
+  heif_suberror_Unspecified,
+  "Internal error (unexpected C++ exception)"
+};
+
 
 // static
 const char Error::kSuccess[] = "Success";

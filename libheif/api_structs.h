@@ -23,11 +23,42 @@
 
 #include "image/pixelimage.h"
 #include "context.h"
+#include "error.h"
 
 #include <memory>
 #include <vector>
 #include <string>
+#include <exception>
+#include <new>
+#include <stdexcept>
 #include "image-items/image_item.h"
+
+
+// Run a C API entry point body and translate any escaping C++ exception into a
+// heif_error. No exception may cross the extern "C" boundary (that is undefined
+// behaviour for C callers), and an out-of-memory condition must not abort the
+// process (GHSA-7p2q-crf9-xm46). The returned errors have string-literal messages,
+// so reporting them never touches the allocator that is already failing.
+template <typename F>
+static inline heif_error exception_guard(F&& body) noexcept
+{
+  try {
+    return body();
+  }
+  catch (const std::bad_alloc&) {
+    return heif_error_out_of_memory;
+  }
+  catch (const std::length_error&) {
+    // e.g. a std::vector/std::string asked to exceed max_size()
+    return heif_error_out_of_memory;
+  }
+  catch (const std::exception&) {
+    return heif_error_internal_exception;
+  }
+  catch (...) {
+    return heif_error_internal_exception;
+  }
+}
 
 struct heif_image_handle
 {

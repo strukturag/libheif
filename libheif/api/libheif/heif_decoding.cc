@@ -249,26 +249,29 @@ heif_error heif_decode_image(const heif_image_handle* in_handle,
   }
 
   *out_img = nullptr;
-  heif_item_id id = in_handle->image->get_id();
 
-  heif_decoding_options dec_options;
-  fill_default_decoding_options(dec_options);
-  heif_decoding_options_copy(&dec_options, input_options);
+  return exception_guard([&]() -> heif_error {
+    heif_item_id id = in_handle->image->get_id();
 
-  Result<std::shared_ptr<HeifPixelImage> > decodingResult = in_handle->context->decode_image(id,
-                                                                                             colorspace,
-                                                                                             chroma,
-                                                                                             dec_options,
-                                                                                             false, 0, 0, {});
+    heif_decoding_options dec_options;
+    fill_default_decoding_options(dec_options);
+    heif_decoding_options_copy(&dec_options, input_options);
 
-  if (!decodingResult) {
-    return decodingResult.error_struct(in_handle->image.get());
-  }
+    Result<std::shared_ptr<HeifPixelImage> > decodingResult = in_handle->context->decode_image(id,
+                                                                                               colorspace,
+                                                                                               chroma,
+                                                                                               dec_options,
+                                                                                               false, 0, 0, {});
 
-  std::shared_ptr<HeifPixelImage> img = *decodingResult;
+    if (!decodingResult) {
+      return decodingResult.error_struct(in_handle->image.get());
+    }
 
-  *out_img = new heif_image();
-  (*out_img)->image = std::move(img);
+    std::shared_ptr<HeifPixelImage> img = *decodingResult;
 
-  return Error::Ok.error_struct(in_handle->image.get());
+    *out_img = new heif_image();
+    (*out_img)->image = std::move(img);
+
+    return Error::Ok.error_struct(in_handle->image.get());
+  });
 }

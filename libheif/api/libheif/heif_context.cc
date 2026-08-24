@@ -57,22 +57,28 @@ void heif_context_free(heif_context* ctx)
 heif_error heif_context_read_from_file(heif_context* ctx, const char* filename,
                                        const heif_reading_options*)
 {
-  Error err = ctx->context->read_from_file(filename);
-  return err.error_struct(ctx->context.get());
+  return exception_guard([&]() -> heif_error {
+    Error err = ctx->context->read_from_file(filename);
+    return err.error_struct(ctx->context.get());
+  });
 }
 
 heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, size_t size,
                                          const heif_reading_options*)
 {
-  Error err = ctx->context->read_from_memory(mem, size, true);
-  return err.error_struct(ctx->context.get());
+  return exception_guard([&]() -> heif_error {
+    Error err = ctx->context->read_from_memory(mem, size, true);
+    return err.error_struct(ctx->context.get());
+  });
 }
 
 heif_error heif_context_read_from_memory_without_copy(heif_context* ctx, const void* mem, size_t size,
                                                       const heif_reading_options*)
 {
-  Error err = ctx->context->read_from_memory(mem, size, false);
-  return err.error_struct(ctx->context.get());
+  return exception_guard([&]() -> heif_error {
+    Error err = ctx->context->read_from_memory(mem, size, false);
+    return err.error_struct(ctx->context.get());
+  });
 }
 
 heif_error heif_context_read_from_reader(heif_context* ctx,
@@ -80,10 +86,12 @@ heif_error heif_context_read_from_reader(heif_context* ctx,
                                          void* userdata,
                                          const heif_reading_options*)
 {
-  auto reader = std::make_shared<StreamReader_CApi>(reader_func_table, userdata);
+  return exception_guard([&]() -> heif_error {
+    auto reader = std::make_shared<StreamReader_CApi>(reader_func_table, userdata);
 
-  Error err = ctx->context->read(reader);
-  return err.error_struct(ctx->context.get());
+    Error err = ctx->context->read(reader);
+    return err.error_struct(ctx->context.get());
+  });
 }
 
 // TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
