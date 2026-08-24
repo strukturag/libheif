@@ -458,7 +458,13 @@ public:
 
   size_t get_current_byte_index() const
   {
-    return data_length - bytes_remaining - nextbits_cnt / 8;
+    // Computed in signed arithmetic: when we skipped past the end of the data,
+    // nextbits_cnt is negative and the index keeps growing beyond data_length (the
+    // 'uncC' alignment handling relies on that). Doing the subtraction in size_t
+    // would convert the negative operand first, which trips the 'integer' sanitizer.
+    // The result itself is always >= 0.
+    int64_t bytes_read = static_cast<int64_t>(data_length - bytes_remaining);
+    return static_cast<size_t>(bytes_read - nextbits_cnt / 8);
   }
 
   int64_t get_bits_remaining() const
@@ -473,7 +479,12 @@ private:
   size_t bytes_remaining;
 
   uint64_t nextbits; // left-aligned bits
-  int nextbits_cnt;
+
+  // Number of valid bits in 'nextbits'. Goes negative when we read or skip past the
+  // end of the data, in which case it holds the (negated) overshoot so that
+  // get_current_byte_index() keeps advancing. Has to be 64-bit because skip_bytes()
+  // may be asked to skip up to 2^32 bytes (= 2^35 bits) past the end.
+  int64_t nextbits_cnt;
 
   void refill(); // refill to at least 56+1 bits
 };

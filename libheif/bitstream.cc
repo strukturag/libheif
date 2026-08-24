@@ -653,10 +653,65 @@ int BitReader::peek_bits(int n)
 
 void BitReader::skip_bytes(uint32_t nBytes)
 {
-  // TODO: this is slow
-  while (nBytes) {
-    nBytes--;
-    skip_bits(8);
+  // This has to run in constant time. The number of bytes to skip is taken directly
+  // from 32-bit file fields (e.g. the 'uncC' row/tile alignment), so a byte-at-a-time
+  // loop spins for billions of iterations when a malformed file asks to skip far
+  // beyond the end of the data. MinimizedImageBox::parse() guards against the same
+  // failure mode by validating its declared chunk sizes up front.
+
+  uint64_t nBits = uint64_t{nBytes} * 8;
+
+  // --- consume the bits that are already buffered in 'nextbits'
+
+  if (nextbits_cnt > 0) {
+    uint64_t from_buffer = std::min(nBits, static_cast<uint64_t>(nextbits_cnt));
+
+    if (from_buffer >= 64) {
+      nextbits = 0;
+    }
+    else {
+#if AVOID_FUZZER_FALSE_POSITIVE
+      nextbits &= (0xffffffffffffffffULL >> from_buffer);
+#endif
+      nextbits <<= from_buffer;
+    }
+
+    nextbits_cnt -= static_cast<int64_t>(from_buffer);
+    nBits -= from_buffer;
+  }
+
+  if (nBits == 0) {
+    return;
+  }
+
+  // --- skip whole bytes directly in the input buffer, without pushing them
+  //     through the bit buffer
+
+  uint64_t whole_bytes = nBits / 8;
+  int residual_bits = static_cast<int>(nBits % 8);
+
+  if (whole_bytes >= bytes_remaining) {
+    // Skipping past the end of the data. Record the overshoot in 'nextbits_cnt' (which
+    // thereby goes negative) so that get_current_byte_index() keeps advancing exactly
+    // as it did with the previous bit-by-bit implementation.
+    uint64_t overshoot_bits = (whole_bytes - bytes_remaining) * 8 + static_cast<uint64_t>(residual_bits);
+
+    data += bytes_remaining;
+    bytes_remaining = 0;
+    nextbits = 0;
+    nextbits_cnt -= static_cast<int64_t>(overshoot_bits);
+    return;
+  }
+
+  data += static_cast<size_t>(whole_bytes);
+  bytes_remaining -= static_cast<size_t>(whole_bytes);
+  nextbits = 0;
+  nextbits_cnt = 0;
+
+  refill();
+
+  if (residual_bits > 0) {
+    skip_bits(residual_bits);
   }
 }
 
@@ -686,7 +741,7 @@ void BitReader::skip_bits_fast(int n)
 
 void BitReader::skip_to_byte_boundary()
 {
-  int nskip = (nextbits_cnt & 7);
+  int nskip = static_cast<int>(nextbits_cnt & 7);
 
 #if AVOID_FUZZER_FALSE_POSITIVE
   nextbits &= (0xffffffffffffffffULL >> nskip);
@@ -747,7 +802,13 @@ void BitReader::refill()
     nextbits |= newval;
   }
 #else
-  int shift = 64 - nextbits_cnt;
+  if (bytes_remaining == 0) {
+    // Nothing to refill. Returning early also keeps the shift below out of range
+    // when nextbits_cnt is far negative after skipping past the end of the data.
+    return;
+  }
+
+  int64_t shift = 64 - nextbits_cnt;
 
   while (shift >= 8 && bytes_remaining) {
     uint64_t newval = *data++;
