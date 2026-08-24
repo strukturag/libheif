@@ -814,12 +814,16 @@ heif_error heif_region_item_add_region_referenced_mask(heif_region_item* region_
  * part of the region. If the bit value is `0`, the corresponding pixel is not part of the
  * region.
  *
+ * @c width and @c height must both be non-zero and @c mask_data_len must be exactly
+ * `(width * height + 7) / 8`, the number of bytes needed to hold one bit per pixel.
+ * Otherwise the function fails without modifying the region item.
+ *
  * @param region_item the region item that holds this mask region
  * @param x the x value for the top-left corner of this mask region
  * @param y the y value for the top-left corner of this mask region
  * @param width the width of this mask region
  * @param height the height of this mask region
- * @param mask_data the location to return the mask data
+ * @param mask_data the mask data to store
  * @param mask_data_len the length of the mask data, in bytes
  * @param out_region pointer to pointer to the returned region (optional, see below)
  * @return heif_error_ok on success, or an error value indicating the problem on failure

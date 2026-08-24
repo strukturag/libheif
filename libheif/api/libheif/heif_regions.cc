@@ -409,12 +409,43 @@ heif_error heif_region_item_add_region_inline_mask_data(heif_region_item* item,
                                                         size_t mask_data_len,
                                                         heif_region** out_region)
 {
+  if (out_region) {
+    *out_region = nullptr;
+  }
+
+  if (mask_data == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  if (width == 0 || height == 0) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+            "Inline mask region has zero width or height"};
+  }
+
+  // The mask is stored with one bit per pixel, no padding between rows. Only the
+  // very last byte is padded. This is the same canonical size that the file parser
+  // (RegionGeometry_InlineMask::parse) and the reader (heif_region_get_mask_image)
+  // compute from the geometry. The caller-supplied buffer must hold exactly that
+  // many bytes: a shorter buffer would make the reader run off the end of the
+  // allocation, and a longer buffer indicates that the caller's geometry and mask
+  // data disagree, which we reject rather than silently discard.
+  uint64_t mask_size = (static_cast<uint64_t>(width) * height + 7) / 8;
+  if (mask_size > std::numeric_limits<size_t>::max()) {
+    return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+            "Inline mask size overflow"};
+  }
+
+  if (mask_data_len != static_cast<size_t>(mask_size)) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+            "Inline mask data length does not match the given region size"};
+  }
+
   auto region = std::make_shared<RegionGeometry_InlineMask>();
   region->x = x;
   region->y = y;
   region->width = width;
   region->height = height;
-  region->mask_data.resize(mask_data_len);
+  region->mask_data.resize(static_cast<size_t>(mask_size));
   std::memcpy(region->mask_data.data(), mask_data, region->mask_data.size());
 
   item->region_item->add_region(region);
@@ -442,7 +473,11 @@ static heif_error heif_region_get_inline_mask_image(const heif_region* region,
     *out_y0 = mask->y;
     uint32_t width = *out_width = mask->width;
     uint32_t height = *out_height = mask->height;
-    uint8_t* mask_data = mask->mask_data.data();
+    const uint8_t* mask_data = mask->mask_data.data();
+    // Defence in depth: the writer API and the file parser both guarantee that
+    // mask_data holds ceil(width*height/8) bytes, but never read beyond the actual
+    // buffer even if that invariant were somehow violated.
+    size_t mask_data_len = mask->mask_data.size();
 
     heif_error err = heif_image_create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome, out_mask_image);
     if (err.code) {
@@ -462,7 +497,7 @@ static heif_error heif_region_get_inline_mask_image(const heif_region* region,
         uint64_t mask_byte = pixel_index / 8;
         uint8_t pixel_bit = uint8_t(0x80U >> (pixel_index % 8));
 
-        p[y * stride + x] = (mask_data[mask_byte] & pixel_bit) ? 255 : 0;
+        p[y * stride + x] = (mask_byte < mask_data_len && (mask_data[mask_byte] & pixel_bit)) ? 255 : 0;
 
         pixel_index++;
       }

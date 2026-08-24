@@ -798,3 +798,179 @@ TEST_CASE("inline mask region from oversized image is cropped") {
   heif_context_free(ctx);
   heif_image_release(img);
 }
+
+
+TEST_CASE("inline mask region data length must match region geometry") {
+  // Regression test for GHSA-p58j-h3vm-3fp5: heif_region_item_add_region_inline_mask_data()
+  // stored the caller-supplied buffer verbatim without checking that it holds at least
+  // (width*height+7)/8 bytes. heif_region_get_mask_image() derives the number of mask
+  // bytes to read from the region geometry, so an undersized buffer led to a heap
+  // out-of-bounds read whose bytes were copied into the returned mask image.
+  struct heif_error err;
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc;
+  err = heif_context_get_encoder_for_format(ctx, heif_compression_AV1, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  uint32_t input_width = 64;
+  uint32_t input_height = 64;
+  heif_image* img;
+  heif_image_create(input_width, input_height, heif_colorspace_YCbCr,
+                    heif_chroma_420, &img);
+  fill_new_plane(img, heif_channel_Y, input_width, input_height);
+  fill_new_plane(img, heif_channel_Cb, (input_width + 1) / 2, (input_height + 1) / 2);
+  fill_new_plane(img, heif_channel_Cr, (input_width + 1) / 2, (input_height + 1) / 2);
+
+  heif_image_handle* handle;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+
+  struct heif_region_item* region_item;
+  err = heif_image_handle_add_region_item(handle, input_width, input_height, &region_item);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // A 64x3 region needs (64*3+7)/8 = 24 bytes of mask data.
+  const uint32_t region_width = 64;
+  const uint32_t region_height = 3;
+  const size_t required_len = (region_width * region_height + 7) / 8;
+  REQUIRE(required_len == 24);
+
+  heif_region* out_region = nullptr;
+
+  // Only 1 byte instead of 24. With the bug this was accepted and rendering the
+  // mask afterwards read 23 bytes past the end of the 1-byte allocation.
+  std::vector<uint8_t> short_mask_data(1, 0xff);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     short_mask_data.data(), short_mask_data.size(),
+                                                     &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+
+  // Off by one (23 of 24 bytes) must be rejected as well.
+  std::vector<uint8_t> almost_mask_data(required_len - 1, 0xff);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     almost_mask_data.data(), almost_mask_data.size(),
+                                                     &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+
+  // The file parser rejects zero-sized inline masks, so the writer must not produce them.
+  std::vector<uint8_t> mask_data(required_len, 0x00);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, 0, region_height,
+                                                     mask_data.data(), mask_data.size(), &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, 0,
+                                                     mask_data.data(), mask_data.size(), &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+
+  // NULL mask data.
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     nullptr, required_len, &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+
+  // None of the rejected calls may have added a region.
+  REQUIRE(heif_region_item_get_number_of_regions(region_item) == 0);
+
+  // A buffer of exactly the required size is accepted and can be rendered as a mask image.
+  mask_data[0] = 0x80;  // pixel (0,0)
+  mask_data[23] = 0x01; // pixel (63,2), the very last pixel of the region
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     mask_data.data(), mask_data.size(), &out_region);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(out_region != nullptr);
+  REQUIRE(heif_region_get_inline_mask_data_len(out_region) == required_len);
+
+  int32_t x, y;
+  uint32_t width, height;
+  heif_image* mask_image = nullptr;
+  err = heif_region_get_mask_image(out_region, &x, &y, &width, &height, &mask_image);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(mask_image != nullptr);
+  REQUIRE(x == 20);
+  REQUIRE(y == 50);
+  REQUIRE(width == 64);
+  REQUIRE(height == 3);
+  int stride;
+  const uint8_t* p = heif_image_get_plane_readonly(mask_image, heif_channel_Y, &stride);
+  REQUIRE(p[0] == 0xff);
+  REQUIRE(p[1] == 0x00);
+  REQUIRE(p[2 * stride + 62] == 0x00);
+  REQUIRE(p[2 * stride + 63] == 0xff);
+  heif_image_release(mask_image);
+  heif_region_release(out_region);
+  out_region = nullptr;
+
+  // A buffer larger than required is rejected as well: a surplus indicates that the
+  // caller's geometry and mask data disagree. (Silently keeping only the canonical
+  // prefix would also risk desynchronizing the on-disk parsing of following regions,
+  // since the format stores exactly (width*height+7)/8 bytes.)
+  std::vector<uint8_t> long_mask_data(required_len + 8, 0xaa);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     long_mask_data.data(), long_mask_data.size(),
+                                                     &out_region);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(out_region == nullptr);
+
+  // Add a second, correctly-sized inline mask so the round-trip below exercises
+  // parsing of multiple consecutive inline-mask regions.
+  std::vector<uint8_t> mask_data2(required_len, 0xaa);
+  err = heif_region_item_add_region_inline_mask_data(region_item, 20, 50, region_width, region_height,
+                                                     mask_data2.data(), mask_data2.size(), &out_region);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(out_region != nullptr);
+  REQUIRE(heif_region_get_inline_mask_data_len(out_region) == required_len);
+  heif_region_release(out_region);
+
+  err = heif_region_item_add_region_point(region_item, 5, 7, nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  err = heif_context_write_to_file(ctx, "regions_mask_inline_data_lengths.heif");
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_region_item_release(region_item);
+  heif_image_handle_release(handle);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+  heif_image_release(img);
+
+  // Read the file back: all three regions must still be parsable and intact.
+  heif_context* readbackCtx = get_context_for_local_file("regions_mask_inline_data_lengths.heif");
+  heif_image_handle* readbackHandle = get_primary_image_handle(readbackCtx);
+  REQUIRE(heif_image_handle_get_number_of_region_items(readbackHandle) == 1);
+  heif_item_id region_item_id;
+  REQUIRE(heif_image_handle_get_list_of_region_item_ids(readbackHandle, &region_item_id, 1) == 1);
+  heif_region_item* in_region_item;
+  err = heif_context_get_region_item(readbackCtx, region_item_id, &in_region_item);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(heif_region_item_get_number_of_regions(in_region_item) == 3);
+  heif_region* regions[3];
+  REQUIRE(heif_region_item_get_list_of_regions(in_region_item, regions, 3) == 3);
+  REQUIRE(heif_region_get_type(regions[0]) == heif_region_type_inline_mask);
+  REQUIRE(heif_region_get_type(regions[1]) == heif_region_type_inline_mask);
+  REQUIRE(heif_region_get_type(regions[2]) == heif_region_type_point);
+  REQUIRE(heif_region_get_inline_mask_data_len(regions[0]) == required_len);
+  REQUIRE(heif_region_get_inline_mask_data_len(regions[1]) == required_len);
+
+  std::vector<uint8_t> mask_data_in(required_len);
+  err = heif_region_get_inline_mask_data(regions[1], &x, &y, &width, &height, mask_data_in.data());
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(width == 64);
+  REQUIRE(height == 3);
+  REQUIRE(mask_data_in[0] == 0xaa);
+  REQUIRE(mask_data_in[23] == 0xaa);
+
+  int32_t px, py;
+  err = heif_region_get_point(regions[2], &px, &py);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(px == 5);
+  REQUIRE(py == 7);
+
+  heif_region_release_many(regions, 3);
+  heif_region_item_release(in_region_item);
+  heif_image_handle_release(readbackHandle);
+  heif_context_free(readbackCtx);
+}
