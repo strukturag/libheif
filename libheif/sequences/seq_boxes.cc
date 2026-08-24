@@ -587,6 +587,29 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
     m_entries[i] = entry;
   }
 
+  // The run-lengths describe the samples of the track, so their sum is the track's
+  // sample count: a 32-bit quantity that 'stsz' caps at max_sequence_frames. Nothing
+  // above bounds the sum, so an oversized table would wrap get_number_of_samples()
+  // and could thereby slip past the consistency check against 'stsz'.
+  {
+    uint64_t total_samples = 0;
+    for (const auto& entry : m_entries) {
+      total_samples += entry.sample_count;
+    }
+
+    uint64_t max_samples = (limits->max_sequence_frames > 0
+                            ? limits->max_sequence_frames
+                            : uint64_t{0xFFFFFFFF});
+
+    if (total_samples > max_samples) {
+      return {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Security_limit_exceeded,
+        "Security limit for maximum number of sequence frames exceeded"
+      };
+    }
+  }
+
   return range.get_error();
 }
 
@@ -664,12 +687,17 @@ uint64_t Box_stts::get_total_duration(bool include_last_frame_duration)
 
 uint32_t Box_stts::get_number_of_samples() const
 {
-  uint32_t total = 0;
+  // The number of samples in a track is a 32-bit quantity (ISO/IEC 14496-12
+  // 8.7.3: the 'stsz' sample_count "gives the number of samples in the track"),
+  // and parse() rejects tables whose run-lengths sum beyond that. Accumulate in
+  // 64 bit anyway so that a box built by the encoder cannot wrap silently.
+  uint64_t total = 0;
   for (const auto& entry : m_entries) {
     total += entry.sample_count;
   }
 
-  return total;
+  assert(total <= 0xFFFFFFFF);
+  return static_cast<uint32_t>(total);
 }
 
 
@@ -743,6 +771,29 @@ Error Box_ctts::parse(BitstreamRange& range, const heif_security_limits* limits)
     m_entries[i] = entry;
   }
 
+  // The run-lengths describe the samples of the track, so their sum is the track's
+  // sample count: a 32-bit quantity that 'stsz' caps at max_sequence_frames. Nothing
+  // above bounds the sum, so an oversized table would wrap get_number_of_samples()
+  // and could thereby slip past the consistency check against 'stsz'.
+  {
+    uint64_t total_samples = 0;
+    for (const auto& entry : m_entries) {
+      total_samples += entry.sample_count;
+    }
+
+    uint64_t max_samples = (limits->max_sequence_frames > 0
+                            ? limits->max_sequence_frames
+                            : uint64_t{0xFFFFFFFF});
+
+    if (total_samples > max_samples) {
+      return {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Security_limit_exceeded,
+        "Security limit for maximum number of sequence frames exceeded"
+      };
+    }
+  }
+
   return range.get_error();
 }
 
@@ -772,12 +823,17 @@ int32_t Box_ctts::compute_min_offset() const
 
 uint32_t Box_ctts::get_number_of_samples() const
 {
-  uint32_t total = 0;
+  // The number of samples in a track is a 32-bit quantity (ISO/IEC 14496-12
+  // 8.7.3: the 'stsz' sample_count "gives the number of samples in the track"),
+  // and parse() rejects tables whose run-lengths sum beyond that. Accumulate in
+  // 64 bit anyway so that a box built by the encoder cannot wrap silently.
+  uint64_t total = 0;
   for (const auto& entry : m_entries) {
     total += entry.sample_count;
   }
 
-  return total;
+  assert(total <= 0xFFFFFFFF);
+  return static_cast<uint32_t>(total);
 }
 
 
