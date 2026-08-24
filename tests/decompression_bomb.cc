@@ -76,19 +76,20 @@ std::vector<uint8_t> make_box(const char fourcc[4],
                               bool is_full_box = false,
                               uint8_t version = 0,
                               uint32_t flags = 0) {
-  std::vector<uint8_t> body;
-  if (is_full_box) {
-    body.push_back(version);
-    body.push_back(static_cast<uint8_t>(flags >> 16));
-    body.push_back(static_cast<uint8_t>(flags >> 8));
-    body.push_back(static_cast<uint8_t>(flags));
-  }
-  body.insert(body.end(), payload.begin(), payload.end());
+  const size_t header_size = is_full_box ? 12 : 8;
 
   std::vector<uint8_t> box;
-  put_u32_be(box, static_cast<uint32_t>(8 + body.size()));
+  box.reserve(header_size + payload.size());
+
+  put_u32_be(box, static_cast<uint32_t>(header_size + payload.size()));
   append_fourcc(box, fourcc);
-  box.insert(box.end(), body.begin(), body.end());
+  if (is_full_box) {
+    box.push_back(version);
+    box.push_back(static_cast<uint8_t>(flags >> 16));
+    box.push_back(static_cast<uint8_t>(flags >> 8));
+    box.push_back(static_cast<uint8_t>(flags));
+  }
+  append(box, payload);
   return box;
 }
 
@@ -172,10 +173,12 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   auto iprp = make_box("iprp", iprp_payload);
 
   // idat: 64 bytes of raw 8x8 8bpp mask data, followed by the brotli bomb payload.
-  std::vector<uint8_t> idat_payload(64, 0x7F);
+  std::vector<uint8_t> idat_payload;
+  idat_payload.reserve(64 + brotli_payload.size());
+  idat_payload.resize(64, 0x7F);
   const uint32_t bomb_offset = static_cast<uint32_t>(idat_payload.size());
   const uint32_t bomb_length = static_cast<uint32_t>(brotli_payload.size());
-  idat_payload.insert(idat_payload.end(), brotli_payload.begin(), brotli_payload.end());
+  append(idat_payload, brotli_payload);
   auto idat = make_box("idat", idat_payload);
 
   // iloc (version 1): both items store their data in idat (construction_method=1).
