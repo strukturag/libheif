@@ -20,6 +20,7 @@
 
 
 #include "compression.h"
+#include "security_limits.h"
 
 
 #if HAVE_ZLIB
@@ -80,7 +81,8 @@ std::vector<uint8_t> compress(const uint8_t* input, size_t size, int windowSize)
 }
 
 
-Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize)
+Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize,
+                                        const heif_security_limits* limits)
 {
   if (compressed_input.empty()) {
     return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
@@ -88,6 +90,11 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
   }
 
   std::vector<uint8_t> output;
+
+  // Track the growth of `output` against the security limits. Without this, a
+  // high-ratio "decompression bomb" would expand a few KB of input into GBs of
+  // output, bypassing max_memory_block_size / max_total_memory (GHSA-24wx-9w62-c96w).
+  MemoryHandle output_memory_handle;
 
   // decompress data with zlib
 
@@ -128,14 +135,18 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
         break;
       }
 
-      if (dst.size() >= 256 * 1024 * 1024) { // TODO: make this a security limit
+      // Grow the scratch buffer so inflate() can make progress. Bound its growth
+      // against the per-block security limit so a pathological stream cannot force
+      // an unbounded scratch allocation (the accumulated output is bounded
+      // separately, via output_memory_handle below).
+      size_t new_size = dst.size() * 2;
+      if (limits && limits->max_memory_block_size != 0 && new_size > limits->max_memory_block_size) {
         inflateEnd(&strm);
-        std::stringstream sstr;
-        sstr << "Error performing zlib inflate: maximum output buffer size exceeded\n";
-        return Error(heif_error_Memory_allocation_error, heif_suberror_Compression_initialisation_error, sstr.str());
+        return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                     "zlib inflate scratch buffer exceeds the maximum block size");
       }
 
-      dst.resize(dst.size() * 2);
+      dst.resize(new_size);
       strm.next_out = dst.data();
       strm.avail_out = (uInt)dst.size();
       continue;
@@ -148,8 +159,15 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
       return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
     }
 
-    // append decoded data to output
-    output.insert(output.end(), dst.begin(), dst.end() - strm.avail_out);
+    // account for and append decoded data to output
+
+    size_t n_new_bytes = dst.size() - strm.avail_out;
+    if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "zlib/deflate decompression output")) {
+      inflateEnd(&strm);
+      return memErr;
+    }
+
+    output.insert(output.end(), dst.begin(), dst.begin() + n_new_bytes);
   } while (err != Z_STREAM_END);
 
 
@@ -169,13 +187,15 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size)
 }
 
 
-Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input)
+Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
+                                             const heif_security_limits* limits)
 {
-  return do_inflate(compressed_input, 15);
+  return do_inflate(compressed_input, 15, limits);
 }
 
-Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input)
+Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
+                                                const heif_security_limits* limits)
 {
-  return do_inflate(compressed_input, -15);
+  return do_inflate(compressed_input, -15, limits);
 }
 #endif

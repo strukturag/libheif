@@ -27,6 +27,8 @@
 #include <error.h>
 #include <libheif/heif_uncompressed.h>
 
+struct heif_security_limits;
+
 /**
  * Convert heif_unci_compression enum to a fourcc code.
  *
@@ -81,7 +83,8 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
  * @sa decompress_deflate
  * @sa compress_zlib
  */
-Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input);
+Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
+                                             const heif_security_limits* limits);
 
 /**
  * Decompress "deflate" compressed data.
@@ -95,7 +98,8 @@ Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compres
  * @sa decompress_zlib
  * @sa compress_deflate
  */
-Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input);
+Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
+                                                const heif_security_limits* limits);
 
 #endif
 
@@ -109,7 +113,8 @@ Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& comp
  * @param output pointer to the resulting vector of decompressed data
  * @return success (Ok) or an error on failure (usually corrupt data)
  */
-Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t>& compressed_input);
+Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t>& compressed_input,
+                                               const heif_security_limits* limits);
 
 std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size);
 #endif

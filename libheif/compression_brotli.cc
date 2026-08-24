@@ -31,9 +31,11 @@ const size_t BUF_SIZE = (1 << 18);
 #include <vector>
 
 #include "error.h"
+#include "security_limits.h"
 
 
-Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compressed_input)
+Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compressed_input,
+                                               const heif_security_limits* limits)
 {
     BrotliDecoderResult result = BROTLI_DECODER_RESULT_ERROR;
     std::vector<uint8_t> buffer(BUF_SIZE, 0);
@@ -46,19 +48,32 @@ Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compr
 
     std::vector<uint8_t> output;
 
+    // Track the growth of `output` against the security limits. Without this, a
+    // high-ratio "decompression bomb" would expand a few KB of input into GBs of
+    // output, bypassing max_memory_block_size / max_total_memory (GHSA-24wx-9w62-c96w).
+    MemoryHandle output_memory_handle;
+
     while (true)
     {
         result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_output, 0);
 
         if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT)
         {
-            output.insert(output.end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
+            size_t n_new_bytes = static_cast<size_t>(std::distance(buffer.data(), next_output));
+            if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "brotli decompression output")) {
+                return memErr;
+            }
+            output.insert(output.end(), buffer.data(), buffer.data() + n_new_bytes);
             available_out = buffer.size();
             next_output = buffer.data();
         }
         else if (result == BROTLI_DECODER_RESULT_SUCCESS)
         {
-            output.insert(output.end(), buffer.data(), buffer.data() + std::distance(buffer.data(), next_output));
+            size_t n_new_bytes = static_cast<size_t>(std::distance(buffer.data(), next_output));
+            if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "brotli decompression output")) {
+                return memErr;
+            }
+            output.insert(output.end(), buffer.data(), buffer.data() + n_new_bytes);
             break;
         }
         else if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT)

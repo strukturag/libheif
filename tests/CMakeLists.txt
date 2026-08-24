@@ -74,6 +74,12 @@ add_libheif_test(text)
 add_libheif_test(cxx_wrapper)
 add_libheif_test(component_descriptions)
 
+if (Brotli_FOUND)
+    add_libheif_test(decompression_bomb)
+else()
+    message(INFO " Disabling the decompression bomb test because Brotli was not found")
+endif ()
+
 if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_HT_ENCODING)
     add_libheif_test(encode_htj2k)
 else()

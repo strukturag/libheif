@@ -75,7 +75,8 @@ protected:
                                                      const Box_iloc::Item* item) const;
 
   Result<std::vector<uint8_t>> do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                  std::vector<uint8_t> compressed_data) const;
+                                                  std::vector<uint8_t> compressed_data,
+                                                  const heif_security_limits* limits) const;
 
   const uint32_t m_width;
   const uint32_t m_height;

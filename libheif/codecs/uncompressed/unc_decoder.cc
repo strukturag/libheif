@@ -115,6 +115,10 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
   std::shared_ptr<const Box_cmpC> cmpC_box = properties.cmpC;
   std::shared_ptr<const Box_icef> icef_box = properties.icef;
 
+  // Security limits used to bound the (potentially highly amplified) decompressed
+  // output. May be nullptr for a raw data extent, in which case no limit applies.
+  const heif_security_limits* limits = dataExtent.m_file ? dataExtent.m_file->get_security_limits() : nullptr;
+
   if (!cmpC_box) {
     // assume no generic compression
     auto readResult = dataExtent.read_data(range_start_offset, range_size);
@@ -148,7 +152,7 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     const std::vector<uint8_t>& compressed_bytes = *readingResult;
 
     // decompress only the unit
-    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes, limits);
     if (!dataResult) {
       return dataResult.error();
     }
@@ -163,6 +167,14 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     }
 
     const std::vector<uint8_t> compressed_bytes = std::move(**readResult);
+
+    // Bound the total decompressed output accumulated across all units. The units
+    // may overlap (nothing forces them to be disjoint), so N units can point at the
+    // same compressed slice and be decompressed N times into `data`. Without this
+    // accounting, that amplifies a tiny icef box into an unbounded allocation
+    // (GHSA-24wx-9w62-c96w). The handle is local, so it only bounds the peak while
+    // building `data`; the cropped result is accounted by the caller.
+    MemoryHandle accumulated_memory_handle;
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
       // Use subtraction form to avoid a uint64_t wrap in 'unit_offset + unit_size',
@@ -181,12 +193,18 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
 
-      auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data));
+      auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data), limits);
       if (!dataResult) {
         return dataResult.error();
       }
 
       const std::vector<uint8_t> uncompressed_unit_data = std::move(*dataResult);
+
+      if (Error memErr = accumulated_memory_handle.alloc(uncompressed_unit_data.size(), limits,
+                                                         "unci icef decompressed units")) {
+        return memErr;
+      }
+
       data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
     }
 
@@ -213,7 +231,7 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
     std::vector<uint8_t> compressed_bytes = std::move(**readResult);
 
     // Decode as a single blob
-    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes);
+    auto dataResult = do_decompress_data(cmpC_box, compressed_bytes, limits);
     if (!dataResult) {
       return dataResult.error();
     }
@@ -238,11 +256,12 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
 
 
 Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                              std::vector<uint8_t> compressed_data) const
+                                                              std::vector<uint8_t> compressed_data,
+                                                              const heif_security_limits* limits) const
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
 #if HAVE_BROTLI
-    return decompress_brotli(compressed_data);
+    return decompress_brotli(compressed_data, limits);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
@@ -253,7 +272,7 @@ Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<co
   }
   else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
 #if HAVE_ZLIB
-    return decompress_zlib(compressed_data);
+    return decompress_zlib(compressed_data, limits);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
@@ -264,7 +283,7 @@ Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<co
   }
   else if (cmpC_box->get_compression_type() == fourcc("defl")) {
 #if HAVE_ZLIB
-    return decompress_deflate(compressed_data);
+    return decompress_deflate(compressed_data, limits);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;

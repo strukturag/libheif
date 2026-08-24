@@ -1111,6 +1111,15 @@ Error HeifContext::interpret_heif_file_images()
     }
     else {
       metadata->m_data = *metadataResult;
+
+      // Account the (possibly decompressed) metadata against the total-memory budget
+      // for the lifetime of the context. This bounds the cumulative memory of up to
+      // max_items metadata items, which would otherwise bypass the security limits
+      // (GHSA-24wx-9w62-c96w).
+      if (Error memErr = metadata->m_memory_handle.alloc(metadata->m_data.size(), &m_limits,
+                                                         "decompressed item metadata")) {
+        return memErr;
+      }
     }
 
     // --- assign metadata to the image
