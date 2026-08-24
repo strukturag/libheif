@@ -23,6 +23,7 @@
 
 #include "error.h"
 #include "api_structs.h"
+#include "security_limits.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_sequences.h"
 #include <string>
@@ -220,6 +221,10 @@ protected:
     uint32_t sample_duration_presentation_time = 0; // TODO
   };
   std::vector<SampleTiming> m_presentation_timeline;
+  // Accounts m_presentation_timeline against max_total_memory. A small track can
+  // declare millions of samples, so this vector (~48 bytes/sample) must be tracked
+  // to bound multi-track accumulation (GHSA-xw34-mjcp-jqh8, variants V2/V3).
+  MemoryHandle m_presentation_timeline_memory;
   uint64_t m_num_output_samples = 0; // Can be larger than the vector. It then repeats the playback.
 
   // How many times the media timeline is repeated.
@@ -241,6 +246,10 @@ protected:
   Error init_sample_timing_table();
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
+  // Accounts the per-chunk Chunk::m_sample_ranges tables against max_total_memory.
+  // Their combined size over all chunks is num_samples * sizeof(SampleFileRange),
+  // so a single reservation here bounds them all (GHSA-xw34-mjcp-jqh8, V2/V3).
+  MemoryHandle m_chunk_sample_ranges_memory;
   std::vector<uint8_t> m_chunk_data;
 
   std::shared_ptr<Box_moov> m_moov;

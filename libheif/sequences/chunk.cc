@@ -102,6 +102,12 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id,
 
   m_next_sample_to_be_decoded = first_sample;
 
+  // Reserve the exact final size so the running offset check below is the only
+  // growth concern (no geometric reallocation). The aggregate over all chunks is
+  // accounted against max_total_memory by the owning Track before any chunk is
+  // built (GHSA-xw34-mjcp-jqh8, variants V2/V3), so no per-chunk limit check here.
+  m_sample_ranges.reserve(num_samples);
+
   for (uint32_t i=0;i<num_samples;i++) {
     SampleFileRange range;
     range.offset = file_offset;
@@ -127,6 +133,12 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id,
   }
 
   success = true;
+}
+
+
+size_t Chunk::sample_range_entry_size()
+{
+  return sizeof(SampleFileRange);
 }
 
 

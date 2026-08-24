@@ -45,6 +45,11 @@ public:
 
   virtual ~Chunk() = default;
 
+  // Size in bytes of one entry in the internal sample-range table. Used by the
+  // owning Track to reserve the aggregate memory for all chunks up front
+  // (GHSA-xw34-mjcp-jqh8, variants V2/V3).
+  static size_t sample_range_entry_size();
+
   heif_compression_format get_compression_format() const { return m_compression_format; }
 
   virtual std::shared_ptr<class Decoder> get_decoder() const { return m_decoder; }

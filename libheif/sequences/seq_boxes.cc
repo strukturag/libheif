@@ -610,6 +610,17 @@ Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
   }
 
+  // Precompute the prefix sum of sample_count for O(log entries) lookups in
+  // get_sample_duration(). Safe as uint32 because the total was just checked to
+  // be <= max_samples <= 0xFFFFFFFF.
+  {
+    uint32_t running = 0;
+    for (auto& entry : m_entries) {
+      running += entry.sample_count;
+      entry.cumulative_sample_count = running;
+    }
+  }
+
   return range.get_error();
 }
 
@@ -644,14 +655,22 @@ Error Box_stts::write(StreamWriter& writer) const
 
 uint32_t Box_stts::get_sample_duration(uint32_t sample_idx)
 {
-  for (const auto& entry : m_entries) {
-    if (sample_idx < entry.sample_count) {
-      return entry.sample_delta;
-    }
-    sample_idx -= entry.sample_count;
+  // The entries are contiguous and cumulative_sample_count is the non-decreasing
+  // index one past the last sample of each entry, so the entry covering sample_idx
+  // is the first one whose cumulative_sample_count is strictly greater than
+  // sample_idx. Binary search keeps this O(log entries); a linear scan would make
+  // the decode/raw output paths O(entries) per sample (GHSA-xw34-mjcp-jqh8, V1).
+  auto it = std::upper_bound(m_entries.begin(), m_entries.end(), sample_idx,
+                             [](uint32_t idx, const TimeToSample& entry) {
+                               return idx < entry.cumulative_sample_count;
+                             });
+
+  if (it == m_entries.end()) {
+    // sample_idx is not covered by any entry.
+    return 0;
   }
 
-  return 0;
+  return it->sample_delta;
 }
 
 
@@ -661,11 +680,13 @@ void Box_stts::append_sample_duration(uint32_t duration)
     TimeToSample entry{};
     entry.sample_delta = duration;
     entry.sample_count = 1;
+    entry.cumulative_sample_count = (m_entries.empty() ? 0 : m_entries.back().cumulative_sample_count) + 1;
     m_entries.push_back(entry);
     return;
   }
 
   m_entries.back().sample_count++;
+  m_entries.back().cumulative_sample_count++;
 }
 
 

@@ -258,21 +258,48 @@ heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_trac
 }
 
 
-heif_error heif_track_get_next_raw_sequence_sample(heif_track* track_ptr,
-                                                   heif_raw_sequence_sample** out_sample)
+// TODO(next major API version): promote this to public API — remove 'static', add
+// the LIBHEIF_API attribute, and add its declaration to
+// libheif/api/libheif/heif_sequences.h. It is the options-taking counterpart of
+// heif_track_get_next_raw_sequence_sample() and the fix for GHSA-xw34-mjcp-jqh8
+// variant V7 (the raw-sample path otherwise cannot honor
+// heif_decoding_options::ignore_sequence_editlist). It is kept 'static' for now
+// because adding a new exported symbol / public declaration is not permitted in a
+// stable-API bugfix release. (The non-terminating-loop aspect of V7 is already
+// fixed by the clamp in Track::init_sample_timing_table(); this only closes the
+// remaining functional gap.)
+//
+// Proposed header declaration:
+//
+//   /**
+//    * Like heif_track_get_next_raw_sequence_sample(), but takes decoding options.
+//    * Set heif_decoding_options::ignore_sequence_editlist to iterate the raw media
+//    * timeline once, ignoring edit-list repetition. `options` may be NULL, which
+//    * behaves like heif_track_get_next_raw_sequence_sample().
+//    */
+//   LIBHEIF_API
+//   heif_error heif_track_get_next_raw_sequence_sample2(heif_track*,
+//                                                       heif_raw_sequence_sample** out_sample,
+//                                                       const heif_decoding_options* options);
+static heif_error heif_track_get_next_raw_sequence_sample2(heif_track* track_ptr,
+                                                           heif_raw_sequence_sample** out_sample,
+                                                           const heif_decoding_options* options)
 {
-  auto track = track_ptr->track;
-
-  // --- reached end of sequence ?
-
-  if (track->end_of_sequence_reached()) {
-    return {heif_error_End_of_sequence, heif_suberror_Unspecified, "End of sequence"};
+  if (out_sample == nullptr) {
+    return heif_error_null_pointer_argument;
   }
 
-  // --- get next raw sample
+  auto track = track_ptr->track;
 
-  // TODO: pass decoding options. We currently have no way to ignore the edit-list.
-  auto decodingResult = track->get_next_sample_raw_data(nullptr);
+  // `options` may be null (the no-options public wrapper below passes nullptr).
+  // get_next_sample_raw_data() treats null as "apply the edit list" and only reads
+  // options->ignore_sequence_editlist when options is non-null.
+  //
+  // We intentionally do not pre-check end_of_sequence_reached() here: that helper
+  // compares against the edit-list-applied output count, whereas
+  // get_next_sample_raw_data() applies ignore_sequence_editlist itself and signals
+  // heif_error_End_of_sequence at the correct (option-dependent) boundary.
+  auto decodingResult = track->get_next_sample_raw_data(options);
   if (!decodingResult) {
     return decodingResult.error_struct(track_ptr->context.get());
   }
@@ -280,6 +307,16 @@ heif_error heif_track_get_next_raw_sequence_sample(heif_track* track_ptr,
   *out_sample = *decodingResult;
 
   return heif_error_success;
+}
+
+
+heif_error heif_track_get_next_raw_sequence_sample(heif_track* track_ptr,
+                                                   heif_raw_sequence_sample** out_sample)
+{
+  // Thin wrapper over the (currently internal) options-taking implementation, with
+  // no decoding options. Once heif_track_get_next_raw_sequence_sample2() is promoted
+  // to public API (see the TODO above), this stays as a convenience wrapper.
+  return heif_track_get_next_raw_sequence_sample2(track_ptr, out_sample, nullptr);
 }
 
 

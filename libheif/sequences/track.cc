@@ -26,6 +26,7 @@
 #include "sequences/track_visual.h"
 #include "sequences/track_metadata.h"
 #include "api_structs.h"
+#include <algorithm>
 #include <limits>
 
 
@@ -356,6 +357,17 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
 
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
+
+  // Account the per-chunk sample-range tables (Chunk::m_sample_ranges) against
+  // max_total_memory before building any chunk. Their combined size across all
+  // chunks is num_samples * sizeof(SampleFileRange); a small track can declare
+  // millions of samples in one chunk, so without this the tables are untracked
+  // and multiple tracks can exhaust memory undetected (GHSA-xw34-mjcp-jqh8, V2/V3).
+  if (auto err = m_chunk_sample_ranges_memory.alloc(m_stsz->num_samples(),
+                                                    Chunk::sample_range_entry_size(),
+                                                    limits, "the sequence chunk sample-range tables")) {
+    return err;
+  }
 
   uint32_t current_sample_idx = 0;
   int32_t previous_sample_description_index = -1;
@@ -1045,9 +1057,23 @@ Error Track::init_sample_timing_table()
 {
   m_num_samples = m_stsz->num_samples();
 
+  const auto* limits = m_heif_context->get_security_limits();
+
+  // Account the presentation timeline against max_total_memory before allocating
+  // it. m_num_samples is bounded by max_sequence_frames, but a single small track
+  // can still declare millions of samples, so this ~48-bytes/sample vector must be
+  // tracked to bound multi-track accumulation (GHSA-xw34-mjcp-jqh8, V2/V3). The
+  // media timeline built below is moved into m_presentation_timeline (not copied),
+  // so only one such buffer ever exists and this single reservation covers it.
+  if (auto err = m_presentation_timeline_memory.alloc(m_num_samples, sizeof(SampleTiming),
+                                                      limits, "the sequence presentation timeline")) {
+    return err;
+  }
+
   // --- build media timeline
 
   std::vector<SampleTiming> media_timeline;
+  media_timeline.reserve(m_num_samples);
 
   uint64_t current_decoding_time = 0;
   uint32_t current_chunk = 0;
@@ -1058,6 +1084,9 @@ Error Track::init_sample_timing_table()
     timing.sampleIdx = i;
     timing.sampleInChunkIdx = current_sample_in_chunk_idx;
     timing.media_decoding_time = current_decoding_time;
+    // O(log entries) per lookup (Box_stts uses a prefix-sum binary search), so
+    // building the whole table is O(samples * log entries) rather than the former
+    // O(samples * entries) file-open CPU-DoS (GHSA-xw34-mjcp-jqh8, variant V1).
     timing.sample_duration_media_time = m_stts->get_sample_duration(i);
     current_decoding_time += timing.sample_duration_media_time;
     current_sample_in_chunk_idx++;
@@ -1093,7 +1122,6 @@ Error Track::init_sample_timing_table()
            m_elst->get_entry(0).media_time == 0 &&
            m_elst->get_entry(0).segment_duration == m_mdhd->get_duration() &&
            m_elst->is_repeat_mode()) {
-    m_presentation_timeline = media_timeline;
 
     uint64_t duration_media_units = get_duration_in_media_units();
     if (duration_media_units == 0) {
@@ -1104,8 +1132,38 @@ Error Track::init_sample_timing_table()
       };
     }
 
-    uint64_t multiplier = m_heif_context->get_sequence_duration() / get_duration_in_media_units();
-    m_num_output_samples = multiplier * media_timeline.size();
+    uint64_t multiplier = m_heif_context->get_sequence_duration() / duration_media_units;
+
+    // Logical number of output samples = physical samples x repeat multiplier.
+    // Compute this saturating instead of wrapping: with the indefinite-duration
+    // sentinel (mvhd.duration = UINT64_MAX) the multiplier is enormous, and a plain
+    // multiply could overflow uint64_t and wrap to a small, misleading value.
+    uint64_t timeline_size = media_timeline.size();
+    uint64_t total_output_samples;
+    if (timeline_size != 0 && multiplier > std::numeric_limits<uint64_t>::max() / timeline_size) {
+      total_output_samples = std::numeric_limits<uint64_t>::max();
+    }
+    else {
+      total_output_samples = multiplier * timeline_size;
+    }
+
+    // The decode loop (Track_Visual::decode_next_image_sample), the raw-data path
+    // (get_next_sample_raw_data) and end_of_sequence_reached() all count emitted
+    // samples with a uint32_t (m_next_sample_to_be_output). If m_num_output_samples
+    // exceeds UINT32_MAX, that counter can never reach it and decoding never
+    // terminates (GHSA-xw34-mjcp-jqh8, variants V4/V5). The physical-sample limit
+    // (max_sequence_frames) is also never applied to this repeat-amplified logical
+    // count (variant V6). Bound the number of samples the loop will emit by the
+    // sequence-frame limit (or UINT32_MAX when the limit is disabled), so a
+    // repeat/indefinite edit list cannot inflate a single physical sample into an
+    // effectively infinite decode. The reported repetition count below still signals
+    // "infinite", so a caller wanting true unbounded playback can loop the media
+    // itself via heif_decoding_options::ignore_sequence_editlist.
+    uint64_t output_sample_cap = (limits->max_sequence_frames > 0)
+                                 ? limits->max_sequence_frames
+                                 : std::numeric_limits<uint32_t>::max();
+
+    m_num_output_samples = std::min(total_output_samples, output_sample_cap);
 
     if (m_heif_context->is_sequence_duration_indefinite()) {
       // mvhd carries the all-1s sentinel -> editlist repeats forever.
@@ -1125,13 +1183,17 @@ Error Track::init_sample_timing_table()
 
   // Fallback: just play the media timeline
   if (fallback) {
-    m_presentation_timeline = media_timeline;
     m_num_output_samples = media_timeline.size();
     // No editlist box at all: the media plays exactly once.
     // Editlist box present but its pattern isn't one libheif interprets: report
     // 0 so callers know they should not rely on a repetition count.
     m_num_repetitions = m_elst ? 0 : 1;
   }
+
+  // Both branches above use media_timeline unchanged as the presentation timeline.
+  // Move (do not copy) it in so only one such buffer is ever allocated, matching
+  // the single reservation made at the top of this function.
+  m_presentation_timeline = std::move(media_timeline);
 
   return {};
 }
