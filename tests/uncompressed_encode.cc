@@ -1065,3 +1065,173 @@ TEST_CASE("Encode rejects oversized component plane")
   heif_image_release(image);
   heif_context_free(ctx);
 }
+
+
+// Helper for the tile-add tests below: builds a YCbCr image with individually
+// chosen chroma plane sizes.
+static heif_image* createImage_YCbCr_customPlanes(int w, int h, heif_chroma chroma,
+                                                  int cb_w, int cb_h, int cr_w, int cr_h)
+{
+  heif_image *image;
+  heif_error err = heif_image_create(w, h, heif_colorspace_YCbCr, chroma, &image);
+  REQUIRE(err.code == heif_error_Ok);
+
+  err = heif_image_add_plane(image, heif_channel_Y, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_Cb, cb_w, cb_h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_Cr, cr_w, cr_h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  return image;
+}
+
+
+// heif_context_add_image_tile() hands the tile image directly to the encoder that was
+// built from the prototype image passed to heif_context_add_empty_unci_image(). The
+// encoder sizes its output buffer from its own configuration while copying from the
+// tile's planes, so a tile that does not match that configuration used to write past
+// the end of that buffer.
+TEST_CASE("Add tile rejects images that do not match the unci configuration")
+{
+  const int TW = 16;
+  const int TH = 16;
+
+  auto add_tile = [](heif_image *prototype, heif_image *tile) -> heif_error {
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = 2 * TW;
+    params.image_height = 2 * TH;
+    params.tile_width = TW;
+    params.tile_height = TH;
+    params.compression = heif_unci_compression_off;
+
+    heif_context *ctx = heif_context_alloc();
+
+    heif_encoder *encoder;
+    heif_error err = heif_context_get_encoder_for_format(ctx, heif_compression_uncompressed, &encoder);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_encoding_options *options = heif_encoding_options_alloc();
+    options->macOS_compatibility_workaround_no_nclx_profile = true;
+
+    heif_image_handle *tiled_image;
+    err = heif_context_add_empty_unci_image(ctx, &params, options, prototype, &tiled_image);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_error tile_err = heif_context_add_image_tile(ctx, tiled_image, 0, 0, tile, encoder);
+
+    heif_image_handle_release(tiled_image);
+    heif_encoding_options_free(options);
+    heif_encoder_release(encoder);
+    heif_context_free(ctx);
+
+    return tile_err;
+  };
+
+  SECTION("component plane larger than the tile") {
+    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
+    // Declares the correct tile size, but its Cb plane is far larger than the
+    // subsampled size the encoder allocates for.
+    heif_image *tile = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, 200, 200, TW / 2, TH / 2);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("chroma format differs from the prototype") {
+    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
+    // A well-formed 4:4:4 tile: every plane matches its own image dimensions, so
+    // checking the tile against itself is not enough. The encoder still assumes
+    // the 4:2:0 subsampling of the prototype.
+    heif_image *tile = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_444, TW, TH, TW, TH);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("tile has fewer components than the prototype") {
+    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_444, TW, TH, TW, TH);
+
+    heif_image *tile;
+    heif_error err = heif_image_create(TW, TH, heif_colorspace_monochrome, heif_chroma_monochrome, &tile);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(tile, heif_channel_Y, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("planar tile for an interleaved prototype") {
+    heif_image *prototype;
+    heif_error err = heif_image_create(TW, TH, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &prototype);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(prototype, heif_channel_interleaved, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_image *tile;
+    err = heif_image_create(TW, TH, heif_colorspace_RGB, heif_chroma_444, &tile);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(tile, heif_channel_R, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(tile, heif_channel_G, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(tile, heif_channel_B, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("interleaved plane smaller than the image") {
+    heif_image *prototype;
+    heif_error err = heif_image_create(TW, TH, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &prototype);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(prototype, heif_channel_interleaved, TW, TH, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    // The interleaved plane is not listed by get_used_planar_component_ids(), so a
+    // check that only walks the planar components does not see this at all.
+    heif_image *tile;
+    err = heif_image_create(TW, TH, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &tile);
+    REQUIRE(err.code == heif_error_Ok);
+    err = heif_image_add_plane(tile, heif_channel_interleaved, 2, 2, 8);
+    REQUIRE(err.code == heif_error_Ok);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("tile size differs from the tile size of the image") {
+    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
+    // Consistent in itself and matching the prototype configuration, but not the
+    // tile size of the image. It would be written to a wrong offset.
+    heif_image *tile = createImage_YCbCr_customPlanes(TW / 2, TH / 2, heif_chroma_420, TW / 4, TH / 4, TW / 4, TH / 4);
+
+    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+
+  SECTION("a matching tile is still accepted") {
+    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
+    heif_image *tile = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
+
+    REQUIRE(add_tile(prototype, tile).code == heif_error_Ok);
+
+    heif_image_release(tile);
+    heif_image_release(prototype);
+  }
+}

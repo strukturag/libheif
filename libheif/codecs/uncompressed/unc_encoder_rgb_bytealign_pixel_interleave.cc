@@ -113,7 +113,7 @@ void *memcpy_swap16(uint8_t *dst, const uint8_t *src, size_t n)
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb_bytealign_pixel_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_rgb_bytealign_pixel_interleave::encode_tile_impl(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 

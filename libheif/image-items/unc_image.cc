@@ -326,6 +326,20 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
                  "tile_x and/or tile_y are out of range."};
   }
 
+  // All tiles have the same size (add_unci_item() enforces that the image size is an integer
+  // multiple of the tile size). We compute the position at which the tile data is written from the
+  // size of the passed image, so a differently sized tile would be written to a wrong offset.
+
+  uint32_t expected_tile_width, expected_tile_height;
+  get_tile_size(expected_tile_width, expected_tile_height);
+
+  if (tile_width != expected_tile_width ||
+      tile_height != expected_tile_height) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Tile image size does not match the tile size of the uncompressed image."};
+  }
+
 
   if (image->has_alpha() && !save_alpha) {
     // TODO: drop alpha

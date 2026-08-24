@@ -64,10 +64,22 @@ public:
 
   virtual uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const = 0;
 
-  [[nodiscard]] virtual std::vector<uint8_t> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const = 0;
+  // Encode one tile. This validates 'image' against the encoder configuration before handing it
+  // to the actual encoder implementation. Do not bypass it by calling encode_tile_impl() directly.
+  [[nodiscard]] Result<std::vector<uint8_t>> encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const;
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<const HeifPixelImage>& src_image,
                                          const heif_encoding_options& options) const;
+
+  // Check that 'image' may be passed to encode_tile().
+  //
+  // An encoder freezes its configuration (component list, bit depths, subsampling, bytes per pixel)
+  // when it is constructed from a prototype image. The tiled writing path
+  // (ImageItem_uncompressed::add_image_tile()) hands us independently constructed images later on,
+  // so every one of them has to be checked against that frozen configuration. Otherwise
+  // encode_tile_impl() sizes its output buffer according to the configuration while copying from
+  // planes with a different layout, which reads and writes outside the buffers.
+  Error check_image_compatibility(const std::shared_ptr<const HeifPixelImage>& image) const;
 
   // Verify that every component plane has the size implied by the primary image dimensions
   // (chroma planes may be subsampled). The encoders assume this when sizing their output buffer,
@@ -75,6 +87,10 @@ public:
   static Error check_component_sizes(const std::shared_ptr<const HeifPixelImage>& src_image);
 
 protected:
+  // Encode one tile. Only called through encode_tile(), which has verified that 'image' matches
+  // the configuration this encoder was constructed with.
+  [[nodiscard]] virtual std::vector<uint8_t> encode_tile_impl(const std::shared_ptr<const HeifPixelImage>& image) const = 0;
+
   std::shared_ptr<Box_cmpd> m_cmpd;
   std::shared_ptr<Box_uncC> m_uncC;
   std::shared_ptr<Box_cpat> m_cpat;
@@ -84,6 +100,23 @@ protected:
   std::shared_ptr<Box_cloc> m_cloc;
 
   std::map<uint32_t, uint32_t> m_map_id_to_cmpd_index;
+
+private:
+  // Configuration of the prototype image this encoder was constructed for. Tile images passed to
+  // encode_tile() have to match it. See check_image_compatibility().
+  struct prototype_component
+  {
+    uint32_t component_id;
+    heif_channel channel;
+    uint16_t component_type;
+    uint16_t bit_depth;
+    heif_component_datatype datatype;
+    bool has_data_plane;
+  };
+
+  heif_colorspace m_prototype_colorspace = heif_colorspace_undefined;
+  heif_chroma m_prototype_chroma = heif_chroma_undefined;
+  std::vector<prototype_component> m_prototype_components;
 };
 
 

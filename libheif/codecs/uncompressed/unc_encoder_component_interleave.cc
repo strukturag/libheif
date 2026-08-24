@@ -187,7 +187,7 @@ uint64_t unc_encoder_component_interleave::compute_tile_data_size_bytes(uint32_t
 }
 
 
-std::vector<uint8_t> unc_encoder_component_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_component_interleave::encode_tile_impl(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   uint64_t total_size = compute_tile_data_size_bytes(src_image->get_width(), src_image->get_height());
   std::vector<uint8_t> data;

@@ -82,6 +82,20 @@ unc_encoder::unc_encoder(const std::shared_ptr<const HeifPixelImage>& image)
     m_map_id_to_cmpd_index[ids[i]] = static_cast<uint32_t>(i);
   }
 
+  // --- remember the image configuration we are generating this encoder for
+
+  m_prototype_colorspace = image->get_colorspace();
+  m_prototype_chroma = image->get_chroma_format();
+
+  for (const auto& desc : image->get_component_descriptions()) {
+    m_prototype_components.push_back({desc.component_id,
+                                      desc.channel,
+                                      desc.component_type,
+                                      desc.bit_depth,
+                                      desc.datatype,
+                                      desc.has_data_plane});
+  }
+
   // TODO: we could combine component_ids with similar types if they are also used in the same way in the metadata boxes
 
   // --- create cmpd component types
@@ -191,13 +205,19 @@ Error unc_encoder::check_component_sizes(const std::shared_ptr<const HeifPixelIm
   uint32_t image_height = src_image->get_height();
   heif_chroma chroma = src_image->get_chroma_format();
 
-  for (uint32_t id : src_image->get_used_planar_component_ids()) {
-    heif_channel channel = src_image->get_component_channel(id);
+  // Iterate the component descriptions rather than get_used_planar_component_ids() so that
+  // components of an interleaved plane are covered too. Reference components of a cpat pattern
+  // carry no pixels and are skipped.
+
+  for (const auto& desc : src_image->get_component_descriptions()) {
+    if (!desc.has_data_plane) {
+      continue;
+    }
 
     uint32_t expected_width = image_width;
     uint32_t expected_height = image_height;
 
-    if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
+    if (desc.channel == heif_channel_Cb || desc.channel == heif_channel_Cr) {
       if (chroma == heif_chroma_420) {
         expected_width = (image_width + 1) / 2;
         expected_height = (image_height + 1) / 2;
@@ -207,8 +227,8 @@ Error unc_encoder::check_component_sizes(const std::shared_ptr<const HeifPixelIm
       }
     }
 
-    if (src_image->get_component_width(id) != expected_width ||
-        src_image->get_component_height(id) != expected_height) {
+    if (desc.width != expected_width ||
+        desc.height != expected_height) {
       return {heif_error_Invalid_input,
               heif_suberror_Unspecified,
               "Image component plane size does not match the image dimensions"};
@@ -219,15 +239,79 @@ Error unc_encoder::check_component_sizes(const std::shared_ptr<const HeifPixelIm
 }
 
 
-Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const HeifPixelImage>& src_image,
-                                                           const heif_encoding_options& in_options) const
+static Error incompatible_image_error()
 {
+  return {heif_error_Invalid_input,
+          heif_suberror_Unspecified,
+          "Image does not match the component configuration of the uncompressed image it is added to"};
+}
+
+
+Error unc_encoder::check_image_compatibility(const std::shared_ptr<const HeifPixelImage>& image) const
+{
+  // The subsampling factors and the number of bytes per pixel are taken from the prototype image.
+
+  if (image->get_colorspace() != m_prototype_colorspace ||
+      image->get_chroma_format() != m_prototype_chroma) {
+    return incompatible_image_error();
+  }
+
+  // The encoders address the component planes by the component ids of the prototype image and use
+  // its bit depths and data types to compute the output size. All of these have to match.
+  //
+  // We look the components up by id instead of comparing the description lists position by
+  // position, because that is how the encoders access them (find_component_description() searches
+  // by id). The order of the description list is not part of the contract: descriptions are
+  // appended by whoever builds the image and transfer_channel_from_image_as() even erases entries
+  // from the middle of the list, so equal images may well list their components in a different
+  // order.
+
+  if (image->get_component_descriptions().size() != m_prototype_components.size()) {
+    return incompatible_image_error();
+  }
+
+  for (const prototype_component& proto : m_prototype_components) {
+    const ComponentDescription* desc = image->find_component_description(proto.component_id);
+
+    if (desc == nullptr ||
+        desc->channel != proto.channel ||
+        desc->component_type != proto.component_type ||
+        desc->bit_depth != proto.bit_depth ||
+        desc->datatype != proto.datatype ||
+        desc->has_data_plane != proto.has_data_plane) {
+      return incompatible_image_error();
+    }
+  }
+
+  // Every prototype component was found and the lists are equally long, so the tile image has
+  // exactly the components the encoder will write and no extra ones that would be silently
+  // dropped.
+
   // The encoders size their output buffer from the primary image dimensions, but copy each
   // component plane using that plane's actual size. If a component plane is larger than the primary
   // image (e.g. an alpha plane that does not match the color planes), this writes out of bounds.
   // Reject any image whose component planes are inconsistent with the primary size. Chroma (Cb/Cr)
   // planes are legitimately subsampled, so they are checked against the subsampled size.
-  if (Error err = check_component_sizes(src_image)) {
+
+  return check_component_sizes(image);
+}
+
+
+Result<std::vector<uint8_t>> unc_encoder::encode_tile(const std::shared_ptr<const HeifPixelImage>& image) const
+{
+  if (Error err = check_image_compatibility(image)) {
+    return err;
+  }
+
+  return encode_tile_impl(image);
+}
+
+
+Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                                           const heif_encoding_options& in_options) const
+{
+  // Fail before generating any boxes. encode_tile() checks this again.
+  if (Error err = check_image_compatibility(src_image)) {
     return err;
   }
 

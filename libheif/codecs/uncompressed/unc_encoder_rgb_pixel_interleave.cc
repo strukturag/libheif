@@ -95,7 +95,7 @@ uint64_t unc_encoder_rgb_pixel_interleave::compute_tile_data_size_bytes(uint32_t
 }
 
 
-std::vector<uint8_t> unc_encoder_rgb_pixel_interleave::encode_tile(const std::shared_ptr<const HeifPixelImage>& src_image) const
+std::vector<uint8_t> unc_encoder_rgb_pixel_interleave::encode_tile_impl(const std::shared_ptr<const HeifPixelImage>& src_image) const
 {
   std::vector<uint8_t> data;
 
