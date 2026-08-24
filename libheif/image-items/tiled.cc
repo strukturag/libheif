@@ -350,6 +350,13 @@ Error TiledHeader::set_parameters(const heif_tiled_image_parameters& params)
     return err;
   }
 
+  // TODO(security): this offset table is bounded only by max_number_of_tiles
+  // (default 4096*4096 => ~256 MB for the TileOffset vector), and the allocation
+  // is neither counted against max_total_memory via MemoryHandle nor deferred to
+  // decode time. It also uses the global security limits instead of the context
+  // limits. Route this allocation through MemoryHandle and use the context limits
+  // so a small 'tili' file cannot pre-allocate hundreds of MB at file-open time.
+  // (Reported in GHSA-x8xm-cm2c-cfc8, variant V3. 'tili' is experimental.)
   m_offsets.resize(*num_tiles_result);
 
   for (auto& tile: m_offsets) {
@@ -958,7 +965,7 @@ Error ImageItem_Tiled::process_before_write()
 Result<std::shared_ptr<HeifPixelImage>>
 ImageItem_Tiled::decode_compressed_image(const heif_decoding_options& options,
                                          bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
-                                         std::set<heif_item_id> processed_ids) const
+                                         DecodeTraversalState decode_state) const
 {
   if (decode_tile_only) {
     return decode_grid_tile(options, tile_x0, tile_y0);

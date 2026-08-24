@@ -313,7 +313,8 @@ private:
 
   Error check_for_ref_cycle_recursion(heif_item_id ID,
                                       const std::shared_ptr<Box_iref>& iref_box,
-                                      std::unordered_set<heif_item_id>& parent_items) const;
+                                      std::unordered_set<heif_item_id>& parent_items,
+                                      std::unordered_set<heif_item_id>& finished_items) const;
 };
 
 #endif

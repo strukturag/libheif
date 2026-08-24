@@ -23,6 +23,7 @@
 
 #include "api/libheif/heif.h"
 #include "error.h"
+#include "security_limits.h"
 #include "nclx.h"
 #include <string>
 #include <vector>
@@ -368,12 +369,12 @@ public:
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                                bool decode_tile_only, uint32_t tile_x0,
                                                                uint32_t tile_y0,
-                                                               std::set<heif_item_id> processed_ids) const;
+                                                               DecodeTraversalState decode_state) const;
 
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0,
                                                                           uint32_t tile_y0,
-                                                                          std::set<heif_item_id> processed_ids) const;
+                                                                          DecodeTraversalState decode_state) const;
 
   // Validate the just-decoded pixel image against the size signaled for this item.
   // Called by decode_image() right after decode_compressed_image(), BEFORE transforms,
@@ -543,14 +544,14 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0,
                                                        uint32_t tile_y0,
-                                                       std::set<heif_item_id> processed_ids) const override
+                                                       DecodeTraversalState decode_state) const override
   {
     return m_item_error;
   }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0,
-                                                                  uint32_t tile_y0, std::set<heif_item_id> processed_ids) const override
+                                                                  uint32_t tile_y0, DecodeTraversalState decode_state) const override
   {
     return m_item_error;
   }

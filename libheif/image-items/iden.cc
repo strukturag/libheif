@@ -37,15 +37,15 @@ ImageItem_iden::ImageItem_iden(HeifContext* ctx, heif_item_id id)
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
-                                                                                std::set<heif_item_id> processed_ids) const
+                                                                                DecodeTraversalState decode_state) const
 {
-  if (processed_ids.contains(get_id())) {
+  if (decode_state.processed_ids.contains(get_id())) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "'iref' has cyclic references"};
   }
 
-  processed_ids.insert(get_id());
+  decode_state.processed_ids.insert(get_id());
 
 
   std::shared_ptr<HeifPixelImage> img;
@@ -93,7 +93,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0, processed_ids);
+  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0, decode_state);
 }
 
 

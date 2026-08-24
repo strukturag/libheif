@@ -252,6 +252,17 @@ Error ImageItem_Overlay::read_overlay_spec()
                  "'iovl' image has no referenced input images");
   }
 
+  // Limit the number of images composited into a single overlay. This is a
+  // hardcoded stopgap (see MAX_OVERLAY_IMAGES) until a configurable limit can be
+  // added to heif_security_limits in the next major release. Skipped when the
+  // security limits are disabled. (GHSA-x8xm-cm2c-cfc8)
+  if (get_context()->get_security_limits()->max_items != 0 &&
+      m_overlay_image_ids.size() > MAX_OVERLAY_IMAGES) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Security_limit_exceeded,
+                 "'iovl' image composites more input images than allowed");
+  }
+
 
   auto overlayDataResult = heif_file->get_uncompressed_item_data(get_id());
   if (!overlayDataResult) {
@@ -275,9 +286,9 @@ Error ImageItem_Overlay::read_overlay_spec()
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_image(const heif_decoding_options& options,
                                                                                    bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
-                                                                                   std::set<heif_item_id> processed_ids) const
+                                                                                   DecodeTraversalState decode_state) const
 {
-  return decode_overlay_image(options, processed_ids);
+  return decode_overlay_image(options, decode_state);
 }
 
 // Note: ImageItem_Overlay does not override check_decoded_image_size(). The overlay
@@ -288,15 +299,28 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_compressed_ima
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(const heif_decoding_options& options,
-                                                                                std::set<heif_item_id> processed_ids) const
+                                                                                DecodeTraversalState decode_state) const
 {
-  if (processed_ids.contains(get_id())) {
+  if (decode_state.processed_ids.contains(get_id())) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "'iref' has cyclic references"};
   }
 
-  processed_ids.insert(get_id());
+  decode_state.processed_ids.insert(get_id());
+
+  // Bound the depth of overlays nested inside one another. Real files place at
+  // most one overlay in a decode chain; deep nesting is a fast-rejection path
+  // for the reference-amplification gadget. decode_state (and thus this counter)
+  // is copied by value at each hop, so overlay_nesting measures depth along the
+  // current path only. (GHSA-x8xm-cm2c-cfc8)
+  decode_state.overlay_nesting++;
+  if (decode_state.max_overlay_nesting != 0 &&
+      decode_state.overlay_nesting > decode_state.max_overlay_nesting) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Security_limit_exceeded,
+                 "'iovl' overlay images nested too deeply"};
+  }
 
 
   std::shared_ptr<HeifPixelImage> img;
@@ -350,7 +374,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
       return error;
     }
 
-    auto decodeResult = imgItem->decode_image(options, false, 0,0, processed_ids);
+    auto decodeResult = imgItem->decode_image(options, false, 0,0, decode_state);
     if (!decodeResult) {
       return decodeResult.error();
     }

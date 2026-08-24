@@ -209,22 +209,22 @@ Error ImageItem_Grid::read_grid_spec()
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(const heif_decoding_options& options,
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
-                                                                                std::set<heif_item_id> processed_ids) const
+                                                                                DecodeTraversalState decode_state) const
 {
-  if (processed_ids.contains(get_id())) {
+  if (decode_state.processed_ids.contains(get_id())) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "'iref' has cyclic references"};
   }
 
-  processed_ids.insert(get_id());
+  decode_state.processed_ids.insert(get_id());
 
 
   if (decode_tile_only) {
-    return decode_grid_tile(options, tile_x0, tile_y0, processed_ids);
+    return decode_grid_tile(options, tile_x0, tile_y0, decode_state);
   }
   else {
-    return decode_full_grid_image(options, processed_ids);
+    return decode_full_grid_image(options, decode_state);
   }
 }
 
@@ -247,7 +247,7 @@ static void wait_for_jobs(std::deque<std::future<Error> >* jobs) {
 }
 #endif
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options, std::set<heif_item_id> processed_ids) const
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options, DecodeTraversalState decode_state) const
 {
   std::shared_ptr<HeifPixelImage> img; // the decoded image
 
@@ -388,7 +388,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
           }
         }
 
-        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings, processed_ids);
+        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter, warnings, decode_state);
         if (err) {
           return err;
         }
@@ -436,7 +436,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
                                 data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
-                                std::ref(progress_counter), warnings, processed_ids));
+                                std::ref(progress_counter), warnings, decode_state));
     }
 
     // check for decoding errors in remaining tiles
@@ -484,7 +484,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
                                                   const heif_decoding_options& options,
                                                   int& progress_counter,
                                                   std::shared_ptr<std::vector<Error> > warnings,
-                                                  std::set<heif_item_id> processed_ids) const
+                                                  DecodeTraversalState decode_state) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 #if ENABLE_PARALLEL_TILE_DECODING
@@ -510,7 +510,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
     return error;
   }
 
-  auto decodeResult = tileItem->decode_image(options, false, 0, 0, processed_ids);
+  auto decodeResult = tileItem->decode_image(options, false, 0, 0, decode_state);
   if (!decodeResult) {
     if (!options.strict_decoding) {
       // We ignore broken tiles. The un-pasted canvas region stays zero from calloc().
@@ -578,7 +578,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty,
-                                                                         std::set<heif_item_id> processed_ids) const
+                                                                         DecodeTraversalState decode_state) const
 {
   uint32_t idx = ty * m_grid_spec.get_columns() + tx;
 
@@ -599,7 +599,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
     return error;
   }
 
-  return tile_item->decode_compressed_image(options, false, 0, 0, processed_ids);
+  return tile_item->decode_compressed_image(options, false, 0, 0, decode_state);
 }
 
 

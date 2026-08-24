@@ -636,30 +636,44 @@ Error HeifFile::parse_heif_sequences()
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
                                     const std::shared_ptr<Box_iref>& iref_box) const
 {
-  std::unordered_set<heif_item_id> parent_items;
-  return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
+  std::unordered_set<heif_item_id> parent_items;    // items on the current DFS path
+  std::unordered_set<heif_item_id> finished_items;  // items whose subtree is known acyclic
+  return check_for_ref_cycle_recursion(ID, iref_box, parent_items, finished_items);
 }
 
 
 Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
                                     const std::shared_ptr<Box_iref>& iref_box,
-                                    std::unordered_set<heif_item_id>& parent_items) const {
+                                    std::unordered_set<heif_item_id>& parent_items,
+                                    std::unordered_set<heif_item_id>& finished_items) const {
   if (parent_items.find(ID) != parent_items.end()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Item_reference_cycle,
                  "Image reference cycle");
   }
+
+  // An item whose subtree we have already fully verified as acyclic cannot be
+  // part of a cycle when reached again through a different path. Without this
+  // memo the DFS visits every distinct root-to-item path, which is exponential
+  // for shared/nested derived-image references (e.g. many 'iden' items pointing
+  // at a common base), turning a tiny file into a file-open CPU DoS.
+  // (GHSA-x8xm-cm2c-cfc8)
+  if (finished_items.find(ID) != finished_items.end()) {
+    return Error::Ok;
+  }
+
   parent_items.insert(ID);
 
   std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
   for (heif_item_id reference_idx : image_references) {
-    Error error = check_for_ref_cycle_recursion(reference_idx, iref_box, parent_items);
+    Error error = check_for_ref_cycle_recursion(reference_idx, iref_box, parent_items, finished_items);
     if (error) {
       return error;
     }
   }
 
   parent_items.erase(ID);
+  finished_items.insert(ID);
   return Error::Ok;
 }
 

@@ -125,7 +125,7 @@ public:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
-                                                                  std::set<heif_item_id> processed_ids) const override;
+                                                                  DecodeTraversalState decode_state) const override;
 
 
   // --- iovl specific
@@ -139,7 +139,7 @@ private:
   Error read_overlay_spec();
 
   Result<std::shared_ptr<HeifPixelImage>> decode_overlay_image(const heif_decoding_options& options,
-                                                               std::set<heif_item_id> processed_ids) const;
+                                                               DecodeTraversalState decode_state) const;
 };
 
 

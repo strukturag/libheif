@@ -29,6 +29,7 @@
 #include <utility>
 
 #include "error.h"
+#include "security_limits.h"
 
 #include "libheif/heif.h"
 #include "libheif/heif_experimental.h"
