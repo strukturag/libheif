@@ -24,7 +24,7 @@
         "url": "https://github.com/strukturag/libheif"
       },
       "licenses": ["spdx:LGPL-3.0-or-later"],
-      "tags": ["heif", "heic", "avif", "image", "codec", "c", "cpp", "security", "multimedia"]
+      "tags": ["heif", "heic", "avif", "image", "codec", "cpp", "security", "multimedia"]
     },
     {
       "guid": "libde265",
@@ -37,7 +37,7 @@
         "url": "https://github.com/strukturag/libde265"
       },
       "licenses": ["spdx:LGPL-3.0-or-later"],
-      "tags": ["hevc", "h265", "video", "codec", "c", "cpp", "multimedia"]
+      "tags": ["hevc", "h265", "video", "codec", "cpp", "multimedia"]
     }
   ],
   "funding": {
