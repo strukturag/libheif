@@ -102,11 +102,18 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   heif_get_file_mime_type(data, clip_int(size));
 
   ctx = heif_context_alloc();
-  heif_context_get_security_limits(ctx)->max_total_memory = UINT64_C(2) * 1024 * 1024 * 1024;
   assert(ctx);
 
   auto* limits = heif_context_get_security_limits(ctx);
+  limits->max_total_memory = UINT64_C(2) * 1024 * 1024 * 1024;
   limits->max_memory_block_size = 128 * 1024 * 1024; // 128 MB
+
+  // Also bound the image size itself. libheif's memory accounting only covers its own
+  // allocations, but the codec libraries allocate their frame buffers before libheif
+  // sees anything (dav1d needs ~12.5 bytes/pixel for a frame header alone). Under MSan,
+  // where every allocation costs about three times its size in RSS, a 56 Mpixel AV1 frame
+  // header was enough to exceed libFuzzer's 2560 MB limit.
+  limits->max_image_size_pixels = 16 * 1024 * 1024; // 16 Mpixel
 
   err = heif_context_read_from_memory(ctx, data, size, nullptr);
   if (err.code != heif_error_Ok) {
