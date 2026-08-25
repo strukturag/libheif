@@ -238,7 +238,12 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
 
     *data = std::move(*dataResult);
 
-    if (range_start_offset + range_size > data->size()) {
+    // Use subtraction form to avoid a uint64_t wrap in 'range_start_offset + range_size'.
+    // A crafted tiling can make the requested tile range wrap to zero, passing the
+    // addition-form check and leading to an out-of-bounds read in the memcpy() below
+    // (GHSA-hh47-fhqr-cj2r; same root cause as the icef sibling branch above, GHSA-73p7-m7gg-w2jv).
+    if (range_start_offset > data->size() ||
+        range_size > data->size() - range_start_offset) {
       return {
         heif_error_Invalid_input,
         heif_suberror_Unspecified,
