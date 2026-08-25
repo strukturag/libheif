@@ -173,7 +173,10 @@ heif_error heif_region_get_point_transformed(const struct heif_region* region, h
     auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
                                                region->region_item->reference_width,
                                                region->region_item->reference_height);
-    RegionCoordinateTransform::Point p = t.transform_point({(double) point->x, (double) point->y});
+    if (!t) {
+      return t.error().error_struct(region->context.get());
+    }
+    RegionCoordinateTransform::Point p = t->transform_point({(double) point->x, (double) point->y});
     *x = p.x;
     *y = p.y;
 
@@ -211,9 +214,12 @@ heif_error heif_region_get_rectangle_transformed(const heif_region* region,
     auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
                                                region->region_item->reference_width,
                                                region->region_item->reference_height);
+    if (!t) {
+      return t.error().error_struct(region->context.get());
+    }
 
-    RegionCoordinateTransform::Point p = t.transform_point({(double) rect->x, (double) rect->y});
-    RegionCoordinateTransform::Extent e = t.transform_extent({(double) rect->width, (double) rect->height});
+    RegionCoordinateTransform::Point p = t->transform_point({(double) rect->x, (double) rect->y});
+    RegionCoordinateTransform::Extent e = t->transform_extent({(double) rect->width, (double) rect->height});
 
     *x = p.x;
     *y = p.y;
@@ -253,9 +259,12 @@ heif_error heif_region_get_ellipse_transformed(const heif_region* region,
     auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
                                                region->region_item->reference_width,
                                                region->region_item->reference_height);
+    if (!t) {
+      return t.error().error_struct(region->context.get());
+    }
 
-    RegionCoordinateTransform::Point p = t.transform_point({(double) ellipse->x, (double) ellipse->y});
-    RegionCoordinateTransform::Extent e = t.transform_extent({(double) ellipse->radius_x, (double) ellipse->radius_y});
+    RegionCoordinateTransform::Point p = t->transform_point({(double) ellipse->x, (double) ellipse->y});
+    RegionCoordinateTransform::Extent e = t->transform_extent({(double) ellipse->radius_x, (double) ellipse->radius_y});
 
     *x = p.x;
     *y = p.y;
@@ -319,9 +328,12 @@ static heif_error heif_region_get_poly_points_scaled(const heif_region* region, 
     auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
                                                region->region_item->reference_width,
                                                region->region_item->reference_height);
+    if (!t) {
+      return t.error().error_struct(region->context.get());
+    }
 
     for (int i = 0; i < (int) poly->points.size(); i++) {
-      RegionCoordinateTransform::Point p = t.transform_point({
+      RegionCoordinateTransform::Point p = t->transform_point({
                                                                (double) poly->points[i].x,
                                                                (double) poly->points[i].y
                                                              });

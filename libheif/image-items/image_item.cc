@@ -309,7 +309,9 @@ Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const s
       input_height != encoded_height) {
 
     auto clap = std::make_shared<Box_clap>();
-    clap->set(input_width, input_height, encoded_width, encoded_height);
+    if (Error err = clap->set(input_width, input_height, encoded_width, encoded_height)) {
+      return err;
+    }
     codedImage.properties.push_back(clap);
   }
 
@@ -996,10 +998,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
           uint32_t img_width = img->get_width();
           uint32_t img_height = img->get_height();
 
-          int left = clap->left_rounded(img_width);
-          int right = clap->right_rounded(img_width);
-          int top = clap->top_rounded(img_height);
-          int bottom = clap->bottom_rounded(img_height);
+          auto clapCrop = clap->get_crop(img_width, img_height);
+          if (!clapCrop) {
+            return clapCrop.error();
+          }
+
+          int left = clapCrop->left;
+          int right = clapCrop->right;
+          int top = clapCrop->top;
+          int bottom = clapCrop->bottom;
 
           if (left < 0) { left = 0; }
           if (top < 0) { top = 0; }
@@ -1338,7 +1345,7 @@ heif_image_tiling ImageItem::get_heif_image_tiling() const
   // process_image_transformations_on_tiling(), so handing it the already
   // transformed m_width/m_height would apply them a second time. For a clap
   // that shrinks the image to zero this double application underflowed inside
-  // Box_clap::left_rounded() (GHSA-jc8f-p23p-5hjg); for irot/imir it silently
+  // Box_clap::get_crop() (GHSA-jc8f-p23p-5hjg); for irot/imir it silently
   // produced wrong dimensions. The grid/unc/tiled overrides likewise report
   // coded dimensions.
   uint32_t coded_width = m_width;
@@ -1485,10 +1492,15 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
     if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
       std::shared_ptr<HeifPixelImage> clap_img;
 
-      int left = clap->left_rounded(tiling.image_width);
-      int right = clap->right_rounded(tiling.image_width);
-      int top = clap->top_rounded(tiling.image_height);
-      int bottom = clap->bottom_rounded(tiling.image_height);
+      auto cropResult = clap->get_crop(tiling.image_width, tiling.image_height);
+      if (!cropResult) {
+        return cropResult.error();
+      }
+
+      int left = cropResult->left;
+      int right = cropResult->right;
+      int top = cropResult->top;
+      int bottom = cropResult->bottom;
 
       if (left < 0) { left = 0; }
       if (top < 0) { top = 0; }

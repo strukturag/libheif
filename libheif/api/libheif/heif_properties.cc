@@ -245,10 +245,22 @@ void heif_item_get_property_transform_crop_borders(const heif_context* context,
     return;
   }
 
-  if (left) *left = (*clap)->left_rounded(image_width);
-  if (right) *right = image_width - 1 - (*clap)->right_rounded(image_width);
-  if (top) *top = (*clap)->top_rounded(image_height);
-  if (bottom) *bottom = image_height - 1 - (*clap)->bottom_rounded(image_height);
+  auto crop = (*clap)->get_crop(image_width, image_height);
+  if (!crop) {
+    // The clean aperture cannot be applied to an image of this size (zero size, negative
+    // size, or a size beyond the supported coordinate range). This function has no error
+    // return, so report that nothing is cropped.
+    if (left) *left = 0;
+    if (right) *right = 0;
+    if (top) *top = 0;
+    if (bottom) *bottom = 0;
+    return;
+  }
+
+  if (left) *left = crop->left;
+  if (right) *right = image_width - 1 - crop->right;
+  if (top) *top = crop->top;
+  if (bottom) *bottom = image_height - 1 - crop->bottom;
 }
 
 

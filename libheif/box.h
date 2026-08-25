@@ -65,10 +65,15 @@ class Fraction
 public:
   Fraction() = default;
 
-  Fraction(int32_t num, int32_t den);
+  // Checked construction from externally supplied values (e.g. box fields or image
+  // sizes). Fails if a value does not fit into int32_t or if the denominator is zero.
+  static Result<Fraction> from_signed(int64_t num, int64_t den);
 
-  // may only use values up to int32_t maximum
-  Fraction(uint32_t num, uint32_t den);
+  static Result<Fraction> from_unsigned(uint32_t num, uint32_t den);
+
+  // The constructors are meant for arithmetic on values that are already known to be
+  // in range. They never fail: values are reduced in precision until they fit.
+  Fraction(int32_t num, int32_t den);
 
   // Values will be reduced until they fit into int32_t.
   Fraction(int64_t num, int64_t den);
@@ -1010,10 +1015,19 @@ public:
 
   const char* debug_box_name() const override { return "Clean Aperture"; }
 
-  int left_rounded(uint32_t image_width) const;  // first column
-  int right_rounded(uint32_t image_width) const; // last column that is part of the cropped image
-  int top_rounded(uint32_t image_height) const;   // first row
-  int bottom_rounded(uint32_t image_height) const; // last row included in the cropped image
+  // The clean aperture in pixel coordinates of an image with the given size.
+  // 'right' and 'bottom' are the last column/row that are part of the cropped image.
+  struct Crop
+  {
+    int left = 0;
+    int top = 0;
+    int right = 0;
+    int bottom = 0;
+  };
+
+  // Fails if the clean aperture cannot be applied to an image of that size
+  // (zero size, or a size that exceeds the int32_t coordinate range).
+  Result<Crop> get_crop(uint32_t image_width, uint32_t image_height) const;
 
   double left(int image_width) const;
   double top(int image_height) const;
@@ -1022,8 +1036,10 @@ public:
 
   int get_height_rounded() const;
 
-  void set(uint32_t clap_width, uint32_t clap_height,
-           uint32_t image_width, uint32_t image_height);
+  // Set a clean aperture of size clap_width x clap_height at the top-left corner of an
+  // image of size image_width x image_height.
+  Error set(uint32_t clap_width, uint32_t clap_height,
+            uint32_t image_width, uint32_t image_height);
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 

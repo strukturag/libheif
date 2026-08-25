@@ -131,6 +131,8 @@ int heif_item_get_property_transform_rotation_ccw(const heif_context* context,
 // Because of the way this data is stored, you have to pass the image size at the moment of the crop operation
 // to compute the cropped border sizes.
 // If 'propertyId==0', it returns the first clap property found.
+// If the clap cannot be applied to the given image size (zero size or a size beyond the
+// supported coordinate range), all four borders are set to 0.
 LIBHEIF_API
 void heif_item_get_property_transform_crop_borders(const heif_context* context,
                                                    heif_item_id itemId,

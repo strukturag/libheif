@@ -22,6 +22,7 @@
 #include "api_structs.h"
 #include "image-items/grid.h"
 #include "image-items/tiled.h"
+#include "security_limits.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
@@ -40,6 +41,21 @@ heif_error heif_image_handle_get_image_tiling(const heif_image_handle* handle, i
   }
 
   *tiling = handle->image->get_heif_image_tiling();
+
+  // Every tile has to be decodable on its own, so apply the same size limit that the
+  // decoding path applies to the 'ispe' size. For plain (non-tiled) items, the single
+  // tile is the whole image. The whole-image size is deliberately not checked here,
+  // because tiled images larger than the limit can still be decoded tile by tile.
+  // A tile size of zero means that the size is unknown (e.g. a grid whose first tile
+  // is missing); there is nothing to check in that case.
+  // (GHSA-gh5q-69gg-c964: the tiling API returned dimensions that no other part of
+  // the library accepts.)
+  if (tiling->tile_width != 0 && tiling->tile_height != 0) {
+    if (Error err = check_for_valid_image_size(handle->context->get_security_limits(),
+                                               tiling->tile_width, tiling->tile_height)) {
+      return err.error_struct(handle->context.get());
+    }
+  }
 
   if (process_image_transformations) {
     Error error = handle->image->process_image_transformations_on_tiling(*tiling);

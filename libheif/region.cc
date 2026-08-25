@@ -514,15 +514,15 @@ void RegionGeometry_InlineMask::encode(StreamWriter& writer, int field_size_byte
 }
 
 
-RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<HeifFile> file,
-                                                            heif_item_id item_id,
-                                                            int reference_width, int reference_height)
+Result<RegionCoordinateTransform> RegionCoordinateTransform::create(std::shared_ptr<HeifFile> file,
+                                                                    heif_item_id item_id,
+                                                                    int reference_width, int reference_height)
 {
   std::vector<std::shared_ptr<Box>> properties;
 
   Error err = file->get_properties(item_id, properties);
   if (err) {
-    return {};
+    return RegionCoordinateTransform{};
   }
 
   uint32_t image_width = 0, image_height = 0;
@@ -536,7 +536,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
   }
 
   if (image_width == 0 || image_height == 0) {
-    return {};
+    return RegionCoordinateTransform{};
   }
 
   RegionCoordinateTransform transform;
@@ -598,10 +598,12 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
       }
       case fourcc("clap"): {
         auto clap = std::dynamic_pointer_cast<Box_clap>(property);
-        int left = clap->left_rounded(image_width);
-        int top = clap->top_rounded(image_height);
-        transform.tx -= left;
-        transform.ty -= top;
+        auto crop = clap->get_crop(image_width, image_height);
+        if (!crop) {
+          return crop.error();
+        }
+        transform.tx -= crop->left;
+        transform.ty -= crop->top;
         image_width = clap->get_width_rounded();
         image_height = clap->get_height_rounded();
         break;

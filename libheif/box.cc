@@ -80,12 +80,28 @@ Fraction::Fraction(int32_t num, int32_t den)
   }
 }
 
-Fraction::Fraction(uint32_t num, uint32_t den)
+Result<Fraction> Fraction::from_signed(int64_t num, int64_t den)
 {
-  assert(num <= (uint32_t) std::numeric_limits<int32_t>::max());
-  assert(den <= (uint32_t) std::numeric_limits<int32_t>::max());
+  if (num < std::numeric_limits<int32_t>::min() || num > std::numeric_limits<int32_t>::max() ||
+      den < std::numeric_limits<int32_t>::min() || den > std::numeric_limits<int32_t>::max()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_fractional_number,
+                 "Fraction value exceeds the supported range");
+  }
 
-  *this = Fraction(int32_t(num), int32_t(den));
+  Fraction f(static_cast<int32_t>(num), static_cast<int32_t>(den));
+  if (!f.is_valid()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_fractional_number,
+                 "Fraction with zero denominator");
+  }
+
+  return f;
+}
+
+Result<Fraction> Fraction::from_unsigned(uint32_t num, uint32_t den)
+{
+  return from_signed(num, den);
 }
 
 Fraction::Fraction(int64_t num, int64_t den)
@@ -3646,28 +3662,24 @@ Error Box_clap::parse(BitstreamRange& range, const heif_security_limits* limits)
   int32_t vertical_offset_num = (int32_t) range.read32();
   uint32_t vertical_offset_den = (uint32_t) range.read32();
 
-  if (clean_aperture_width_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      clean_aperture_width_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      horizontal_offset_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      vertical_offset_den > (uint32_t) std::numeric_limits<int32_t>::max()) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_fractional_number,
-                 "Exceeded supported value range.");
+  // The checked Fraction construction rejects values outside the int32_t range and
+  // zero denominators.
+  auto clean_aperture_width = Fraction::from_unsigned(clean_aperture_width_num, clean_aperture_width_den);
+  auto clean_aperture_height = Fraction::from_unsigned(clean_aperture_height_num, clean_aperture_height_den);
+  auto horizontal_offset = Fraction::from_signed(horizontal_offset_num, horizontal_offset_den);
+  auto vertical_offset = Fraction::from_signed(vertical_offset_num, vertical_offset_den);
+
+  for (const Result<Fraction>* f : {&clean_aperture_width, &clean_aperture_height,
+                                    &horizontal_offset, &vertical_offset}) {
+    if (!*f) {
+      return f->error();
+    }
   }
 
-  m_clean_aperture_width = Fraction(clean_aperture_width_num,
-                                    clean_aperture_width_den);
-  m_clean_aperture_height = Fraction(clean_aperture_height_num,
-                                     clean_aperture_height_den);
-  m_horizontal_offset = Fraction(horizontal_offset_num, (int32_t) horizontal_offset_den);
-  m_vertical_offset = Fraction(vertical_offset_num, (int32_t) vertical_offset_den);
-  if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
-      !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_fractional_number);
-  }
+  m_clean_aperture_width = *clean_aperture_width;
+  m_clean_aperture_height = *clean_aperture_height;
+  m_horizontal_offset = *horizontal_offset;
+  m_vertical_offset = *vertical_offset;
 
   return range.get_error();
 }
@@ -3725,50 +3737,45 @@ double Box_clap::top(int image_height) const
 }
 
 
-int Box_clap::left_rounded(uint32_t image_width) const
+Result<Box_clap::Crop> Box_clap::get_crop(uint32_t image_width, uint32_t image_height) const
 {
-  // pcX = horizOff + (width  - 1)/2
-  // pcX ± (cleanApertureWidth - 1)/2
-
-  // left = horizOff + (width-1)/2 - (clapWidth-1)/2
-
-  // Guard against image_width==0: `image_width - 1U` would underflow to
-  // UINT32_MAX and overflow the Fraction (GHSA-jc8f-p23p-5hjg).
-  if (image_width == 0) {
-    return 0;
+  // The clean aperture is specified relative to the image center:
+  //   pcX  = horizOff + (width - 1)/2
+  //   left = pcX - (clapWidth - 1)/2
+  //   right = left + clapWidth - 1
+  // (and likewise vertically).
+  //
+  // Computing this needs the image size inside the int32_t-based Fraction. A zero size
+  // would underflow `size - 1` (GHSA-jc8f-p23p-5hjg) and a size above INT32_MAX + 1
+  // does not fit (GHSA-gh5q-69gg-c964). Such an image cannot be cropped with a 'clap',
+  // which is reported as an error instead of computing a bogus crop.
+  if (image_width == 0 || image_height == 0) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_clean_aperture,
+                 "Clean aperture cannot be applied to an image with zero size");
   }
 
-  Fraction pcX = m_horizontal_offset + Fraction(image_width - 1U, 2U);
+  auto halfWidth = Fraction::from_unsigned(image_width - 1, 2);
+  auto halfHeight = Fraction::from_unsigned(image_height - 1, 2);
+  if (!halfWidth || !halfHeight) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_clean_aperture,
+                 "Clean aperture cannot be applied to an image larger than 2^31 pixels in any direction");
+  }
+
+  Fraction pcX = m_horizontal_offset + *halfWidth;
+  Fraction pcY = m_vertical_offset + *halfHeight;
+
   Fraction left = pcX - (m_clean_aperture_width - 1) / 2;
-
-  return left.round_down();
-}
-
-int Box_clap::right_rounded(uint32_t image_width) const
-{
-  Fraction right = m_clean_aperture_width - 1 + left_rounded(image_width);
-
-  return right.round();
-}
-
-int Box_clap::top_rounded(uint32_t image_height) const
-{
-  // Guard against image_height==0 underflowing the Fraction (see left_rounded).
-  if (image_height == 0) {
-    return 0;
-  }
-
-  Fraction pcY = m_vertical_offset + Fraction(image_height - 1U, 2U);
   Fraction top = pcY - (m_clean_aperture_height - 1) / 2;
 
-  return top.round();
-}
+  Crop crop;
+  crop.left = left.round_down();
+  crop.top = top.round();
+  crop.right = (m_clean_aperture_width - 1 + crop.left).round();
+  crop.bottom = (m_clean_aperture_height - 1 + crop.top).round();
 
-int Box_clap::bottom_rounded(uint32_t image_height) const
-{
-  Fraction bottom = m_clean_aperture_height - 1 + top_rounded(image_height);
-
-  return bottom.round();
+  return crop;
 }
 
 int Box_clap::get_width_rounded() const
@@ -3781,17 +3788,32 @@ int Box_clap::get_height_rounded() const
   return m_clean_aperture_height.round();
 }
 
-void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
-                   uint32_t image_width, uint32_t image_height)
+Error Box_clap::set(uint32_t clap_width, uint32_t clap_height,
+                    uint32_t image_width, uint32_t image_height)
 {
-  assert(image_width >= clap_width);
-  assert(image_height >= clap_height);
+  if (clap_width > image_width || clap_height > image_height) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Clean aperture is larger than the image");
+  }
 
-  m_clean_aperture_width = Fraction(clap_width, 1U);
-  m_clean_aperture_height = Fraction(clap_height, 1U);
+  auto width = Fraction::from_unsigned(clap_width, 1);
+  auto height = Fraction::from_unsigned(clap_height, 1);
+  auto horizontal_offset = Fraction::from_signed(-int64_t{image_width - clap_width}, 2);
+  auto vertical_offset = Fraction::from_signed(-int64_t{image_height - clap_height}, 2);
 
-  m_horizontal_offset = Fraction(-(int32_t) (image_width - clap_width), 2);
-  m_vertical_offset = Fraction(-(int32_t) (image_height - clap_height), 2);
+  if (!width || !height || !horizontal_offset || !vertical_offset) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Clean aperture values exceed the supported range");
+  }
+
+  m_clean_aperture_width = *width;
+  m_clean_aperture_height = *height;
+  m_horizontal_offset = *horizontal_offset;
+  m_vertical_offset = *vertical_offset;
+
+  return Error::Ok;
 }
 
 

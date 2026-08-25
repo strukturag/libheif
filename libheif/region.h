@@ -188,9 +188,11 @@ class HeifFile;
 class RegionCoordinateTransform
 {
 public:
-  static RegionCoordinateTransform create(std::shared_ptr<HeifFile> file,
-                                          heif_item_id item_id,
-                                          int reference_width, int reference_height);
+  // Fails if a transformative property of the image cannot be applied (e.g. a 'clap'
+  // on an image size outside the supported range).
+  static Result<RegionCoordinateTransform> create(std::shared_ptr<HeifFile> file,
+                                                  heif_item_id item_id,
+                                                  int reference_width, int reference_height);
 
   struct Point
   {
