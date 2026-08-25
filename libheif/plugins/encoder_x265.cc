@@ -1025,12 +1025,32 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
+  // x265 sizes some of its internal picture buffers with 32-bit arithmetic and, up to at least
+  // v3.5, neither validates the picture size nor the result of these allocations. Pictures of
+  // roughly 700 Mpixel or more make it crash in one of its worker threads (GHSA-2c3g-p585-8rpq).
+  // Newer x265 versions refuse pictures above the HEVC Level 7.2 maximum of 142,606,336 luma
+  // samples (16384x8704) in x265_check_params() unless non-conformance is explicitly allowed.
+  // Apply the same limit here, so that the behavior is the same with all x265 versions and the
+  // encoder is never opened with a picture it cannot handle.
+  const uint64_t max_luma_samples = 142606336;
+  if (static_cast<uint64_t>(param->sourceWidth) * static_cast<uint64_t>(param->sourceHeight) > max_luma_samples) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Encoder_encoding,
+            "Image too large for x265: at most 142,606,336 luma samples (HEVC Level 7.2) are supported"};
+  }
+
   param->fpsNum = framerate_num;
   param->fpsDenom = framerate_denom;
 
   encoder->bit_depth = bit_depth;
 
   encoder->encoder = api->encoder_open(param);
+  if (encoder->encoder == nullptr) {
+    // x265 rejected the parameters (e.g. newer versions refuse oversized pictures).
+    return {heif_error_Encoding_error,
+            heif_suberror_Encoder_initialization,
+            "x265 encoder could not be opened with the given parameters"};
+  }
 
   if (image_sequence) {
     x265_nal* nals = nullptr;

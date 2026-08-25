@@ -156,3 +156,44 @@ TEST_CASE( "ispe odd size", "[heif_context]" ) {
   test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 121,99, 121,99);
   test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 120,100, 120,100);
 }
+
+
+TEST_CASE("x265 rejects oversized images", "[heif_encoder]") {
+  // Regression test for GHSA-2c3g-p585-8rpq. x265 (up to at least v3.5) neither checks the
+  // picture size nor its internal allocation results and crashes in a worker thread for
+  // pictures of roughly 700 Mpixel or more. The x265 plugin therefore rejects pictures above
+  // the HEVC Level 7.2 maximum of 142,606,336 luma samples (16384x8704), which is the same
+  // limit newer x265 versions enforce themselves.
+
+  const heif_encoder_descriptor* descriptor = nullptr;
+  int n = heif_get_encoder_descriptors(heif_compression_HEVC, "x265", &descriptor, 1);
+  if (n == 0) {
+    SKIP("x265 encoder not available, skipping test");
+  }
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc = nullptr;
+  heif_error err = heif_context_get_encoder(ctx, descriptor, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // One row more than Level 7.2 allows. A single 8-bit luma plane keeps this at about 142 MB.
+  const int w = 16384;
+  const int h = 8705;
+  heif_image* img = nullptr;
+  err = heif_image_create(w, h, heif_colorspace_monochrome, heif_chroma_monochrome, &img);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(img, heif_channel_Y, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
+  REQUIRE(err.code == heif_error_Encoding_error);
+  REQUIRE(err.subcode == heif_suberror_Encoder_encoding);
+
+  if (handle) {
+    heif_image_handle_release(handle);
+  }
+  heif_image_release(img);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+}

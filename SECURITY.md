@@ -31,6 +31,16 @@ exceptionally hard to implement securely:
 * **Multiple codecs behind one container.** The container makes claims (dimensions, chroma
   format, bit depth, color information) that the embedded HEVC, AV1, JPEG, JPEG 2000 or VVC
   bitstream may contradict. libheif has to reconcile both before any pixel buffer is touched.
+* **Many codec libraries.** libheif supports more than a dozen decoder and encoder backends
+  (libde265, x265, kvazaar, libaom, dav1d, rav1e, SVT-AV1, vvdec, vvenc, uvg266, openh264,
+  x264, ffmpeg, libjpeg, OpenJPEG, OpenJPH), in whatever versions the distributions ship.
+  Bugs and undocumented limits in these libraries surface through libheif, because libheif is
+  the component that hands them the untrusted data and that is named in the bug report.
+  Typical cases are integer overflows inside a codec at very large image sizes, crashes on
+  inputs that are valid for the container but exceed codec-internal limits, and frame buffers
+  allocated inside the codec that are outside libheif's memory accounting. libheif has to
+  anticipate these and compensate with its own checks and limits before data is passed to a
+  codec and after results come back, for code it does not control.
 
 libheif validates all of this, is fuzzed continuously, and uses configurable security limits
 to bound memory and CPU use. Still, the number of feature combinations is large, and as

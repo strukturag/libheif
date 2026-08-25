@@ -894,3 +894,76 @@ TEST_CASE("Mismatched alpha bit depth - conversion correctness") {
     CHECK(p[3] == 200);  // A (10-bit 800 >> 2 = 200)
   }
 }
+
+
+// Regression test for GHSA-2c3g-p585-8rpq. Op_RGB24_32_to_YCbCr (like the other conversion
+// operations) used to compute the row offset y * stride in 32-bit int, which overflows as soon
+// as a plane exceeds 2 GB and made the conversion read from a wild address. All internal
+// strides are size_t since v1.19.6. Reproducing the overflow inherently needs a plane of more
+// than 2 GB (about 5 GB in total for this test), so the test is hidden from the default run.
+// Run it explicitly with:
+//     ./tests/conversion "[large-memory]"
+TEST_CASE("RGB24 to YCbCr conversion with planes larger than 2 GB", "[.large-memory]")
+{
+  // Same size as the advisory PoC. The row stride is about 98 KB, so y * stride exceeds
+  // INT32_MAX for every row beyond roughly 21850.
+  const uint32_t w = 32767;
+  const uint32_t h = 32767;
+
+  // Creates an interleaved RGB image with a red first row and a blue last row.
+  auto make_image = [](uint32_t width, uint32_t height) {
+    auto img = std::make_shared<HeifPixelImage>();
+    img->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RGB);
+    auto err = img->add_channel(heif_channel_interleaved, width, height, 8, nullptr);
+    REQUIRE(!err);
+
+    size_t stride;
+    uint8_t* first = img->get_channel_memory(heif_channel_interleaved, &stride);
+    uint8_t* last = first + static_cast<size_t>(height - 1) * stride;
+    for (uint32_t x = 0; x < width; x++) {
+      first[3 * x + 0] = 255;
+      first[3 * x + 1] = 0;
+      first[3 * x + 2] = 0;
+      last[3 * x + 0] = 0;
+      last[3 * x + 1] = 0;
+      last[3 * x + 2] = 255;
+    }
+    return img;
+  };
+
+  // Force nearest-neighbor chroma downsampling: this selects the single-step, per-pixel
+  // Op_RGB24_32_to_YCbCr from the advisory. The default (sharp yuv, if libsharpyuv is
+  // available) adjusts luma based on the neighboring rows, which are left uninitialized here.
+  heif_color_conversion_options options;
+  heif_color_conversion_options_set_defaults(&options);
+  options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
+  options.only_use_preferred_chroma_algorithm = true;
+
+  auto convert = [&](const std::shared_ptr<HeifPixelImage>& img) {
+    auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_420,
+                                     nclx_profile::defaults(), 8, options, nullptr,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    return *result;
+  };
+
+  auto big = make_image(w, h);
+  size_t in_stride;
+  big->get_channel_memory(heif_channel_interleaved, &in_stride);
+  REQUIRE(static_cast<uint64_t>(in_stride) * (h - 1) > INT32_MAX); // the last row is only reachable with 64-bit offsets
+
+  auto big_out = convert(big);
+  big.reset();
+  auto small_out = convert(make_image(2, 2));
+
+  // The first and the last row of the large image must convert to the same luma values as
+  // the two rows of the small reference image.
+  size_t big_stride, small_stride;
+  const uint8_t* big_y = big_out->get_channel_memory(heif_channel_Y, &big_stride);
+  const uint8_t* small_y = small_out->get_channel_memory(heif_channel_Y, &small_stride);
+  REQUIRE(big_y[0] == small_y[0]);
+  REQUIRE(big_y[w - 1] == small_y[0]);
+  REQUIRE(big_y[static_cast<size_t>(h - 1) * big_stride] == small_y[small_stride]);
+  REQUIRE(big_y[static_cast<size_t>(h - 1) * big_stride + (w - 1)] == small_y[small_stride]);
+  REQUIRE(small_y[0] != small_y[small_stride]);
+}
