@@ -974,3 +974,102 @@ TEST_CASE("inline mask region data length must match region geometry") {
   heif_image_handle_release(readbackHandle);
   heif_context_free(readbackCtx);
 }
+
+
+TEST_CASE("polygon and polyline point arguments are validated") {
+  // Regression test for GHSA-prcj-g5xh-rw95.
+  //
+  // heif_region_item_add_region_polygon() and heif_region_item_add_region_polyline()
+  // read 2*nPoints values from the caller's array. The library has no way to check
+  // the real size of that array (that is the caller's responsibility, as documented
+  // in heif_regions.h), but it must reject the inconsistent argument combinations
+  // it can detect instead of crashing: a negative point count used to be converted
+  // to a huge size_t in std::vector::resize() and aborted the process with an
+  // uncaught std::length_error, and a NULL array was dereferenced.
+
+  auto context = get_context_for_test_file("rainbow-451x461.heic");
+  heif_image_handle* handle = get_primary_image_handle(context);
+
+  heif_region_item* region_item;
+  heif_error err = heif_image_handle_add_region_item(handle, 451, 461, &region_item);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(heif_region_item_get_number_of_regions(region_item) == 0);
+
+  int32_t pts[6] = {10, 20, 30, 20, 30, 40};
+
+  // On failure, `out_region` must be reset to NULL so that callers never see a
+  // dangling or uninitialized pointer. Start from a non-NULL sentinel to verify this.
+  heif_region sentinel;
+  heif_region* region;
+
+  // --- negative point count ---
+
+  region = &sentinel;
+  err = heif_region_item_add_region_polygon(region_item, pts, -1, &region);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Invalid_parameter_value);
+  REQUIRE(region == nullptr);
+
+  region = &sentinel;
+  err = heif_region_item_add_region_polyline(region_item, pts, -1, &region);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Invalid_parameter_value);
+  REQUIRE(region == nullptr);
+
+  region = &sentinel;
+  err = heif_region_item_add_region_polygon(region_item, pts, INT32_MIN, &region);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Invalid_parameter_value);
+  REQUIRE(region == nullptr);
+
+  // --- NULL point array with a non-zero count ---
+
+  region = &sentinel;
+  err = heif_region_item_add_region_polygon(region_item, nullptr, 3, &region);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Null_pointer_argument);
+  REQUIRE(region == nullptr);
+
+  region = &sentinel;
+  err = heif_region_item_add_region_polyline(region_item, nullptr, 2, &region);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Null_pointer_argument);
+  REQUIRE(region == nullptr);
+
+  // The out_region argument is optional, the checks must also work without it.
+  err = heif_region_item_add_region_polygon(region_item, nullptr, 3, nullptr);
+  REQUIRE(err.code == heif_error_Usage_error);
+  err = heif_region_item_add_region_polygon(region_item, pts, -1, nullptr);
+  REQUIRE(err.code == heif_error_Usage_error);
+
+  // None of the failed calls may have added a region.
+  REQUIRE(heif_region_item_get_number_of_regions(region_item) == 0);
+
+  // --- valid calls still work and the points round-trip ---
+
+  region = nullptr;
+  err = heif_region_item_add_region_polygon(region_item, pts, 3, &region);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(region != nullptr);
+  REQUIRE(heif_region_get_type(region) == heif_region_type_polygon);
+  REQUIRE(heif_region_get_polygon_num_points(region) == 3);
+  int32_t out[6] = {0};
+  err = heif_region_get_polygon_points(region, out);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(memcmp(out, pts, sizeof(pts)) == 0);
+  heif_region_release(region);
+
+  region = nullptr;
+  err = heif_region_item_add_region_polyline(region_item, pts, 2, &region);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(region != nullptr);
+  REQUIRE(heif_region_get_type(region) == heif_region_type_polyline);
+  REQUIRE(heif_region_get_polyline_num_points(region) == 2);
+  heif_region_release(region);
+
+  REQUIRE(heif_region_item_get_number_of_regions(region_item) == 2);
+
+  heif_region_item_release(region_item);
+  heif_image_handle_release(handle);
+  heif_context_free(context);
+}

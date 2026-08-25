@@ -627,27 +627,59 @@ heif_error heif_region_item_add_region_ellipse(heif_region_item* item,
 }
 
 
+// Shared implementation of heif_region_item_add_region_polygon() and
+// heif_region_item_add_region_polyline(). `pts` holds 2*nPoints values in the
+// order X1, Y1, X2, Y2, ...
+static heif_error add_region_poly(heif_region_item* item,
+                                  const int32_t* pts, int nPoints,
+                                  bool closed,
+                                  heif_region** out_region)
+{
+  if (out_region) {
+    *out_region = nullptr;
+  }
+
+  // We cannot verify that the caller's array really holds 2*nPoints values, that
+  // is part of the API contract (GHSA-prcj-g5xh-rw95). What we can check is that
+  // the arguments are self-consistent: a negative count would be converted to a
+  // huge size_t in resize() below and throw std::length_error through the C API,
+  // and a NULL array with a non-zero count would be dereferenced.
+  if (nPoints < 0) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+            "Number of polygon points must not be negative"};
+  }
+
+  if (nPoints > 0 && pts == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  return exception_guard([&]() -> heif_error {
+    auto region = std::make_shared<RegionGeometry_Polygon>();
+    region->points.resize(nPoints);
+
+    for (int i = 0; i < nPoints; i++) {
+      region->points[i].x = pts[2 * i + 0];
+      region->points[i].y = pts[2 * i + 1];
+    }
+
+    region->closed = closed;
+
+    item->region_item->add_region(region);
+
+    if (out_region) {
+      *out_region = create_region(region, item);
+    }
+
+    return heif_error_success;
+  });
+}
+
+
 heif_error heif_region_item_add_region_polygon(heif_region_item* item,
                                                const int32_t* pts, int nPoints,
                                                heif_region** out_region)
 {
-  auto region = std::make_shared<RegionGeometry_Polygon>();
-  region->points.resize(nPoints);
-
-  for (int i = 0; i < nPoints; i++) {
-    region->points[i].x = pts[2 * i + 0];
-    region->points[i].y = pts[2 * i + 1];
-  }
-
-  region->closed = true;
-
-  item->region_item->add_region(region);
-
-  if (out_region) {
-    *out_region = create_region(region, item);
-  }
-
-  return heif_error_success;
+  return add_region_poly(item, pts, nPoints, true, out_region);
 }
 
 
@@ -655,23 +687,7 @@ heif_error heif_region_item_add_region_polyline(heif_region_item* item,
                                                 const int32_t* pts, int nPoints,
                                                 heif_region** out_region)
 {
-  auto region = std::make_shared<RegionGeometry_Polygon>();
-  region->points.resize(nPoints);
-
-  for (int i = 0; i < nPoints; i++) {
-    region->points[i].x = pts[2 * i + 0];
-    region->points[i].y = pts[2 * i + 1];
-  }
-
-  region->closed = false;
-
-  item->region_item->add_region(region);
-
-  if (out_region) {
-    *out_region = create_region(region, item);
-  }
-
-  return heif_error_success;
+  return add_region_poly(item, pts, nPoints, false, out_region);
 }
 
 

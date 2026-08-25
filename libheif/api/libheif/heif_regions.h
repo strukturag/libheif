@@ -722,6 +722,12 @@ heif_error heif_region_item_add_region_ellipse(heif_region_item* region_item,
  * The points are provided as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
+ * @c pts_array must point to at least `2 * nPoints` values. The library cannot
+ * verify the size of the array, so passing a shorter array reads beyond its end.
+ * @c nPoints must not be negative and @c pts_array must not be `NULL` when
+ * @c nPoints is greater than zero. Otherwise the function fails without
+ * modifying the region item.
+ *
  * @param region_item the region item that holds this polygon region
  * @param pts_array the array of points in X,Y order (see above)
  * @param nPoints the number of points
@@ -744,6 +750,12 @@ heif_error heif_region_item_add_region_polygon(heif_region_item* region_item,
  * intersect (even minimally) a one-pixel line drawn along the polyline.
  * The points are provided as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
+ *
+ * @c pts_array must point to at least `2 * nPoints` values. The library cannot
+ * verify the size of the array, so passing a shorter array reads beyond its end.
+ * @c nPoints must not be negative and @c pts_array must not be `NULL` when
+ * @c nPoints is greater than zero. Otherwise the function fails without
+ * modifying the region item.
  *
  * @param region_item the region item that holds this polyline region
  * @param pts_array the array of points in X,Y order (see above)
