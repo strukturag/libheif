@@ -126,6 +126,7 @@ if (WITH_UNCOMPRESSED_CODEC)
 
     if (ZLIB_FOUND)
         add_libheif_test(uncompressed_decode_generic_compression)
+        add_libheif_test(uncompressed_tile_range_overflow)
     else()
         message(WARNING "Generic compress tests of the 'uncompressed codec' are not compiled because zlib was not found")
     endif ()
