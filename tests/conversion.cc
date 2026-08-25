@@ -27,6 +27,7 @@
 #include <iomanip>
 #include "catch_amalgamated.hpp"
 #include "color-conversion/colorconversion.h"
+#include "color-conversion/hdr_sdr.h"
 #include "image/pixelimage.h"
 #include <cmath>
 
@@ -892,6 +893,67 @@ TEST_CASE("Mismatched alpha bit depth - conversion correctness") {
     CHECK(p[1] == 64);   // G (unchanged)
     CHECK(p[2] == 192);  // B (unchanged)
     CHECK(p[3] == 200);  // A (10-bit 800 >> 2 = 200)
+  }
+}
+
+
+// Regression test for GHSA-8857-r8x5-7499. Op_to_hdr_planes widens an 8-bit input to a higher
+// bit depth with out = (in << (m-8)) | (in >> (16-m)). For m > 16 the right shift exponent
+// (16-m) becomes negative, which is undefined behavior (UBSan: "shift exponent is negative"),
+// and m > 16 also does not fit the uint16_t output plane. The operation must only offer/perform
+// the conversion for 8 < m <= 16.
+TEST_CASE("Op_to_hdr_planes rejects out-of-range output bit depth", "[heif_image]")
+{
+  heif_color_conversion_options options{};
+  std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+      options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+  ColorState input_state(heif_colorspace_YCbCr, heif_chroma_444, false, 8);
+  nclx_default_if_undefined(input_state);
+
+  const uint32_t width = 4;
+  const uint32_t height = 4;
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+  img->fill_new_channel(heif_channel_Y, 0xAB, width, height, 8, nullptr);
+  img->fill_new_channel(heif_channel_Cb, 0xAB, width, height, 8, nullptr);
+  img->fill_new_channel(heif_channel_Cr, 0xAB, width, height, 8, nullptr);
+
+  Op_to_hdr_planes op;
+
+  SECTION("supported target bit depths widen correctly") {
+    for (int out_bits : {9, 10, 16}) {
+      ColorState target_state(heif_colorspace_YCbCr, heif_chroma_444, false, out_bits);
+      nclx_default_if_undefined(target_state);
+
+      auto states = op.state_after_conversion(input_state, target_state, options, *options_ext);
+      REQUIRE(states.size() == 1);
+
+      auto result = op.convert_colorspace(img, input_state, target_state, options, *options_ext,
+                                          heif_get_disabled_security_limits());
+      REQUIRE(result);
+      size_t stride;
+      const uint16_t* p = (const uint16_t*) (*result)->get_channel_memory(heif_channel_Y, &stride);
+      REQUIRE(p != nullptr);
+      const uint16_t expected = (uint16_t) ((0xAB << (out_bits - 8)) | (0xAB >> (16 - out_bits)));
+      CHECK(p[0] == expected);
+    }
+  }
+
+  SECTION("out-of-range target bit depths are rejected without UB") {
+    for (int out_bits : {17, 20, 24, 32}) {
+      ColorState target_state(heif_colorspace_YCbCr, heif_chroma_444, false, out_bits);
+      nclx_default_if_undefined(target_state);
+
+      // The pipeline must not select this operation for an unsupported target.
+      auto states = op.state_after_conversion(input_state, target_state, options, *options_ext);
+      CHECK(states.empty());
+
+      // A direct call must return an error instead of performing the negative shift.
+      auto result = op.convert_colorspace(img, input_state, target_state, options, *options_ext,
+                                          heif_get_disabled_security_limits());
+      CHECK_FALSE(result);
+    }
   }
 }
 

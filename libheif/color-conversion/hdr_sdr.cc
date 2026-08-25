@@ -36,6 +36,16 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // This operation increases the bit depth of an 8-bit input by replicating
+  // the input bit pattern: out = (in << (m-8)) | (in >> (16-m)). That identity
+  // only holds for target bit depths m in (8, 16]; a larger m would both make
+  // the right shift exponent negative (undefined behavior) and exceed the range
+  // of the uint16_t output plane. Only offer the conversion within that range.
+  if (target_state.bits_per_pixel <= 8 ||
+      target_state.bits_per_pixel > 16) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
@@ -83,6 +93,17 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
 
       int input_bits = input->get_bits_per_pixel(channel);
       int output_bits = target_state.bits_per_pixel;
+
+      // Guard against unsupported bit-depth combinations. state_after_conversion()
+      // only offers this operation for 8-bit input and 8 < output <= 16, but a
+      // caller may invoke convert_colorspace() directly. Outside that range the
+      // bit-replication formula below would use a negative or oversized shift
+      // exponent (undefined behavior), so reject it instead.
+      if (input_bits != 8 || output_bits <= input_bits || output_bits > 2 * input_bits) {
+        return Error{heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_color_conversion,
+                     "Op_to_hdr_planes: unsupported bit depth conversion"};
+      }
 
       int shift1 = output_bits - input_bits;
       int shift2 = 2 * input_bits - output_bits;
