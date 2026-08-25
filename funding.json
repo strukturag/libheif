@@ -1,0 +1,101 @@
+{
+  "$schema": "https://fundingjson.org/schema/v1.0.0/funding.schema.json",
+  "version": "v1.0.0",
+  "entity": {
+    "type": "individual",
+    "role": "maintainer",
+    "name": "Dirk Farin",
+    "email": "dirk.farin@gmail.com",
+    "phone": "",
+    "description": "Author and sole maintainer of libheif (HEIF/AVIF file format library) and libde265 (H.265/HEVC decoder). These libraries are used by practically all open-source software that reads or writes HEIC and AVIF images, including ImageMagick, GIMP, libvips/sharp, Pillow, darktable, digiKam, GDAL and the GNOME and KDE desktops, and through these by a large number of web services and image pipelines. The work is currently almost entirely unfunded: in 2026 alone, 37 security advisories had to be investigated, fixed and released in unpaid evenings and weekends.",
+    "webpageUrl": {
+      "url": "https://github.com/farindk"
+    }
+  },
+  "projects": [
+    {
+      "guid": "libheif",
+      "name": "libheif",
+      "description": "ISO/IEC 23008-12 HEIF and AVIF file format decoder and encoder. Supports HEIC, AVIF, VVC, AVC, JPEG, JPEG 2000 and uncompressed (ISO/IEC 23001-17) codecs, image sequences, tiling, HDR, metadata and region annotations. Continuously fuzzed on OSS-Fuzz.",
+      "webpageUrl": {
+        "url": "https://github.com/strukturag/libheif"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/strukturag/libheif"
+      },
+      "licenses": ["spdx:LGPL-3.0-or-later"],
+      "tags": ["heif", "heic", "avif", "image", "codec", "c", "cpp", "security", "multimedia"]
+    },
+    {
+      "guid": "libde265",
+      "name": "libde265",
+      "description": "Open source H.265/HEVC video decoder, used by libheif as the default HEIC decoder.",
+      "webpageUrl": {
+        "url": "https://github.com/strukturag/libde265"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/strukturag/libde265"
+      },
+      "licenses": ["spdx:LGPL-3.0-or-later"],
+      "tags": ["hevc", "h265", "video", "codec", "c", "cpp", "multimedia"]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "github-sponsors",
+        "type": "payment-provider",
+        "address": "https://github.com/sponsors/farindk",
+        "description": "GitHub Sponsors, monthly or one-time. Organizations can pay by invoice through GitHub."
+      },
+      {
+        "guid": "invoice",
+        "type": "bank",
+        "address": "",
+        "description": "Bank transfer against an invoice for commercial support agreements, sponsored features and grants. Contact dirk.farin@gmail.com."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "maintenance",
+        "status": "active",
+        "name": "Sustained maintenance and security response",
+        "description": "Funds about two days per week of maintenance for libheif and libde265: triage and fixing of security reports, fuzzing, security releases, keeping up with the ISO/IEC 23008-12 specification, and platform/compiler support. This is the amount that would move security work from weekends into regular working hours.",
+        "amount": 5000,
+        "currency": "USD",
+        "frequency": "monthly",
+        "channels": ["github-sponsors", "invoice"]
+      },
+      {
+        "guid": "hardening-sprint",
+        "status": "active",
+        "name": "Security hardening sprint",
+        "description": "A scoped, one-time project: systematic hardening of one subsystem (box parser, image sequences, uncompressed codec, derived images), extension of the fuzzing corpus and harnesses, and a security release. Deliverables and scope are agreed in advance.",
+        "amount": 25000,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": ["invoice", "github-sponsors"]
+      },
+      {
+        "guid": "feature",
+        "status": "active",
+        "name": "Sponsored feature development",
+        "description": "Development of a specific feature or codec integration that your product needs (for example hardware-accelerated codecs, new ISO/IEC 23008-12 amendments, GIMI/geospatial extensions). Priced per project.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "other",
+        "channels": ["invoice"]
+      },
+      {
+        "guid": "any",
+        "status": "active",
+        "name": "Any amount",
+        "description": "Any recurring or one-time contribution helps to keep libheif and libde265 maintained.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "other",
+        "channels": ["github-sponsors"]
+      }
+    ]
+  }
+}
