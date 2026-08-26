@@ -16,7 +16,7 @@
     {
       "guid": "libheif",
       "name": "libheif",
-      "description": "ISO/IEC 23008-12 HEIF and AVIF file format decoder and encoder. Supports HEIC, AVIF, VVC, AVC, JPEG, JPEG 2000 and uncompressed (ISO/IEC 23001-17) codecs, image sequences, tiling, HDR, metadata and region annotations. Continuously fuzzed on OSS-Fuzz.",
+      "description": "ISO/IEC 23008-12 HEIF and AVIF file format decoder and encoder. Supports HEIC, AVIF, VVC, AVC, JPEG, JPEG 2000 and uncompressed (ISO/IEC 23001-17) codecs, image sequences, tiling, HDR, metadata and region annotations. Continuously fuzzed on OSS-Fuzz. In continuous development for 9 years and shipped by all major Linux distributions, Homebrew and vcpkg as the standard open-source HEIF/AVIF library (2.3k GitHub stars).",
       "webpageUrl": {
         "url": "https://github.com/strukturag/libheif"
       },
@@ -29,7 +29,7 @@
     {
       "guid": "libde265",
       "name": "libde265",
-      "description": "Open source H.265/HEVC video decoder, used by libheif as the default HEIC decoder.",
+      "description": "Open source H.265/HEVC video decoder, used by libheif as the default HEIC decoder. In development for 13 years (1.9k GitHub stars), it is packaged by all major Linux distributions and runs wherever open-source software decodes HEIC images.",
       "webpageUrl": {
         "url": "https://github.com/strukturag/libde265",
         "wellKnown": "https://github.com/strukturag/libde265/blob/master/.well-known/funding-manifest-urls"
@@ -74,6 +74,26 @@
         "name": "Security hardening sprint",
         "description": "A scoped, one-time project: systematic hardening of one subsystem (box parser, image sequences, uncompressed codec, derived images), extension of the fuzzing corpus and harnesses, and a security release. Deliverables and scope are agreed in advance.",
         "amount": 25000,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": ["invoice", "github-sponsors"]
+      },
+      {
+        "guid": "hdr-gainmap",
+        "status": "active",
+        "name": "HDR Gain Map / Ultra HDR support for libheif",
+        "description": "Implementation of HDR Gain Maps in libheif, including reading and writing Ultra HDR JPEG images. A gain map stores an SDR base image together with the information to reconstruct the full HDR image, so that photos render correctly on both SDR and HDR displays. This is the HDR format that current iPhone and Android cameras produce; the project gives libheif-based applications access to these photos and interoperable conversion between HEIC, AVIF and Ultra HDR JPEG.",
+        "amount": 25000,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": ["invoice", "github-sponsors"]
+      },
+      {
+        "guid": "gpu-decoding",
+        "status": "active",
+        "name": "GPU hardware decoding of HEIC or AVIF for libheif",
+        "description": "Implementation of GPU hardware decoding in libheif for one of the two main image formats, HEIC or AVIF, using the video decoding hardware built into common GPUs. Offloading the decoding speeds up viewing of large and tiled images considerably, frees the CPU for the application, and lowers energy consumption. This benefits image viewers, photo management applications and services that display or thumbnail large numbers of HEIC/AVIF images.",
+        "amount": 40000,
         "currency": "USD",
         "frequency": "one-time",
         "channels": ["invoice", "github-sponsors"]
