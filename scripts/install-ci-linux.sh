@@ -69,11 +69,9 @@ fi
 
 if [ "$WITH_DAV1D" = "1" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        meson \
         nasm \
         ninja-build \
-        python3-pip \
-        python3-setuptools \
-        python3-wheel \
         "
 fi
 
@@ -183,9 +181,6 @@ elif [ "$MINGW" == "64" ]; then
 fi
 
 if [ "$WITH_DAV1D" = "1" ]; then
-    pip3 install --user meson
-
-    export PATH="$PATH:$HOME/.local/bin"
     cd third-party
     sh -e dav1d.cmd # dav1d does not support this option anymore: -Denable_avx512=false
     cd ..
