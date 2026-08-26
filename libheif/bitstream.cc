@@ -75,8 +75,7 @@ bool StreamReader_istream::seek(uint64_t position)
 
 
 StreamReader_memory::StreamReader_memory(const uint8_t* data, size_t size, bool copy)
-    : m_length(size),
-      m_position(0)
+    : m_length(size)
 {
   if (copy) {
     m_owned_data = new uint8_t[m_length];

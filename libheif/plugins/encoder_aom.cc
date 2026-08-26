@@ -896,7 +896,8 @@ chroma_info get_chroma_info(heif_chroma chroma,
   }
 
   if (bpp_y > 8) {
-    info.img_format = (aom_img_fmt_t) (info.img_format | AOM_IMG_FMT_HIGHBITDEPTH);
+    // aom_img_fmt_t is a set of flags, so the combined value is intentionally not an enumerator.
+    info.img_format = (aom_img_fmt_t) (info.img_format | AOM_IMG_FMT_HIGHBITDEPTH); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
   }
 
   return info;

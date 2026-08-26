@@ -74,7 +74,10 @@ private:
 };
 
 
-class Error
+// The clang static analyzer reports a garbage value assigned in the implicit copy constructor
+// when an Error is copied out of the std::variant inside Result<T>. All members have default
+// initializers, so this is a false positive of its variant modeling.
+class Error // NOLINT(clang-analyzer-core.uninitialized.Assign)
 {
 public:
   heif_error_code error_code = heif_error_Ok;

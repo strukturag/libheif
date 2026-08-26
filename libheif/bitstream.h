@@ -143,7 +143,7 @@ public:
 private:
   const uint8_t* m_data;
   uint64_t m_length;
-  uint64_t m_position;
+  uint64_t m_position = 0;
 
   // if we made a copy of the data, we store a pointer to the owned memory area here
   uint8_t* m_owned_data = nullptr;
