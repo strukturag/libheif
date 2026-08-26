@@ -2,7 +2,8 @@ name: coverity
 
 on:
   push:
-    branches: [ master, coverity ]
+    branches: [ coverity ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,7 +12,6 @@ jobs:
   scan:
     runs-on: ubuntu-22.04
     env:
-      TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       WITH_AOM: 1
       WITH_DAV1D: 1
       WITH_GRAPHICS: 1
@@ -23,16 +23,30 @@ jobs:
       with:
         persist-credentials: false
 
+    - name: Get checksum of the current Coverity build tool
+      id: coverity-md5
+      env:
+        TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+      run: |
+        md5=$(curl -sSf --data "token=$TOKEN&project=strukturag%2Flibheif&md5=1" https://scan.coverity.com/download/linux64)
+        echo "md5=$md5" >> "$GITHUB_OUTPUT"
+
     - name: Cache Coverity build tool
+      id: coverity-cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
       with:
-        path: |
-          coverity_tool.tar.gz
-        key: coverity_tool-${{ runner.os }}
+        path: coverity_tool.tar.gz
+        key: coverity-tool-${{ runner.os }}-${{ steps.coverity-md5.outputs.md5 }}
 
     - name: Download Coverity build tool
+      if: steps.coverity-cache.outputs.cache-hit != 'true'
+      env:
+        TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       run: |
-        wget -c -N https://scan.coverity.com/download/linux64 --post-data "token=$TOKEN&project=strukturag%2Flibheif" -O coverity_tool.tar.gz
+        curl -sSfL --data "token=$TOKEN&project=strukturag%2Flibheif" -o coverity_tool.tar.gz https://scan.coverity.com/download/linux64
+
+    - name: Unpack Coverity build tool
+      run: |
         mkdir coverity_tool
         tar xzf coverity_tool.tar.gz --strip 1 -C coverity_tool
 
@@ -52,7 +66,8 @@ jobs:
         cov-build --dir cov-int make -j$(nproc)
 
     - name: Submit build result to Coverity Scan
-      if: github.ref == 'refs/heads/coverity'
+      env:
+        TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       run: |
         tar czvf libheif.tar.gz cov-int
         curl --form token=$TOKEN \
