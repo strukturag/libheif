@@ -56,7 +56,11 @@ void put_u16_be(std::vector<uint8_t>& out, uint16_t v) {
 }
 
 void append_fourcc(std::vector<uint8_t>& out, const char fourcc[4]) {
-  out.insert(out.end(), fourcc, fourcc + 4);
+  // Append the bytes one at a time. A range insert from the char array makes
+  // GCC 13 report a bogus -Wstringop-overflow in optimized builds.
+  for (int i = 0; i < 4; i++) {
+    out.push_back(static_cast<uint8_t>(fourcc[i]));
+  }
 }
 
 void append(std::vector<uint8_t>& out, const std::vector<uint8_t>& v) {
