@@ -28,21 +28,21 @@ jobs:
     steps:
     - name: Build Fuzzers
       id: build
-      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@e004f85123eab0ba61ba5371c857239f97c1df27 # master, 2026-08-27
       with:
         oss-fuzz-project-name: 'libheif'
         dry-run: false
         architecture: ${{ matrix.architecture }}
         sanitizer: ${{ matrix.sanitizer }}
     - name: Run Fuzzers
-      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@e004f85123eab0ba61ba5371c857239f97c1df27 # master, 2026-08-27
       with:
         oss-fuzz-project-name: 'libheif'
         fuzz-seconds: 600
         dry-run: false
         sanitizer: ${{ matrix.sanitizer }}
     - name: Upload Crash
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
       if: failure() && steps.build.outcome == 'success'
       with:
         name: artifacts-${{ matrix.sanitizer }}-${{ matrix.architecture }}
