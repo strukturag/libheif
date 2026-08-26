@@ -63,7 +63,7 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_uncompressed::get_sample_de
   auto uncv = std::make_shared<Box_uncv>();
   uncv->get_VisualSampleEntry().compressorname = "iso23001-17";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     switch (prop->get_short_type()) {
       case fourcc("cmpd"):
       case fourcc("uncC"):

@@ -297,7 +297,7 @@ std::shared_ptr<Box_VisualSampleEntry> Encoder_HEVC::get_sample_description_box(
   auto hvc1 = std::make_shared<Box_hvc1>();
   hvc1->get_VisualSampleEntry().compressorname = "HEVC";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     if (prop->get_short_type() == fourcc("hvcC")) {
       hvc1->append_child_box(prop);
       return hvc1;

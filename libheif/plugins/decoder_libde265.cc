@@ -357,7 +357,8 @@ static heif_error libde265_v1_push_data2(void* decoder_raw, const void* data, si
     printf("put nal with size %d %x\n", nal_size, *(cdata+ptr));
 #endif
 
-    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data);
+    // The codec hands this opaque pointer back unchanged; it carries an integer, not an address.
+    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data); // NOLINT(performance-no-int-to-ptr)
     ptr += nal_size;
   }
 

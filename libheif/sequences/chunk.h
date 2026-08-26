@@ -23,6 +23,7 @@
 
 #include "codecs/decoder.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 
@@ -62,7 +63,7 @@ public:
 
   DataExtent get_data_extent_for_sample(uint32_t n) const;
 
-  void set_decoder(std::shared_ptr<class Decoder> dec) { m_decoder = dec; }
+  void set_decoder(std::shared_ptr<class Decoder> dec) { m_decoder = std::move(dec); }
 
 private:
   // Sets `success` to false if the chunk cannot be constructed validly

@@ -261,8 +261,8 @@ std::string sanitizeFilename(const std::string& filename) {
 
 
 int decode_single_image(heif_image_handle* handle,
-                        std::string filename_stem,
-                        std::string filename_suffix,
+                        const std::string& filename_stem,
+                        const std::string& filename_suffix,
                         heif_decoding_options* decode_options,
                         std::unique_ptr<Encoder>& encoder)
 {
@@ -526,8 +526,8 @@ int digits_for_integer(uint32_t v)
 
 
 int decode_image_tiles(heif_image_handle* handle,
-                       std::string filename_stem,
-                       std::string filename_suffix,
+                       const std::string& filename_stem,
+                       const std::string& filename_suffix,
                        heif_decoding_options* decode_options,
                        std::unique_ptr<Encoder>& encoder)
 {

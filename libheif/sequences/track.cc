@@ -116,8 +116,8 @@ void SampleAuxInfoHelper::write_all(const std::shared_ptr<Box>& parent, const st
 }
 
 
-SampleAuxInfoReader::SampleAuxInfoReader(std::shared_ptr<Box_saiz> saiz,
-                                         std::shared_ptr<Box_saio> saio,
+SampleAuxInfoReader::SampleAuxInfoReader(const std::shared_ptr<Box_saiz>& saiz,
+                                         const std::shared_ptr<Box_saio>& saio,
                                          const std::vector<std::shared_ptr<Chunk>>& chunks)
 {
   m_saiz = saiz;
@@ -949,7 +949,7 @@ void Track::add_chunk(heif_compression_format format)
   m_stsc->add_chunk(chunkIdx);
 }
 
-void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_box)
+void Track::set_sample_description_box(const std::shared_ptr<Box>& sample_description_box)
 {
   // --- add 'taic' when we store timestamps as sample auxiliary information
 
@@ -1016,7 +1016,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
 
   if (m_track_info.with_sample_content_ids != heif_sample_aux_info_presence_none) {
     if (gimi_contentID) {
-      auto id = *gimi_contentID;
+      const auto& id = *gimi_contentID;
       const char* id_str = id.c_str();
       std::vector<uint8_t> id_vector;
       id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);

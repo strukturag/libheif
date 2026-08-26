@@ -28,6 +28,7 @@
 #include "libheif/heif_sequences.h"
 #include <string>
 #include <memory>
+#include <utility>
 #include <vector>
 
 class HeifContext;
@@ -67,8 +68,8 @@ private:
 class SampleAuxInfoReader
 {
 public:
-  SampleAuxInfoReader(std::shared_ptr<Box_saiz>,
-                      std::shared_ptr<Box_saio>,
+  SampleAuxInfoReader(const std::shared_ptr<Box_saiz>&,
+                      const std::shared_ptr<Box_saio>&,
                       const std::vector<std::shared_ptr<Chunk>>& chunks);
 
   heif_sample_aux_info_type get_type() const;
@@ -162,7 +163,7 @@ public:
 
   void set_auxiliary_info_type(heif_auxiliary_track_info_type);
 
-  void set_auxiliary_info_type_urn(std::string t) { m_auxiliary_info_type = t; }
+  void set_auxiliary_info_type_urn(std::string t) { m_auxiliary_info_type = std::move(t); }
 
   bool is_visual_track() const;
 
@@ -292,7 +293,7 @@ protected:
   // Has to be called when we call add_chunk().
   // It is not merged with add_chunk() because the sample_description_box may need information from the
   // first encoded frame.
-  void set_sample_description_box(std::shared_ptr<Box> sample_description_box);
+  void set_sample_description_box(const std::shared_ptr<Box>& sample_description_box);
 
   // Write the actual sample data. `tai` may be null and `gimi_contentID` may be empty.
   // In these cases, no timestamp or no contentID will be written, respectively.

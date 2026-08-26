@@ -58,7 +58,7 @@ Error Decoder_JPEG::parse_SOF()
 
   const std::vector<uint8_t>& data = *dataResult;
 
-  const Error error_invalidSOF{heif_error_Invalid_input,
+  Error error_invalidSOF{heif_error_Invalid_input,
                                heif_suberror_Unspecified,
                                "Invalid JPEG SOF header"};
 

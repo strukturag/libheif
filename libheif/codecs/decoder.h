@@ -82,7 +82,7 @@ class Decoder
 public:
   static std::shared_ptr<Decoder> alloc_for_infe_type(const ImageItem* item);
 
-  static std::shared_ptr<Decoder> alloc_for_sequence_sample_description_box(std::shared_ptr<const class Box_VisualSampleEntry> sample_description_box);
+  static std::shared_ptr<Decoder> alloc_for_sequence_sample_description_box(const std::shared_ptr<const class Box_VisualSampleEntry>& sample_description_box);
 
 
   virtual ~Decoder();

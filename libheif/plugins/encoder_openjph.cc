@@ -523,7 +523,7 @@ static const heif_error &ojph_set_codestream_comment(encoder_struct_ojph *encode
 static const heif_error &ojph_set_tile_size(encoder_struct_ojph *encoder, const char *value)
 {
   std::string valueStr(value);
-  size_t commaOffset = valueStr.find(",");
+  size_t commaOffset = valueStr.find(',');
   if (commaOffset == std::string::npos) {
     return heif_error_invalid_parameter_value;
   }
@@ -594,7 +594,7 @@ static const int log_base_2(unsigned long v)
 static const heif_error &ojph_set_block_dimensions(encoder_struct_ojph *encoder, const char *value)
 {
   std::string valueStr(value);
-  size_t commaOffset = valueStr.find(",");
+  size_t commaOffset = valueStr.find(',');
   if (commaOffset == std::string::npos) {
     return heif_error_invalid_parameter_value;
   }

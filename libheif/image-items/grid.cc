@@ -27,6 +27,7 @@
 #include <mutex>
 #include <set>
 #include <algorithm>
+#include <utility>
 #include "api_structs.h"
 #include "security_limits.h"
 
@@ -247,7 +248,7 @@ static void wait_for_jobs(std::deque<std::future<Error> >* jobs) {
 }
 #endif
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options, DecodeTraversalState decode_state) const
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options, const DecodeTraversalState& decode_state) const
 {
   std::shared_ptr<HeifPixelImage> img; // the decoded image
 
@@ -483,7 +484,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
                                                   std::shared_ptr<HeifPixelImage>& inout_image,
                                                   const heif_decoding_options& options,
                                                   int& progress_counter,
-                                                  std::shared_ptr<std::vector<Error> > warnings,
+                                                  const std::shared_ptr<std::vector<Error> >& warnings,
                                                   DecodeTraversalState decode_state) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
@@ -510,7 +511,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
     return error;
   }
 
-  auto decodeResult = tileItem->decode_image(options, false, 0, 0, decode_state);
+  auto decodeResult = tileItem->decode_image(options, false, 0, 0, std::move(decode_state));
   if (!decodeResult) {
     if (!options.strict_decoding) {
       // We ignore broken tiles. The un-pasted canvas region stays zero from calloc().
@@ -599,7 +600,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
     return error;
   }
 
-  return tile_item->decode_compressed_image(options, false, 0, 0, decode_state);
+  return tile_item->decode_compressed_image(options, false, 0, 0, std::move(decode_state));
 }
 
 

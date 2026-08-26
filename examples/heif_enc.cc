@@ -956,7 +956,7 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 
 heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encoder,
                                                             heif_color_profile_nclx** out_nclx,
-                                                            std::shared_ptr<heif_image> input_image,
+                                                            const std::shared_ptr<heif_image>& input_image,
                                                             bool lossless,
                                                             heif_output_nclx_color_profile_preset profile_preset)
 {
@@ -1242,7 +1242,7 @@ public:
                                              heif_get_global_security_limits(),
                                              &tileImage);
     if (err.code) {
-      std::cerr << "error extracting tile " << tx << ";" << ty << std::endl;
+      std::cerr << "error extracting tile " << tx << ";" << ty << '\n';
       exit(1);
     }
 
@@ -1416,7 +1416,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 
 
 template <typename T>
-std::vector<T> parse_comma_separated_numeric_arguments(std::string arg,
+std::vector<T> parse_comma_separated_numeric_arguments(const std::string& arg,
                                                        std::vector<T> max_val)
 {
   std::istringstream ss(arg);
@@ -2265,7 +2265,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
 
   std::vector<heif_item_id> encoded_image_ids;
 
-  for (std::string input_filename : args) {
+  for (const std::string& input_filename : args) {
 
     InputImage input_image;
     heif_image_tiling tiling{};
@@ -2704,7 +2704,7 @@ int do_encode_sequence(heif_context* context, heif_encoder* encoder, heif_encodi
   heif_track* track = nullptr;
   heif_sequence_encoding_options* encoding_options = nullptr;
 
-  for (std::string input_filename : args) {
+  for (const std::string& input_filename : args) {
     currImage++;
     if (currImage > nImages) {
       break;

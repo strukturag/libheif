@@ -214,7 +214,8 @@ heif_error dav1d_push_data2(void* decoder_raw, const void* frame_data, size_t fr
 
   memcpy(d, frame_data, frame_size);
 
-  packet.m.user_data.data = (uint8_t*)user_data;
+  // The codec hands this opaque pointer back unchanged; it carries an integer, not an address.
+  packet.m.user_data.data = (uint8_t*)user_data; // NOLINT(performance-no-int-to-ptr)
 
   // --- put data into queue
 

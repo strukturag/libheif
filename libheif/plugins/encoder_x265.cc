@@ -1124,7 +1124,8 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
   }
 
   pic->bitDepth = encoder->bit_depth;
-  pic->userData = reinterpret_cast<void*>(frame_nr);
+  // The codec hands this opaque pointer back unchanged; it carries an integer, not an address.
+  pic->userData = reinterpret_cast<void*>(frame_nr); // NOLINT(performance-no-int-to-ptr)
 
   x265_nal* nals = nullptr;
   uint32_t num_nals = 0;

@@ -210,7 +210,7 @@ std::shared_ptr<Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(
   auto av01 = std::make_shared<Box_av01>();
   av01->get_VisualSampleEntry().compressorname = "AVIF";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     if (prop->get_short_type() == fourcc("av1C")) {
       av01->append_child_box(prop);
       return av01;

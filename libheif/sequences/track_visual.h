@@ -52,7 +52,7 @@ public:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const heif_decoding_options& options);
 
-  Error encode_image(std::shared_ptr<HeifPixelImage> image,
+  Error encode_image(const std::shared_ptr<HeifPixelImage>& image,
                      heif_encoder* encoder,
                      const heif_sequence_encoding_options* options,
                      heif_image_input_class image_class);

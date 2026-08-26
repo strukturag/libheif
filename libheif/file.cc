@@ -73,6 +73,7 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 {
   std::vector<heif_item_id> IDs;
 
+  IDs.reserve(m_infe_boxes.size());
   for (const auto& infe : m_infe_boxes) {
     IDs.push_back(infe.second->get_item_ID());
   }
@@ -1224,7 +1225,7 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
 }
 
 
-Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size)
+Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_type, const std::string& content_encoding, const uint8_t* data, size_t size)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
@@ -1238,7 +1239,7 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
 
   heif_item_id metadata_id = infe_box->get_item_ID();
 
-  set_precompressed_item_data(infe_box, data, size, std::move(content_encoding));
+  set_precompressed_item_data(infe_box, data, size, content_encoding);
 
   return metadata_id;
 }
@@ -1324,7 +1325,7 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
 }
 
 
-Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding)
+Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, const std::string& content_encoding)
 {
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (!content_encoding.empty() &&
@@ -1370,28 +1371,28 @@ void HeifFile::set_primary_item_id(heif_item_id id)
 }
 
 
-void HeifFile::set_ipco_box(std::shared_ptr<Box_ipco> ipco)
+void HeifFile::set_ipco_box(const std::shared_ptr<Box_ipco>& ipco)
 {
   m_ipco_box = ipco;
   m_meta_box->replace_child_box(ipco);
 }
 
 
-void HeifFile::set_ipma_box(std::shared_ptr<Box_ipma> ipma)
+void HeifFile::set_ipma_box(const std::shared_ptr<Box_ipma>& ipma)
 {
   m_ipma_box = ipma;
   m_meta_box->replace_child_box(ipma);
 }
 
 
-void HeifFile::set_iloc_box(std::shared_ptr<Box_iloc> iloc)
+void HeifFile::set_iloc_box(const std::shared_ptr<Box_iloc>& iloc)
 {
   m_iloc_box = iloc;
   m_meta_box->replace_child_box(iloc);
 }
 
 
-void HeifFile::set_iref_box(std::shared_ptr<Box_iref> iref)
+void HeifFile::set_iref_box(const std::shared_ptr<Box_iref>& iref)
 {
   m_iref_box = iref;
   m_meta_box->replace_child_box(iref);

@@ -1761,7 +1761,7 @@ public:
    * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
    * Examples: "en-AU", "de-DE", or "zh-CN“.
    */
-  void set_lang(const std::string lang) { m_lang = lang; }
+  void set_lang(const std::string& lang) { m_lang = lang; }
 
   /**
    * Name.
@@ -1776,7 +1776,7 @@ public:
   *
   * Human readable name for the item or group being described.
   */
-  void set_name(const std::string name) { m_name = name; }
+  void set_name(const std::string& name) { m_name = name; }
 
   /**
    * Description.
@@ -1791,7 +1791,7 @@ public:
    *
    * Human readable description for the item or group.
    */
-  void set_description(const std::string description) { m_description = description; }
+  void set_description(const std::string& description) { m_description = description; }
 
   /**
    * Tags.
@@ -1806,7 +1806,7 @@ public:
    *
    * Comma separated user defined tags applicable to the item or group.
    */
-  void set_tags(const std::string tags) { m_tags = tags; }
+  void set_tags(const std::string& tags) { m_tags = tags; }
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
@@ -2041,7 +2041,7 @@ public:
    * An RFC 5646 (IETF BCP 47) compliant language identifier for the language of the text.
    * Examples: "en-AU", "de-DE", or "zh-CN“.
    */
-  void set_lang(const std::string lang) { m_lang = lang; }
+  void set_lang(const std::string& lang) { m_lang = lang; }
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 

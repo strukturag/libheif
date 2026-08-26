@@ -324,7 +324,8 @@ heif_error aom_push_data2(void* decoder_raw, const void* frame_data, size_t fram
   (void)ver;
 
   aom_codec_err_t aomerr;
-  aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*) frame_data, frame_size, (void*)user_data);
+  // The codec hands this opaque pointer back unchanged; it carries an integer, not an address.
+  aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*) frame_data, frame_size, (void*)user_data); // NOLINT(performance-no-int-to-ptr)
   if (aomerr) {
     heif_error err = {heif_error_Invalid_input, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
     return err;

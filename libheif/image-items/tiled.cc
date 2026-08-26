@@ -381,7 +381,7 @@ Error TiledHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file,
 Error TiledHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
                                            uint64_t start, uint64_t end)
 {
-  const Error eofError(heif_error_Invalid_input,
+  Error eofError(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
                        "Tili header data incomplete");
 
@@ -759,7 +759,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
                                     const heif_encoding_options* encoding_options)
 {
   Result<uint64_t> num_tiles_result = number_of_tiles(*parameters, ctx->get_security_limits());
-  if (auto err = num_tiles_result.error()) {
+  if (const auto& err = num_tiles_result.error()) {
     return err;
   }
 

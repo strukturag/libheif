@@ -30,8 +30,8 @@ class unc_decoder_block_component_interleave : public unc_decoder
 {
 public:
   unc_decoder_block_component_interleave(uint32_t width, uint32_t height,
-                                          std::shared_ptr<const Box_cmpd> cmpd,
-                                          std::shared_ptr<const Box_uncC> uncC,
+                                          const std::shared_ptr<const Box_cmpd>& cmpd,
+                                          const std::shared_ptr<const Box_uncC>& uncC,
                                           const std::vector<uint32_t>& uncC_index_to_comp_ids);
 
   Result<std::vector<uint64_t>> get_tile_data_sizes() const override;

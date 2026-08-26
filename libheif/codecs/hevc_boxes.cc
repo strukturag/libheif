@@ -353,7 +353,7 @@ void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
           // If they are similar, keep the smaller one.
 
           if (nal_unit.size() > nal.size()) {
-            nal_unit = std::move(nal);
+            nal_unit = nal;
           }
 
           // Exit. Do not add a copy of the packet.
@@ -362,7 +362,7 @@ void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
         }
       }
 
-      nal_array.m_nal_units.push_back(std::move(nal));
+      nal_array.m_nal_units.push_back(nal);
 
       return;
     }
@@ -373,7 +373,7 @@ void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
   HEVCDecoderConfigurationRecord::NalArray array;
   array.m_array_completeness = 1;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
-  array.m_nal_units.push_back(std::move(nal));
+  array.m_nal_units.push_back(nal);
 
   m_configuration.m_nal_array.push_back(array);
 }

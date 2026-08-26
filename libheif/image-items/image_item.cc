@@ -79,7 +79,7 @@ std::shared_ptr<HeifFile> ImageItem::get_file() const
 }
 
 
-heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool essential)
+heif_property_id ImageItem::add_property(const std::shared_ptr<Box>& property, bool essential)
 {
   if (!property) {
     return 0;
@@ -91,7 +91,7 @@ heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool ess
 }
 
 
-heif_property_id ImageItem::add_property_without_deduplication(std::shared_ptr<Box> property, bool essential)
+heif_property_id ImageItem::add_property_without_deduplication(const std::shared_ptr<Box>& property, bool essential)
 {
   if (!property) {
     return 0;

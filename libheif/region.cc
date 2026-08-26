@@ -514,7 +514,7 @@ void RegionGeometry_InlineMask::encode(StreamWriter& writer, int field_size_byte
 }
 
 
-Result<RegionCoordinateTransform> RegionCoordinateTransform::create(std::shared_ptr<HeifFile> file,
+Result<RegionCoordinateTransform> RegionCoordinateTransform::create(const std::shared_ptr<HeifFile>& file,
                                                                     heif_item_id item_id,
                                                                     int reference_width, int reference_height)
 {

@@ -102,7 +102,7 @@ Error Track_Visual::initialize_after_parsing(HeifContext* ctx, const std::vector
   // Only assign to image-sequence tracks (TODO: are there also alpha tracks allowed for video tracks 'heif_track_type_video'?)
 
   if (get_handler() == heif_track_type_image_sequence) {
-    for (auto track : all_tracks) {
+    for (const auto& track : all_tracks) {
       // skip ourselves
       if (track->get_id() != get_id()) {
         // Is this an aux alpha track?
@@ -395,7 +395,7 @@ Error Track_Visual::encode_end_of_sequence(heif_encoder* h_encoder)
 }
 
 
-Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
+Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
                                  heif_encoder* h_encoder,
                                  const heif_sequence_encoding_options* in_options,
                                  heif_image_input_class input_class)

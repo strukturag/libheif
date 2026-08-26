@@ -175,7 +175,7 @@ public:
                              uint32_t item_type, const char* content_type, const char* item_uri_type,
                              heif_metadata_compression compression, heif_item_id* out_item_id);
 
-  heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);
+  heif_property_id add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential);
 
   Result<heif_item_id> add_pyramid_group(const std::vector<heif_item_id>& layers);
 
@@ -232,7 +232,7 @@ public:
   Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(const TrackOptions*, uint32_t handler_type,
                                                                         uint16_t width, uint16_t height);
 
-  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const TrackOptions*, std::string uri);
+  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(const TrackOptions*, const std::string& uri);
 
   void add_text_item(std::shared_ptr<TextItem> text_item)
   {

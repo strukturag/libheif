@@ -26,6 +26,7 @@
 #include "security_limits.h"
 #include "nclx.h"
 #include <string>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -166,9 +167,9 @@ public:
     return result;
   }
 
-  heif_property_id add_property(std::shared_ptr<Box> property, bool essential);
+  heif_property_id add_property(const std::shared_ptr<Box>& property, bool essential);
 
-  heif_property_id add_property_without_deduplication(std::shared_ptr<Box> property, bool essential);
+  heif_property_id add_property_without_deduplication(const std::shared_ptr<Box>& property, bool essential);
 
   void set_resolution(uint32_t w, uint32_t h)
   {
@@ -532,7 +533,7 @@ public:
   // dummy ImageItem class that is a placeholder for unsupported item types
 
   ImageItem_Error(uint32_t item_type, heif_item_id id, Error err)
-    : ImageItem(nullptr, id), m_item_type(item_type), m_item_error(err) {}
+    : ImageItem(nullptr, id), m_item_type(item_type), m_item_error(std::move(err)) {}
 
   uint32_t get_infe_type() const override
   {

@@ -193,6 +193,7 @@ heif_error heif_context_encode_grid(heif_context* ctx,
 
   // Convert heif_images to a vector of HeifPixelImages
   std::vector<std::shared_ptr<HeifPixelImage> > pixel_tiles;
+  pixel_tiles.reserve(rows * columns);
   for (int i = 0; i < rows * columns; i++) {
     pixel_tiles.push_back(tiles[i]->image);
   }

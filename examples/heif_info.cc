@@ -560,13 +560,17 @@ int main(int argc, char** argv)
           ID = itemtype;
         }
         else if (itemtype == "uri ") {
-          ID = itemtype + "/" + item_uri_type;
+          ID = itemtype;
+          ID += "/";
+          ID += item_uri_type;
         }
         else if (contenttype == "application/rdf+xml") {
           ID = "XMP";
         }
         else {
-          ID = itemtype + "/" + contenttype;
+          ID = itemtype;
+          ID += "/";
+          ID += contenttype;
         }
 
         printf("  %s: %zu bytes\n", ID.c_str(), heif_image_handle_get_metadata_size(handle, ids[n]));

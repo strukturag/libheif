@@ -1940,7 +1940,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 }
 
 
-heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential)
+heif_property_id HeifContext::add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential)
 {
   heif_property_id id;
 
@@ -2113,6 +2113,7 @@ Error HeifContext::interpret_heif_file_sequences()
   // --- post-parsing initialization
 
   std::vector<std::shared_ptr<Track>> all_tracks;
+  all_tracks.reserve(m_tracks.size());
   for (auto& track : m_tracks) {
    all_tracks.push_back(track.second);
   }
@@ -2132,6 +2133,7 @@ std::vector<uint32_t> HeifContext::get_track_IDs() const
 {
   std::vector<uint32_t> ids;
 
+  ids.reserve(m_tracks.size());
   for (const auto& track : m_tracks) {
     ids.push_back(track.first);
   }
@@ -2255,7 +2257,7 @@ Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(con
 
 
 Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequence_track(const TrackOptions* options,
-                                                                                           std::string uri)
+                                                                                           const std::string& uri)
 {
   m_heif_file->init_for_sequence();
 

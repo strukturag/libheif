@@ -124,7 +124,7 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_JPEG::get_sample_descriptio
   auto mjpg = std::make_shared<Box_mjpg>();
   mjpg->get_VisualSampleEntry().compressorname = "JPEG";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     if (prop->get_short_type() == fourcc("jpgC")) {
       mjpg->append_child_box(prop);
     }

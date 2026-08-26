@@ -193,7 +193,7 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
 
-      auto dataResult = do_decompress_data(cmpC_box, std::move(compressed_unit_data), limits);
+      auto dataResult = do_decompress_data(cmpC_box, compressed_unit_data, limits);
       if (!dataResult) {
         return dataResult.error();
       }
@@ -261,7 +261,7 @@ const Error unc_decoder::get_compressed_image_data_uncompressed(const DataExtent
 
 
 Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
-                                                              std::vector<uint8_t> compressed_data,
+                                                              const std::vector<uint8_t>& compressed_data,
                                                               const heif_security_limits* limits) const
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
@@ -299,7 +299,7 @@ Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<co
   }
   else {
     std::stringstream sstr;
-    sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << std::endl;
+    sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << '\n';
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_generic_compression_method,
                  sstr.str());

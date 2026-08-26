@@ -228,7 +228,7 @@ public:
         return (uint8_t)(m_bitDepths.size());
     }
 
-    void add_entry(const PaletteEntry entry)
+    void add_entry(const PaletteEntry& entry)
     {
         m_entries.push_back(entry);
     }

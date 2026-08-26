@@ -83,7 +83,7 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_JPEG2000::get_sample_descri
   auto j2ki = std::make_shared<Box_j2ki>();
   j2ki->get_VisualSampleEntry().compressorname = "JPEG2000";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     if (prop->get_short_type() == fourcc("j2kH")) {
       j2ki->append_child_box(prop);
       return j2ki;
@@ -100,7 +100,7 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_HTJ2K::get_sample_descripti
   auto j2ki = std::make_shared<Box_j2ki>();
   j2ki->get_VisualSampleEntry().compressorname = "HTJ2K";
 
-  for (auto prop : data.properties) {
+  for (const auto& prop : data.properties) {
     if (prop->get_short_type() == fourcc("j2kH")) {
       j2ki->append_child_box(prop);
       return j2ki;

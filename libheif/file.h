@@ -141,7 +141,7 @@ public:
 
   std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID);
 
-  void set_iref_box(std::shared_ptr<Box_iref>);
+  void set_iref_box(const std::shared_ptr<Box_iref>&);
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
@@ -149,11 +149,11 @@ public:
 
   std::shared_ptr<Box_ipco> get_ipco_box() { return m_ipco_box; }
 
-  void set_ipco_box(std::shared_ptr<Box_ipco>);
+  void set_ipco_box(const std::shared_ptr<Box_ipco>&);
 
   std::shared_ptr<Box_ipco> get_ipco_box() const { return m_ipco_box; }
 
-  void set_ipma_box(std::shared_ptr<Box_ipma>);
+  void set_ipma_box(const std::shared_ptr<Box_ipma>&);
 
   std::shared_ptr<Box_ipma> get_ipma_box() { return m_ipma_box; }
 
@@ -221,19 +221,19 @@ public:
 
   Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
 
-  Result<heif_item_id> add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size);
+  Result<heif_item_id> add_precompressed_infe_mime(const char* content_type, const std::string& content_encoding, const uint8_t* data, size_t size);
 
   Result<heif_item_id> add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size);
 
   Error set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression);
 
-  Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
+  Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, const std::string& content_encoding);
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method);
 
   void replace_iloc_data(heif_item_id id, uint64_t offset, const std::vector<uint8_t>& data, uint8_t construction_method = 0);
 
-  void set_iloc_box(std::shared_ptr<Box_iloc>);
+  void set_iloc_box(const std::shared_ptr<Box_iloc>&);
 
   std::shared_ptr<Box_iloc> get_iloc_box() { return m_iloc_box; }
 

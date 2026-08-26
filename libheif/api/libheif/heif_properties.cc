@@ -135,7 +135,7 @@ heif_item_property_type heif_item_get_property_type(const heif_context* context,
 }
 
 
-static char* create_c_string_copy(const std::string s)
+static char* create_c_string_copy(const std::string& s)
 {
   char* copy = new char[s.length() + 1];
   strcpy(copy, s.data());

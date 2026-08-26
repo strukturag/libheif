@@ -26,6 +26,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 #include <vector>
 #include <limits>
 
@@ -324,7 +325,7 @@ public:
     }
   }
 
-  void add_sample_entry(std::shared_ptr<class Box> entry)
+  void add_sample_entry(const std::shared_ptr<class Box>& entry)
   {
     m_sample_entries.push_back(entry);
   }
@@ -710,7 +711,7 @@ public:
     set_short_type(fourcc("uri "));
   }
 
-  void set_uri(std::string uri) { m_uri = uri; }
+  void set_uri(std::string uri) { m_uri = std::move(uri); }
 
   std::string get_uri() const { return m_uri; }
 

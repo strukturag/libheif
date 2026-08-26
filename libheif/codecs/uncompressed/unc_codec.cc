@@ -294,6 +294,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
   if (properties.cpat) {
     const auto& pattern_cmpd = properties.cpat->get_pattern();
     std::vector<uint32_t> cpat_indices;
+    cpat_indices.reserve(pattern_cmpd.pixels.size());
     for (const auto& pixel : pattern_cmpd.pixels) {
       cpat_indices.push_back(pixel.cmpd_index);
     }

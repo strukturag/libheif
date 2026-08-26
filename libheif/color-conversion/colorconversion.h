@@ -67,7 +67,7 @@ enum SpeedCosts
 
 struct ColorStateWithCost
 {
-  ColorStateWithCost(ColorState c, int s) : color_state(std::move(c)), speed_costs(s) {}
+  ColorStateWithCost(ColorState c, int s) : color_state(c), speed_costs(s) {}
 
   ColorState color_state;
 
