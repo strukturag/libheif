@@ -26,16 +26,12 @@ INSTALL_PACKAGES="gdb "
 REMOVE_PACKAGES=
 BUILD_ROOT=$ROOT/..
 UPDATE_APT=
-ADD_LIBHEIF_PPA=
 CURRENT_BRANCH=$TRAVIS_BRANCH
 if [ -z "$CURRENT_BRANCH" ]; then
     CURRENT_BRANCH=${GITHUB_REF##*/}
 fi
 
-if [ "$WITH_LIBDE265" = "1" ]; then
-    echo "Adding PPA strukturag/libde265 ..."
-    sudo add-apt-repository -y ppa:strukturag/libde265
-    UPDATE_APT=1
+if [ "$WITH_LIBDE265" = "1" ] || [ "$WITH_LIBDE265" = "3" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libde265-dev \
         "
@@ -59,21 +55,13 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     ls -lR $BUILD_ROOT/libde265/dist
 fi
 
-if [ "$WITH_LIBDE265" = "3" ]; then
-    INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        libde265-dev \
-        "
-fi
-
 if [ "$WITH_AOM" = "1" ]; then
-    ADD_LIBHEIF_PPA=1
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libaom-dev \
         "
 fi
 
 if [ "$WITH_X265" = "1" ]; then
-    ADD_LIBHEIF_PPA=1
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libx265-dev \
         "
@@ -147,12 +135,6 @@ elif [ "$MINGW" == "64" ]; then
         libz-mingw-w64 \
         wine-stable \
         "
-fi
-
-if [ ! -z "$ADD_LIBHEIF_PPA" ]; then
-    echo "Adding PPA strukturag/libheif ..."
-    sudo add-apt-repository -y ppa:strukturag/libheif
-    UPDATE_APT=1
 fi
 
 if [ ! -z "$INSTALL_PACKAGES" ]; then
