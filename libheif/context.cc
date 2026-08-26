@@ -144,18 +144,28 @@ void heif_encoder::copy_parameters_from(const heif_encoder& src)
 }
 
 
-HeifContext::HeifContext()
-    : m_memory_tracker(&m_limits)
+// Selects the initial security limits for a new context. The environment variable
+// LIBHEIF_SECURITY_LIMITS=off disables all limits (for trusted input only).
+static const heif_security_limits& initial_security_limits()
 {
   const char* security_limits_variable = getenv("LIBHEIF_SECURITY_LIMITS");
 
   if (security_limits_variable && (strcmp(security_limits_variable, "off") == 0 ||
                                    strcmp(security_limits_variable, "OFF") == 0)) {
-    m_limits = disabled_security_limits;
+    return disabled_security_limits;
   }
   else {
-    m_limits = global_security_limits;
+    return global_security_limits;
   }
+}
+
+
+HeifContext::HeifContext()
+    : m_limits(initial_security_limits()),
+      m_memory_tracker(&m_limits)
+{
+  // m_limits must be fully initialized above before its address is passed to the memory tracker.
+  // (m_limits is declared before m_memory_tracker in context.h, so it is constructed first.)
 
   reset_to_empty_heif();
 }
