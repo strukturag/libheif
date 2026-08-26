@@ -31,10 +31,12 @@
       "name": "libde265",
       "description": "Open source H.265/HEVC video decoder, used by libheif as the default HEIC decoder.",
       "webpageUrl": {
-        "url": "https://github.com/strukturag/libde265"
+        "url": "https://github.com/strukturag/libde265",
+        "wellKnown": "https://github.com/strukturag/libde265/blob/master/.well-known/funding-manifest-urls"
       },
       "repositoryUrl": {
-        "url": "https://github.com/strukturag/libde265"
+        "url": "https://github.com/strukturag/libde265",
+        "wellKnown": "https://github.com/strukturag/libde265/blob/master/.well-known/funding-manifest-urls"
       },
       "licenses": ["spdx:LGPL-3.0-or-later"],
       "tags": ["hevc", "h265", "video", "codec", "cpp", "multimedia"]
