@@ -18,6 +18,7 @@ jobs:
           - { NAME: "gcc-13", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 13 }
           - { NAME: "gcc-14", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 14 }
           - { NAME: "gcc-15", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 15 }
+          - { NAME: "gcc-16", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 3, GCC: 16 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-24.04
     steps:
@@ -28,7 +29,7 @@ jobs:
     - name: Install dependencies
       run: |
         ./scripts/install-ci-linux.sh
-        # gcc-15 is not in the noble main archives yet; pull it from the
+        # gcc-15 and gcc-16 are not in the noble archives; pull them from the
         # ubuntu-toolchain-r/test PPA. The line is harmless for older GCCs.
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt update
