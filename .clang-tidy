@@ -1,13 +1,12 @@
 ---
-Checks: >
-  -clang-analyzer-security.insecureAPI.strcat,
-  -clang-analyzer-security.insecureAPI.strcpy,
-  modernize-shrink-to-fit,
-  modernize-use-default-member-init,
-  modernize-use-equals-default,
-  modernize-use-equals-delete,
-  modernize-use-override,
-  performance-*
+# Note: "performance-*" was listed here for years but never took effect in the
+# CI: as the last entry of a folded YAML scalar it carried a trailing newline,
+# which the clang-tidy 12 used by the CI did not strip from the glob. With a
+# current clang-tidy the family fires on about 200 sites, roughly half of them
+# performance-enum-size on the public C API enums (whose base type is part of
+# the ABI). Enable it deliberately, together with the code changes, not as a
+# side effect of a compiler upgrade.
+Checks: '-clang-analyzer-security.insecureAPI.strcat,-clang-analyzer-security.insecureAPI.strcpy,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,modernize-shrink-to-fit,modernize-use-default-member-init,modernize-use-equals-default,modernize-use-equals-delete,modernize-use-override'
 HeaderFilterRegex: .*
 WarningsAsErrors: '*'
 ...
