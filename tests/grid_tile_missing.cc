@@ -26,57 +26,13 @@
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
+#include "test_utils.h"
 #include "libheif/heif_tiling.h"
 
 #include <cstdint>
 #include <vector>
 
 namespace {
-
-void put_u32_be(std::vector<uint8_t>& out, uint32_t v) {
-  out.push_back(static_cast<uint8_t>(v >> 24));
-  out.push_back(static_cast<uint8_t>(v >> 16));
-  out.push_back(static_cast<uint8_t>(v >> 8));
-  out.push_back(static_cast<uint8_t>(v));
-}
-
-void put_u16_be(std::vector<uint8_t>& out, uint16_t v) {
-  out.push_back(static_cast<uint8_t>(v >> 8));
-  out.push_back(static_cast<uint8_t>(v));
-}
-
-void append_fourcc(std::vector<uint8_t>& out, const char fourcc[4]) {
-  // Append the bytes one at a time. A range insert from the char array makes
-  // GCC 13 report a bogus -Wstringop-overflow in optimized builds.
-  for (int i = 0; i < 4; i++) {
-    out.push_back(static_cast<uint8_t>(fourcc[i]));
-  }
-}
-
-void append(std::vector<uint8_t>& out, const std::vector<uint8_t>& v) {
-  out.insert(out.end(), v.begin(), v.end());
-}
-
-std::vector<uint8_t> make_box(const char fourcc[4],
-                              const std::vector<uint8_t>& payload,
-                              bool is_full_box = false,
-                              uint8_t version = 0,
-                              uint32_t flags = 0) {
-  std::vector<uint8_t> body;
-  if (is_full_box) {
-    body.push_back(version);
-    body.push_back(static_cast<uint8_t>(flags >> 16));
-    body.push_back(static_cast<uint8_t>(flags >> 8));
-    body.push_back(static_cast<uint8_t>(flags));
-  }
-  body.insert(body.end(), payload.begin(), payload.end());
-
-  std::vector<uint8_t> box;
-  put_u32_be(box, static_cast<uint32_t>(8 + body.size()));
-  append_fourcc(box, fourcc);
-  box.insert(box.end(), body.begin(), body.end());
-  return box;
-}
 
 // Build a minimal HEIF with one 'grid' item (id=1, 1x1, 64x64) whose 'dimg'
 // iref references a tile item id (99) that has no corresponding 'infe' entry.

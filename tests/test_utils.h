@@ -24,7 +24,9 @@
   SOFTWARE.
 */
 
+#include <cstdint>
 #include <string>
+#include <vector>
 #include "libheif/heif.h"
 
 #include <filesystem>
@@ -51,3 +53,26 @@ heif_encoder* get_encoder_or_skip_test(heif_compression_format format);
 fs::path get_tests_output_dir();
 
 std::string get_tests_output_file_path(const char* filename);
+
+
+// --- Helpers to build ISOBMFF byte streams for synthetic test files ---
+
+// Append a big-endian integer.
+void put_u32_be(std::vector<uint8_t>& out, uint32_t v);
+void put_u16_be(std::vector<uint8_t>& out, uint16_t v);
+
+// Append the four characters of a box type or brand.
+void append_fourcc(std::vector<uint8_t>& out, const char fourcc[4]);
+
+// Append a null-terminated string, including the terminator.
+void append_cstr(std::vector<uint8_t>& out, const char* s);
+
+// Append the contents of another byte vector.
+void append(std::vector<uint8_t>& out, const std::vector<uint8_t>& v);
+
+// Build a box, or a full box with version and flags, from its type and payload.
+std::vector<uint8_t> make_box(const char fourcc[4],
+                              const std::vector<uint8_t>& payload,
+                              bool is_full_box = false,
+                              uint8_t version = 0,
+                              uint32_t flags = 0);

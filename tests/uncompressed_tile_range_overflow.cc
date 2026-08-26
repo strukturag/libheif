@@ -51,62 +51,12 @@
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
+#include "test_utils.h"
 
 #include <cstdint>
 #include <vector>
 
 namespace {
-
-void put_u32_be(std::vector<uint8_t>& out, uint32_t v) {
-  out.push_back(static_cast<uint8_t>(v >> 24));
-  out.push_back(static_cast<uint8_t>(v >> 16));
-  out.push_back(static_cast<uint8_t>(v >> 8));
-  out.push_back(static_cast<uint8_t>(v));
-}
-
-void put_u16_be(std::vector<uint8_t>& out, uint16_t v) {
-  out.push_back(static_cast<uint8_t>(v >> 8));
-  out.push_back(static_cast<uint8_t>(v));
-}
-
-void append_fourcc(std::vector<uint8_t>& out, const char fourcc[4]) {
-  // Append the bytes one at a time. A range insert from the char array makes
-  // GCC 13 report a bogus -Wstringop-overflow in optimized builds.
-  for (int i = 0; i < 4; i++) {
-    out.push_back(static_cast<uint8_t>(fourcc[i]));
-  }
-}
-
-void append_cstr(std::vector<uint8_t>& out, const char* s) {
-  while (*s) { out.push_back(static_cast<uint8_t>(*s)); ++s; }
-  out.push_back(0);
-}
-
-void append(std::vector<uint8_t>& out, const std::vector<uint8_t>& v) {
-  out.insert(out.end(), v.begin(), v.end());
-}
-
-std::vector<uint8_t> make_box(const char fourcc[4],
-                              const std::vector<uint8_t>& payload,
-                              bool is_full_box = false,
-                              uint8_t version = 0,
-                              uint32_t flags = 0) {
-  const size_t header_size = is_full_box ? 12 : 8;
-
-  std::vector<uint8_t> box;
-  box.reserve(header_size + payload.size());
-
-  put_u32_be(box, static_cast<uint32_t>(header_size + payload.size()));
-  append_fourcc(box, fourcc);
-  if (is_full_box) {
-    box.push_back(version);
-    box.push_back(static_cast<uint8_t>(flags >> 16));
-    box.push_back(static_cast<uint8_t>(flags >> 8));
-    box.push_back(static_cast<uint8_t>(flags));
-  }
-  append(box, payload);
-  return box;
-}
 
 constexpr uint32_t WIDTH = 4096;
 constexpr uint32_t HEIGHT = 4096;
