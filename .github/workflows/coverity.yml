@@ -20,6 +20,8 @@ jobs:
       WITH_X265: 1
     steps:
     - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
 
     - name: Cache Coverity build tool
       uses: actions/cache@v6
