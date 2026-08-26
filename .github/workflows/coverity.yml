@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       WITH_AOM: 1
       WITH_DAV1D: 1

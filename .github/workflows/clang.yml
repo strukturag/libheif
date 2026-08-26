@@ -17,7 +17,7 @@ jobs:
           - { NAME: "nothing" }
           - { NAME: "libde265 (1) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
     env: ${{ matrix.env }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
@@ -50,7 +50,7 @@ jobs:
       WITH_DAV1D: 1
       WITH_LIBDE265: 1
       CLANG_TIDY: 1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
@@ -59,7 +59,7 @@ jobs:
     - name: Install dependencies
       run: |
         ./scripts/install-ci-linux.sh
-        sudo apt install clang-tidy-12
+        sudo apt install clang-tidy-18
 
     - name: Prepare CI
       run: |
@@ -71,4 +71,4 @@ jobs:
 
     - name: Run clang-tidy
       run: |
-        run-clang-tidy-12 -checks=-clang-diagnostic-tautological-compare,-clang-diagnostic-tautological-constant-out-of-range-compare -j$(nproc)
+        run-clang-tidy-18 -checks=-clang-diagnostic-tautological-compare,-clang-diagnostic-tautological-constant-out-of-range-compare -j$(nproc)
