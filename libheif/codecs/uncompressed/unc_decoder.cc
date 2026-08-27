@@ -268,33 +268,27 @@ Result<std::vector<uint8_t> > unc_decoder::do_decompress_data(std::shared_ptr<co
 #if HAVE_BROTLI
     return decompress_brotli(compressed_data, limits);
 #else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
+                 "cannot decode unci item with brotli compression - not enabled");
 #endif
   }
   else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
 #if HAVE_ZLIB
     return decompress_zlib(compressed_data, limits);
 #else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
+                 "cannot decode unci item with zlib compression - not enabled");
 #endif
   }
   else if (cmpC_box->get_compression_type() == fourcc("defl")) {
 #if HAVE_ZLIB
     return decompress_deflate(compressed_data, limits);
 #else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
+                 "cannot decode unci item with deflate compression - not enabled");
 #endif
   }
   else {
