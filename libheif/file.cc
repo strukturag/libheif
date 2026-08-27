@@ -793,7 +793,7 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
     // Skipping is also necessary to avoid libstdc++'s _S_compare(0, N) which
     // computes unsigned `0 - N` and trips UBSan even though the cast result
     // is benign.
-    if (!encoding.empty()) {
+    if (!encoding.empty() && encoding != "identity") {
       if (encoding == "compress_zlib") {
 #if HAVE_ZLIB
         std::vector<uint8_t> compressed_data;
@@ -976,8 +976,8 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
 
   heif_metadata_compression compression;
 
-  if (encoding.empty()) {
-    // shortcut for case of uncompressed mime data
+  if (encoding.empty() || encoding == "identity") {
+    // shortcut for case of uncompressed mime data ("identity" is the RFC 2616 no-op coding)
 
     if (out_compression) {
       *out_compression = heif_metadata_compression_off;

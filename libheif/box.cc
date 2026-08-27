@@ -1833,7 +1833,45 @@ Error Box_iloc::read_data(heif_item_id item_id,
   //       this function clears the array in some cases. This should be corrected.
 
   for (const auto& extent : item->extents) {
+
+    // --- data that was appended in memory (append_data()) and not written to a file yet
+
+    // This is the case for items added to a context that is being written. There may be no
+    // input stream at all (writer-only context), and even if there is one (context read from
+    // a file, then modified), the stream does not contain this data.
+
+    if (!extent.data.empty() || extent.length == 0) {
+      uint64_t skip_len = std::min(offset, extent.length);
+      offset -= skip_len;
+
+      uint64_t read_len = std::min(extent.length - skip_len, size);
+
+      if (offset > 0 || read_len == 0) {
+        continue;
+      }
+
+      auto max_memory_block_size = limits->max_memory_block_size;
+      if (max_memory_block_size && max_memory_block_size - dest->size() < read_len) {
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Security_limit_exceeded,
+                "iloc item data exceeds the maximum memory block size"};
+      }
+
+      dest->insert(dest->end(),
+                   extent.data.begin() + static_cast<size_t>(skip_len),
+                   extent.data.begin() + static_cast<size_t>(skip_len + read_len));
+
+      size -= read_len;
+      continue;
+    }
+
     if (item->construction_method == 0) {
+
+      if (!istr) {
+        return {heif_error_Invalid_input,
+                heif_suberror_No_item_data,
+                "Item data is not available: the context has no input file"};
+      }
 
       // --- make sure that all data is available
 

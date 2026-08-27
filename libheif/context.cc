@@ -1110,6 +1110,14 @@ Error HeifContext::interpret_heif_file_images()
 
     auto metadataResult = m_heif_file->get_uncompressed_item_data(id);
     if (!metadataResult) {
+      if (metadataResult.error().error_code == heif_error_Unsupported_feature) {
+        // The item uses a content_encoding that we cannot decode (unknown coding, or the
+        // decompressor was not compiled in). That is a limitation of this one item, not of
+        // the file: skip it instead of refusing the whole file. Its raw data stays accessible
+        // through heif_item_get_item_data().
+        continue;
+      }
+
       if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
         return metadataResult.error();
@@ -1264,6 +1272,12 @@ Error HeifContext::interpret_heif_file_images()
 
     auto textDataResult = m_heif_file->get_uncompressed_item_data(id);
     if (!textDataResult) {
+      if (textDataResult.error().error_code == heif_error_Unsupported_feature) {
+        // content_encoding that we cannot decode: this is not a text item we can use, but
+        // that is no reason to reject the file (see the metadata loop above)
+        continue;
+      }
+
       return textDataResult.error();
     }
 
