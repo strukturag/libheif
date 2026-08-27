@@ -500,9 +500,10 @@ Error HeifFile::parse_heif_file()
       }
 
   m_mini_box = m_file_layout->get_mini_box();
-  m_top_level_boxes.push_back(m_mini_box);
 
   if (m_mini_box) {
+    m_top_level_boxes.push_back(m_mini_box);
+
     Error err = m_mini_box->create_expanded_boxes(this);
     if (err) {
       return err;

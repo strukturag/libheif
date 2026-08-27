@@ -391,6 +391,15 @@ static uint64_t rescale(uint64_t duration, uint32_t old_base, uint32_t new_base)
 
 Error HeifContext::write(StreamWriter& writer)
 {
+  // Writing is only implemented for contexts that were built in memory. In a context read
+  // from a file, the item and sample data still live in the input file and would not be
+  // copied to the output: the result would be a truncated file that no reader accepts.
+  if (m_heif_file->get_reader()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unspecified,
+                 "Writing a context that was read from a file is not supported");
+  }
+
   // --- finalize some parameters
 
   uint64_t max_sequence_duration = 0;
@@ -508,6 +517,15 @@ Error HeifContext::write(StreamWriter& writer)
   // set major brand if not set manually yet
   if (ftyp->get_major_brand() == 0) {
     ftyp->set_major_brand(main_brand);
+  }
+
+  // A file without images and without an image sequence (e.g. only metadata items) has no
+  // brand that describes it. Instead of writing a file with an all-zero 'ftyp' box that no
+  // reader (including libheif) accepts, refuse to write it.
+  if (ftyp->get_major_brand() == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Cannot write a file that contains neither images nor an image sequence");
   }
 
   ftyp->set_minor_version(0);
