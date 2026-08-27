@@ -143,7 +143,13 @@ Error HeifFile::read(const std::shared_ptr<StreamReader>& reader)
   }
 
   Error error = parse_heif_file();
-  return error;
+  if (error) {
+    return error;
+  }
+
+  seed_id_creator();
+
+  return Error::Ok;
 }
 
 
@@ -1029,6 +1035,36 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
 Result<heif_item_id> HeifFile::get_unused_item_id()
 {
   return m_id_creator.get_new_id(IDCreator::Namespace::item);
+}
+
+
+void HeifFile::seed_id_creator()
+{
+  // A file with the 'unif' brand uses one ID space for items, tracks and entity groups.
+  // Keep it that way for everything we add to the file.
+  if (m_ftyp_box && m_ftyp_box->has_compatible_brand(heif_brand2_unif)) {
+    m_id_creator.set_unif(true);
+  }
+
+  for (const auto& infe : m_infe_boxes) {
+    m_id_creator.mark_id_used(IDCreator::Namespace::item, infe.first);
+  }
+
+  if (m_grpl_box) {
+    for (const auto& box : m_grpl_box->get_all_child_boxes()) {
+      if (auto group = std::dynamic_pointer_cast<Box_EntityToGroup>(box)) {
+        m_id_creator.mark_id_used(IDCreator::Namespace::entity_group, group->get_group_id());
+      }
+    }
+  }
+
+  if (m_moov_box) {
+    for (const auto& trak : m_moov_box->get_child_boxes<Box_trak>()) {
+      if (auto tkhd = trak->get_child_box<Box_tkhd>()) {
+        m_id_creator.mark_id_used(IDCreator::Namespace::track, tkhd->get_track_id());
+      }
+    }
+  }
 }
 
 

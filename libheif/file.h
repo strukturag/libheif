@@ -304,6 +304,10 @@ private:
 
   Error parse_heif_file();
 
+  // Advance the ID creator past all item, track and entity-group IDs found in the parsed
+  // file, so that IDs allocated for new items cannot collide with existing ones.
+  void seed_id_creator();
+
   Error parse_heif_images();
 
   Error parse_heif_sequences();

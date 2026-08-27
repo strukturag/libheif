@@ -39,6 +39,11 @@ public:
   // Returns error on overflow (counter would exceed 0xFFFFFFFF).
   Result<uint32_t> get_new_id(Namespace ns);
 
+  // Declare an ID as already taken (e.g. because it was read from an existing file),
+  // so that get_new_id() will never hand it out again. Advances the namespace counter
+  // and the global counter past 'id'.
+  void mark_id_used(Namespace ns, uint32_t id);
+
 private:
   bool m_unif = false;
   uint32_t m_next_id_item = 1;

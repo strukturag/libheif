@@ -50,5 +50,40 @@ Result<uint32_t> IDCreator::get_new_id(Namespace ns)
                  "ID namespace overflow");
   }
 
-  return (*counter)++;
+  uint32_t id = (*counter)++;
+
+  // Keep the global counter ahead of all namespace counters so that switching to
+  // unif mode later does not reuse an ID that was already handed out.
+  if (m_next_id_global != 0 && id >= m_next_id_global) {
+    m_next_id_global = id + 1;
+  }
+
+  return id;
+}
+
+
+void IDCreator::mark_id_used(Namespace ns, uint32_t id)
+{
+  uint32_t* counter = nullptr;
+  switch (ns) {
+    case Namespace::item:
+      counter = &m_next_id_item;
+      break;
+    case Namespace::track:
+      counter = &m_next_id_track;
+      break;
+    case Namespace::entity_group:
+      counter = &m_next_id_entity_group;
+      break;
+  }
+
+  // A counter value of 0 means "exhausted" (see get_new_id). id + 1 wraps to 0 exactly
+  // when id == 0xFFFFFFFF, which is the correct exhausted state.
+  if (*counter != 0 && id >= *counter) {
+    *counter = id + 1;
+  }
+
+  if (m_next_id_global != 0 && id >= m_next_id_global) {
+    m_next_id_global = id + 1;
+  }
 }
