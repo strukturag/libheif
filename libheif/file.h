@@ -88,6 +88,10 @@ public:
 
   void init_for_image();
 
+  // Create the 'iprp'/'ipco'/'ipma' boxes if they do not exist yet. Unlike init_for_image(),
+  // this does not turn the file into an image file (no 'pict' handler, no 'pitm').
+  void init_for_item_properties();
+
   void init_for_sequence();
 
   void set_hdlr_box(std::shared_ptr<Box_hdlr> box) { m_hdlr_box = std::move(box); }
@@ -307,6 +311,9 @@ private:
   // Advance the ID creator past all item, track and entity-group IDs found in the parsed
   // file, so that IDs allocated for new items cannot collide with existing ones.
   void seed_id_creator();
+
+  // Undo add_new_infe_box() / add_new_meta_infe_box() when the item could not be completed.
+  void remove_infe_box(const std::shared_ptr<Box_infe>& infe);
 
   Error parse_heif_images();
 

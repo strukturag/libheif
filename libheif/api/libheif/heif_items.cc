@@ -150,9 +150,11 @@ heif_error heif_item_get_item_data(const heif_context* ctx,
 
   auto dataResult = ctx->context->get_heif_file()->get_item_data(item_id, out_compression_format);
   if (!dataResult) {
-    *out_data_size = 0;
+    if (out_data_size) {
+      *out_data_size = 0;
+    }
     if (out_data) {
-      *out_data = 0;
+      *out_data = nullptr;
     }
 
     return dataResult.error_struct(ctx->context.get());
@@ -301,6 +303,42 @@ heif_error heif_context_add_item_references(heif_context* ctx,
 
 // ------------------------- writing -------------------------
 
+// Check the (data, size) pair that all item writers take. 'size' is a public 'int' that
+// is converted to size_t further down: a negative value would turn into a huge allocation
+// (std::length_error through the C API), and a NULL buffer with a non-zero size would be
+// dereferenced.
+static heif_error check_item_data_arguments(const void* data, int size)
+{
+  if (size < 0) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "item data size must not be negative"};
+  }
+
+  if (size > 0 && data == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  return heif_error_success;
+}
+
+
+// Common tail of all item writers: report the error, or store the new item ID.
+// A NULL out_item_id is allowed (the item is added, but its ID is not reported).
+static heif_error return_new_item_id(heif_context* ctx, Result<heif_item_id> result, heif_item_id* out_item_id)
+{
+  if (!result) {
+    return result.error_struct(ctx->context.get());
+  }
+
+  if (out_item_id) {
+    *out_item_id = *result;
+  }
+
+  return heif_error_success;
+}
+
+
 heif_error heif_context_add_item(heif_context* ctx,
                                  const char* item_type,
                                  const void* data, int size,
@@ -314,15 +352,14 @@ heif_error heif_context_add_item(heif_context* ctx,
     };
   }
 
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
+  if (heif_error err = check_item_data_arguments(data, size); err.code != heif_error_Ok) {
+    return err;
+  }
 
-  if (result && out_item_id) {
-    *out_item_id = *result;
-    return heif_error_success;
-  }
-  else {
-    return result.error_struct(ctx->context.get());
-  }
+  return exception_guard([&]() -> heif_error {
+    Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
+    return return_new_item_id(ctx, std::move(result), out_item_id);
+  });
 }
 
 heif_error heif_context_add_mime_item(heif_context* ctx,
@@ -331,15 +368,18 @@ heif_error heif_context_add_mime_item(heif_context* ctx,
                                       const void* data, int size,
                                       heif_item_id* out_item_id)
 {
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
+  if (content_type == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
 
-  if (result && out_item_id) {
-    *out_item_id = *result;
-    return heif_error_success;
+  if (heif_error err = check_item_data_arguments(data, size); err.code != heif_error_Ok) {
+    return err;
   }
-  else {
-    return result.error_struct(ctx->context.get());
-  }
+
+  return exception_guard([&]() -> heif_error {
+    Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
+    return return_new_item_id(ctx, std::move(result), out_item_id);
+  });
 }
 
 
@@ -349,15 +389,18 @@ heif_error heif_context_add_precompressed_mime_item(heif_context* ctx,
                                                     const void* data, int size,
                                                     heif_item_id* out_item_id)
 {
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_precompressed_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
+  if (content_type == nullptr || content_encoding == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
 
-  if (result && out_item_id) {
-    *out_item_id = *result;
-    return heif_error_success;
+  if (heif_error err = check_item_data_arguments(data, size); err.code != heif_error_Ok) {
+    return err;
   }
-  else {
-    return result.error_struct(ctx->context.get());
-  }
+
+  return exception_guard([&]() -> heif_error {
+    Result<heif_item_id> result = ctx->context->get_heif_file()->add_precompressed_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
+    return return_new_item_id(ctx, std::move(result), out_item_id);
+  });
 }
 
 heif_error heif_context_add_uri_item(heif_context* ctx,
@@ -365,13 +408,16 @@ heif_error heif_context_add_uri_item(heif_context* ctx,
                                      const void* data, int size,
                                      heif_item_id* out_item_id)
 {
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_uri(item_uri_type, (const uint8_t*) data, size);
+  if (item_uri_type == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
 
-  if (result && out_item_id) {
-    *out_item_id = *result;
-    return heif_error_success;
+  if (heif_error err = check_item_data_arguments(data, size); err.code != heif_error_Ok) {
+    return err;
   }
-  else {
-    return result.error_struct(ctx->context.get());
-  }
+
+  return exception_guard([&]() -> heif_error {
+    Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_uri(item_uri_type, (const uint8_t*) data, size);
+    return return_new_item_id(ctx, std::move(result), out_item_id);
+  });
 }

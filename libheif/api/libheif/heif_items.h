@@ -227,12 +227,50 @@ heif_error heif_context_add_item_references(heif_context* ctx,
 
 // ------------------------- adding new items -------------------------
 
+/*
+ * All functions in this section add a new item to the context and return its ID in
+ * 'out_item_id'. The item ID is freshly allocated and does not collide with any item that
+ * already exists in the context, including items read from an input file.
+ *
+ * 'data' is copied into the context, the caller may release it afterwards. 'size' is the
+ * number of bytes in 'data'. A NULL 'data' is only allowed together with size 0.
+ * 'out_item_id' may be NULL, in which case the item is added but its ID is not reported.
+ *
+ * The new item is marked as hidden. Use heif_context_add_item_reference() to link it to an
+ * image (e.g. with a 'cdsc' reference for metadata that describes the image).
+ *
+ * Note that a file must contain at least one image or image sequence to be written;
+ * a context holding only items added with these functions cannot be written.
+ */
+
+/**
+ * Add an item with an arbitrary four-character item type (e.g. "Exif").
+ *
+ * @param ctx the file context
+ * @param item_type four-character item type
+ * @param data the item payload
+ * @param size number of bytes in 'data'
+ * @param out_item_id receives the ID of the new item (may be NULL)
+ */
 LIBHEIF_API
 heif_error heif_context_add_item(heif_context* ctx,
                                  const char* item_type,
                                  const void* data, int size,
                                  heif_item_id* out_item_id);
 
+/**
+ * Add a 'mime' item, optionally compressing the payload.
+ *
+ * @param ctx the file context
+ * @param content_type MIME content type of the payload (e.g. "application/rdf+xml")
+ * @param content_encoding compression to apply to the payload before storing it.
+ *        Use heif_metadata_compression_method_supported() to check which methods this
+ *        build of libheif can compress. An unsupported method returns an error and no
+ *        item is added.
+ * @param data the (uncompressed) item payload
+ * @param size number of bytes in 'data'
+ * @param out_item_id receives the ID of the new item (may be NULL)
+ */
 LIBHEIF_API
 heif_error heif_context_add_mime_item(heif_context* ctx,
                                       const char* content_type,
@@ -240,6 +278,21 @@ heif_error heif_context_add_mime_item(heif_context* ctx,
                                       const void* data, int size,
                                       heif_item_id* out_item_id);
 
+/**
+ * Add a 'mime' item whose payload has already been compressed by the caller.
+ *
+ * @param ctx the file context
+ * @param content_type MIME content type of the (uncompressed) payload
+ * @param content_encoding the HTTP content-coding name that was applied to 'data', stored
+ *        verbatim as the item's content_encoding. Use "" for uncompressed data.
+ *        libheif itself can decode "deflate", "compress_zlib" and "br" (when built with
+ *        zlib / Brotli support) and treats "identity" as uncompressed; items with any other
+ *        content_encoding are kept, but their data can only be retrieved in compressed form
+ *        with heif_item_get_item_data().
+ * @param data the compressed item payload
+ * @param size number of bytes in 'data'
+ * @param out_item_id receives the ID of the new item (may be NULL)
+ */
 LIBHEIF_API
 heif_error heif_context_add_precompressed_mime_item(heif_context* ctx,
                                                     const char* content_type,
@@ -247,6 +300,15 @@ heif_error heif_context_add_precompressed_mime_item(heif_context* ctx,
                                                     const void* data, int size,
                                                     heif_item_id* out_item_id);
 
+/**
+ * Add a 'uri ' item.
+ *
+ * @param ctx the file context
+ * @param item_uri_type the URI that identifies the type of the item payload
+ * @param data the item payload
+ * @param size number of bytes in 'data'
+ * @param out_item_id receives the ID of the new item (may be NULL)
+ */
 LIBHEIF_API
 heif_error heif_context_add_uri_item(heif_context* ctx,
                                      const char* item_uri_type,

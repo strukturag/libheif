@@ -212,6 +212,14 @@ void HeifFile::init_for_image()
     m_meta_box->append_child_box(m_pitm_box);
   }
 
+  init_for_item_properties();
+}
+
+
+void HeifFile::init_for_item_properties()
+{
+  init_for_meta_item();
+
   if (!m_iprp_box) {
     m_iprp_box = std::make_shared<Box_iprp>();
     m_meta_box->append_child_box(m_iprp_box);
@@ -1068,6 +1076,16 @@ void HeifFile::seed_id_creator()
 }
 
 
+void HeifFile::remove_infe_box(const std::shared_ptr<Box_infe>& infe)
+{
+  m_infe_boxes.erase(infe->get_item_ID());
+
+  if (m_iinf_box) {
+    m_iinf_box->remove_child_box(infe);
+  }
+}
+
+
 Result<heif_item_id> HeifFile::add_new_image(uint32_t item_type)
 {
   auto result = add_new_infe_box(item_type);
@@ -1124,6 +1142,8 @@ Result<std::shared_ptr<Box_infe>> HeifFile::add_new_meta_infe_box(uint32_t item_
 
 void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential)
 {
+  init_for_item_properties();
+
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
@@ -1136,6 +1156,8 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
 
 heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
+  init_for_item_properties();
+
   uint32_t index = m_ipco_box->find_or_append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
@@ -1146,6 +1168,8 @@ heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<B
 
 heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
+  init_for_item_properties();
+
   uint32_t index = m_ipco_box->append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
@@ -1156,6 +1180,8 @@ heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, c
 
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
+  init_for_item_properties();
+
   // Note: ISO/IEC 23000-22:2019(E) (MIAF) 7.3.6.7 requires the following order:
   // clean aperture first, then rotation, then mirror
 
@@ -1220,7 +1246,7 @@ Result<heif_item_id> HeifFile::add_infe(uint32_t item_type, const uint8_t* data,
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_result = add_new_infe_box(item_type);
+  auto infe_result = add_new_meta_infe_box(item_type);
   if (!infe_result) {
     return infe_result.error();
   }
@@ -1229,7 +1255,10 @@ Result<heif_item_id> HeifFile::add_infe(uint32_t item_type, const uint8_t* data,
 
   heif_item_id metadata_id = infe_box->get_item_ID();
 
-  set_item_data(infe_box, data, size, heif_metadata_compression_off);
+  if (Error err = set_item_data(infe_box, data, size, heif_metadata_compression_off)) {
+    remove_infe_box(infe_box);
+    return err;
+  }
 
   return metadata_id;
 }
@@ -1255,7 +1284,10 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
 
   heif_item_id metadata_id = infe_box->get_item_ID();
 
-  set_item_data(infe_box, data, size, content_encoding);
+  if (Error err = set_item_data(infe_box, data, size, content_encoding)) {
+    remove_infe_box(infe_box);
+    return err;
+  }
 
   return metadata_id;
 }
@@ -1275,7 +1307,10 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
 
   heif_item_id metadata_id = infe_box->get_item_ID();
 
-  set_precompressed_item_data(infe_box, data, size, content_encoding);
+  if (Error err = set_precompressed_item_data(infe_box, data, size, content_encoding)) {
+    remove_infe_box(infe_box);
+    return err;
+  }
 
   return metadata_id;
 }
@@ -1295,7 +1330,10 @@ Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uin
 
   heif_item_id metadata_id = infe_box->get_item_ID();
 
-  set_item_data(infe_box, data, size, heif_metadata_compression_off);
+  if (Error err = set_item_data(infe_box, data, size, heif_metadata_compression_off)) {
+    remove_infe_box(infe_box);
+    return err;
+  }
 
   return metadata_id;
 }
@@ -1312,7 +1350,9 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (compression != heif_metadata_compression_off &&
       item->get_item_type_4cc() != fourcc("mime")) {
-    // TODO: error, compression not supported
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Item data compression is only supported for 'mime' items");
   }
 
 
@@ -1366,13 +1406,17 @@ Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& ite
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (!content_encoding.empty() &&
       item->get_item_type_4cc() != fourcc("mime")) {
-    // TODO: error, compression not supported
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "A content_encoding can only be set for 'mime' items");
   }
 
 
   std::vector<uint8_t> data_array;
-  data_array.resize(size);
-  memcpy(data_array.data(), data, size);
+  if (size > 0) { // do not memcpy() from a NULL pointer when there is no data
+    data_array.resize(size);
+    memcpy(data_array.data(), data, size);
+  }
 
   item->set_content_encoding(content_encoding);
 
@@ -1487,6 +1531,8 @@ std::shared_ptr<Box_EntityToGroup> HeifFile::get_entity_group(heif_entity_group_
 
 void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
 {
+  init_for_item_properties();
+
   auto auxC = std::make_shared<Box_auxC>();
   auxC->set_aux_type(type);
 
