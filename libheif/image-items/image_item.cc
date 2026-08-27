@@ -523,7 +523,7 @@ int ImageItem::get_luma_bits_per_pixel() const
 {
   auto decoderResult = get_decoder();
   if (!decoderResult) {
-    return decoderResult.error();
+    return -1;
   }
 
   auto decoder = *decoderResult;
@@ -536,7 +536,7 @@ int ImageItem::get_chroma_bits_per_pixel() const
 {
   auto decoderResult = get_decoder();
   if (!decoderResult) {
-    return decoderResult.error();
+    return -1;
   }
 
   auto decoder = *decoderResult;

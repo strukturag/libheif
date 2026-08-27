@@ -111,7 +111,10 @@ public:
     }
   }
 
-  operator bool() const { return error_code != heif_error_Ok; }
+  // 'explicit' so that an Error can only be tested in a boolean context (if/!/&&/...).
+  // Without it, `int x = err;` or `return err;` from an int function silently compile
+  // and yield 0/1 instead of the intended value.
+  explicit operator bool() const { return error_code != heif_error_Ok; }
 
   static const char* get_error_string(heif_error_code err);
 
@@ -137,7 +140,11 @@ public:
 
   Result(const Error& e) : m_data(e) {}
 
-  operator bool() const { return std::holds_alternative<T>(m_data); }
+  // True if the Result holds a value, false if it holds an error.
+  // 'explicit' so that the value can only be extracted with operator*: `id = result;` must
+  // not compile, because it would store the boolean (this bug shipped several times, see
+  // https://github.com/strukturag/libheif/pull/1885).
+  explicit operator bool() const { return std::holds_alternative<T>(m_data); }
 
   //void set(const T& v) { m_data = v; }
 

@@ -286,7 +286,7 @@ heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
 
   if (result) {
     if (out_group_id) {
-      *out_group_id = result;
+      *out_group_id = *result;
     }
     return heif_error_success;
   }
