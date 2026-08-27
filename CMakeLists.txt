@@ -45,6 +45,16 @@ if(NOT MSVC)
   add_compile_options(-Wno-error=conversion)
   add_compile_options(-Wno-error=unused-parameter)
   add_compile_options(-Wno-error=deprecated-declarations)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+    # GCC 16 speculatively devirtualizes a virtual call to several candidate targets and then runs
+    # -Warray-bounds on the inlined body of a candidate whose type is larger than the object that was
+    # actually allocated, even though that branch can never be taken at runtime. Examples are the
+    # std::shared_ptr control block destructor and virtual calls through a base class pointer:
+    #   "array subscript 'Box_meta[0]' is partly outside array bounds of 'unsigned char [56]'"
+    # This is a compiler false positive (observed with GCC 16.0 snapshots, 16.1 and 16.2), so do not
+    # let it fail the build.
+    add_compile_options(-Wno-error=array-bounds)
+  endif ()
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       add_compile_options(-Wno-error=tautological-compare)
       add_compile_options(-Wno-error=tautological-constant-out-of-range-compare)
