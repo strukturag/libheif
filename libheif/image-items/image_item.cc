@@ -1291,7 +1291,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
   // when the codec bitstream lies about its dimensions.
   heif_security_limits tightened = tighten_image_size_limit_for_ispe(
       get_context()->get_security_limits(),
-      get_width(), get_height(),
+      get_ispe_width(), get_ispe_height(),
       max_coding_unit_size_for_codec(get_compression_format()));
 
   return decoder->decode_single_frame_from_compressed_data(options, &tightened);
