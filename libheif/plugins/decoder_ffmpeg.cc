@@ -339,6 +339,9 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8:
     case AV_PIX_FMT_GRAY10LE:
+    case AV_PIX_FMT_GRAY12LE:
+    case AV_PIX_FMT_GRAY14LE:
+    case AV_PIX_FMT_GRAY16LE:
       return heif_chroma_monochrome;
 
     case AV_PIX_FMT_YUV420P:
