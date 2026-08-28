@@ -189,7 +189,7 @@ static const char* kParam_speed = "speed";
 
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
-    "420", "422", "444", nullptr
+    "400", "420", "422", "444", nullptr
 };
 
 static const char* kParam_tune = "tune";
@@ -681,7 +681,11 @@ heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const c
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
 
   if (strcmp(name, kParam_chroma) == 0) {
-    if (strcmp(value, "420") == 0) {
+    if (strcmp(value, "400") == 0) {
+      encoder->chroma = heif_chroma_monochrome;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "420") == 0) {
       encoder->chroma = heif_chroma_420;
       return heif_error_ok;
     }
