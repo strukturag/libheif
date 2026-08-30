@@ -92,6 +92,7 @@ add_libheif_test(tai)
 add_libheif_test(text)
 add_libheif_test(cxx_wrapper)
 add_libheif_test(component_descriptions)
+add_libheif_test(ffmpeg_decode_bitdepth)
 
 if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_HT_ENCODING)
     add_libheif_test(encode_htj2k)

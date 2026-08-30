@@ -38,6 +38,7 @@
 extern "C"
 {
     #include <libavcodec/avcodec.h>
+    #include <libavutil/pixdesc.h>
 }
 
 
@@ -464,12 +465,22 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
     *out_user_data = av_frame->pts;
   }
 
-  // FFmpeg's JPEG2000 decoder hands back the codestream's 3 components as packed
-  // "rgb24", but libheif stores them as sYCC (the codestream is tagged sYCC).
-  // De-interleave into YCbCr-444 planes so the container's nclx color conversion
-  // is applied correctly.
-  if (av_dec_ctx->pix_fmt == AV_PIX_FMT_RGB24 &&
+  // FFmpeg's JPEG2000 decoder hands back a 3-component 4:4:4 codestream as packed
+  // "rgb24" (8 bit) or "rgb48le" (9-16 bit), but libheif stores them as sYCC (the
+  // codestream is tagged sYCC). De-interleave into YCbCr-444 planes so the container's
+  // nclx color conversion is applied correctly. For rgb48le, FFmpeg scales the samples
+  // up to 16 bit; undo this so that the image has the coded bit depth (see below).
+  if ((av_dec_ctx->pix_fmt == AV_PIX_FMT_RGB24 || av_dec_ctx->pix_fmt == AV_PIX_FMT_RGB48LE) &&
       decoder->av_codec->id == AV_CODEC_ID_JPEG2000) {
+    const bool packed16 = (av_dec_ctx->pix_fmt == AV_PIX_FMT_RGB48LE);
+    int bpp = packed16 ? 16 : 8;
+    int shift = 0;
+    int coded_bpp = av_dec_ctx->bits_per_raw_sample;
+    if (coded_bpp > 0 && coded_bpp < bpp) {
+      shift = bpp - coded_bpp;
+      bpp = coded_bpp;
+    }
+
     heif_error err = heif_image_create(av_frame->width, av_frame->height,
                                        heif_colorspace_YCbCr, heif_chroma_444, image);
     if (err.code) {
@@ -478,7 +489,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
     heif_channel planes[3] = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
     uint8_t* dst[3]; size_t dst_stride[3];
     for (int c = 0; c < 3; c++) {
-      err = heif_image_add_plane_safe(*image, planes[c], av_frame->width, av_frame->height, 8, limits);
+      err = heif_image_add_plane_safe(*image, planes[c], av_frame->width, av_frame->height, bpp, limits);
       if (err.code) {
         decoder->error_message = err.message;
         err.message = decoder->error_message.c_str();
@@ -492,9 +503,17 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
     for (int y = 0; y < av_frame->height; y++) {
       const uint8_t* row = src + static_cast<size_t>(y) * src_stride;
       for (int x = 0; x < av_frame->width; x++) {
-        dst[0][y * dst_stride[0] + x] = row[x * 3 + 0];  // Y  <- "R"
-        dst[1][y * dst_stride[1] + x] = row[x * 3 + 1];  // Cb <- "G"
-        dst[2][y * dst_stride[2] + x] = row[x * 3 + 2];  // Cr <- "B"
+        // Y <- "R", Cb <- "G", Cr <- "B"
+        for (int c = 0; c < 3; c++) {
+          uint16_t v = packed16 ? reinterpret_cast<const uint16_t*>(row)[x * 3 + c] : row[x * 3 + c];
+          v = static_cast<uint16_t>(v >> shift);
+          if (bpp > 8) {
+            reinterpret_cast<uint16_t*>(dst[c] + y * dst_stride[c])[x] = v;
+          }
+          else {
+            dst[c][y * dst_stride[c] + x] = static_cast<uint8_t>(v);
+          }
+        }
       }
     }
     return heif_error_success;
@@ -522,18 +541,34 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
 
     int nPlanes = is_mono ? 1 : 3;
 
-    for (int channel = 0; channel < nPlanes; channel++) {
-      int bpp = get_ffmpeg_format_bpp(av_dec_ctx->pix_fmt);
-      if (bpp == 0) {
-        heif_image_release(*image);
-        err = {
-          heif_error_Decoder_plugin_error,
-          heif_suberror_Unsupported_color_conversion,
-          "Pixel format not implemented"
-        };
-        return err;
-      }
+    int format_bpp = get_ffmpeg_format_bpp(av_dec_ctx->pix_fmt);
+    if (format_bpp == 0) {
+      heif_image_release(*image);
+      err = {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_Unsupported_color_conversion,
+        "Pixel format not implemented"
+      };
+      return err;
+    }
 
+    // FFmpeg's MJPEG and JPEG 2000 decoders do not have an exact-depth pixel format for
+    // every coded bit depth. A 12-bit grayscale JPEG is returned as GRAY16, a 10- or 12-bit
+    // grayscale JPEG 2000 as GRAY16LE, a 12-bit YCbCr JPEG as YUV4xxP16, etc. In these cases
+    // FFmpeg shifts the samples left so that they fill the container (the low bits are zero)
+    // and reports the coded precision in bits_per_raw_sample. Undo that scaling so that the
+    // decoded image has the bit depth declared in the file (SOF / SIZ / pixi) and the
+    // original sample values. For HEVC/AVC/VVC/AV1 the pixel format depth always equals the
+    // coded depth, so nothing is shifted there.
+    int bpp = format_bpp;
+    int shift = 0;
+    int coded_bpp = av_dec_ctx->bits_per_raw_sample;
+    if (coded_bpp > 0 && coded_bpp < format_bpp) {
+      shift = format_bpp - coded_bpp;
+      bpp = coded_bpp;
+    }
+
+    for (int channel = 0; channel < nPlanes; channel++) {
       int stride = av_frame->linesize[channel];
       const uint8_t* data = av_frame->data[channel];
 
@@ -562,20 +597,47 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
       size_t dst_stride;
       uint8_t* dst_mem = heif_image_get_plane2(*image, channel2plane[channel], &dst_stride);
 
-      int bytes_per_pixel = (bpp + 7) / 8;
+      int src_bytes_per_pixel = (format_bpp + 7) / 8;
+      int dst_bytes_per_pixel = (bpp + 7) / 8;
 
       for (int y = 0; y < h; y++) {
-        memcpy(dst_mem + y * dst_stride, data + static_cast<size_t>(y) * stride, static_cast<size_t>(w) * bytes_per_pixel);
+        const uint8_t* src_row = data + static_cast<size_t>(y) * stride;
+        uint8_t* dst_row = dst_mem + y * dst_stride;
+
+        if (shift == 0) {
+          memcpy(dst_row, src_row, static_cast<size_t>(w) * src_bytes_per_pixel);
+        }
+        else if (src_bytes_per_pixel == 2) {
+          const uint16_t* src16 = reinterpret_cast<const uint16_t*>(src_row);
+          if (dst_bytes_per_pixel == 2) {
+            uint16_t* dst16 = reinterpret_cast<uint16_t*>(dst_row);
+            for (int x = 0; x < w; x++) {
+              dst16[x] = static_cast<uint16_t>(src16[x] >> shift);
+            }
+          }
+          else {
+            for (int x = 0; x < w; x++) {
+              dst_row[x] = static_cast<uint8_t>(src16[x] >> shift);
+            }
+          }
+        }
+        else {
+          for (int x = 0; x < w; x++) {
+            dst_row[x] = static_cast<uint8_t>(src_row[x] >> shift);
+          }
+        }
       }
     }
 
     return heif_error_success;
   }
   else {
+    const char* fmt_name = av_get_pix_fmt_name(av_dec_ctx->pix_fmt);
+    decoder->error_message = std::string("Pixel format not implemented: ") + (fmt_name ? fmt_name : "unknown");
     return {
       heif_error_Unsupported_feature,
       heif_suberror_Unsupported_color_conversion,
-      "Pixel format not implemented"
+      decoder->error_message.c_str()
     };
   }
 }
