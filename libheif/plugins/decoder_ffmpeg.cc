@@ -74,6 +74,12 @@ static bool supportsNal(AVCodecID id) {
   return id == AV_CODEC_ID_H264 || id == AV_CODEC_ID_H265 || id == AV_CODEC_ID_H266;
 }
 
+// Codecs whose bitstream carries CICP colour signalling (VUI / sequence header).
+static bool codec_has_cicp_signalling(AVCodecID id)
+{
+  return supportsNal(id) || id == AV_CODEC_ID_AV1;
+}
+
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -685,6 +691,15 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   if (avcodec_parameters_from_context(av_codecParam, decoder->av_codec_context) < 0)
   {
     return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_parameters_from_context returned error" };
+  }
+
+  // Only AVC/HEVC/VVC (VUI) and AV1 (sequence header) carry CICP colour signalling in the
+  // bitstream. For JPEG and JPEG 2000, FFmpeg's colour fields are synthesized defaults
+  // (e.g. "unspecified" and limited range for JPEG 2000), not something read from the
+  // codestream. Attaching them as a bitstream profile would make libheif convert the
+  // decoded planes when the file has no 'colr' box. Leave the profile unset for those.
+  if (!codec_has_cicp_signalling(decoder->av_codec->id)) {
+    return heif_error_ok;
   }
 
   uint8_t video_full_range_flag = 0;
