@@ -1575,6 +1575,35 @@ static std::pair<std::string, std::string> parse_alttext_argument(const std::str
 }
 
 
+// Days from 1970-01-01 to the given civil date (proleptic Gregorian calendar, UTC).
+// Algorithm "days_from_civil" from Howard Hinnant's chrono-compatible date algorithms.
+// (We do not use the equivalent std::chrono::year_month_day / sys_days because the
+// C++20 chrono calendar is not available in older standard libraries like GCC 10.)
+static int64_t days_from_civil(int y, int m, int d)
+{
+  y -= m <= 2;
+  const int era = (y >= 0 ? y : y - 399) / 400;
+  const unsigned yoe = static_cast<unsigned>(y - era * 400);                        // [0, 399]
+  const unsigned doy = (153 * static_cast<unsigned>(m + (m > 2 ? -3 : 9)) + 2) / 5
+                       + static_cast<unsigned>(d) - 1;                              // [0, 365]
+  const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;                       // [0, 146096]
+  return static_cast<int64_t>(era) * 146097 + static_cast<int64_t>(doe) - 719468;
+}
+
+
+static int days_in_month(int year, int month)
+{
+  static const int days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+  bool leap_year = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+  if (month == 2 && leap_year) {
+    return 29;
+  }
+
+  return days[month - 1];
+}
+
+
 // Parse a UTC date of the form "YYYY-MM-DD", "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
 // into seconds since the Unix epoch.
 static bool parse_utc_datetime(std::string s, uint64_t* out_unix_seconds)
@@ -1589,19 +1618,15 @@ static bool parse_utc_datetime(std::string s, uint64_t* out_unix_seconds)
     return false;
   }
 
-  std::chrono::year_month_day ymd{std::chrono::year{year},
-                                  std::chrono::month{static_cast<unsigned>(month)},
-                                  std::chrono::day{static_cast<unsigned>(day)}};
-  if (!ymd.ok() ||
+  if (month < 1 || month > 12 ||
+      day < 1 || day > days_in_month(year, month) ||
       hour < 0 || hour > 23 ||
       minute < 0 || minute > 59 ||
       second < 0 || second > 60) {
     return false;
   }
 
-  auto days_since_epoch = std::chrono::sys_days{ymd}.time_since_epoch();
-  int64_t unix_seconds = std::chrono::duration_cast<std::chrono::seconds>(days_since_epoch).count()
-                         + hour * 3600 + minute * 60 + second;
+  int64_t unix_seconds = days_from_civil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second;
   if (unix_seconds < 0) {
     return false;  // dates before 1970 cannot be passed as a Unix timestamp
   }
