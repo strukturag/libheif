@@ -41,6 +41,7 @@
 #include <libheif/heif_library.h>
 #include <libheif/heif_regions.h>
 #include <libheif/heif_properties.h>
+#include <ctime>
 #include <libheif/heif_experimental.h>
 #include "libheif/heif_sequences.h"
 #include <libheif/heif_text.h>
@@ -184,6 +185,48 @@ static const char* matrix_coefficients_name(uint16_t v)
     case heif_matrix_coefficients_ICtCp: return "ICtCp";
     default: return "unknown";
   }
+}
+
+
+// Print a 'crtt'/'mdft' timestamp property as a UTC date.
+// Returns whether the item has this property.
+static bool print_item_timestamp(const heif_context* ctx, heif_item_id id, const char* title,
+                                 heif_error (* get_timestamp)(const heif_context*, heif_item_id,
+                                                              heif_timestamp_type, uint64_t*))
+{
+  uint64_t native;
+  heif_error err = get_timestamp(ctx, id, heif_timestamp_type_heif_microseconds, &native);
+  if (err.code) {
+    return false;  // item has no such property
+  }
+
+  uint64_t unix_us;
+  err = get_timestamp(ctx, id, heif_timestamp_type_unix_microseconds, &unix_us);
+  if (err.code) {
+    // the time cannot be represented as a Unix timestamp (before 1970)
+    printf("  %s: %llu microseconds since 1904-01-01 (before 1970)\n", title, (unsigned long long) native);
+    return true;
+  }
+
+  time_t t = (time_t) (unix_us / 1000000);
+  struct tm tm;
+#ifdef _WIN32
+  gmtime_s(&tm, &t);
+#else
+  gmtime_r(&t, &tm);
+#endif
+
+  char buf[64];
+  strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
+
+  if (unix_us % 1000000 != 0) {
+    printf("  %s: %s.%06d UTC\n", title, buf, (int) (unix_us % 1000000));
+  }
+  else {
+    printf("  %s: %s UTC\n", title, buf);
+  }
+
+  return true;
 }
 
 
@@ -824,6 +867,11 @@ int main(int argc, char** argv)
       }
       heif_property_accessibility_text_array_release(alttexts);
     }
+
+    // creation / modification time
+
+    properties_shown |= print_item_timestamp(ctx.get(), IDs[i], "creation time", heif_item_get_property_creation_time);
+    properties_shown |= print_item_timestamp(ctx.get(), IDs[i], "modification time", heif_item_get_property_modification_time);
 
     // --- camera intrinsic and extrinsic parameters
 
