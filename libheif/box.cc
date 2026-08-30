@@ -4766,7 +4766,7 @@ std::string Box_udes::dump(Indent& indent) const
   sstr << indent << "lang: " << m_lang << "\n";
   sstr << indent << "name: " << m_name << "\n";
   sstr << indent << "description: " << m_description << "\n";
-  sstr << indent << "tags: " << m_lang << "\n";
+  sstr << indent << "tags: " << m_tags << "\n";
   return sstr.str();
 }
 
