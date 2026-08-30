@@ -587,6 +587,21 @@ TEST_CASE("Unsupported matrices", "[heif_image]") {
   TestFailingConversion(os.str(), src_state, dst_state, options, options_ext);
 }
 
+TEST_CASE("Chroma downsampling algorithm availability", "[heif_image]") {
+  REQUIRE(heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_nearest_neighbor));
+  REQUIRE(heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_average));
+#ifdef HAVE_LIBSHARPYUV
+  REQUIRE(heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_sharp_yuv));
+#else
+  REQUIRE(!heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_sharp_yuv));
+#endif
+
+  // The default options must only select algorithms that are actually available.
+  heif_color_conversion_options defaults{};
+  heif_color_conversion_options_set_defaults(&defaults);
+  REQUIRE(heif_have_chroma_downsampling_algorithm(defaults.preferred_chroma_downsampling_algorithm));
+}
+
 TEST_CASE("Sharp yuv conversion", "[heif_image]") {
   heif_color_conversion_options sharp_yuv_options{
       .preferred_chroma_downsampling_algorithm =

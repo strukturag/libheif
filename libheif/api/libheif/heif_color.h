@@ -94,6 +94,14 @@ typedef struct heif_color_conversion_options_ext
 } heif_color_conversion_options_ext;
 
 
+// Returns whether the given chroma downsampling algorithm is available in this build of libheif.
+// Some algorithms depend on optional external libraries. For example, 'heif_chroma_downsampling_sharp_yuv'
+// is only available when libheif has been compiled with libsharpyuv support.
+// Requesting an unavailable algorithm with 'only_use_preferred_chroma_algorithm=true' will make the
+// color conversion fail with 'heif_suberror_Unsupported_color_conversion'.
+LIBHEIF_API
+int heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_algorithm algorithm);
+
 // Assumes that it is a version=1 struct.
 LIBHEIF_API
 void heif_color_conversion_options_set_defaults(heif_color_conversion_options*);

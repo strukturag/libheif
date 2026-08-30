@@ -1664,12 +1664,11 @@ int main(int argc, char** argv)
         if (chroma_downsampling == "nn") { // abbreviation
           chroma_downsampling = "nearest-neighbor";
         }
-#if !HAVE_LIBSHARPYUV
-        if (chroma_downsampling == "sharp-yuv") {
+        if (chroma_downsampling == "sharp-yuv" &&
+            !heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_sharp_yuv)) {
           std::cerr << "Error: sharp-yuv chroma downsampling method has not been compiled into libheif.\n";
           return 5;
         }
-#endif
         break;
       case 'T':
         use_tiling = true;

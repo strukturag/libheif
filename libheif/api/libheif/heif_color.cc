@@ -40,14 +40,33 @@
 #include <array>
 
 
+int heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_algorithm algorithm)
+{
+  switch (algorithm) {
+    case heif_chroma_downsampling_nearest_neighbor:
+    case heif_chroma_downsampling_average:
+      return 1;
+    case heif_chroma_downsampling_sharp_yuv:
+#if HAVE_LIBSHARPYUV
+      return 1;
+#else
+      return 0;
+#endif
+  }
+
+  return 0;
+}
+
+
 void heif_color_conversion_options_set_defaults(heif_color_conversion_options* options)
 {
   options->version = 1;
-#if HAVE_LIBSHARPYUV
-  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
-#else
-  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
-#endif
+  if (heif_have_chroma_downsampling_algorithm(heif_chroma_downsampling_sharp_yuv)) {
+    options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+  }
+  else {
+    options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  }
 
   options->preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options->only_use_preferred_chroma_algorithm = true;
