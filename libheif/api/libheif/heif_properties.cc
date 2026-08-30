@@ -326,6 +326,192 @@ void heif_property_accessibility_text_array_release(heif_property_accessibility_
 }
 
 
+// --- creation / modification time
+
+// seconds between the HEIF timestamp epoch (1904-01-01) and the Unix epoch (1970-01-01)
+static const uint64_t unix_epoch_offset_seconds = 2082844800;
+
+// microseconds between the Windows FILETIME epoch (1601-01-01) and the HEIF timestamp epoch (1904-01-01)
+static const uint64_t windows_epoch_offset_microseconds = 9561628800000000;
+
+
+// Convert 'timestamp' given in the format 'timestamp_type' to a HEIF timestamp (microseconds since 1904-01-01).
+static Result<uint64_t> timestamp_to_heif_microseconds(uint64_t timestamp, heif_timestamp_type timestamp_type)
+{
+  const Error out_of_range_error{heif_error_Usage_error,
+                                 heif_suberror_Invalid_parameter_value,
+                                 "Timestamp cannot be represented as a HEIF timestamp (microseconds since 1904)."};
+
+  switch (timestamp_type) {
+    case heif_timestamp_type_heif_microseconds:
+      return timestamp;
+
+    case heif_timestamp_type_unix_seconds: {
+      uint64_t seconds_since_1904 = timestamp + unix_epoch_offset_seconds;
+      if (seconds_since_1904 < timestamp ||  // addition overflow
+          seconds_since_1904 > UINT64_MAX / 1000000) {
+        return out_of_range_error;
+      }
+      return seconds_since_1904 * 1000000;
+    }
+
+    case heif_timestamp_type_unix_microseconds: {
+      uint64_t heif_microseconds = timestamp + unix_epoch_offset_seconds * 1000000;
+      if (heif_microseconds < timestamp) {  // addition overflow
+        return out_of_range_error;
+      }
+      return heif_microseconds;
+    }
+
+    case heif_timestamp_type_windows_filetime: {
+      uint64_t microseconds = timestamp / 10;
+      if (microseconds < windows_epoch_offset_microseconds) {  // before 1904
+        return out_of_range_error;
+      }
+      return microseconds - windows_epoch_offset_microseconds;
+    }
+  }
+
+  return Error{heif_error_Usage_error,
+               heif_suberror_Invalid_parameter_value,
+               "Unknown timestamp type."};
+}
+
+
+// Convert a HEIF timestamp (microseconds since 1904-01-01) to the format 'timestamp_type'.
+static Result<uint64_t> heif_microseconds_to_timestamp(uint64_t heif_microseconds, heif_timestamp_type timestamp_type)
+{
+  const Error out_of_range_error{heif_error_Usage_error,
+                                 heif_suberror_Invalid_parameter_value,
+                                 "Timestamp cannot be represented in the requested format."};
+
+  switch (timestamp_type) {
+    case heif_timestamp_type_heif_microseconds:
+      return heif_microseconds;
+
+    case heif_timestamp_type_unix_seconds: {
+      if (heif_microseconds < unix_epoch_offset_seconds * 1000000) {  // before 1970
+        return out_of_range_error;
+      }
+      return heif_microseconds / 1000000 - unix_epoch_offset_seconds;
+    }
+
+    case heif_timestamp_type_unix_microseconds: {
+      if (heif_microseconds < unix_epoch_offset_seconds * 1000000) {  // before 1970
+        return out_of_range_error;
+      }
+      return heif_microseconds - unix_epoch_offset_seconds * 1000000;
+    }
+
+    case heif_timestamp_type_windows_filetime: {
+      uint64_t microseconds = heif_microseconds + windows_epoch_offset_microseconds;
+      if (microseconds < heif_microseconds ||  // addition overflow
+          microseconds > UINT64_MAX / 10) {
+        return out_of_range_error;
+      }
+      return microseconds * 10;
+    }
+  }
+
+  return Error{heif_error_Usage_error,
+               heif_suberror_Invalid_parameter_value,
+               "Unknown timestamp type."};
+}
+
+
+template<typename BoxType>
+static heif_error set_item_timestamp(heif_context* context,
+                                     heif_item_id itemId,
+                                     uint64_t timestamp,
+                                     heif_timestamp_type timestamp_type,
+                                     heif_property_id* out_optional_propertyId)
+{
+  if (!context) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto heif_microseconds = timestamp_to_heif_microseconds(timestamp, timestamp_type);
+  if (!heif_microseconds) {
+    return heif_microseconds.error_struct(context->context.get());
+  }
+
+  auto propertyId = context->context->set_item_timestamp<BoxType>(itemId, *heif_microseconds);
+  if (!propertyId) {
+    return propertyId.error_struct(context->context.get());
+  }
+
+  if (out_optional_propertyId) {
+    *out_optional_propertyId = *propertyId;
+  }
+
+  return heif_error_success;
+}
+
+
+template<typename BoxType>
+static heif_error get_item_timestamp(const heif_context* context,
+                                     heif_item_id itemId,
+                                     heif_timestamp_type timestamp_type,
+                                     uint64_t* out_timestamp)
+{
+  if (!context || !out_timestamp) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto box = context->context->find_property<BoxType>(itemId, 0);
+  if (!box) {
+    return box.error_struct(context->context.get());
+  }
+
+  auto timestamp = heif_microseconds_to_timestamp((*box)->get_timestamp(), timestamp_type);
+  if (!timestamp) {
+    return timestamp.error_struct(context->context.get());
+  }
+
+  *out_timestamp = *timestamp;
+
+  return heif_error_success;
+}
+
+
+heif_error heif_item_set_property_creation_time(heif_context* context,
+                                                heif_item_id itemId,
+                                                uint64_t timestamp,
+                                                heif_timestamp_type timestamp_type,
+                                                heif_property_id* out_optional_propertyId)
+{
+  return set_item_timestamp<Box_crtt>(context, itemId, timestamp, timestamp_type, out_optional_propertyId);
+}
+
+
+heif_error heif_item_get_property_creation_time(const heif_context* context,
+                                                heif_item_id itemId,
+                                                heif_timestamp_type timestamp_type,
+                                                uint64_t* out_timestamp)
+{
+  return get_item_timestamp<Box_crtt>(context, itemId, timestamp_type, out_timestamp);
+}
+
+
+heif_error heif_item_set_property_modification_time(heif_context* context,
+                                                    heif_item_id itemId,
+                                                    uint64_t timestamp,
+                                                    heif_timestamp_type timestamp_type,
+                                                    heif_property_id* out_optional_propertyId)
+{
+  return set_item_timestamp<Box_mdft>(context, itemId, timestamp, timestamp_type, out_optional_propertyId);
+}
+
+
+heif_error heif_item_get_property_modification_time(const heif_context* context,
+                                                    heif_item_id itemId,
+                                                    heif_timestamp_type timestamp_type,
+                                                    uint64_t* out_timestamp)
+{
+  return get_item_timestamp<Box_mdft>(context, itemId, timestamp_type, out_timestamp);
+}
+
+
 heif_transform_mirror_direction heif_item_get_property_transform_mirror(const heif_context* context,
                                                                         heif_item_id itemId,
                                                                         heif_property_id propertyId)

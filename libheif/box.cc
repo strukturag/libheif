@@ -670,6 +670,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_altt>();
       break;
 
+    case fourcc("crtt"):
+      box = std::make_shared<Box_crtt>();
+      break;
+
+    case fourcc("mdft"):
+      box = std::make_shared<Box_mdft>();
+      break;
+
     case fourcc("jpgC"):
       box = std::make_shared<Box_jpgC>();
       break;
@@ -4815,6 +4823,43 @@ Error Box_altt::write(StreamWriter& writer) const
   writer.write(m_alt_lang);
   prepend_header(writer, box_start);
   return Error::Ok;
+}
+
+
+Error Box_creation_modification_time::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error(get_type_string().c_str());
+  }
+
+  m_timestamp = range.read64();
+  return range.get_error();
+}
+
+Error Box_creation_modification_time::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_timestamp);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+std::string Box_crtt::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "creation time: " << get_timestamp() << "\n";
+  return sstr.str();
+}
+
+std::string Box_mdft::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "modification time: " << get_timestamp() << "\n";
+  return sstr.str();
 }
 
 

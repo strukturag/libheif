@@ -183,6 +183,27 @@ public:
 
   Result<heif_property_id> add_accessibility_text(heif_item_id, const std::string& alt_text, const std::string& alt_lang);
 
+  // Set a 'crtt' or 'mdft' property. There may be at most one such property per item.
+  // The timestamp is in microseconds since 1904-01-01 00:00:00 UTC.
+  template<typename BoxType>
+  Result<heif_property_id> set_item_timestamp(heif_item_id itemId, uint64_t timestamp)
+  {
+    auto box = std::make_shared<BoxType>();
+
+    if (find_property<BoxType>(itemId)) {
+      return Error{
+          heif_error_Usage_error,
+          heif_suberror_Unspecified,
+          "Item already has a '" + box->get_type_string() + "' property."
+      };
+    }
+
+    box->set_timestamp(timestamp);
+
+    heif_property_id id = add_property(itemId, box, false);
+    return id;
+  }
+
 
   // --- region items
 

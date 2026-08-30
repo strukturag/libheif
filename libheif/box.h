@@ -1876,6 +1876,62 @@ private:
 };
 
 
+/**
+ * Common base class for the Creation Time ('crtt') and Modification Time ('mdft') properties,
+ * which both contain a single 64-bit timestamp.
+ *
+ * See ISO/IEC 23008-12:2025 Sections 6.5.18 and 6.5.19.
+ */
+class Box_creation_modification_time : public FullBox
+{
+public:
+  /**
+   * Timestamp in microseconds since 1904-01-01 00:00:00 UTC.
+   */
+  uint64_t get_timestamp() const { return m_timestamp; }
+
+  void set_timestamp(uint64_t timestamp) { m_timestamp = timestamp; }
+
+  Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint64_t m_timestamp = 0;
+};
+
+
+class Box_crtt : public Box_creation_modification_time
+{
+public:
+  Box_crtt()
+  {
+    set_short_type(fourcc("crtt"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Creation Time"; }
+};
+
+
+class Box_mdft : public Box_creation_modification_time
+{
+public:
+  Box_mdft()
+  {
+    set_short_type(fourcc("mdft"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Modification Time"; }
+};
+
+
 void initialize_heif_tai_clock_info(heif_tai_clock_info* taic);
 void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai);
 

@@ -42,7 +42,9 @@ typedef enum heif_item_property_type
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
   heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
   heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g'),
-  heif_item_property_type_accessibility_text = heif_fourcc('a', 'l', 't', 't')
+  heif_item_property_type_accessibility_text = heif_fourcc('a', 'l', 't', 't'),
+  heif_item_property_type_creation_time = heif_fourcc('c', 'r', 't', 't'),
+  heif_item_property_type_modification_time = heif_fourcc('m', 'd', 'f', 't')
 } heif_item_property_type;
 
 // Get the heif_property_id for a heif_item_id.
@@ -162,6 +164,66 @@ heif_property_accessibility_text* heif_item_get_accessibility_texts(const heif_c
 // Release an array received from heif_item_get_accessibility_texts(), including all its strings.
 LIBHEIF_API
 void heif_property_accessibility_text_array_release(heif_property_accessibility_text* texts);
+
+
+// --- creation / modification time ('crtt' / 'mdft')
+
+// The 'crtt' and 'mdft' properties store a timestamp as microseconds since 1904-01-01 00:00:00 UTC.
+// The functions below convert automatically between this native format and other common timestamp
+// formats, selected with heif_timestamp_type.
+typedef enum heif_timestamp_type
+{
+  // microseconds since 1904-01-01 00:00:00 UTC, the native format of 'crtt' / 'mdft'.
+  // Note: this uses the same epoch as classic Mac and ISOBMFF timestamps, but those count seconds.
+  heif_timestamp_type_heif_microseconds = 0,
+
+  // seconds since 1970-01-01 00:00:00 UTC (Unix time_t)
+  heif_timestamp_type_unix_seconds = 1,
+
+  // microseconds since 1970-01-01 00:00:00 UTC
+  heif_timestamp_type_unix_microseconds = 2,
+
+  // 100-nanosecond intervals since 1601-01-01 00:00:00 UTC (Windows FILETIME)
+  heif_timestamp_type_windows_filetime = 3
+} heif_timestamp_type;
+
+// Set the "crtt" creation time property of the item.
+// 'timestamp' is interpreted according to 'timestamp_type' and converted to the native format.
+// Each item can have at most one creation time property. Setting a second one is an error.
+LIBHEIF_API
+heif_error heif_item_set_property_creation_time(heif_context* context,
+                                                heif_item_id itemId,
+                                                uint64_t timestamp,
+                                                heif_timestamp_type timestamp_type,
+                                                heif_property_id* out_optional_propertyId);
+
+// Get the "crtt" creation time property of the item, converted to the format given by 'timestamp_type'.
+// It is an error if the item has no creation time property, or if the stored time cannot be
+// represented in the requested format (e.g. a time before 1970 as a Unix timestamp).
+LIBHEIF_API
+heif_error heif_item_get_property_creation_time(const heif_context* context,
+                                                heif_item_id itemId,
+                                                heif_timestamp_type timestamp_type,
+                                                uint64_t* out_timestamp);
+
+// Set the "mdft" modification time property of the item.
+// 'timestamp' is interpreted according to 'timestamp_type' and converted to the native format.
+// Each item can have at most one modification time property. Setting a second one is an error.
+LIBHEIF_API
+heif_error heif_item_set_property_modification_time(heif_context* context,
+                                                    heif_item_id itemId,
+                                                    uint64_t timestamp,
+                                                    heif_timestamp_type timestamp_type,
+                                                    heif_property_id* out_optional_propertyId);
+
+// Get the "mdft" modification time property of the item, converted to the format given by 'timestamp_type'.
+// It is an error if the item has no modification time property, or if the stored time cannot be
+// represented in the requested format (e.g. a time before 1970 as a Unix timestamp).
+LIBHEIF_API
+heif_error heif_item_get_property_modification_time(const heif_context* context,
+                                                    heif_item_id itemId,
+                                                    heif_timestamp_type timestamp_type,
+                                                    uint64_t* out_timestamp);
 
 typedef enum heif_transform_mirror_direction
 {
