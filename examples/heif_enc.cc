@@ -43,6 +43,7 @@
 #include <map>
 #include <tuple>
 #include <random>
+#include <chrono>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -162,6 +163,8 @@ heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_
 
 std::string property_pitm_description;
 std::vector<std::pair<std::string, std::string>> property_pitm_alttexts;  // (language, text)
+std::optional<std::pair<uint64_t, heif_timestamp_type>> property_pitm_creation_time;
+std::optional<std::pair<uint64_t, heif_timestamp_type>> property_pitm_modification_time;
 
 RawImageParameters raw_input_params;
 bool force_raw_input = false;
@@ -240,6 +243,8 @@ const int OPTION_DO_FLIP_H = 1047;
 const int OPTION_DO_FLIP_V = 1048;
 const int OPTION_MINI = 1049;
 const int OPTION_PITM_ALTTEXT = 1050;
+const int OPTION_PITM_CREATION_TIMESTAMP = 1051;
+const int OPTION_PITM_MODIFICATION_TIMESTAMP = 1052;
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -390,6 +395,8 @@ static option long_options[] = {
     {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "pitm-alttext",                required_argument, 0,                     OPTION_PITM_ALTTEXT},
+    {(char* const) "pitm-creation-timestamp",     required_argument, 0,                     OPTION_PITM_CREATION_TIMESTAMP},
+    {(char* const) "pitm-modification-timestamp", required_argument, 0,                     OPTION_PITM_MODIFICATION_TIMESTAMP},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
@@ -485,6 +492,11 @@ void show_help(const char* argv0)
             << "                                    LANG is an RFC 5646 language tag like 'de-DE'. When omitted, the language\n"
             << "                                    is undefined. Start with '=' to force an undefined language for a text\n"
             << "                                    containing '='. May be given several times with different languages.\n"
+            << "      --pitm-creation-timestamp TS      set the 'crtt' creation time of the primary image\n"
+            << "      --pitm-modification-timestamp TS  set the 'mdft' modification time of the primary image.\n"
+            << "                                    TS is either 'now', a UTC date like '2026-08-29' or '2026-08-29 14:30:00',\n"
+            << "                                    or a number: 'unix=N' (seconds since 1970), 'filetime=N' (Windows FILETIME),\n"
+            << "                                    or plain N (microseconds since 1904)\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
@@ -1551,6 +1563,81 @@ static std::pair<std::string, std::string> parse_alttext_argument(const std::str
 }
 
 
+// Parse a UTC date of the form "YYYY-MM-DD", "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+// into seconds since the Unix epoch.
+static bool parse_utc_datetime(std::string s, uint64_t* out_unix_seconds)
+{
+  std::replace(s.begin(), s.end(), 'T', ' ');
+
+  int year, month, day;
+  int hour = 0, minute = 0, second = 0;
+  char tail;
+  int n = sscanf(s.c_str(), "%d-%d-%d %d:%d:%d%c", &year, &month, &day, &hour, &minute, &second, &tail);
+  if (n != 3 && n != 6) {
+    return false;
+  }
+
+  std::chrono::year_month_day ymd{std::chrono::year{year},
+                                  std::chrono::month{static_cast<unsigned>(month)},
+                                  std::chrono::day{static_cast<unsigned>(day)}};
+  if (!ymd.ok() ||
+      hour < 0 || hour > 23 ||
+      minute < 0 || minute > 59 ||
+      second < 0 || second > 60) {
+    return false;
+  }
+
+  auto days_since_epoch = std::chrono::sys_days{ymd}.time_since_epoch();
+  int64_t unix_seconds = std::chrono::duration_cast<std::chrono::seconds>(days_since_epoch).count()
+                         + hour * 3600 + minute * 60 + second;
+  if (unix_seconds < 0) {
+    return false;  // dates before 1970 cannot be passed as a Unix timestamp
+  }
+
+  *out_unix_seconds = static_cast<uint64_t>(unix_seconds);
+  return true;
+}
+
+
+// Parse a timestamp argument: "now", a UTC date, "unix=N", "filetime=N", or a plain number
+// of microseconds since 1904 (native HEIF timestamp).
+static bool parse_timestamp_argument(const std::string& arg, std::pair<uint64_t, heif_timestamp_type>* out)
+{
+  if (arg == "now") {
+    uint64_t unix_us = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    *out = {unix_us, heif_timestamp_type_unix_microseconds};
+    return true;
+  }
+
+  std::string number = arg;
+  heif_timestamp_type type = heif_timestamp_type_heif_microseconds;
+
+  if (arg.rfind("unix=", 0) == 0) {
+    number = arg.substr(5);
+    type = heif_timestamp_type_unix_seconds;
+  }
+  else if (arg.rfind("filetime=", 0) == 0) {
+    number = arg.substr(9);
+    type = heif_timestamp_type_windows_filetime;
+  }
+  else {
+    uint64_t unix_seconds;
+    if (parse_utc_datetime(arg, &unix_seconds)) {
+      *out = {unix_seconds, heif_timestamp_type_unix_seconds};
+      return true;
+    }
+  }
+
+  if (number.empty() || number.find_first_not_of("0123456789") != std::string::npos) {
+    return false;
+  }
+
+  *out = {strtoull(number.c_str(), nullptr, 10), type};
+  return true;
+}
+
+
 int main(int argc, char** argv)
 {
   // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
@@ -1633,6 +1720,24 @@ int main(int argc, char** argv)
       case OPTION_PITM_ALTTEXT:
         property_pitm_alttexts.push_back(parse_alttext_argument(optarg));
         break;
+      case OPTION_PITM_CREATION_TIMESTAMP: {
+        std::pair<uint64_t, heif_timestamp_type> timestamp;
+        if (!parse_timestamp_argument(optarg, &timestamp)) {
+          std::cerr << "Invalid timestamp '" << optarg << "'\n";
+          return 5;
+        }
+        property_pitm_creation_time = timestamp;
+        break;
+      }
+      case OPTION_PITM_MODIFICATION_TIMESTAMP: {
+        std::pair<uint64_t, heif_timestamp_type> timestamp;
+        if (!parse_timestamp_argument(optarg, &timestamp)) {
+          std::cerr << "Invalid timestamp '" << optarg << "'\n";
+          return 5;
+        }
+        property_pitm_modification_time = timestamp;
+        break;
+      }
       case OPTION_USE_HEVC_COMPRESSION:
         force_enc_hevc = true;
         break;
@@ -2664,6 +2769,41 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
       err = heif_item_add_property_accessibility_text(context, pitm_id, &altt, nullptr);
       if (err.code) {
         std::cerr << "Cannot set accessibility text: " << err.message << "\n";
+        return 5;
+      }
+    }
+
+    heif_image_handle_release(primary_image_handle);
+  }
+
+  if (property_pitm_creation_time || property_pitm_modification_time) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set timestamps\n";
+      return 5;
+    }
+
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+
+    if (property_pitm_creation_time) {
+      err = heif_item_set_property_creation_time(context, pitm_id,
+                                                 property_pitm_creation_time->first,
+                                                 property_pitm_creation_time->second,
+                                                 nullptr);
+      if (err.code) {
+        std::cerr << "Cannot set creation time: " << err.message << "\n";
+        return 5;
+      }
+    }
+
+    if (property_pitm_modification_time) {
+      err = heif_item_set_property_modification_time(context, pitm_id,
+                                                     property_pitm_modification_time->first,
+                                                     property_pitm_modification_time->second,
+                                                     nullptr);
+      if (err.code) {
+        std::cerr << "Cannot set modification time: " << err.message << "\n";
         return 5;
       }
     }
