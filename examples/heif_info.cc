@@ -735,6 +735,16 @@ int main(int argc, char** argv)
             heif_property_user_description_release(udes);
           }
         }
+
+        heif_property_accessibility_text* alttexts = heif_item_get_accessibility_texts(ctx.get(), region_item_id, nullptr);
+        if (alttexts) {
+          for (int k = 0; alttexts[k].alt_text != nullptr; k++) {
+            printf("    accessibility text:\n");
+            printf("      lang: %s\n", alttexts[k].alt_lang[0] ? alttexts[k].alt_lang : "(undefined)");
+            printf("      text: %s\n", alttexts[k].alt_text);
+          }
+          heif_property_accessibility_text_array_release(alttexts);
+        }
       }
     }
     else {
@@ -800,6 +810,19 @@ int main(int argc, char** argv)
           heif_property_user_description_release(udes);
         }
       }
+    }
+
+    // accessibility texts
+
+    heif_property_accessibility_text* alttexts = heif_item_get_accessibility_texts(ctx.get(), IDs[i], nullptr);
+    if (alttexts) {
+      for (int p = 0; alttexts[p].alt_text != nullptr; p++) {
+        printf("  accessibility text:\n");
+        printf("    lang: %s\n", alttexts[p].alt_lang[0] ? alttexts[p].alt_lang : "(undefined)");
+        printf("    text: %s\n", alttexts[p].alt_text);
+        properties_shown = true;
+      }
+      heif_property_accessibility_text_array_release(alttexts);
     }
 
     // --- camera intrinsic and extrinsic parameters
