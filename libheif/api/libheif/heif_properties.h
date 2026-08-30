@@ -41,7 +41,8 @@ typedef enum heif_item_property_type
   heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd'),
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
   heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
-  heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g')
+  heif_item_property_type_extended_language = heif_fourcc('e', 'l', 'n', 'g'),
+  heif_item_property_type_accessibility_text = heif_fourcc('a', 'l', 't', 't')
 } heif_item_property_type;
 
 // Get the heif_property_id for a heif_item_id.
@@ -104,6 +105,63 @@ heif_error heif_item_add_property_user_description(const heif_context* context,
 // Only call for objects that you received from heif_item_get_property_user_description().
 LIBHEIF_API
 void heif_property_user_description_release(heif_property_user_description*);
+
+
+// The strings are managed by libheif. They will be deleted in heif_property_accessibility_text_release().
+typedef struct heif_property_accessibility_text
+{
+  int version;
+
+  // version 1
+
+  // Text suitable as an alternate text for the image if the image cannot be displayed,
+  // similar to alt text in HTML (UTF-8).
+  const char* alt_text;
+
+  // IETF RFC 5646 language tag for the language of alt_text, e.g. "en-US".
+  // An empty string means that the language is unknown/undefined.
+  const char* alt_lang;
+} heif_property_accessibility_text;
+
+// Get the "altt" accessibility text property content.
+// Undefined strings are returned as empty strings.
+LIBHEIF_API
+heif_error heif_item_get_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     heif_property_id propertyId,
+                                                     heif_property_accessibility_text** out);
+
+// Add an "altt" accessibility text property to the item.
+// If any string pointers are NULL, an empty string will be used instead.
+// An item may have several accessibility texts, but each must have a different language.
+// Adding a text with the same language as an already existing property is an error.
+LIBHEIF_API
+heif_error heif_item_add_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     const heif_property_accessibility_text* alt_text,
+                                                     heif_property_id* out_optional_propertyId);
+
+// Release all strings and the object itself.
+// Only call for objects that you received from heif_item_get_property_accessibility_text().
+LIBHEIF_API
+void heif_property_accessibility_text_release(heif_property_accessibility_text*);
+
+// Get all "altt" accessibility text properties of an item at once.
+// Returns an array allocated by libheif, terminated by an extra element with all strings set to NULL.
+// The number of properties (not counting the terminator element) is returned in 'out_count',
+// which is optional and may be NULL. You can also iterate the array until you reach the element
+// with a NULL alt_text. Undefined strings are returned as empty strings.
+// When the item has no accessibility text properties, an array with only the terminator element is
+// returned. NULL is only returned when 'context' is NULL.
+// Release the array with heif_property_accessibility_text_array_release().
+LIBHEIF_API
+heif_property_accessibility_text* heif_item_get_accessibility_texts(const heif_context* context,
+                                                                    heif_item_id itemId,
+                                                                    int* out_count);
+
+// Release an array received from heif_item_get_accessibility_texts(), including all its strings.
+LIBHEIF_API
+void heif_property_accessibility_text_array_release(heif_property_accessibility_text* texts);
 
 typedef enum heif_transform_mirror_direction
 {

@@ -181,6 +181,8 @@ public:
 
   Result<heif_property_id> add_text_property(heif_item_id, const std::string& language);
 
+  Result<heif_property_id> add_accessibility_text(heif_item_id, const std::string& alt_text, const std::string& alt_lang);
+
 
   // --- region items
 

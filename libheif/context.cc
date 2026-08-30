@@ -2110,6 +2110,33 @@ Result<heif_property_id> HeifContext::add_text_property(heif_item_id itemId, con
 }
 
 
+Result<heif_property_id> HeifContext::add_accessibility_text(heif_item_id itemId, const std::string& alt_text, const std::string& alt_lang)
+{
+  // ISO/IEC 23008-12:2025, 6.5.21.1: "At most one AccessibilityTextProperty with the
+  // same alt_lang value should apply to the same item."
+
+  auto existing = m_heif_file->get_properties_for_item<Box_altt>(itemId);
+  if (existing) {  // ignore errors since the item may not have any properties assigned yet
+    for (const auto& existing_altt : *existing) {
+      if (existing_altt->get_alt_lang() == alt_lang) {
+        return Error{
+            heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Item already has an 'altt' accessibility text property with the same language."
+        };
+      }
+    }
+  }
+
+  auto altt = std::make_shared<Box_altt>();
+  altt->set_alt_text(alt_text);
+  altt->set_alt_lang(alt_lang);
+
+  heif_property_id id = add_property(itemId, altt, false);
+  return id;
+}
+
+
 Error HeifContext::interpret_heif_file_sequences()
 {
   m_tracks.clear();

@@ -666,6 +666,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_udes>();
       break;
 
+    case fourcc("altt"):
+      box = std::make_shared<Box_altt>();
+      break;
+
     case fourcc("jpgC"):
       box = std::make_shared<Box_jpgC>();
       break;
@@ -4777,6 +4781,38 @@ Error Box_udes::write(StreamWriter& writer) const
   writer.write(m_name);
   writer.write(m_description);
   writer.write(m_tags);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
+Error Box_altt::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("altt");
+  }
+
+  m_alt_text = range.read_string();
+  m_alt_lang = range.read_string();
+  return range.get_error();
+}
+
+std::string Box_altt::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "alt text: " << m_alt_text << "\n";
+  sstr << indent << "alt lang: " << m_alt_lang << "\n";
+  return sstr.str();
+}
+
+Error Box_altt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write(m_alt_text);
+  writer.write(m_alt_lang);
   prepend_header(writer, box_start);
   return Error::Ok;
 }

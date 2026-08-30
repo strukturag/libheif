@@ -42,7 +42,8 @@ int heif_item_get_properties_of_type(const heif_context* context,
   std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
-    // We do not pass the error, because a missing ipco should have been detected already when reading the file.
+    // We do not pass the error: a file without ipco/ipma boxes or an item without property associations
+    // simply has no properties, and a corrupt property reference will surface when the item is used.
     return 0;
   }
 
@@ -85,7 +86,8 @@ int heif_item_get_transformation_properties(const heif_context* context,
   std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
-    // We do not pass the error, because a missing ipco should have been detected already when reading the file.
+    // We do not pass the error: a file without ipco/ipma boxes or an item without property associations
+    // simply has no properties, and a corrupt property reference will surface when the item is used.
     return 0;
   }
 
@@ -122,7 +124,8 @@ heif_item_property_type heif_item_get_property_type(const heif_context* context,
   std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
-    // We do not pass the error, because a missing ipco should have been detected already when reading the file.
+    // We do not pass the error: a file without ipco/ipma boxes or an item without property associations
+    // simply has no properties, and a corrupt property reference will surface when the item is used.
     return heif_item_property_type_invalid;
   }
 
@@ -206,6 +209,120 @@ void heif_property_user_description_release(heif_property_user_description* udes
   delete[] udes->tags;
 
   delete udes;
+}
+
+
+heif_error heif_item_get_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     heif_property_id propertyId,
+                                                     heif_property_accessibility_text** out)
+{
+  if (!out || !context) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto altt = context->context->find_property<Box_altt>(itemId, propertyId);
+  if (!altt) {
+    return altt.error_struct(context->context.get());
+  }
+
+  auto* altt_c = new heif_property_accessibility_text();
+  altt_c->version = 1;
+  altt_c->alt_text = create_c_string_copy((*altt)->get_alt_text());
+  altt_c->alt_lang = create_c_string_copy((*altt)->get_alt_lang());
+
+  *out = altt_c;
+
+  return heif_error_success;
+}
+
+
+heif_error heif_item_add_property_accessibility_text(const heif_context* context,
+                                                     heif_item_id itemId,
+                                                     const heif_property_accessibility_text* alt_text,
+                                                     heif_property_id* out_optional_propertyId)
+{
+  if (!context || !alt_text) {
+    return heif_error_null_pointer_argument;
+  }
+
+  auto propertyId = context->context->add_accessibility_text(itemId,
+                                                             alt_text->alt_text ? alt_text->alt_text : "",
+                                                             alt_text->alt_lang ? alt_text->alt_lang : "");
+  if (!propertyId) {
+    return propertyId.error_struct(context->context.get());
+  }
+
+  if (out_optional_propertyId) {
+    *out_optional_propertyId = *propertyId;
+  }
+
+  return heif_error_success;
+}
+
+
+void heif_property_accessibility_text_release(heif_property_accessibility_text* altt)
+{
+  if (altt == nullptr) {
+    return;
+  }
+
+  delete[] altt->alt_text;
+  delete[] altt->alt_lang;
+
+  delete altt;
+}
+
+
+heif_property_accessibility_text* heif_item_get_accessibility_texts(const heif_context* context,
+                                                                    heif_item_id itemId,
+                                                                    int* out_count)
+{
+  if (out_count) {
+    *out_count = 0;
+  }
+
+  if (!context) {
+    return nullptr;
+  }
+
+  std::vector<std::shared_ptr<Box_altt>> altt_boxes;
+
+  auto propertiesResult = context->context->get_heif_file()->get_properties_for_item<Box_altt>(itemId);
+  if (propertiesResult) {  // ignore errors since the item may not have any properties assigned
+    altt_boxes = std::move(*propertiesResult);
+  }
+
+  // allocate one extra element as array terminator (all fields zero / NULL)
+
+  auto* texts = new heif_property_accessibility_text[altt_boxes.size() + 1]();
+
+  for (size_t i = 0; i < altt_boxes.size(); i++) {
+    texts[i].version = 1;
+    texts[i].alt_text = create_c_string_copy(altt_boxes[i]->get_alt_text());
+    texts[i].alt_lang = create_c_string_copy(altt_boxes[i]->get_alt_lang());
+  }
+
+  if (out_count) {
+    *out_count = static_cast<int>(altt_boxes.size());
+  }
+
+  return texts;
+}
+
+
+void heif_property_accessibility_text_array_release(heif_property_accessibility_text* texts)
+{
+  if (!texts) {
+    return;
+  }
+
+  for (int i = 0; texts[i].alt_text != nullptr; i++) {
+    delete[] texts[i].alt_text;
+    delete[] texts[i].alt_lang;
+  }
+
+  delete[] texts;
 }
 
 

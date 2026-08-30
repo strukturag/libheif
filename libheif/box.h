@@ -1821,6 +1821,61 @@ private:
 };
 
 
+/**
+ * Accessibility text property.
+ *
+ * Contains a text suitable to be used as an alternate text for an image if the image
+ * cannot be displayed, similar to alt text in HTML.
+ * There may be multiple altt properties for an item, each with a different language code.
+ *
+ * See ISO/IEC 23008-12:2025 Section 6.5.21.
+ */
+class Box_altt : public FullBox
+{
+public:
+  Box_altt()
+  {
+    set_short_type(fourcc("altt"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Accessibility Text"; }
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * Alternate text.
+   *
+   * A text suitable to be used as an alternate text for the image if the image cannot
+   * be displayed, similar to alt text in HTML.
+   */
+  std::string get_alt_text() const { return m_alt_text; }
+
+  void set_alt_text(const std::string& alt_text) { m_alt_text = alt_text; }
+
+  /**
+   * Language tag.
+   *
+   * An RFC 5646 compliant language identifier for the language of the alternate text.
+   * Examples: "en-US", "fr-FR", or "zh-CN".
+   * When empty, the language is unknown/undefined.
+   */
+  std::string get_alt_lang() const { return m_alt_lang; }
+
+  void set_alt_lang(const std::string& lang) { m_alt_lang = lang; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::string m_alt_text;
+  std::string m_alt_lang;
+};
+
+
 void initialize_heif_tai_clock_info(heif_tai_clock_info* taic);
 void initialize_heif_tai_timestamp_packet(heif_tai_timestamp_packet* itai);
 

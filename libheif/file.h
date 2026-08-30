@@ -190,6 +190,26 @@ public:
     return nullptr;
   }
 
+  // Returns all properties of the given type that are assigned to the item, in their original order.
+  template<class BoxType>
+  Result<std::vector<std::shared_ptr<BoxType>>> get_properties_for_item(heif_item_id imageID) const
+  {
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = get_properties(imageID, properties);
+    if (err) {
+      return err;
+    }
+
+    std::vector<std::shared_ptr<BoxType>> matches;
+    for (auto& property : properties) {
+      if (auto box = std::dynamic_pointer_cast<BoxType>(property)) {
+        matches.push_back(box);
+      }
+    }
+
+    return matches;
+  }
+
   std::string debug_dump_boxes() const;
 
   std::string debug_dump_item_data() const;
