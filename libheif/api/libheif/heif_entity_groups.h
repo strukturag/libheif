@@ -27,11 +27,14 @@ extern "C" {
 
 #include "libheif/heif_library.h"
 
-// Entity group type FourCC; For complete list of entity group types see https://mp4ra.org/registered-types/entity-groups
+// Entity group type FourCCs.
+// For the complete list of registered entity group types, see https://mp4ra.org/registered-types/entity-groups
+
 /**
- * Alternative image.
+ * Alternatives.
  *
- * The entity group consists of multiple alternative versions, the application should display only one of them. The most preferred image comes first.
+ * Alternative versions of the same content, listed in order of preference.
+ * Only one of them should be displayed.
  *
  * See ISO/IEC 14496-12:2026 Section 8.15.3.1.
  */
@@ -40,143 +43,145 @@ extern "C" {
 /**
  * Multi-resolution pyramid.
  *
- * The entity group consists of multiple resolution versions. Low resolution image comes first.
- * 
+ * The same image at different resolutions, listed from lowest to highest resolution.
+ *
  * See ISO/IEC 23008-12:2025/Amd. 1:2025 Section 6.8.12.
  */
 #define heif_entity_group_pymd   heif_fourcc('p','y','m','d')
 
 /**
- * Equivalent entity group
- * 
- * The entity group associates an untimed image with a position in the timeline of a sequence.
- * 
- * See ISO/IEC 23008-12:2025 Section 6.8.1
+ * Timeline equivalence.
+ *
+ * Relates untimed image items to an equivalent position in the timeline of a track.
+ *
+ * See ISO/IEC 23008-12:2025 Section 6.8.1.
  */
 #define heif_entity_group_eqiv   heif_fourcc('e','q','i','v')
 
 /**
- * Burst image entity group
+ * Image burst.
  *
- * The entity group consists of burst images. The images can be stored as an image sequence or a set of image items. Only one entity in the entity group if it is an image sequence.
+ * A series of burst-captured images in temporally increasing order.
+ * The images can be stored as image items or as a single image sequence track (the group's only entity).
  *
- * See ISO/IEC 23008-12:2025 Section 6.8.2
+ * See ISO/IEC 23008-12:2025 Section 6.8.2.
  */
 #define heif_entity_group_brst   heif_fourcc('b','r','s','t')
 
 /**
- * Time-synchronized capture entity group
+ * Time-synchronized capture.
  *
- * The entity group consists of images taken at synchronized time. The images can be stored as an image sequence or a set of image items, but not both.
+ * Images captured simultaneously, stored either as image items or as image sequence tracks, but not a mixture of both.
  *
- * See ISO/IEC 23008-12:2025 Section 6.8.3
+ * See ISO/IEC 23008-12:2025 Section 6.8.3.
  */
 #define heif_entity_group_tsyn   heif_fourcc('t','s','y','n')
 
 /**
  * Stereo pair.
  *
- * The entity group consists of a stereoscopic pair of image items. The first image is left image, the second image is right image.
+ * A stereoscopic pair of two image items: first the left view, then the right view.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.5.
  */
 #define heif_entity_group_ster   heif_fourcc('s','t','e','r')
 
 /**
- * Stereo pair with mono fallback.
+ * Stereo pair with monoscopic fallback.
  *
- * The entity group consists of a stereoscopic pair of image items and a monoscopic fallback.
- * The first image is left image, the second image is right image, the third image is monoscopic image. The monoscopic fallback can be the same as left or right image.
+ * Three image items: left view, right view, and a monoscopic fallback,
+ * which may be the same as the left or right view.
  *
  * See ISO/IEC 23008-12:2025/Amd. 1:2025 Section 6.8.11.
  */
 #define heif_entity_group_stem   heif_fourcc('s','t','e','m')
 
 /**
- * Auto-exposure bracket
+ * Auto-exposure bracketing.
  *
- * The entity group consists of image items taken at different exposure settings.
+ * Images of the same scene taken with varying exposure settings.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.6.2.
  */
 #define heif_entity_group_aebr   heif_fourcc('a','e','b','r')
 
 /**
- * White bracket
+ * White balance bracketing.
  *
- * The entity group consists of image items taken at different white balance settings.
+ * Images of the same scene taken with varying white balance settings.
  *
-  * See ISO/IEC 23008-12:2025 Section 6.8.6.3.
+ * See ISO/IEC 23008-12:2025 Section 6.8.6.3.
  */
 #define heif_entity_group_wbbr   heif_fourcc('w','b','b','r')
 
 /**
- * Focus bracket
+ * Focus bracketing.
  *
- * The entity group consists of image items taken at different focus settings.
+ * Images of the same scene taken with varying focus settings.
  *
-  * See ISO/IEC 23008-12:2025 Section 6.8.6.4.
+ * See ISO/IEC 23008-12:2025 Section 6.8.6.4.
  */
 #define heif_entity_group_fobr   heif_fourcc('f','o','b','r')
 
 /**
- * Flash exposure bracket
+ * Flash exposure bracketing.
  *
- * The entity group consists of image items taken at different flash exposure settings.
+ * Images of the same scene taken with varying flash exposure settings.
  *
-  * See ISO/IEC 23008-12:2025 Section 6.8.6.5.
+ * See ISO/IEC 23008-12:2025 Section 6.8.6.5.
  */
 #define heif_entity_group_afbr   heif_fourcc('a','f','b','r')
 
 /**
- * Depth of field bracket
+ * Depth of field bracketing.
  *
- * The entity group consists of image items taken at different aperture settings.
+ * Images of the same scene taken with varying aperture settings.
  *
-  * See ISO/IEC 23008-12:2025 Section 6.8.6.6.
+ * See ISO/IEC 23008-12:2025 Section 6.8.6.6.
  */
 #define heif_entity_group_dobr   heif_fourcc('d','o','b','r')
 
 /**
- * Album collection
+ * Album collection.
  *
- * The entity group consists of entities that form an album collection.
+ * A user-defined album of images.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.7.1.
  */
 #define heif_entity_group_albc   heif_fourcc('a','l','b','c')
 
 /**
- * Favorites collection
+ * Favorites collection.
  *
- * The entity group consists of entities that form an collection of favorites images.
+ * A user-defined collection of favorite images.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.7.2.
  */
 #define heif_entity_group_favc   heif_fourcc('f','a','v','c')
 
 /**
- * Panorama
+ * Panorama.
  *
- * The entity group consists of images captured in order to create a panorama.
+ * Images captured to be composed into a panorama, listed in panorama order.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.8.
  */
 #define heif_entity_group_pano   heif_fourcc('p','a','n','o')
 
 /**
- * Slideshow
+ * Slideshow.
  *
- * The entity group consists of images intended to form a slideshow.
+ * Images intended to form a slideshow, listed in display order.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.9.
  */
 #define heif_entity_group_slid   heif_fourcc('s','l','i','d')
 
 /**
- * Progressive rendering
+ * Progressive rendering.
  *
- * The entity group consists of images of different quality. Low quality image comes first. These images should also be members of an 'altr' entity group.
+ * The same image at different quality levels, listed from lowest to highest quality.
+ * These images should also be members of an 'altr' entity group.
  *
  * See ISO/IEC 23008-12:2025 Section 6.8.10.
  */
@@ -189,7 +194,7 @@ typedef uint32_t heif_entity_group_id;
 typedef struct heif_entity_group
 {
   heif_entity_group_id entity_group_id;
-  // this is a FourCC constant defined above
+  // one of the heif_entity_group_* FourCC constants defined above
   uint32_t entity_group_type;
   heif_item_id* entities;
   uint32_t num_entities;
