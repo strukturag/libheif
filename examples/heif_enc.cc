@@ -161,6 +161,7 @@ heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_
 
 
 std::string property_pitm_description;
+std::vector<std::pair<std::string, std::string>> property_pitm_alttexts;  // (language, text)
 
 RawImageParameters raw_input_params;
 bool force_raw_input = false;
@@ -238,6 +239,7 @@ const int OPTION_DO_ROTATE = 1046;
 const int OPTION_DO_FLIP_H = 1047;
 const int OPTION_DO_FLIP_V = 1048;
 const int OPTION_MINI = 1049;
+const int OPTION_PITM_ALTTEXT = 1050;
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -387,6 +389,7 @@ static option long_options[] = {
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
     {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
+    {(char* const) "pitm-alttext",                required_argument, 0,                     OPTION_PITM_ALTTEXT},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "cut-tiles",                   required_argument, nullptr, OPTION_CUT_TILES},
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
@@ -478,6 +481,10 @@ void show_help(const char* argv0)
             << "                                    (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                   measure encoding time, PSNR, and output file size\n"
             << "      --pitm-description TEXT       set user description for primary image (experimental)\n"
+            << "      --pitm-alttext [LANG=]TEXT    add an accessibility text ('altt') for the primary image.\n"
+            << "                                    LANG is an RFC 5646 language tag like 'de-DE'. When omitted, the language\n"
+            << "                                    is undefined. Start with '=' to force an undefined language for a text\n"
+            << "                                    containing '='. May be given several times with different languages.\n"
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "      --add-mime-item TYPE       add a mime item of the specified content type (experimental)\n"
             << "      --mime-item-file FILE      use the specified FILE as the data to put into the mime item (experimental)\n"
@@ -1495,6 +1502,55 @@ int do_encode_sequence(heif_context*, heif_encoder*, heif_encoding_options* opti
 int add_mime_item(heif_context* context);
 
 
+// Whether 's' looks like an RFC 5646 language tag (e.g. "en", "de-DE", "zh-Hans-CN").
+static bool is_language_tag(const std::string& s)
+{
+  if (s.empty()) {
+    return false;
+  }
+
+  size_t subtag_len = 0;
+  bool first_subtag = true;
+
+  for (size_t i = 0; i <= s.size(); i++) {
+    if (i == s.size() || s[i] == '-') {
+      if (subtag_len == 0 || subtag_len > 8) {
+        return false;
+      }
+      subtag_len = 0;
+      first_subtag = false;
+    }
+    else if (isalpha(static_cast<unsigned char>(s[i])) ||
+             (!first_subtag && isdigit(static_cast<unsigned char>(s[i])))) {
+      subtag_len++;
+    }
+    else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+// Parse "[LANG=]TEXT" into (language, text). A leading '=' forces an undefined language.
+static std::pair<std::string, std::string> parse_alttext_argument(const std::string& arg)
+{
+  std::string::size_type eq = arg.find('=');
+  if (eq != std::string::npos) {
+    std::string prefix = arg.substr(0, eq);
+    if (prefix.empty()) {
+      return {"", arg.substr(eq + 1)};
+    }
+    else if (is_language_tag(prefix)) {
+      return {prefix, arg.substr(eq + 1)};
+    }
+  }
+
+  return {"", arg};
+}
+
+
 int main(int argc, char** argv)
 {
   // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
@@ -1573,6 +1629,9 @@ int main(int argc, char** argv)
         break;
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
+        break;
+      case OPTION_PITM_ALTTEXT:
+        property_pitm_alttexts.push_back(parse_alttext_argument(optarg));
         break;
       case OPTION_USE_HEVC_COMPRESSION:
         force_enc_hevc = true;
@@ -2582,6 +2641,31 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (err.code) {
       std::cerr << "Cannot set user description\n";
       return 5;
+    }
+
+    heif_image_handle_release(primary_image_handle);
+  }
+
+  if (!property_pitm_alttexts.empty()) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set accessibility text\n";
+      return 5;
+    }
+
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+
+    for (const auto& alttext : property_pitm_alttexts) {
+      heif_property_accessibility_text altt;
+      altt.version = 1;
+      altt.alt_lang = alttext.first.c_str();
+      altt.alt_text = alttext.second.c_str();
+      err = heif_item_add_property_accessibility_text(context, pitm_id, &altt, nullptr);
+      if (err.code) {
+        std::cerr << "Cannot set accessibility text: " << err.message << "\n";
+        return 5;
+      }
     }
 
     heif_image_handle_release(primary_image_handle);
