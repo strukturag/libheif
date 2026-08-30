@@ -77,6 +77,7 @@ endif()
 
 # --- tests that only access the public API
 
+add_libheif_test(accessibility_text)
 add_libheif_test(encode)
 add_libheif_test(encode_grid)
 add_libheif_test(entity_groups)
