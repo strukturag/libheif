@@ -162,6 +162,9 @@ heif_output_nclx_color_profile_preset output_color_profile_preset = heif_output_
 
 
 std::string property_pitm_description;
+std::string property_pitm_description_lang;
+std::string property_pitm_description_name;
+std::string property_pitm_description_tags;
 std::vector<std::pair<std::string, std::string>> property_pitm_alttexts;  // (language, text)
 std::optional<std::pair<uint64_t, heif_timestamp_type>> property_pitm_creation_time;
 std::optional<std::pair<uint64_t, heif_timestamp_type>> property_pitm_modification_time;
@@ -245,6 +248,9 @@ const int OPTION_MINI = 1049;
 const int OPTION_PITM_ALTTEXT = 1050;
 const int OPTION_PITM_CREATION_TIMESTAMP = 1051;
 const int OPTION_PITM_MODIFICATION_TIMESTAMP = 1052;
+const int OPTION_PITM_DESCRIPTION_LANG = 1053;
+const int OPTION_PITM_DESCRIPTION_NAME = 1054;
+const int OPTION_PITM_DESCRIPTION_TAGS = 1055;
 
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
@@ -394,6 +400,9 @@ static option long_options[] = {
     {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
     {(char* const) "enable-metadata-compression", required_argument, 0, OPTION_METADATA_COMPRESSION},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
+    {(char* const) "pitm-description-lang",       required_argument, 0,                     OPTION_PITM_DESCRIPTION_LANG},
+    {(char* const) "pitm-description-name",       required_argument, 0,                     OPTION_PITM_DESCRIPTION_NAME},
+    {(char* const) "pitm-description-tags",       required_argument, 0,                     OPTION_PITM_DESCRIPTION_TAGS},
     {(char* const) "pitm-alttext",                required_argument, 0,                     OPTION_PITM_ALTTEXT},
     {(char* const) "pitm-creation-timestamp",     required_argument, 0,                     OPTION_PITM_CREATION_TIMESTAMP},
     {(char* const) "pitm-modification-timestamp", required_argument, 0,                     OPTION_PITM_MODIFICATION_TIMESTAMP},
@@ -487,7 +496,10 @@ void show_help(const char* argv0)
             << "  -C, --chroma-downsampling ALGO    force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                    (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "      --benchmark                   measure encoding time, PSNR, and output file size\n"
-            << "      --pitm-description TEXT       set user description for primary image (experimental)\n"
+            << "      --pitm-description TEXT       set user description ('udes') for primary image\n"
+            << "      --pitm-description-lang LANG  set the language (RFC 5646, like 'de-DE') of the user description texts\n"
+            << "      --pitm-description-name TEXT  set the user description name for primary image\n"
+            << "      --pitm-description-tags TEXT  set comma-separated user description tags for primary image\n"
             << "      --pitm-alttext [LANG=]TEXT    add an accessibility text ('altt') for the primary image.\n"
             << "                                    LANG is an RFC 5646 language tag like 'de-DE'. When omitted, the language\n"
             << "                                    is undefined. Start with '=' to force an undefined language for a text\n"
@@ -1717,6 +1729,15 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_PITM_DESCRIPTION_LANG:
+        property_pitm_description_lang = optarg;
+        break;
+      case OPTION_PITM_DESCRIPTION_NAME:
+        property_pitm_description_name = optarg;
+        break;
+      case OPTION_PITM_DESCRIPTION_TAGS:
+        property_pitm_description_tags = optarg;
+        break;
       case OPTION_PITM_ALTTEXT:
         property_pitm_alttexts.push_back(parse_alttext_argument(optarg));
         break;
@@ -2727,7 +2748,10 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     is_primary_image = false;
   }
 
-  if (!property_pitm_description.empty()) {
+  if (!property_pitm_description.empty() ||
+      !property_pitm_description_lang.empty() ||
+      !property_pitm_description_name.empty() ||
+      !property_pitm_description_tags.empty()) {
     heif_image_handle* primary_image_handle;
     struct heif_error err = heif_context_get_primary_image_handle(context, &primary_image_handle);
     if (err.code) {
@@ -2738,9 +2762,9 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
 
     heif_property_user_description udes;
-    udes.lang = nullptr;
-    udes.name = nullptr;
-    udes.tags = nullptr;
+    udes.lang = property_pitm_description_lang.c_str();
+    udes.name = property_pitm_description_name.c_str();
+    udes.tags = property_pitm_description_tags.c_str();
     udes.description = property_pitm_description.c_str();
     err = heif_item_add_property_user_description(context, pitm_id, &udes, nullptr);
     if (err.code) {
