@@ -880,7 +880,7 @@ chroma_info get_chroma_info(heif_chroma chroma,
       break;
     case heif_chroma_422:
       info.img_format = AOM_IMG_FMT_I422;
-      info.chroma_height = (source_height+1)/2;
+      info.chroma_height = source_height; // 4:2:2 is subsampled horizontally only
       info.chroma_sample_position = AOM_CSP_COLOCATED;
       break;
     case heif_chroma_444:
