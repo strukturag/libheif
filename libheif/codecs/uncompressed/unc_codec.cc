@@ -649,5 +649,19 @@ UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::
     };
   }
 
+  // Same up-front row-alignment sanity check as the still-image decode path
+  // (decode_uncompressed_image(context, ID, img)). The sequence path was missing
+  // it, letting a huge row_align_size flow into the tile decoders. The tile
+  // decoders themselves are now overflow-safe, but reject the nonsensical value
+  // here too so both paths behave identically.
+  if (uncC->get_row_align_size() > 0 &&
+      UINT32_MAX / uncC->get_row_align_size() < 8) {
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Aligned row size larger than supported maximum"
+    };
+  }
+
   return unc_decoder::decode_full_image(properties, extent, securityLimits);
 }
