@@ -19,6 +19,7 @@
  */
 
 #include "security_limits.h"
+#include <algorithm>
 #include <limits>
 #include <map>
 #include <mutex>
@@ -114,7 +115,7 @@ heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limit
     return result;
   }
 
-  uint64_t allowed = padded_w * padded_h;
+  uint64_t allowed = std::max(padded_w * padded_h, MIN_TIGHTENED_CODED_IMAGE_PIXELS);
 
   if (result.max_image_size_pixels == 0 || allowed < result.max_image_size_pixels) {
     result.max_image_size_pixels = allowed;

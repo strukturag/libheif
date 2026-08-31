@@ -84,3 +84,32 @@ TEST_CASE("decode cropped image within default security limits")
     heif_context_free(ctx);
   }
 }
+
+
+// Second regression from issue #1856: a conformant HEVC stream may code a frame
+// far larger than the 'ispe' size and crop it away with the SPS conformance
+// window. The test file (reported through ImageMagick) declares a 2x2 image but
+// codes a 160x64 frame, exceeding the ispe + one-CTU budget. The tightened
+// limit must allow at least MIN_TIGHTENED_CODED_IMAGE_PIXELS for the coded
+// frame. The file also carries a 1x1 'clap'.
+
+TEST_CASE("decode image with coded frame much larger than ispe")
+{
+  heif_context* ctx = get_context_for_test_file("conformance_window_padding.heic");
+  heif_image_handle* handle = get_primary_image_handle(ctx);
+
+  REQUIRE(heif_image_handle_get_width(handle) == 1);
+  REQUIRE(heif_image_handle_get_height(handle) == 1);
+
+  heif_image* img = nullptr;
+  heif_error err = heif_decode_image(handle, &img, heif_colorspace_undefined,
+                                     heif_chroma_undefined, nullptr);
+  INFO((err.message ? err.message : ""));
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(heif_image_get_primary_width(img) == 1);
+  REQUIRE(heif_image_get_primary_height(img) == 1);
+  heif_image_release(img);
+
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
