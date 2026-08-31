@@ -127,21 +127,30 @@ Error unc_decoder_block_pixel_interleave::decode_tile(const std::vector<uint8_t>
     }
   }
 
-  const uint8_t* src_end = tile_data.data() + tile_data.size();
+  // Address tile_data by 64-bit offset, not by raw pointer. A crafted
+  // row_align_size can inflate bytes_per_row to hundreds of megabytes, so
+  // `tile_data.data() + tile_y * bytes_per_row` would overflow a 32-bit pointer
+  // and wrap to a small in-range address, defeating the src_end check below and
+  // causing an out-of-bounds read on 32-bit builds. Offset arithmetic in
+  // uint64_t cannot wrap; the bound is checked before the pointer is formed.
+  const uint8_t* const src_base = tile_data.data();
+  const uint64_t src_size = tile_data.size();
 
-  uint32_t bytes_per_row = m_tile_width * pixel_size;
+  uint64_t bytes_per_row = static_cast<uint64_t>(m_tile_width) * pixel_size;
   skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
   for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
-    const uint8_t* row_start = tile_data.data() + static_cast<uint64_t>(tile_y) * bytes_per_row;
+    const uint64_t row_start_offset = static_cast<uint64_t>(tile_y) * bytes_per_row;
 
     for (uint32_t tile_x = 0; tile_x < m_tile_width; tile_x++) {
-      const uint8_t* pixel_ptr = row_start + static_cast<uint64_t>(tile_x) * pixel_size;
+      const uint64_t pixel_offset = row_start_offset + static_cast<uint64_t>(tile_x) * pixel_size;
 
-      if (pixel_ptr + block_size > src_end) {
+      if (pixel_offset > src_size || block_size > src_size - pixel_offset) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified,
                 "Block-pixel interleave: insufficient data"};
       }
+
+      const uint8_t* pixel_ptr = src_base + pixel_offset;
 
       // Read block_size bytes into a uint64_t.
       uint64_t block_val = 0;

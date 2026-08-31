@@ -118,20 +118,31 @@ Error unc_decoder_block_component_interleave::decode_tile(const std::vector<uint
 #endif
   }
 
-  const uint8_t* src = tile_data.data();
-  const uint8_t* src_end = src + tile_data.size();
+  // Address tile_data by 64-bit offset, not by raw pointer. A crafted
+  // row_align_size can inflate bytes_per_row to hundreds of megabytes, so the
+  // per-row `src += bytes_per_row - pixel_bytes` skip would overflow a 32-bit
+  // pointer and wrap to a small in-range address, defeating the src_end check
+  // and causing an out-of-bounds read on 32-bit builds. Offset arithmetic in
+  // uint64_t cannot wrap; the bound is checked before the pointer is formed.
+  const uint8_t* const src_base = tile_data.data();
+  const uint64_t src_size = tile_data.size();
+  uint64_t src_offset = 0;
 
   // Process components sequentially (component interleave)
   for (uint32_t c = 0; c < num_components; c++) {
-    uint32_t bytes_per_row = block_size * m_tile_width;
+    uint64_t bytes_per_row = static_cast<uint64_t>(block_size) * m_tile_width;
     skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
     for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
+      const uint64_t row_start_offset = src_offset;
+
       for (uint32_t tile_x = 0; tile_x < m_tile_width; tile_x++) {
-        if (src + block_size > src_end) {
+        if (src_offset > src_size || block_size > src_size - src_offset) {
           return {heif_error_Invalid_input, heif_suberror_Unspecified,
                   "Block-component interleave: insufficient data"};
         }
+
+        const uint8_t* src = src_base + src_offset;
 
         if (comp[c].use) {
           // Read block_size bytes into a uint64_t.
@@ -170,12 +181,11 @@ Error unc_decoder_block_component_interleave::decode_tile(const std::vector<uint
           }
         }
 
-        src += block_size;
+        src_offset += block_size;
       }
 
-      // Skip row alignment padding
-      uint32_t pixel_bytes = block_size * m_tile_width;
-      src += bytes_per_row - pixel_bytes;
+      // Skip to the next row (includes any row-alignment padding).
+      src_offset = row_start_offset + bytes_per_row;
     }
   }
 
