@@ -1170,6 +1170,9 @@ func (i *ImageAccess) setData(data []byte, stride int) {
 	i.Plane = C.GoBytes(i.planePtr, C.int(i.height*i.Stride))
 }
 
+// C.GoBytes takes a C.int length, so it can copy at most this many bytes.
+const maxGoBytesLen = int64(^uint32(0) >> 1) // math.MaxInt32
+
 func (img *Image) GetPlane(channel Channel) (*ImageAccess, error) {
 	height := C.heif_image_get_height(img.image, C.heif_channel(channel))
 	runtime.KeepAlive(img)
@@ -1177,17 +1180,27 @@ func (img *Image) GetPlane(channel Channel) (*ImageAccess, error) {
 		return nil, fmt.Errorf("No such channel %v", channel)
 	}
 
-	var stride C.int
-	plane := C.heif_image_get_plane(img.image, C.heif_channel(channel), &stride)
+	// Use the size_t-stride variant. The deprecated heif_image_get_plane() returns
+	// an int stride; multiplying that by the height overflows int32 for large
+	// multi-byte images, which then makes C.GoBytes() panic on a negative length.
+	var stride C.size_t
+	plane := C.heif_image_get_plane2(img.image, C.heif_channel(channel), &stride)
 	runtime.KeepAlive(img)
 	if plane == nil {
 		return nil, fmt.Errorf("No such channel %v", channel)
 	}
 
 	ptr := unsafe.Pointer(plane)
-	size := stride * height
+
+	// Compute the plane size in 64-bit arithmetic and reject planes larger than
+	// C.GoBytes() can represent instead of overflowing into a negative length.
+	size := int64(stride) * int64(height)
+	if size < 0 || size > maxGoBytesLen {
+		return nil, fmt.Errorf("Image plane too large: %d bytes", size)
+	}
+
 	access := &ImageAccess{
-		Plane:    C.GoBytes(ptr, size),
+		Plane:    C.GoBytes(ptr, C.int(size)),
 		planePtr: ptr,
 		Stride:   int(stride),
 		height:   int(height),
