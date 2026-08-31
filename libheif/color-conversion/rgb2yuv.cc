@@ -120,6 +120,14 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     return Error::InternalError;
   }
 
+  // All three colour planes are reinterpreted as the same 'Pixel' type below, so their
+  // bit depths (and hence plane strides) must match. Differing bit depths would make the
+  // shared stride assumption read past the smaller plane.
+  if (input->get_bits_per_pixel(heif_channel_G) != bpp ||
+      input->get_bits_per_pixel(heif_channel_B) != bpp) {
+    return Error::InternalError;
+  }
+
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
   if (has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) != bpp) {
@@ -231,13 +239,13 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
       if (matrix_coeffs == 0) {
         if (full_range_flag) {
           out_cb[(y / subV) * out_cb_stride + (x / subH)] = in_b[y * in_b_stride + x];
-          out_cr[(y / subV) * out_cb_stride + (x / subH)] = in_r[y * in_b_stride + x];
+          out_cr[(y / subV) * out_cr_stride + (x / subH)] = in_r[y * in_r_stride + x];
         }
         else {
           out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
               ((in_b[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
-          out_cr[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
-              ((in_r[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
+          out_cr[(y / subV) * out_cr_stride + (x / subH)] = (Pixel) clip_f_u16(
+              ((in_r[y * in_r_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
         }
       }
       else if (matrix_coeffs == 8) {
