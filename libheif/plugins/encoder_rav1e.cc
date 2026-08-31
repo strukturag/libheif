@@ -561,7 +561,7 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
     rav1eRange = nclx->full_range_flag ? RA_PIXEL_RANGE_FULL : RA_PIXEL_RANGE_LIMITED;
   }
 
-  int bitDepth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+  int bitDepth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
   auto rav1eConfigRaw = rav1e_config_default();
   auto rav1eConfig = std::shared_ptr<RaConfig>(rav1eConfigRaw, [](RaConfig* c) { rav1e_config_unref(c); });
@@ -677,7 +677,7 @@ heif_error rav1e_encode_sequence_frame(void* encoder_raw, const heif_image* imag
   auto* encoder = (encoder_struct_rav1e*) encoder_raw;
   auto& rav1eContext = encoder->rav1eContextRaw;
 
-  int bitDepth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+  int bitDepth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
   int yShift = encoder->yShift;
 
