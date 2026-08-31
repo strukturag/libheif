@@ -27,6 +27,7 @@
 #include "libheif/heif.h"
 #include "api_structs.h"
 #include <cstdint>
+#include <cstdlib>
 #include <stdio.h>
 #include "test_utils.h"
 #include <string.h>
@@ -686,5 +687,61 @@ TEST_CASE("check image content YCbCr 4:2:0 16 bit") {
   auto context = get_context_for_test_file(file);
   INFO("file name: " << file);
   check_image_content_ycbcr420_16bit(context);
+  heif_context_free(context);
+}
+
+// Regression test for https://github.com/strukturag/libheif/issues/1881:
+// YCbCr images with more than 14 bits per pixel could not be converted to RGB.
+void check_image_content_ycbcr420_16bit_rgb(struct heif_context *&context) {
+  heif_image_handle *handle = get_primary_image_handle(context);
+  heif_image *img = get_primary_image(handle);
+
+  REQUIRE(heif_image_get_bits_per_pixel_range(img, heif_channel_R) == 16);
+  REQUIRE(heif_image_get_bits_per_pixel_range(img, heif_channel_G) == 16);
+  REQUIRE(heif_image_get_bits_per_pixel_range(img, heif_channel_B) == 16);
+
+  // The image consists of uniformly colored 4x4 blocks. Block (bx, by) has color
+  // (bx + by) % 10 of this table (values from BT.601 full-range conversion of the
+  // 16-bit YCbCr samples in the file, allowing +-2 for float rounding differences).
+  static const int expected[10][3] = {
+      {0xFFA1, 0x0035, 0x0000}, // red
+      {0x001D, 0x806D, 0x000C}, // green (50%)
+      {0x0000, 0x0016, 0xFF88}, // blue
+      {0xFFE1, 0xFFFF, 0xFF87}, // white
+      {0x0000, 0x0001, 0x0000}, // black
+      {0xFFE0, 0xFFFF, 0x0000}, // yellow
+      {0x003E, 0xFFF0, 0xFFA8}, // cyan
+      {0x8071, 0x8094, 0x8044}, // gray (50%)
+      {0xFFCA, 0xA5C1, 0x0000}, // orange
+      {0xEEB8, 0x82B5, 0xEE73}, // pink
+  };
+
+  int stride_r, stride_g, stride_b;
+  const uint16_t *plane_r = (const uint16_t *) heif_image_get_plane_readonly(img, heif_channel_R, &stride_r);
+  const uint16_t *plane_g = (const uint16_t *) heif_image_get_plane_readonly(img, heif_channel_G, &stride_g);
+  const uint16_t *plane_b = (const uint16_t *) heif_image_get_plane_readonly(img, heif_channel_B, &stride_b);
+  stride_r /= 2;
+  stride_g /= 2;
+  stride_b /= 2;
+
+  for (int y = 0; y < 20; y++) {
+    for (int x = 0; x < 32; x++) {
+      INFO("pixel: " << x << "," << y);
+      const int *e = expected[(x / 4 + y / 4) % 10];
+      REQUIRE(std::abs(plane_r[stride_r * y + x] - e[0]) <= 2);
+      REQUIRE(std::abs(plane_g[stride_g * y + x] - e[1]) <= 2);
+      REQUIRE(std::abs(plane_b[stride_b * y + x] - e[2]) <= 2);
+    }
+  }
+
+  heif_image_release(img);
+  heif_image_handle_release(handle);
+}
+
+TEST_CASE("check RGB conversion YCbCr 4:2:0 16 bit") {
+  auto file = GENERATE(YUV_16BIT_420_FILES);
+  auto context = get_context_for_test_file(file);
+  INFO("file name: " << file);
+  check_image_content_ycbcr420_16bit_rgb(context);
   heif_context_free(context);
 }
