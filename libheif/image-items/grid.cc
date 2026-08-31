@@ -461,9 +461,21 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     return Error{heif_error_Canceled, heif_suberror_Unspecified, "Decoding the image was canceled"};
   }
 
-  if (img) {
-    img->add_warnings(*warnings.get());
+  if (!img) {
+    // No tile could be decoded and the output canvas was never created.
+    // Returning the null image would only produce a meaningless generic error
+    // further up. Return the first per-tile error instead, which names the
+    // actual cause, for example that no decoder plugin is installed (#1876).
+    if (!warnings->empty()) {
+      return warnings->front();
+    }
+
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_grid_data,
+                 "Grid image without tiles"};
   }
+
+  img->add_warnings(*warnings.get());
 
   return img;
 }
