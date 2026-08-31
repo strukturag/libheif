@@ -1088,7 +1088,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
 
     uint32_t uvWidth = get_subsampled_size_h(encoded_width, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
     uint32_t uvHeight = get_subsampled_size_v(encoded_height, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
-    dummy_color_plane.resize(uvWidth * uvHeight);
+    dummy_color_plane.resize(uvWidth * uvHeight * bytesPerPixel);
 
     if (bitdepth_y <= 8) {
       uint8_t val = static_cast<uint8_t>(1 << (bitdepth_y - 1));
