@@ -127,6 +127,7 @@ if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode_ycbcr420)
     add_libheif_test(uncompressed_decode_ycbcr422)
     add_libheif_test(uncompressed_sequence_odd_chroma)
+    add_libheif_test(uncompressed_mixed_chroma_depth_overflow)
     add_libheif_test(uncompressed_encode)
 
     if (ENABLE_EXPERIMENTAL_FEATURES)

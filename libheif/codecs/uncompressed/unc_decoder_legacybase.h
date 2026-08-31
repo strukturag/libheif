@@ -161,12 +161,20 @@ protected:
 
     heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane = nullptr;
-    uint8_t* other_chroma_dst_plane = nullptr;
     size_t dst_plane_stride;
-    size_t other_chroma_dst_plane_stride;
     uint32_t tile_width;
     uint32_t tile_height;
     uint32_t bytes_per_component_sample;
+    // Mixed interleave only: the Cb and Cr planes, indexed in the order the
+    // two components are declared in the uncC component list (index 0 is
+    // whichever comes first there -- not "Cb" specifically), since that is
+    // the order their samples are actually interleaved in the bitstream.
+    // Each plane is allocated according to its own component's bit depth, so
+    // the two can have different byte widths; using one plane's width for
+    // the other's write overruns it (GHSA-x8r2-mggj-j6wr).
+    uint8_t* chroma_dst_plane[2] = {nullptr, nullptr};
+    size_t chroma_dst_plane_stride[2] = {0, 0};
+    uint32_t chroma_bytes_per_component_sample[2] = {0, 0};
     uint16_t bits_per_component_sample;
     uint8_t component_alignment;
     uint32_t bytes_per_tile_row_src;
