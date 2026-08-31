@@ -22,7 +22,6 @@
 #include "libheif/heif_plugin.h"
 #include "encoder_x264.h"
 #include <memory>
-#include <sstream>
 #include <string>
 #include <cstring>
 #include <cassert>
@@ -823,34 +822,23 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   // make sure NCLX profile is deleted at end of function
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
+  // Set the VUI fields directly instead of going through x264_param_parse(),
+  // which only accepts symbolic names ("bt709", ...), not the numeric code points.
+  // The VUI enums are the same CICP code points that nclx uses.
+
   if (nclx) {
-    x264_param_parse(&param, "range", nclx->full_range_flag ? "full" : "limited");
+    param.vui.b_fullrange = nclx->full_range_flag ? 1 : 0;
   }
   else {
-    x264_param_parse(&param, "range", "full");
+    param.vui.b_fullrange = 1;
   }
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->color_primaries;
-      x264_param_parse(&param, "colorprim", sstr.str().c_str());
-    }
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->transfer_characteristics;
-      x264_param_parse(&param, "transfer", sstr.str().c_str());
-    }
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->matrix_coefficients;
-      x264_param_parse(&param, "colormatrix", sstr.str().c_str());
-    }
+    param.vui.i_colorprim = static_cast<int>(nclx->color_primaries);
+    param.vui.i_transfer = static_cast<int>(nclx->transfer_characteristics);
+    param.vui.i_colmatrix = static_cast<int>(nclx->matrix_coefficients);
   }
 
   for (const auto& p : encoder->parameters) {
