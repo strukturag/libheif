@@ -1152,7 +1152,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
 
   res = svt_av1_enc_send_picture(svt_encoder, &input_buffer);
   if (res != EB_ErrorNone) {
-    delete input_buffer.p_buffer;
+    // input_buffer.p_buffer is owned by the svt_io_format unique_ptr, which frees it on return.
     return heif_error_codec_library_error;
   }
 
