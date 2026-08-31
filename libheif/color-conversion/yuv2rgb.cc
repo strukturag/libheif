@@ -49,9 +49,11 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   }
 
   int matrix = input_state.nclx.get_matrix_coefficients();
-  if (matrix == 11 || matrix == 14) {
+  if (matrix == 11 || matrix == 14 || matrix == 17) {
     return {};
   }
+  // TODO: matrix == 17 (YCgCo-Ro) is not implemented. Without the rejection above, it would
+  //   fall through to the Kr/Kb-based conversion and silently decode with BT.601 coefficients.
   // TODO: matrix == 10 (BT.2020 CL) currently falls through and is decoded as if it were
   //   BT.2020 NCL. A correct CL path needs EOTF inversion on Cb/Cr, not the linear matrix below.
 
@@ -67,7 +69,13 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (input_state.bits_per_pixel > 14) {
+  // The YCgCo-Re conversion computes with int16_t intermediates. 14 bpp input is the
+  // maximum for which these cannot overflow.
+  if (matrix == 16 && input_state.bits_per_pixel > 14) {
+    return {};
+  }
+
+  if (input_state.bits_per_pixel > 16) {
     return {};
   }
 
@@ -214,6 +222,11 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
                                            colorProfile.get_colour_primaries());
   }
 
+  // The YCgCo-Re path below computes with int16_t intermediates, which overflow above 14 bpp.
+  if (matrix_coeffs == 16 && bpp_y > 14) {
+    return Error::InternalError;
+  }
+
 
   uint32_t x, y;
   for (y = 0; y < height; y++) {
@@ -242,9 +255,10 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         int cb = in_cb[cy * in_cb_stride + cx] - halfRange;
         int cr = in_cr[cy * in_cr_stride + cx] - halfRange;
 
-        out_r[y * out_r_stride + x] = (Pixel) (clip_int_u8(yv - cb + cr));
-        out_g[y * out_g_stride + x] = (Pixel) (clip_int_u8(yv + cb));
-        out_b[y * out_b_stride + x] = (Pixel) (clip_int_u8(yv - cb - cr));
+        uint16_t max_rgb = static_cast<uint16_t>(fullRange);
+        out_r[y * out_r_stride + x] = (Pixel) (clip_int_u16(yv - cb + cr, max_rgb));
+        out_g[y * out_g_stride + x] = (Pixel) (clip_int_u16(yv + cb, max_rgb));
+        out_b[y * out_b_stride + x] = (Pixel) (clip_int_u16(yv - cb - cr, max_rgb));
       }
       else if (matrix_coeffs == 16) {
         int16_t yy = in_y[y * in_y_stride + x];
