@@ -240,6 +240,17 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
   // uncC entry first, in order, so the first N descriptions in m_components
   // (where N == uncC->get_components().size()) correspond positionally to
   // the uncC entries we're walking here.
+  //
+  // Capture the number of pre-populated descriptions ONCE, before the loop.
+  // The fallback branch below calls add_component(), which appends a new
+  // description to the image; comparing desc_idx against the live
+  // get_component_descriptions().size() would let those freshly added
+  // descriptions flip later iterations onto the pre-populated branch. That
+  // made a 3-component YCbCr sequence (no pre-populated descriptions) create
+  // the Y plane, then mistake it for a pre-populated description on the next
+  // iteration and re-reference the Y component instead of creating Cb, so the
+  // Cb plane was dropped entirely.
+  const size_t num_prepopulated_descriptions = img->get_component_descriptions().size();
   uint32_t desc_idx = 0;
   for (Box_uncC::Component component : uncC->get_components()) {
     if (component.component_index >= components.size()) {
@@ -250,17 +261,26 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       };
     }
 
-    if (desc_idx >= img->get_component_descriptions().size()) {
-      // Fallback: source did not populate descriptions (shouldn't happen
-      // for an item that went through populate_component_descriptions, but
-      // keep the historical add_component path as a safety net).
+    if (desc_idx >= num_prepopulated_descriptions) {
+      // Fallback: source did not populate descriptions. This is the path taken
+      // by the sequence ('uncv') decoder, which builds the properties directly
+      // from the sample-entry boxes and does not clone descriptions from an
+      // ImageItem.
       auto component_type = components[component.component_index].component_type;
       uint32_t plane_w = width;
       uint32_t plane_h = height;
       if (component_type == heif_cmpd_component_type_Cb ||
           component_type == heif_cmpd_component_type_Cr) {
-        plane_w = width / chroma_h_subsampling(chroma);
-        plane_h = height / chroma_v_subsampling(chroma);
+        // Round the chroma plane size UP so that it covers the full logical
+        // image, matching channel_width()/channel_height() used on the
+        // description path above and the round-up chroma extent that the RGB
+        // conversion (e.g. Op_YCbCr420_to_RGB24, which indexes chroma with
+        // y/2 for every luma row) and primary_planes_have_size() expect. Floor
+        // division here undersized the Cb/Cr planes by one row/column for odd
+        // 4:2:0/4:2:2 dimensions, causing a heap-buffer-overflow read during
+        // RGB conversion of sequence frames (GHSA-4h82-g446-83fm).
+        plane_w = channel_width(width, chroma, heif_channel_Cb);
+        plane_h = channel_height(height, chroma, heif_channel_Cb);
       }
       auto result = img->add_component(plane_w, plane_h, component_type,
                                        unc_component_format_to_datatype(component.component_format),
@@ -319,7 +339,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       if (it != cpat_cmpd_idx_to_comp_id.end()) {
         comp_id = it->second;
       }
-      else if (desc_idx < img->get_component_descriptions().size()) {
+      else if (desc_idx < num_prepopulated_descriptions) {
         comp_id = img->get_component_descriptions()[desc_idx].component_id;
         desc_idx++;
         cpat_cmpd_idx_to_comp_id[p.cmpd_index] = comp_id;
