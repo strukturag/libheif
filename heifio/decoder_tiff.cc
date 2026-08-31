@@ -864,6 +864,16 @@ static YCbCrInfo getYCbCrInfo(TIFF* tif)
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric) && photometric == PHOTOMETRIC_YCBCR) {
     info.is_ycbcr = true;
     TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRSUBSAMPLING, &info.horiz_sub, &info.vert_sub);
+
+    // A file-supplied subsampling factor of 0 would cause a division by zero in
+    // the chroma-size computations below. libtiff normally rejects this at open
+    // time, but guard defensively against a value of 0 reaching us.
+    if (info.horiz_sub == 0) {
+      info.horiz_sub = 1;
+    }
+    if (info.vert_sub == 0) {
+      info.vert_sub = 1;
+    }
   }
   return info;
 }
