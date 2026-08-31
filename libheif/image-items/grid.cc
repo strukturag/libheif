@@ -532,8 +532,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   // --- generate the image canvas for combining all the tiles
 
-  if (!inout_image) { // this avoids that we normally have to lock a mutex
+  {
 #if ENABLE_PARALLEL_TILE_DECODING
+    // All threads have to take this mutex, even those that will only read `inout_image`.
+    // Otherwise, the image initialization would not be synchronized to them (they could,
+    // for example, see the image pointer before the image content initialization is visible).
     static std::mutex createImageMutex;
     std::lock_guard<std::mutex> lock(createImageMutex);
 #endif
@@ -557,7 +560,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
       grid_image->copy_metadata_from(*tile_img);
 
-      inout_image = grid_image; // We have to set this at the very end because of the unlocked check to `inout_image` above.
+      inout_image = grid_image;
     }
   }
 
