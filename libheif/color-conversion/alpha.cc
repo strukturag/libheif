@@ -227,6 +227,20 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
     int bpp_alpha = input->get_bits_per_pixel(heif_channel_Alpha);
     Pixel alpha_max = (Pixel)((1 << bpp_alpha) - 1);
 
+    // The composite below (p_in*a + bkg*(alpha_max-a)) is a weighted sum bounded by
+    // (2^bpp-1) * (2^bpp_alpha-1). For 8-bit samples that fits a plain int; for
+    // wider samples it can exceed a signed 32-bit int (65535*65535 overflows), so
+    // accumulate in an unsigned 32-bit integer, which is exact as long as both the
+    // colour and alpha samples are <= 16 bits (bound < 2^32). Using uint32_t rather
+    // than a 64-bit type keeps the hot path efficient on non-64-bit architectures.
+    // Reject anything wider instead of overflowing.
+    if (bpp_alpha > 16 || input->get_bits_per_pixel(channel) > 16) {
+      return Error{heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_bit_depth,
+                   "Alpha compositing is not supported for images with more than 16 bits per sample."};
+    }
+    using composite_t = std::conditional_t<(sizeof(Pixel) > 1), uint32_t, int>;
+
     const Pixel* p_in;
     size_t stride_in;
     p_in = (const Pixel*)input->get_channel_memory(channel, &stride_in);
@@ -265,7 +279,9 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
       for (uint32_t y = 0; y < height; y++)
         for (uint32_t x = 0; x < width; x++) {
           int a = p_alpha[y * stride_alpha + x];
-          p_out[y * stride_out + x] = static_cast<Pixel>((p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha);
+          composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
+                                  + static_cast<composite_t>(bkg) * (alpha_max - a);
+          p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
         }
     }
     else {
@@ -298,7 +314,9 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
           Pixel bkg = parity ? bkg1 : bkg2;
 
           int a = p_alpha[y * stride_alpha + x];
-          p_out[y * stride_out + x] = static_cast<Pixel>((p_in[y * stride_in + x] * a + bkg * (alpha_max - a)) >> bpp_alpha);
+          composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
+                                  + static_cast<composite_t>(bkg) * (alpha_max - a);
+          p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
         }
     }
 
