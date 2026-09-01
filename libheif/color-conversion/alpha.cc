@@ -19,7 +19,44 @@
  */
 
 #include <cstdint>
+#include <cassert>
+#include <type_traits>
 #include "alpha.h"
+
+
+namespace {
+  // Expand an `in_bits`-bit sample to `out_bits` bits by bit replication
+  // (repeating the source bit pattern); requires out_bits >= in_bits >= 1.
+  //
+  // For out_bits <= 2*in_bits a single extra copy of the top bits suffices:
+  //   (in << (out_bits - in_bits)) | (in >> (2*in_bits - out_bits))
+  // both shift counts are non-negative in that range.
+  //
+  // For a wider expansion (out_bits > 2*in_bits) the right-shift exponent above
+  // would go negative, which is undefined behaviour. Instead we lay down the
+  // required number of copies with a single multiply: multiplying by a constant
+  // whose set bits sit at 0, in_bits, 2*in_bits, ... places ceil(out_bits/in_bits)
+  // non-overlapping copies of the pattern, and one final (non-negative) right
+  // shift keeps the top out_bits. All arithmetic fits in 32 bits for the sample
+  // widths used here (out_bits <= 16).
+  inline uint32_t replicate_sample_bits(uint32_t in, int in_bits, int out_bits)
+  {
+    assert(in_bits >= 1 && out_bits >= in_bits);
+
+    if (out_bits <= 2 * in_bits) {
+      return (in << (out_bits - in_bits)) | (in >> (2 * in_bits - out_bits));
+    }
+
+    int num_copies = (out_bits + in_bits - 1) / in_bits;  // ceil(out_bits / in_bits)
+    uint32_t replication_const = 0;
+    for (int j = 0; j < num_copies; j++) {
+      replication_const |= static_cast<uint32_t>(1) << (j * in_bits);
+    }
+
+    uint32_t replicated = in * replication_const;
+    return replicated >> (num_copies * in_bits - out_bits);
+  }
+}
 
 
 std::vector<ColorStateWithCost>
@@ -359,7 +396,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   if (input_alpha_bpp <= 8 && target_bpp > 8) {
-    // Upscale: 8-bit alpha -> HDR using pattern replication
+    // Upscale: 8-bit alpha -> HDR using bit replication
     const uint8_t* p_in;
     size_t stride_in;
     p_in = input->get_channel_memory(heif_channel_Alpha, &stride_in);
@@ -369,13 +406,10 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
     p_out = (uint16_t*) outimg->get_channel_memory(heif_channel_Alpha, &stride_out);
     stride_out /= 2;
 
-    int shift1 = target_bpp - input_alpha_bpp;
-    int shift2 = 2 * input_alpha_bpp - target_bpp;
-
     for (uint32_t y = 0; y < alpha_height; y++)
       for (uint32_t x = 0; x < alpha_width; x++) {
         int in = p_in[y * stride_in + x];
-        p_out[y * stride_out + x] = (uint16_t) ((in << shift1) | (in >> shift2));
+        p_out[y * stride_out + x] = (uint16_t) replicate_sample_bits(in, input_alpha_bpp, target_bpp);
       }
   }
   else if (input_alpha_bpp > 8 && target_bpp <= 8) {
@@ -409,12 +443,10 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
     stride_out /= 2;
 
     if (target_bpp > input_alpha_bpp) {
-      int shift1 = target_bpp - input_alpha_bpp;
-      int shift2 = 2 * input_alpha_bpp - target_bpp;
       for (uint32_t y = 0; y < alpha_height; y++)
         for (uint32_t x = 0; x < alpha_width; x++) {
           int in = p_in[y * stride_in + x];
-          p_out[y * stride_out + x] = (uint16_t) ((in << shift1) | (in >> shift2));
+          p_out[y * stride_out + x] = (uint16_t) replicate_sample_bits(in, input_alpha_bpp, target_bpp);
         }
     }
     else {
@@ -436,12 +468,10 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
     p_out = outimg->get_channel_memory(heif_channel_Alpha, &stride_out);
 
     if (target_bpp > input_alpha_bpp) {
-      int shift1 = target_bpp - input_alpha_bpp;
-      int shift2 = 2 * input_alpha_bpp - target_bpp;
       for (uint32_t y = 0; y < alpha_height; y++)
         for (uint32_t x = 0; x < alpha_width; x++) {
           int in = p_in[y * stride_in + x];
-          p_out[y * stride_out + x] = (uint8_t) ((in << shift1) | (in >> shift2));
+          p_out[y * stride_out + x] = (uint8_t) replicate_sample_bits(in, input_alpha_bpp, target_bpp);
         }
     }
     else {
