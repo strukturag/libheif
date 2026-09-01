@@ -233,6 +233,7 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     return false;
   }
 
+  uint64_t total_component_bits = 0;
   for (const auto& component : uncC->get_components()) {
     if (component.component_bit_depth > 16) {
       return false;
@@ -240,6 +241,19 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     if (component.component_format != component_format_unsigned) {
       return false;
     }
+    total_component_bits += component.component_bit_depth;
+  }
+
+  // All components are packed into a single block and decode_tile() derives each
+  // component's bit shift by accumulating the component bit depths. If the depths
+  // sum to more than the block width, a shift reaches or exceeds 64 and the
+  // `block_val >> shift` on the uint64_t block (or, for pad_lsb, a uint32_t
+  // bit-offset underflow) is undefined behaviour. Requiring the components to fit
+  // within the block keeps every shift in [0, 63]. This mirrors the byte-granular
+  // check in check_hard_limits(); enforcing it in can_decode() makes the decoder
+  // safe no matter which decode path selected it.
+  if (total_component_bits > static_cast<uint64_t>(effective_block_size) * 8) {
+    return false;
   }
 
   return true;

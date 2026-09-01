@@ -420,6 +420,19 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
     return error;
   }
 
+  // Same uncC layout validation the full-image path runs in
+  // unc_decoder::decode_full_image(). Without it, a per-tile decode could reach
+  // a decoder with a component packing the full-image path rejects (e.g. a
+  // block-pixel layout whose component bit depths sum to more than the block
+  // width, which produces an undefined shift in
+  // unc_decoder_block_pixel_interleave::decode_tile). The whole-image size is
+  // deliberately NOT checked here: tiled images larger than the security limit
+  // must still be decodable tile by tile.
+  error = check_hard_limits(uncC);
+  if (error) {
+    return error;
+  }
+
   uint32_t tile_width = ispe->get_width() / uncC->get_number_of_tile_columns();
   uint32_t tile_height = ispe->get_height() / uncC->get_number_of_tile_rows();
 
