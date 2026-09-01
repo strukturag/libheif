@@ -855,6 +855,7 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
   // disable 2-pass
   svt_config.rc_stats_buffer = SvtAv1FixedBuf{nullptr, 0};
 
+  svt_config.rate_control_mode = 0; // constant rate factor
   //svt_config.enable_adaptive_quantization = 0;   // 2 is CRF (the default), 0 would be CQP
   float qp;
   if (encoder->qp_set) {
@@ -863,16 +864,17 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
   else {
     qp = (float) (100 - encoder->quality) * 63.0f / 100.0f;
   }
-#if SVT_AV1_CHECK_VERSION(4, 2, 0)
-  // "cqp" accepts fractional QP values and switches to constant-QP rate control.
-  char qp_string[64];
-  snprintf(qp_string, sizeof(qp_string), "%.2f", qp);
-  if (svt_av1_enc_parse_parameter(&svt_config, "cqp", qp_string) != EB_ErrorNone) {
-    return heif_error_codec_library_error;
-  }
+#if SVT_AV1_CHECK_VERSION(4, 0, 0)
+  // Use quarter-QP precision. The fractional QP part is passed in 'extended_crf_qindex_offset'
+  // in units of quarter QP steps (one AV1 qindex step).
+  // We set these configuration fields directly instead of using
+  // svt_av1_enc_parse_parameter(&svt_config, "cqp", ...), because that would also
+  // set aq_mode=0, which switches the rate control from CRF to plain CQP.
+  uint32_t quarter_qp_steps = (uint32_t) std::lround(qp * 4.0f);
+  svt_config.qp = quarter_qp_steps / 4;
+  svt_config.extended_crf_qindex_offset = (uint8_t) (quarter_qp_steps % 4);
 #else
   svt_config.qp = (uint32_t) std::lround(qp);
-  svt_config.rate_control_mode = 0; // constant rate factor
 #endif
   svt_config.min_qp_allowed = encoder->min_q;
   svt_config.max_qp_allowed = encoder->max_q;
