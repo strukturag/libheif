@@ -602,6 +602,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_ster>();
       break;
 
+    case fourcc("stem"):
+      box = std::make_shared<Box_stem>();
+      break;
+
     case fourcc("dinf"):
       box = std::make_shared<Box_dinf>();
       break;
@@ -4538,6 +4542,37 @@ std::string Box_ster::dump(Indent& indent) const
   sstr << indent << "group id: " << group_id << "\n"
        << indent << "left image ID: " << entity_ids[0] << "\n"
        << indent << "right image ID: " << entity_ids[1] << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_stem::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  Error err = Box_EntityToGroup::parse(range, limits);
+  if (err) {
+    return err;
+  }
+
+  if (entity_ids.size() != 3) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_box_size,
+            "'stem' entity group does not consist of exactly three images"};
+  }
+
+  return Error::Ok;
+}
+
+
+std::string Box_stem::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "group id: " << group_id << "\n"
+       << indent << "left image ID: " << get_left_image() << "\n"
+       << indent << "right image ID: " << get_right_image() << "\n"
+       << indent << "monoscopic image ID: " << get_monoscopic_image() << "\n";
 
   return sstr.str();
 }

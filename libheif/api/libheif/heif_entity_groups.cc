@@ -23,19 +23,30 @@
 #include "api_structs.h"
 #include "file.h"
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
 
 namespace {
 
+enum class DuplicatePolicy {
+  Reject,
+  AllowLastEntityAsAlias,
+};
+
 heif_error add_entity_group(heif_context* ctx,
                             const std::shared_ptr<Box_EntityToGroup>& group,
                             const std::vector<heif_item_id>& item_ids,
                             bool require_image_items,
+                            DuplicatePolicy duplicate_policy,
                             bool enforce_unique_alternative_membership,
                             heif_entity_group_id* out_group_id)
 {
+  if (out_group_id) {
+    *out_group_id = 0;
+  }
+
   const auto* limits = ctx->context->get_security_limits();
   if (limits->max_size_entity_group && item_ids.size() > limits->max_size_entity_group) {
     return {heif_error_Usage_error, heif_suberror_Security_limit_exceeded,
@@ -49,10 +60,18 @@ heif_error add_entity_group(heif_context* ctx,
       return {heif_error_Input_does_not_exist, heif_suberror_Nonexisting_item_referenced,
               "Entity group references a nonexisting item"};
     }
+
     if (std::find(item_ids.begin(), item, id) != item) {
-      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
-              "Entity group contains a duplicate item"};
+      const bool is_allowed_alias =
+          duplicate_policy == DuplicatePolicy::AllowLastEntityAsAlias &&
+          item_ids.size() == 3 && item == item_ids.begin() + 2 &&
+          (id == item_ids[0] || id == item_ids[1]);
+      if (!is_allowed_alias) {
+        return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+                "Entity group contains a duplicate item"};
+      }
     }
+
     if (require_image_items && !ctx->context->is_image(id)) {
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
               "Stereo entity groups must contain image items"};
@@ -196,7 +215,7 @@ heif_error heif_context_add_alternative_entity_group(heif_context* ctx,
   auto group = std::make_shared<Box_EntityToGroup>();
   group->set_short_type(fourcc("altr"));
   return add_entity_group(ctx, group, std::vector<heif_item_id>(item_ids, item_ids + num_items),
-                          false, true,
+                          false, DuplicatePolicy::Reject, true,
                           out_group_id);
 }
 
@@ -214,6 +233,33 @@ heif_error heif_context_add_stereo_pair_entity_group(heif_context* ctx,
   }
 
   auto group = std::make_shared<Box_ster>();
-  return add_entity_group(ctx, group, {left_image_id, right_image_id}, true, false,
+  return add_entity_group(ctx, group, {left_image_id, right_image_id}, true,
+                          DuplicatePolicy::Reject, false,
+                          out_group_id);
+}
+
+
+heif_error heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+    heif_context* ctx,
+    heif_item_id left_image_id,
+    heif_item_id right_image_id,
+    heif_item_id monoscopic_image_id,
+    heif_entity_group_id* out_group_id)
+{
+  if (out_group_id) {
+    *out_group_id = 0;
+  }
+  if (!ctx) {
+    return heif_error_null_pointer_argument;
+  }
+  if (left_image_id == right_image_id) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+            "Stereo pair left and right images must differ"};
+  }
+
+  auto group = std::make_shared<Box_stem>();
+  return add_entity_group(ctx, group,
+                          {left_image_id, right_image_id, monoscopic_image_id}, true,
+                          DuplicatePolicy::AllowLastEntityAsAlias, false,
                           out_group_id);
 }

@@ -37,11 +37,7 @@
 
 namespace {
 
-// Build a minimal HEIF file whose 'grpl' box contains a single child box
-// whose four-cc is NOT one of the registered Box_EntityToGroup subclasses
-// (pymd / altr / ster). Such children parse to Box_other and used to
-// trigger a NULL-pointer dereference in heif_context_get_entity_groups().
-std::vector<uint8_t> build_minimal_heif_with_bogus_grpl_child() {
+std::vector<uint8_t> build_minimal_heif_with_grpl_child(const std::vector<uint8_t>& child) {
   // ftyp: heic / 0 / mif1 heic
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "heic");
@@ -73,10 +69,7 @@ std::vector<uint8_t> build_minimal_heif_with_bogus_grpl_child() {
   put_u16_be(iloc_payload, 0);
   auto iloc = make_box("iloc", iloc_payload, /*full=*/true);
 
-  // grpl with a single 'pict' child — 'pict' is not registered as an
-  // entity-to-group type, so it parses to Box_other.
-  auto bogus_child = make_box("pict", {});
-  auto grpl = make_box("grpl", bogus_child);
+  auto grpl = make_box("grpl", child);
 
   // meta = hdlr + iinf + iloc + grpl
   std::vector<uint8_t> meta_payload;
@@ -90,6 +83,29 @@ std::vector<uint8_t> build_minimal_heif_with_bogus_grpl_child() {
   file.insert(file.end(), ftyp.begin(), ftyp.end());
   file.insert(file.end(), meta.begin(), meta.end());
   return file;
+}
+
+// Build a minimal HEIF file whose 'grpl' box contains a single child box
+// whose four-cc is NOT one of the registered Box_EntityToGroup subclasses
+// (pymd / altr / ster / stem). Such children parse to Box_other and used to
+// trigger a NULL-pointer dereference in heif_context_get_entity_groups().
+std::vector<uint8_t> build_minimal_heif_with_bogus_grpl_child() {
+  // grpl with a single 'pict' child — 'pict' is not registered as an
+  // entity-to-group type, so it parses to Box_other.
+  auto bogus_child = make_box("pict", {});
+  return build_minimal_heif_with_grpl_child(bogus_child);
+}
+
+std::vector<uint8_t> build_minimal_heif_with_stem_entity_count(uint32_t entity_count) {
+  std::vector<uint8_t> stem_payload;
+  put_u32_be(stem_payload, 1);  // entity_group_id
+  put_u32_be(stem_payload, entity_count);
+  for (uint32_t i = 0; i < entity_count; ++i) {
+    put_u32_be(stem_payload, i + 1);
+  }
+
+  return build_minimal_heif_with_grpl_child(
+      make_box("stem", stem_payload, /*full=*/true));
 }
 
 heif_error memory_writer(heif_context*, const void* data, size_t size, void* userdata) {
@@ -320,6 +336,153 @@ TEST_CASE("entity_groups: specialized writers enforce group semantics") {
   REQUIRE(groups[0].entities[1] == image_ids[1]);
   heif_entity_groups_release(groups, num_groups);
   heif_context_free(read_ctx);
+}
+
+
+TEST_CASE("entity_groups: stem writer preserves stereo order and accepts fallback aliases") {
+  heif_encoder* encoder = get_encoder_or_skip_test(heif_compression_AV1);
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_context_set_major_brand(ctx, heif_brand2_mif1);
+  heif_context_set_unif(ctx, 1);
+
+  const heif_item_id image_ids[] = {
+      add_test_av1_image(ctx, encoder), add_test_av1_image(ctx, encoder),
+      add_test_av1_image(ctx, encoder)};
+  heif_encoder_release(encoder);
+
+  // Stereo groups are not restricted by an item's alternative-group membership.
+  heif_entity_group_id alternative_group_id = 0;
+  REQUIRE(heif_context_add_alternative_entity_group(
+      ctx, &image_ids[0], 1, &alternative_group_id).code == heif_error_Ok);
+
+  heif_entity_group_id distinct_group_id = 123;
+  REQUIRE(heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], image_ids[2], &distinct_group_id).code ==
+          heif_error_Ok);
+  REQUIRE(distinct_group_id != 0);
+
+  heif_entity_group_id left_fallback_group_id = 123;
+  REQUIRE(heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], image_ids[0], &left_fallback_group_id).code ==
+          heif_error_Ok);
+
+  heif_entity_group_id right_fallback_group_id = 123;
+  REQUIRE(heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], image_ids[1], &right_fallback_group_id).code ==
+          heif_error_Ok);
+
+  std::vector<uint8_t> encoded;
+  heif_writer writer{};
+  writer.writer_api_version = 1;
+  writer.write = memory_writer;
+  REQUIRE(heif_context_write(ctx, &writer, &encoded).code == heif_error_Ok);
+  heif_context_free(ctx);
+
+  ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_error read_err = heif_context_read_from_memory_without_copy(
+      ctx, encoded.data(), encoded.size(), nullptr);
+  UNSCOPED_INFO(read_err.message);
+  REQUIRE(read_err.code == heif_error_Ok);
+
+  int num_groups = 0;
+  heif_entity_group* groups = heif_context_get_entity_groups(
+      ctx, heif_fourcc('s', 't', 'e', 'm'), 0, &num_groups);
+  REQUIRE(num_groups == 3);
+  REQUIRE(groups != nullptr);
+
+  REQUIRE(groups[0].entity_group_id == distinct_group_id);
+  REQUIRE(groups[0].entity_group_type == heif_fourcc('s', 't', 'e', 'm'));
+  REQUIRE(groups[0].num_entities == 3);
+  REQUIRE(groups[0].entities[0] == image_ids[0]);
+  REQUIRE(groups[0].entities[1] == image_ids[1]);
+  REQUIRE(groups[0].entities[2] == image_ids[2]);
+
+  REQUIRE(groups[1].entity_group_id == left_fallback_group_id);
+  REQUIRE(groups[1].num_entities == 3);
+  REQUIRE(groups[1].entities[0] == image_ids[0]);
+  REQUIRE(groups[1].entities[1] == image_ids[1]);
+  REQUIRE(groups[1].entities[2] == image_ids[0]);
+
+  REQUIRE(groups[2].entity_group_id == right_fallback_group_id);
+  REQUIRE(groups[2].num_entities == 3);
+  REQUIRE(groups[2].entities[0] == image_ids[0]);
+  REQUIRE(groups[2].entities[1] == image_ids[1]);
+  REQUIRE(groups[2].entities[2] == image_ids[1]);
+
+  heif_entity_groups_release(groups, num_groups);
+  heif_context_free(ctx);
+}
+
+
+TEST_CASE("entity_groups: stem writer rejects invalid references without creating groups") {
+  heif_encoder* encoder = get_encoder_or_skip_test(heif_compression_AV1);
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  const heif_item_id image_ids[] = {
+      add_test_av1_image(ctx, encoder), add_test_av1_image(ctx, encoder),
+      add_test_av1_image(ctx, encoder)};
+  heif_encoder_release(encoder);
+
+  const uint8_t data[] = {0x12, 0x34};
+  heif_item_id non_image_id = 0;
+  REQUIRE(heif_context_add_mime_item(ctx, "application/x-not-an-image",
+                                     heif_metadata_compression_off,
+                                     data, sizeof(data), &non_image_id).code == heif_error_Ok);
+
+  heif_entity_group_id group_id = 123;
+  heif_error err = heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[0], image_ids[2], &group_id);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Invalid_parameter_value);
+  REQUIRE(group_id == 0);
+
+  group_id = 123;
+  err = heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], non_image_id, &group_id);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Invalid_parameter_value);
+  REQUIRE(group_id == 0);
+
+  group_id = 123;
+  err = heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], 0xFFFF, &group_id);
+  REQUIRE(err.code == heif_error_Input_does_not_exist);
+  REQUIRE(err.subcode == heif_suberror_Nonexisting_item_referenced);
+  REQUIRE(group_id == 0);
+
+  heif_security_limits* limits = heif_context_get_security_limits(ctx);
+  REQUIRE(limits != nullptr);
+  const uint32_t old_group_limit = limits->max_size_entity_group;
+  limits->max_size_entity_group = 2;
+  group_id = 123;
+  err = heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+      ctx, image_ids[0], image_ids[1], image_ids[2], &group_id);
+  REQUIRE(err.code == heif_error_Usage_error);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(group_id == 0);
+  limits->max_size_entity_group = old_group_limit;
+
+  int num_groups = -1;
+  heif_entity_group* groups = heif_context_get_entity_groups(ctx, 0, 0, &num_groups);
+  REQUIRE(num_groups == 0);
+  heif_entity_groups_release(groups, num_groups);
+  heif_context_free(ctx);
+}
+
+
+TEST_CASE("entity_groups: malformed stem entity count is rejected") {
+  auto data = build_minimal_heif_with_stem_entity_count(2);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_error err = heif_context_read_from_memory_without_copy(
+      ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Invalid_input);
+  REQUIRE(err.subcode == heif_suberror_Invalid_box_size);
+  heif_context_free(ctx);
 }
 
 

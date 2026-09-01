@@ -70,6 +70,18 @@ heif_error heif_context_add_stereo_pair_entity_group(heif_context* ctx,
                                                      heif_item_id right_image_id,
                                                      heif_entity_group_id* out_group_id);
 
+// Create a stereo-pair-with-monoscopic-fallback ('stem') entity group. The first
+// image is the left view, the second image is the right view, and the third image
+// is the monoscopic fallback. The fallback may be identical to either stereo view.
+// `out_group_id` may be NULL.
+LIBHEIF_API
+heif_error heif_context_add_stereo_pair_with_monoscopic_fallback_entity_group(
+    heif_context* ctx,
+    heif_item_id left_image_id,
+    heif_item_id right_image_id,
+    heif_item_id monoscopic_image_id,
+    heif_entity_group_id* out_group_id);
+
 
 #ifdef __cplusplus
 }
