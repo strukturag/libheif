@@ -478,15 +478,23 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
             sstr.str()};
   }
 
-  // Check for allocation size overflow using 64-bit arithmetic
+  // Check for allocation size overflow.
   // Test case was an overlay image with size 1x134217727.
   // Width 1 gets aligned to 64 and then width * height overflows 32 bit systems.
-  uint64_t alloc_64 = static_cast<uint64_t>(m_mem_height) * stride + alignment - 1;
-  if (alloc_64 > std::numeric_limits<size_t>::max()) {
+  //
+  // On 64-bit systems (size_t is 64 bits) the product m_mem_height * stride can
+  // overflow the uint64_t multiplication itself and wrap to a small value, which
+  // would then slip past a post-multiply "> SIZE_MAX" comparison and undersize the
+  // buffer. So bound m_mem_height against stride *before* multiplying, leaving room
+  // for the trailing "+ alignment - 1". This also subsumes the 32-bit size_t case.
+  uint64_t max_alloc = std::numeric_limits<size_t>::max();
+  if (stride != 0 &&
+      static_cast<uint64_t>(m_mem_height) > (max_alloc - (alignment - 1)) / stride) {
     return {heif_error_Memory_allocation_error,
             heif_suberror_Security_limit_exceeded,
             "Image allocation size overflow"};
   }
+  uint64_t alloc_64 = static_cast<uint64_t>(m_mem_height) * stride + alignment - 1;
   allocation_size = static_cast<size_t>(alloc_64);
 
   if (auto err = memory_handle.alloc(allocation_size, limits, "image data")) {
