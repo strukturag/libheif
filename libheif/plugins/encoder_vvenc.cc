@@ -51,7 +51,7 @@ struct encoder_struct_vvenc
   // --- encoder
 
   vvencEncoder* vvencoder = nullptr;
-  vvencChromaFormat vvencChroma;
+  vvencChromaFormat vvencChroma = VVENC_CHROMA_420;
   uint32_t encoded_width=0, encoded_height=0;
 
   // --- output
@@ -331,11 +331,7 @@ static void vvenc_query_input_colorspace2(void* encoder_raw, heif_colorspace* co
   }
   else {
     *colorspace = heif_colorspace_YCbCr;
-    if (*chroma != heif_chroma_420 &&
-        *chroma != heif_chroma_422 &&
-        *chroma != heif_chroma_444) {
-      *chroma = heif_chroma_420;
-    }
+    *chroma = heif_chroma_420;
   }
 }
 
@@ -409,9 +405,10 @@ static void append_chunk_data(struct encoder_struct_vvenc* encoder, vvencAccessU
   }
 }
 
-
-static void copy_plane(int16_t* dst_p, size_t dst_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
+template<typename T>
+static void copy_plane(int16_t* dst_p, size_t dst_stride, const T* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
 {
+  in_stride /= sizeof(T);
   for (int y = 0; y < padded_height; y++) {
     int sy = std::min(y, h - 1); // source y
 
@@ -444,7 +441,8 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
   vvenc_config params;
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
-  if (bit_depth != 8) {
+  // VVenC supports 8 bit and 10 bit color
+  if (bit_depth != 8 && bit_depth != 10) {
     return heif_error{
       heif_error_Encoder_plugin_error,
       heif_suberror_Unsupported_image_type,
@@ -490,6 +488,9 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
   if (isGreyscale) {
     params.m_internChromaFormat = VVENC_CHROMA_400;
   }
+  else {
+    params.m_internChromaFormat = encoder->vvencChroma;
+  }
 
   params.m_FrameRate = framerate_denom;
   params.m_FrameScale = framerate_num;
@@ -512,6 +513,38 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
       case heif_sequence_gop_structure_unrestricted:
         ;
     }
+  }
+
+  heif_color_profile_nclx* nclx;
+  heif_image_get_nclx_color_profile(image, &nclx);
+  if (nclx) {
+    params.m_HdrMode = VVENC_HDR_USER_DEFINED;
+    params.m_colourDescriptionPresent = true;
+    params.m_colourPrimaries = nclx->color_primaries;
+    params.m_transferCharacteristics = nclx->transfer_characteristics;
+    params.m_matrixCoefficients = nclx->matrix_coefficients;
+    params.m_videoFullRangeFlag = nclx->full_range_flag;
+    heif_nclx_color_profile_free(nclx);
+  }
+  if (heif_image_has_content_light_level(image)) {
+    heif_content_light_level cll;
+    heif_image_get_content_light_level(image, &cll);
+    params.m_contentLightLevel[0] = cll.max_content_light_level;
+    params.m_contentLightLevel[1] = cll.max_pic_average_light_level;
+  }
+  if (heif_image_has_mastering_display_colour_volume(image)) {
+    heif_mastering_display_colour_volume mdcv;
+    heif_image_get_mastering_display_colour_volume(image, &mdcv);
+    params.m_masteringDisplay[0] = mdcv.display_primaries_x[0];
+    params.m_masteringDisplay[1] = mdcv.display_primaries_y[0];
+    params.m_masteringDisplay[2] = mdcv.display_primaries_x[1];
+    params.m_masteringDisplay[3] = mdcv.display_primaries_y[1];
+    params.m_masteringDisplay[4] = mdcv.display_primaries_x[2];
+    params.m_masteringDisplay[5] = mdcv.display_primaries_y[2];
+    params.m_masteringDisplay[6] = mdcv.white_point_x;
+    params.m_masteringDisplay[7] = mdcv.white_point_y;
+    params.m_masteringDisplay[8] = mdcv.max_display_mastering_luminance;
+    params.m_masteringDisplay[9] = mdcv.min_display_mastering_luminance;
   }
 
   vvencEncoder* vvencoder = encoder->vvencoder = vvenc_encoder_create();
@@ -545,7 +578,7 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
   heif_chroma chroma = heif_image_get_chroma_format(image);
 
 
-
+  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
 
@@ -566,24 +599,11 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
     vvencChroma = VVENC_CHROMA_420;
     chroma_stride_shift = 1;
     chroma_height_shift = 1;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = (input_height + 1) / 2;
-  }
-  else if (chroma == heif_chroma_422) {
-    vvencChroma = VVENC_CHROMA_422;
-    chroma_stride_shift = 1;
-    chroma_height_shift = 0;
-    input_chroma_width = (input_width + 1) / 2;
-    input_chroma_height = input_height;
-  }
-  else if (chroma == heif_chroma_444) {
-    vvencChroma = VVENC_CHROMA_444;
-    chroma_stride_shift = 0;
-    chroma_height_shift = 0;
-    input_chroma_width = input_width;
-    input_chroma_height = input_height;
+    input_chroma_width = input_width / 2 + (input_width & 1);
+    input_chroma_height = input_height / 2 + (input_height & 1);
   }
   else {
+    // vvenc only supports monochrome and 4:2:0 (https://github.com/fraunhoferhhi/vvenc/issues/450)
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Unsupported_image_type,
@@ -596,8 +616,8 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
   if (chroma != heif_chroma_monochrome) {
     int w = heif_image_get_width(image, heif_channel_Y);
     int h = heif_image_get_height(image, heif_channel_Y);
-    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
-    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+    if (chroma != heif_chroma_444) { w = w / 2 + (w & 1); }
+    if (chroma == heif_chroma_420) { h = h / 2 + (h & 1); }
 
     assert(heif_image_get_width(image, heif_channel_Cb) == w);
     assert(heif_image_get_width(image, heif_channel_Cr) == w);
@@ -661,26 +681,51 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
 
   // vvenc_init_pass( encoder, pass, statsfilename );
 
-  if (isGreyscale) {
-    size_t stride;
-    const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
+  if (bit_depth == 8) {
+    if (isGreyscale) {
+      size_t stride;
+      const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
-    copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+      copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+    }
+    else {
+      size_t stride;
+      const uint8_t* data;
+
+      data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
+      copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+
+      data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
+      copy_plane(yuvbuf->planes[1].ptr, yuvbuf->planes[1].stride, data, stride, input_chroma_width, input_chroma_height,
+        encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+
+      data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
+      copy_plane(yuvbuf->planes[2].ptr, yuvbuf->planes[2].stride, data, stride, input_chroma_width, input_chroma_height,
+        encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+    }
   }
   else {
-    size_t stride;
-    const uint8_t* data;
+    if (isGreyscale) {
+      size_t stride;
+      const uint16_t* data = (uint16_t*)heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
-    data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
-    copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+      copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+    }
+    else {
+      size_t stride;
+      const uint16_t* data;
 
-    data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
-    copy_plane(yuvbuf->planes[1].ptr, yuvbuf->planes[1].stride, data, stride, input_chroma_width, input_chroma_height,
-               encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+      data = (uint16_t*)heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
+      copy_plane(yuvbuf->planes[0].ptr, yuvbuf->planes[0].stride, data, stride, input_width, input_height, encoded_width, encoded_height);
 
-    data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
-    copy_plane(yuvbuf->planes[2].ptr, yuvbuf->planes[2].stride, data, stride, input_chroma_width, input_chroma_height,
-               encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+      data = (uint16_t*)heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
+      copy_plane(yuvbuf->planes[1].ptr, yuvbuf->planes[1].stride, data, stride, input_chroma_width, input_chroma_height,
+        encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+
+      data = (uint16_t*)heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
+      copy_plane(yuvbuf->planes[2].ptr, yuvbuf->planes[2].stride, data, stride, input_chroma_width, input_chroma_height,
+        encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
+    }
   }
 
 
@@ -711,12 +756,6 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
   vvenc_YUVBuffer_free_buffer(yuvbuf);
   vvenc_YUVBuffer_free(yuvbuf, false); // release storage and payload memory
   vvenc_accessUnit_free(au, true); // release storage and payload memory
-
-  /*
-  delete[] yptr;
-  delete[] cbptr;
-  delete[] crptr;
-*/
 
   return heif_error_ok;
 }
