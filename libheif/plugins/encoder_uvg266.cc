@@ -589,6 +589,22 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
     config->vui.colormatrix = nclx->matrix_coefficients;
   }
 
+  // Write the pixel aspect ratio into the VUI. uvg266 emits aspect_ratio_info when both
+  // sar fields are >0. Extended_SAR stores sar_width/sar_height as u(16), so ratios that
+  // do not fit are only signalled through the pasp property. A 1:1 ratio is omitted
+  // (VUI absence already means unspecified/square).
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    config->vui.sar_width = (int32_t) aspect_h;
+    config->vui.sar_height = (int32_t) aspect_v;
+  }
+
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
 

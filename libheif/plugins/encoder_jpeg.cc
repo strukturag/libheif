@@ -375,6 +375,23 @@ heif_error jpeg_encode_image(void* encoder_raw, const heif_image* image,
   jpeg_set_defaults(&cinfo);
   static const boolean kForceBaseline = TRUE;
   jpeg_set_quality(&cinfo, encoder->quality, kForceBaseline);
+
+  // Write the pixel aspect ratio into the JFIF APP0 density fields. With density_unit=0,
+  // Xdensity:Ydensity specifies the pixel aspect ratio (ITU-T T.871), in the same
+  // hSpacing:vSpacing order as the pasp property (matching the FFmpeg convention).
+  // The fields are u(16), so ratios that do not fit are only signalled through pasp.
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    cinfo.density_unit = 0; // no absolute units, aspect ratio only
+    cinfo.X_density = (UINT16) aspect_h;
+    cinfo.Y_density = (UINT16) aspect_v;
+  }
   static const boolean kWriteAllTables = TRUE;
   jpeg_start_compress(&cinfo, kWriteAllTables);
 

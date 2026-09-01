@@ -841,6 +841,22 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
     param.vui.i_colmatrix = static_cast<int>(nclx->matrix_coefficients);
   }
 
+  // Write the pixel aspect ratio into the VUI. Extended_SAR stores sar_width/sar_height
+  // as u(16), so ratios that do not fit are only signalled through the pasp property.
+  // A 1:1 ratio is omitted (VUI absence already means unspecified/square).
+  // Set before the user parameters below so that an explicit "x264:sar" takes precedence.
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    param.vui.i_sar_width = static_cast<int>(aspect_h);
+    param.vui.i_sar_height = static_cast<int>(aspect_v);
+  }
+
   for (const auto& p : encoder->parameters) {
     if (p.name == heif_encoder_parameter_name_quality) {
       // quality=0   -> crf=50
