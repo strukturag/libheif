@@ -647,6 +647,18 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   int bpp = input->get_bits_per_pixel(heif_channel_Y);
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
+  // Defense in depth: the Cb/Cr planes are read below through a uint16_t* using a
+  // sample width taken from the Y channel (bpp). convert_colorspace() already
+  // rejects YCbCr with mismatched luma/chroma bit depths (GHSA-w7mc-p8jc-p853),
+  // but guard here as well so this operator is self-contained and a future direct
+  // caller or pipeline change cannot reintroduce the out-of-bounds chroma read.
+  if (input->get_bits_per_pixel(heif_channel_Cb) != bpp ||
+      input->get_bits_per_pixel(heif_channel_Cr) != bpp) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "Color conversion cannot handle YCbCr images with chroma bit depth differing from luma."};
+  }
+
   int le = (target_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
             target_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) ? 1 : 0;
 
