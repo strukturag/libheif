@@ -1053,6 +1053,17 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
       return alpha_image->get_item_error();
     }
 
+    // Record this item on the current decode path before following the alpha
+    // ('auxl') edge. Unlike the derived-image ('dimg') edges, whose cycle-guard
+    // insert happens inside decode_compressed_image(), the alpha edge is
+    // followed here in the base decode_image() using this frame's own
+    // decode_state. decode_compressed_image() only received a *copy* of it, so
+    // its insert of m_id is invisible here. Without adding m_id ourselves, a
+    // cycle of alpha references (auxl A->B, B->A) would re-enter decode_image()
+    // on an item whose non-recursive m_decode_mutex is still held one frame up,
+    // deadlocking the decode thread. (GHSA-8fmq-r4pf-7m57)
+    decode_state.processed_ids.insert(m_id);
+
     auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0, decode_state);
     if (!alphaDecodingResult) {
       return alphaDecodingResult.error();
