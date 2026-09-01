@@ -1974,15 +1974,35 @@ Error Box_iloc::read_data(heif_item_id item_id,
                 "idat box referenced in iref box is not present in file"};
       }
 
+      // Honor the requested (offset, size) window, exactly like the in-memory
+      // and construction_method==0 branches above. Reading the whole extent and
+      // doing `size -= extent.length` unconditionally ignored the caller's
+      // sub-range: any partial read (size < extent.length) underflowed `size`
+      // and fell into the "Not enough data" check below, which broke per-tile
+      // and per-icef-unit reads of uncompressed items stored in 'idat'
+      // (unc_decoder::get_compressed_image_data_uncompressed()).
+      uint64_t skip_len = std::min(offset, extent.length);
+      offset -= skip_len;
+
+      uint64_t read_len = std::min(extent.length - skip_len, size);
+
+      if (offset > 0) {
+        continue;
+      }
+
+      if (read_len == 0) {
+        continue;
+      }
+
       Error err = idat->read_data(istr,
-                                  extent.offset + item->base_offset,
-                                  extent.length,
+                                  extent.offset + item->base_offset + skip_len,
+                                  read_len,
                                   *dest, limits);
       if (err) {
         return err;
       }
 
-      size -= extent.length;
+      size -= read_len;
     }
     else {
       std::stringstream sstr;

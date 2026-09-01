@@ -136,6 +136,7 @@ if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_mixed_chroma_depth_overflow)
     add_libheif_test(uncompressed_mixed_chroma_depth_colorconv)
     add_libheif_test(uncompressed_block_pixel_overpacked)
+    add_libheif_test(uncompressed_idat_tiled)
     add_libheif_test(uncompressed_encode)
 
     if (ENABLE_EXPERIMENTAL_FEATURES)
