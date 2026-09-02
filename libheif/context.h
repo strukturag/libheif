@@ -268,7 +268,8 @@ public:
     }
 
     if (propertyId - 1 >= properties.size()) {
-      Error(heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range");
+      return Error(heif_error_Usage_error, heif_suberror_Invalid_property,
+                   "property index out of range");
     }
 
     auto box = properties[propertyId - 1];
