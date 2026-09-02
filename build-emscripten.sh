@@ -80,6 +80,7 @@ if [ "$ENABLE_AOM" = "1" ]; then
         emcmake cmake aom-source \
             -DENABLE_CCACHE=1 \
             -DAOM_TARGET_CPU=generic \
+            -DENABLE_APPS=0 \
             -DENABLE_DOCS=0 \
             -DENABLE_TESTS=0 \
             -DENABLE_EXAMPLES=0 \
