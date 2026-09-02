@@ -255,18 +255,19 @@ std::vector<uint8_t> build_heif_grid_with_irot270() {
   return file;
 }
 
-// Build a minimal HEIF with one 'grid' item (id=1, 1x1, 64x64) whose single
-// tile (id=2, 'hvc1') is well-formed at the box level (valid infe, ispe, hvcC)
+// Build a minimal AVIF with one 'grid' item (id=1, 1x1, 64x64) whose single
+// tile (id=2, 'av01') is well-formed at the box level (valid infe, ispe, av1C)
 // but whose iloc extent points far beyond the end of the file, so reading the
 // compressed tile data fails at decode time. This models a file where every
 // tile fails to decode (issue #1876: e.g. no decoder plugin installed, or all
-// tile data unreadable).
+// tile data unreadable). The tile is AV1 rather than HEVC so that the test also
+// runs on builds that leave out the HEVC codecs (issue #1900).
 std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
   std::vector<uint8_t> ftyp_payload;
-  append_fourcc(ftyp_payload, "heic");
+  append_fourcc(ftyp_payload, "avif");
   put_u32_be(ftyp_payload, 0);
   append_fourcc(ftyp_payload, "mif1");
-  append_fourcc(ftyp_payload, "heic");
+  append_fourcc(ftyp_payload, "avif");
   auto ftyp = make_box("ftyp", ftyp_payload);
 
   std::vector<uint8_t> hdlr_payload;
@@ -282,7 +283,7 @@ std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
   put_u16_be(pitm_payload, 1);
   auto pitm = make_box("pitm", pitm_payload, /*full=*/true);
 
-  // iinf with two items: id=1 'grid', id=2 'hvc1'
+  // iinf with two items: id=1 'grid', id=2 'av01'
   std::vector<uint8_t> infe1_payload;
   put_u16_be(infe1_payload, 1);
   put_u16_be(infe1_payload, 0);
@@ -293,7 +294,7 @@ std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
   std::vector<uint8_t> infe2_payload;
   put_u16_be(infe2_payload, 2);
   put_u16_be(infe2_payload, 0);
-  append_fourcc(infe2_payload, "hvc1");
+  append_fourcc(infe2_payload, "av01");
   infe2_payload.push_back(0);
   auto infe2 = make_box("infe", infe2_payload, /*full=*/true, /*version=*/2);
 
@@ -303,36 +304,25 @@ std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
   append(iinf_payload, infe2);
   auto iinf = make_box("iinf", iinf_payload, /*full=*/true);
 
-  // ipco: ispe(64x64) as prop 1, minimal hvcC (no NAL arrays) as prop 2
+  // ipco: ispe(64x64) as prop 1, minimal av1C (no configOBUs) as prop 2
   std::vector<uint8_t> ispe_payload;
   put_u32_be(ispe_payload, 64);
   put_u32_be(ispe_payload, 64);
   auto ispe = make_box("ispe", ispe_payload, /*full=*/true);
 
-  std::vector<uint8_t> hvcC_payload;
-  hvcC_payload.push_back(1);            // configuration_version
-  hvcC_payload.push_back(0x01);         // profile_space=0, tier=0, profile_idc=1 (Main)
-  put_u32_be(hvcC_payload, 0x60000000); // general_profile_compatibility_flags
-  for (int i = 0; i < 6; ++i) {         // general_constraint_indicator_flags
-    hvcC_payload.push_back(0);
-  }
-  hvcC_payload.push_back(93);           // general_level_idc (3.1)
-  put_u16_be(hvcC_payload, 0xF000);     // reserved + min_spatial_segmentation_idc
-  hvcC_payload.push_back(0xFC);         // reserved + parallelism_type
-  hvcC_payload.push_back(0xFD);         // reserved + chroma_format (4:2:0)
-  hvcC_payload.push_back(0xF8);         // reserved + bit_depth_luma - 8
-  hvcC_payload.push_back(0xF8);         // reserved + bit_depth_chroma - 8
-  put_u16_be(hvcC_payload, 0);          // avg_frame_rate
-  hvcC_payload.push_back(0x0F);         // frame_rate/layers/nested + length_size - 1 (=4)
-  hvcC_payload.push_back(0);            // num_of_arrays
-  auto hvcC = make_box("hvcC", hvcC_payload);
+  std::vector<uint8_t> av1C_payload;
+  av1C_payload.push_back(0x81);         // marker=1, version=1
+  av1C_payload.push_back(0x00);         // seq_profile=0 (Main), seq_level_idx_0=0
+  av1C_payload.push_back(0x0C);         // 8 bit, color, chroma_subsampling_x/y=1 (4:2:0)
+  av1C_payload.push_back(0x00);         // no initial_presentation_delay
+  auto av1C = make_box("av1C", av1C_payload);
 
   std::vector<uint8_t> ipco_payload;
   append(ipco_payload, ispe);
-  append(ipco_payload, hvcC);
+  append(ipco_payload, av1C);
   auto ipco = make_box("ipco", ipco_payload);
 
-  // ipma: item 1 -> ispe; item 2 -> ispe + essential hvcC
+  // ipma: item 1 -> ispe; item 2 -> ispe + essential av1C
   std::vector<uint8_t> ipma_payload;
   put_u32_be(ipma_payload, 2);          // entry_count
   put_u16_be(ipma_payload, 1);          // item_ID 1
@@ -341,7 +331,7 @@ std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
   put_u16_be(ipma_payload, 2);          // item_ID 2
   ipma_payload.push_back(2);            // association_count
   ipma_payload.push_back(1);            // non-essential ispe
-  ipma_payload.push_back(0x80 | 2);     // essential hvcC
+  ipma_payload.push_back(0x80 | 2);     // essential av1C
   auto ipma = make_box("ipma", ipma_payload, /*full=*/true);
 
   std::vector<uint8_t> iprp_payload;
@@ -535,6 +525,12 @@ TEST_CASE("grid: rotated grid rejects tile coord beyond displayed bounds") {
 // "Decoder plugin generated an error: Unspecified". The real per-tile error
 // must be returned instead.
 TEST_CASE("grid: real error is reported when all tiles fail to decode") {
+  // The expected error comes from reading the tile data, which only happens
+  // once a decoder for the tile has been found.
+  if (!heif_have_decoder_for_format(heif_compression_AV1)) {
+    SKIP("AV1 decoder not available, skipping test");
+  }
+
   auto data = build_heif_grid_with_undecodable_tile();
 
   heif_context* ctx = heif_context_alloc();

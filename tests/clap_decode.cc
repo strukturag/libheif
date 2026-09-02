@@ -41,16 +41,30 @@
 
 TEST_CASE("decode cropped image within default security limits")
 {
-  const char* files[] = {
-      "clap_cropped.avif",
-      "clap_cropped.heic",
-      "clap_cropped_irot_imir.avif",
+  struct TestFile {
+    const char* name;
+    heif_compression_format codec;
   };
 
-  for (const char* file : files) {
-    INFO(file);
+  const TestFile files[] = {
+      {"clap_cropped.avif", heif_compression_AV1},
+      {"clap_cropped.heic", heif_compression_HEVC},
+      {"clap_cropped_irot_imir.avif", heif_compression_AV1},
+  };
 
-    heif_context* ctx = get_context_for_test_file(file);
+  // The regression is in the codec-independent decode path, so every file
+  // whose codec can be decoded is checked and the others are left out. Builds
+  // without a HEVC decoder (issue #1900) still cover the AVIF variants.
+  int num_tested = 0;
+
+  for (const TestFile& file : files) {
+    if (!heif_have_decoder_for_format(file.codec)) {
+      continue;
+    }
+
+    INFO(file.name);
+
+    heif_context* ctx = get_context_for_test_file(file.name);
     heif_image_handle* handle = get_primary_image_handle(ctx);
 
     // The handle reports the size after all transformations.
@@ -82,6 +96,12 @@ TEST_CASE("decode cropped image within default security limits")
 
     heif_image_handle_release(handle);
     heif_context_free(ctx);
+
+    num_tested++;
+  }
+
+  if (num_tested == 0) {
+    SKIP("neither an AV1 nor a HEVC decoder is available, skipping test");
   }
 }
 
@@ -95,6 +115,11 @@ TEST_CASE("decode cropped image within default security limits")
 
 TEST_CASE("decode image with coded frame much larger than ispe")
 {
+  // The conformance window is a HEVC feature, so this test needs a HEVC decoder.
+  if (!heif_have_decoder_for_format(heif_compression_HEVC)) {
+    SKIP("HEVC decoder not available, skipping test");
+  }
+
   heif_context* ctx = get_context_for_test_file("conformance_window_padding.heic");
   heif_image_handle* handle = get_primary_image_handle(ctx);
 
