@@ -4729,16 +4729,8 @@ Error Box_dref::parse(BitstreamRange& range, const heif_security_limits* limits)
                  "Too many entities in dref box.");
   }
 
-  Error err = read_children(range, (int)nEntities, limits);
-  if (err) {
-    return err;
-  }
-
-  if (m_children.size() != nEntities) {
-    // TODO return Error(
-  }
-
-  return err;
+  // read_children verifies that exactly nEntities children are present.
+  return read_children(range, (int)nEntities, limits);
 }
 
 
