@@ -184,10 +184,13 @@ heif_error heif_item_add_property_user_description(const heif_context* context,
   udes->set_description(description->description ? description->description : "");
   udes->set_tags(description->tags ? description->tags : "");
 
-  heif_property_id id = context->context->add_property(itemId, udes, false);
+  auto id = context->context->add_property(itemId, udes, false);
+  if (!id) {
+    return id.error_struct(context->context.get());
+  }
 
   if (out_propertyId) {
-    *out_propertyId = id;
+    *out_propertyId = *id;
   }
 
   return heif_error_success;
@@ -286,10 +289,13 @@ heif_error heif_item_add_raw_property(const heif_context* context,
   std::vector<uint8_t> data_vector(data, data + size);
   raw_box->set_raw_data(data_vector);
 
-  heif_property_id id = context->context->add_property(itemId, raw_box, is_essential != 0);
+  auto id = context->context->add_property(itemId, raw_box, is_essential != 0);
+  if (!id) {
+    return id.error_struct(context->context.get());
+  }
 
   if (out_propertyId) {
-    *out_propertyId = id;
+    *out_propertyId = *id;
   }
 
   return heif_error_success;

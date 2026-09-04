@@ -117,10 +117,13 @@ heif_error heif_item_set_property_tai_clock_info(heif_context* ctx,
   auto taic = std::make_shared<Box_taic>();
   taic->set_from_tai_clock_info(clock);
 
-  heif_property_id id = ctx->context->add_property(itemId, taic, false);
+  auto id = ctx->context->add_property(itemId, taic, false);
+  if (!id) {
+    return id.error_struct(ctx->context.get());
+  }
 
   if (out_propertyId) {
-    *out_propertyId = id;
+    *out_propertyId = *id;
   }
 
   return heif_error_success;
@@ -198,10 +201,13 @@ heif_error heif_item_set_property_tai_timestamp(heif_context* ctx,
   auto itai = std::make_shared<Box_itai>();
   itai->set_from_tai_timestamp_packet(timestamp);
 
-  heif_property_id id = ctx->context->add_property(itemId, itai, false);
+  auto id = ctx->context->add_property(itemId, itai, false);
+  if (!id) {
+    return id.error_struct(ctx->context.get());
+  }
 
   if (out_propertyId) {
-    *out_propertyId = id;
+    *out_propertyId = *id;
   }
 
   return heif_error_success;

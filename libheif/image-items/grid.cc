@@ -800,7 +800,9 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
   file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
 
   // Add ISPE property
-  file->add_ispe_property(grid_id, output_width, output_height, false);
+  if (Error err = file->add_ispe_property(grid_id, output_width, output_height, false)) {
+    return err;
+  }
 
   // PIXI property will be added when the first tile is set
 
@@ -866,7 +868,9 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
     // Add transformative properties
 
-    get_context()->get_heif_file()->add_orientation_properties(get_id(), m_grid_orientation);
+    if (Error err = get_context()->get_heif_file()->add_orientation_properties(get_id(), m_grid_orientation)) {
+      return err;
+    }
   }
 
   return Error::Ok;

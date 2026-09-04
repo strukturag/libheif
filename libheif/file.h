@@ -209,10 +209,10 @@ public:
 
   Result<std::shared_ptr<Box_infe>> add_new_meta_infe_box(uint32_t item_type);
 
-  void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
+  Error add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 
   // set irot/imir according to heif_orientation
-  void add_orientation_properties(heif_item_id id, heif_orientation);
+  Error add_orientation_properties(heif_item_id id, heif_orientation);
 
   // TODO: can we remove the 'essential' parameter and take this from the box? Or is that depending on the context?
   heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
@@ -250,7 +250,7 @@ public:
 
   void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
 
-  void set_auxC_property(heif_item_id id, const std::string& type);
+  Error set_auxC_property(heif_item_id id, const std::string& type);
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
   static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);

@@ -835,8 +835,18 @@ public:
 
   bool is_property_essential_for_item(heif_item_id itemId, int propertyIndex) const;
 
-  void add_property_for_item_ID(heif_item_id itemID,
-                                PropertyAssociation assoc);
+  // Associates the property with the item and returns the 1-based position of the property
+  // within this item's property list, i.e. the 'heif_property_id' that the public API uses.
+  // Note that this is not the index of the property in the 'ipco' box, as one 'ipco' is shared
+  // by all items of the file. If the property is already associated with the item, the position
+  // of the existing association is returned.
+  heif_property_id add_property_for_item_ID(heif_item_id itemID,
+                                            PropertyAssociation assoc);
+
+  // Returns the 1-based position of the property with the given 'ipco' index within the item's
+  // property list, or 0 if the property is not associated with the item. This matches the
+  // indices into the vector filled by Box_ipco::get_properties_for_item_ID().
+  heif_property_id get_property_id_for_item_ID(heif_item_id itemID, uint16_t property_index) const;
 
   void derive_box_version() override;
 

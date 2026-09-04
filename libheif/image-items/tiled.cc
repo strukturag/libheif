@@ -936,7 +936,9 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
         break;
     }
 
-    get_file()->add_orientation_properties(get_id(), m_image_orientation);
+    if (Error err = get_file()->add_orientation_properties(get_id(), m_image_orientation)) {
+      return err;
+    }
   }
 
   //get_file()->set_brand(encoder->plugin->compression_format,

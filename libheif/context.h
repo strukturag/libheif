@@ -175,7 +175,7 @@ public:
                              uint32_t item_type, const char* content_type, const char* item_uri_type,
                              heif_metadata_compression compression, heif_item_id* out_item_id);
 
-  heif_property_id add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential);
+  Result<heif_property_id> add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential);
 
   Result<heif_item_id> add_pyramid_group(const std::vector<heif_item_id>& layers);
 
@@ -268,7 +268,7 @@ public:
     }
 
     if (propertyId - 1 >= properties.size()) {
-      Error(heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range");
+      return Error(heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range");
     }
 
     auto box = properties[propertyId - 1];

@@ -37,6 +37,7 @@
 #include "plugin_registry.h"
 #include "security_limits.h"
 
+#include <algorithm>
 #include <limits>
 #include <cassert>
 #include <cstring>
@@ -85,8 +86,13 @@ heif_property_id ImageItem::add_property(const std::shared_ptr<Box>& property, b
     return 0;
   }
 
-  // TODO: is this correct? What happens when add_property does deduplicate the property?
-  m_properties.push_back(property);
+  // HeifFile::add_property() deduplicates the property box, so only remember it here if the
+  // item does not hold it yet. The returned id is the position in the item's property list and
+  // is correct in both cases.
+  if (std::find(m_properties.begin(), m_properties.end(), property) == m_properties.end()) {
+    m_properties.push_back(property);
+  }
+
   return get_file()->add_property(get_id(), property, essential);
 }
 
@@ -436,7 +442,9 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   }
 
   // TODO: move this into encode_to_bistream_and_boxes()
-  ctx->get_heif_file()->add_orientation_properties(image_id, options.image_orientation);
+  if (Error err = ctx->get_heif_file()->add_orientation_properties(image_id, options.image_orientation)) {
+    return err;
+  }
 
   return Error::Ok;
 }

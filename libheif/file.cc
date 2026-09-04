@@ -61,6 +61,8 @@
 // TODO: make this a decoder option
 #define STRICT_PARSING false
 
+static const char* const too_many_properties_error = "Too many item properties in file to add another one";
+
 
 HeifFile::HeifFile()
 {
@@ -1141,7 +1143,7 @@ Result<std::shared_ptr<Box_infe>> HeifFile::add_new_meta_infe_box(uint32_t item_
 }
 
 
-void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential)
+Error HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential)
 {
   init_for_item_properties();
 
@@ -1150,7 +1152,17 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
 
   uint32_t index = m_ipco_box->find_or_append_child_box(ispe);
 
+  // 'ipma' stores the property index as a 16 bit value. Rather than truncating it and writing a
+  // wrong association, refuse to add the property.
+  if (index + 1 > 0xFFFF) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Unspecified,
+            too_many_properties_error};
+  }
+
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
+
+  return Error::Ok;
 }
 
 
@@ -1161,9 +1173,15 @@ heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<B
 
   uint32_t index = m_ipco_box->find_or_append_child_box(property);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
+  // 'ipma' stores the property index as a 16 bit value. Rather than truncating it and writing a
+  // wrong association, refuse to add the property.
+  if (index + 1 > 0xFFFF) {
+    return 0;
+  }
 
-  return index + 1;
+  // Note that we have to return the position within the item's property list and not 'index',
+  // as 'index' is the position in the file-wide 'ipco' box, which is shared by all items.
+  return m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 }
 
 
@@ -1172,14 +1190,15 @@ heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, c
   init_for_item_properties();
 
   uint32_t index = m_ipco_box->append_child_box(property);
+  if (index + 1 > 0xFFFF) {
+    return 0;
+  }
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
-
-  return index + 1;
+  return m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 }
 
 
-void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
+Error HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
   init_for_item_properties();
 
@@ -1228,6 +1247,9 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     irot->set_rotation_ccw(rotation_ccw);
 
     uint32_t index = m_ipco_box->find_or_append_child_box(irot);
+    if (index + 1 > 0xFFFF) {
+      return {heif_error_Encoding_error, heif_suberror_Unspecified, too_many_properties_error};
+    }
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
@@ -1237,9 +1259,14 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     imir->set_mirror_direction(mirror);
 
     uint32_t index = m_ipco_box->find_or_append_child_box(imir);
+    if (index + 1 > 0xFFFF) {
+      return {heif_error_Encoding_error, heif_suberror_Unspecified, too_many_properties_error};
+    }
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
   }
+
+  return Error::Ok;
 }
 
 
@@ -1530,7 +1557,7 @@ std::shared_ptr<Box_EntityToGroup> HeifFile::get_entity_group(heif_entity_group_
 }
 
 
-void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
+Error HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
 {
   init_for_item_properties();
 
@@ -1538,8 +1565,13 @@ void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
   auxC->set_aux_type(type);
 
   uint32_t index = m_ipco_box->find_or_append_child_box(auxC);
+  if (index + 1 > 0xFFFF) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, too_many_properties_error};
+  }
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+  return Error::Ok;
 }
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)

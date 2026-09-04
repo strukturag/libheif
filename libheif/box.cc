@@ -3432,8 +3432,8 @@ bool Box_ipma::is_property_essential_for_item(heif_item_id itemId, int propertyI
 }
 
 
-void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
-                                        PropertyAssociation assoc)
+heif_property_id Box_ipma::add_property_for_item_ID(heif_item_id itemID,
+                                                    PropertyAssociation assoc)
 {
   size_t idx;
   for (idx = 0; idx < m_entries.size(); idx++) {
@@ -3452,7 +3452,7 @@ void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
   // If the property is already associated with the item, skip.
   for (auto const& a : m_entries[idx].associations) {
     if (a.property_index == assoc.property_index) {
-      return;
+      return get_property_id_for_item_ID(itemID, assoc.property_index);
     }
 
     // TODO: should we check that the essential flag matches and return an internal error if not?
@@ -3460,6 +3460,43 @@ void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
 
   // add the property association
   m_entries[idx].associations.push_back(assoc);
+
+  return get_property_id_for_item_ID(itemID, assoc.property_index);
+}
+
+
+heif_property_id Box_ipma::get_property_id_for_item_ID(heif_item_id itemID, uint16_t property_index) const
+{
+  // Index 0 means "no property". It is skipped by Box_ipco::get_properties_for_item_ID() and
+  // hence has no position in the item's property list.
+  if (property_index == 0) {
+    return 0;
+  }
+
+  for (const auto& entry : m_entries) {
+    if (entry.item_ID != itemID) {
+      continue;
+    }
+
+    // Count the associations the way Box_ipco::get_properties_for_item_ID() does, i.e. skipping
+    // the associations with index 0, so that the returned id indexes the vector it produces.
+    heif_property_id id = 0;
+    for (const auto& assoc : entry.associations) {
+      if (assoc.property_index == 0) {
+        continue;
+      }
+
+      id++;
+
+      if (assoc.property_index == property_index) {
+        return id;
+      }
+    }
+
+    break;
+  }
+
+  return 0;
 }
 
 
