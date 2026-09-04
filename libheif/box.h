@@ -32,6 +32,7 @@
 
 #include <utility>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include <limits>
@@ -1098,6 +1099,17 @@ protected:
 
 private:
   std::vector<Reference> m_references;
+
+  // Index from 'from_item_ID' to the positions in m_references, so the
+  // reference queries run in O(matches) instead of O(m_references). It is kept
+  // in sync incrementally: parse() builds it, add_references() appends to it,
+  // and overwrite_reference() leaves it untouched (it only edits to_item_ID,
+  // not from_item_ID).
+  std::unordered_map<heif_item_id, std::vector<size_t>> m_from_id_index;
+
+  void build_index();
+
+  void add_to_index(size_t reference_index);
 };
 
 

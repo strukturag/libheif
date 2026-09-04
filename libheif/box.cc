@@ -4082,6 +4082,8 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 #endif
 
+  build_index();
+
   return range.get_error();
 }
 
@@ -4178,15 +4180,25 @@ std::string Box_iref::dump(Indent& indent) const
 }
 
 
+void Box_iref::build_index()
+{
+  m_from_id_index.clear();
+  m_from_id_index.reserve(m_references.size());
+  for (size_t i = 0; i < m_references.size(); i++) {
+    add_to_index(i);
+  }
+}
+
+
+void Box_iref::add_to_index(size_t reference_index)
+{
+  m_from_id_index[m_references[reference_index].from_item_ID].push_back(reference_index);
+}
+
+
 bool Box_iref::has_references(uint32_t itemID) const
 {
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
-      return true;
-    }
-  }
-
-  return false;
+  return m_from_id_index.find(itemID) != m_from_id_index.end();
 }
 
 
@@ -4194,9 +4206,11 @@ std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id item
 {
   std::vector<Reference> references;
 
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
-      references.push_back(ref);
+  auto iter = m_from_id_index.find(itemID);
+  if (iter != m_from_id_index.end()) {
+    references.reserve(iter->second.size());
+    for (size_t ref_idx : iter->second) {
+      references.push_back(m_references[ref_idx]);
     }
   }
 
@@ -4206,10 +4220,13 @@ std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id item
 
 std::vector<uint32_t> Box_iref::get_references(uint32_t itemID, uint32_t ref_type) const
 {
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID &&
-        ref.header.get_short_type() == ref_type) {
-      return ref.to_item_ID;
+  auto iter = m_from_id_index.find(itemID);
+  if (iter != m_from_id_index.end()) {
+    for (size_t ref_idx : iter->second) {
+      const Reference& ref = m_references[ref_idx];
+      if (ref.header.get_short_type() == ref_type) {
+        return ref.to_item_ID;
+      }
     }
   }
 
@@ -4227,6 +4244,7 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   assert(to_ids.size() <= 0xFFFF);
 
   m_references.push_back(ref);
+  add_to_index(m_references.size() - 1);
 }
 
 
