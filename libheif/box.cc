@@ -1107,7 +1107,52 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
 
 Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_security_limits* limits)
 {
-  uint32_t count = 0;
+  // A freshly parsed box has no children yet, so m_children.size() below tracks
+  // the number of children read so far.
+  assert(m_children.empty());
+
+  // Determine the applicable limit on the number of child boxes.
+  uint32_t max_children;
+  if (get_short_type() == fourcc("iinf")) {
+    max_children = limits->max_items;
+  }
+  else {
+    max_children = limits->max_children_per_box;
+  }
+
+  // If the number of children is known in advance, reject an excessive count
+  // directly instead of reading children until the accumulated count reaches
+  // the limit.
+  if (max_number != READ_CHILDREN_ALL) {
+    if (max_children && max_number > max_children) {
+      std::stringstream sstr;
+      sstr << "Number of child boxes (" << max_number << ") in '" << get_type_string()
+           << "' box exceeds the security limit of " << max_children << ".";
+
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
+    }
+
+    // The declared number of children cannot exceed what the remaining input
+    // could possibly hold (each box occupies at least an 8-byte header). A
+    // larger count means the box is truncated or malformed, so reject it
+    // before reading anything. This also bounds the reservation below, which
+    // matters when security limits are disabled and 'max_number' is otherwise
+    // unbounded.
+    size_t max_possible_children = range.get_remaining_bytes() / 8;
+    if (max_number > max_possible_children) {
+      std::stringstream sstr;
+      sstr << "'" << get_type_string() << "' box declares " << max_number
+           << " child boxes, but the remaining data can hold at most "
+           << max_possible_children << ".";
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data,
+                   sstr.str());
+    }
+
+    m_children.reserve(max_number);
+  }
 
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
@@ -1117,14 +1162,6 @@ Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_
     }
 
     if (max_number == READ_CHILDREN_ALL) {
-      uint32_t max_children;
-      if (get_short_type() == fourcc("iinf")) {
-        max_children = limits->max_items;
-      }
-      else {
-        max_children = limits->max_children_per_box;
-      }
-
       if (max_children && m_children.size() > max_children) {
         std::stringstream sstr;
         sstr << "Maximum number of child boxes (" << max_children << ") in '" << get_type_string() << "' box exceeded.";
@@ -1138,15 +1175,24 @@ Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_
 
     m_children.push_back(std::move(box));
 
-
-    // count the new child and end reading new children when we reached the expected number
-
-    count++;
-
+    // Stop once we have read the expected number of children.
     if (max_number != READ_CHILDREN_ALL &&
-        count == max_number) {
+        m_children.size() == max_number) {
       break;
     }
+  }
+
+  // If a specific number of children was expected, we must have read exactly
+  // that many. A short read means the box is truncated or malformed. Prefer
+  // this specific error over the lower-level range error below, which would
+  // otherwise mask it.
+  if (max_number != READ_CHILDREN_ALL && m_children.size() != max_number) {
+    std::stringstream sstr;
+    sstr << "'" << get_type_string() << "' box declares " << max_number
+         << " child boxes, but only " << m_children.size() << " could be read.";
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data,
+                 sstr.str());
   }
 
   return range.get_error();
@@ -2628,6 +2674,17 @@ Error Box_iinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   if (item_count == 0) {
     return Error::Ok;
+  }
+
+  // Sanity check.
+  if (limits->max_items && item_count > limits->max_items) {
+    std::stringstream sstr;
+    sstr << "iinf box contains " << item_count << " items, which exceeds the security limit of "
+         << limits->max_items << " items.";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
   }
 
   return read_children(range, item_count, limits);
