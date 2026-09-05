@@ -21,6 +21,7 @@
 #include "decoder_webcodecs.h"
 #include "libheif/heif_plugin.h"
 #include "codecs/hevc_boxes.h"
+#include "codecs/decoder.h"
 #include "bitstream.h"
 #include "nalu_utils.h"
 
@@ -196,195 +197,6 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
     }
   });
 });
-
-
-static std::vector<uint8_t> remove_start_code_emulation2(const uint8_t* sps, size_t size)
-{
-  std::vector<uint8_t> out_data;
-
-  for (size_t i = 0; i < size; i++) {
-    if (i + 2 < size &&
-        sps[i] == 0 &&
-        sps[i + 1] == 0 &&
-        sps[i + 2] == 3) {
-      out_data.push_back(0);
-      out_data.push_back(0);
-      i += 2;
-    }
-    else {
-      out_data.push_back(sps[i]);
-    }
-  }
-
-  return out_data;
-}
-
-
-// Parses the SPS and fills 'config'. On return, 'width' and 'height' hold the
-// size of the visible image (after applying the conformance window), while
-// 'coded_width' and 'coded_height' hold the size of the coded picture.
-Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
-                                       HEVCDecoderConfigurationRecord* config,
-                                       uint32_t* width, uint32_t* height,
-                                       uint32_t* coded_width, uint32_t* coded_height)
-{
-  // remove start-code emulation bytes from SPS header stream
-
-  std::vector<uint8_t> sps_no_emul = remove_start_code_emulation2(sps, size);
-
-  sps = sps_no_emul.data();
-  size = sps_no_emul.size();
-
-
-  BitReader reader(sps, size);
-
-  // skip NAL header
-  reader.skip_bits(2 * 8);
-
-  // skip VPS ID
-  reader.skip_bits(4);
-
-  uint8_t nMaxSubLayersMinus1 = reader.get_bits8(3);
-
-  config->temporal_id_nested = reader.get_bits8(1);
-
-  // --- profile_tier_level ---
-
-  config->general_profile_space = reader.get_bits8(2);
-  config->general_tier_flag = reader.get_bits8(1);
-  config->general_profile_idc = reader.get_bits8(5);
-  config->general_profile_compatibility_flags = reader.get_bits32(32);
-
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-
-  config->general_level_idc = reader.get_bits8(8);
-
-  std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
-  std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
-
-  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
-    layer_profile_present[i] = reader.get_bits(1);
-    layer_level_present[i] = reader.get_bits(1);
-  }
-
-  if (nMaxSubLayersMinus1 > 0) {
-    for (int i = nMaxSubLayersMinus1; i < 8; i++) {
-      reader.skip_bits(2);
-    }
-  }
-
-  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
-    if (layer_profile_present[i]) {
-      reader.skip_bits(2 + 1 + 5);
-      reader.skip_bits(32);
-      reader.skip_bits(16);
-    }
-
-    if (layer_level_present[i]) {
-      reader.skip_bits(8);
-    }
-  }
-
-
-  // --- SPS continued ---
-
-  Error invalidUVLC{
-    heif_error_Invalid_input,
-    heif_suberror_Invalid_parameter_value,
-    "Invalid variable length code in HEVC SPS header"
-  };
-
-  uint32_t dummy, value;
-  if (!reader.get_uvlc(&dummy) || // skip seq_parameter_seq_id
-      !reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  if (value > 3) {
-    // chroma_format_idc is in the range 0..3 (H.265 section 7.4.3.2.1). The
-    // value is later cast to heif_chroma, so it must not be left unchecked.
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 "SPS chroma_format_idc out of range"};
-  }
-  config->chroma_format = (uint8_t) value;
-
-  if (config->chroma_format == 3) {
-    reader.skip_bits(1);
-  }
-
-  if (!reader.get_uvlc(width) ||
-      !reader.get_uvlc(height)) {
-    return invalidUVLC;
-  }
-
-  *coded_width = *width;
-  *coded_height = *height;
-
-  bool conformance_window = reader.get_bits(1);
-  if (conformance_window) {
-    uint32_t left, right, top, bottom;
-    if (!reader.get_uvlc(&left) ||
-        !reader.get_uvlc(&right) ||
-        !reader.get_uvlc(&top) ||
-        !reader.get_uvlc(&bottom)) {
-      return invalidUVLC;
-    }
-
-    //printf("conformance borders: %u %u %u %u\n",left,right,top,bottom);
-
-    uint32_t subH = 1, subV = 1;
-    if (config->chroma_format == 1) {
-      subV = 2;
-      subH = 2;
-    }
-    if (config->chroma_format == 2) { subH = 2; }
-
-    const uint64_t crop_w = (uint64_t)subH * ((uint64_t)left + (uint64_t)right);
-    const uint64_t crop_h = (uint64_t)subV * ((uint64_t)top + (uint64_t)bottom);
-    if (crop_w > *width || crop_h > *height) {
-      return Error{heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   "SPS conformance window exceeds image dimensions"};
-    }
-    *width  -= (uint32_t)crop_w;
-    *height -= (uint32_t)crop_h;
-  }
-
-  if (!reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  if (value > 8) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 "SPS bit_depth_luma_minus8 out of range"};
-  }
-  config->bit_depth_luma = (uint8_t) (value + 8);
-
-  if (!reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  if (value > 8) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 "SPS bit_depth_chroma_minus8 out of range"};
-  }
-  config->bit_depth_chroma = (uint8_t) (value + 8);
-
-
-
-  // --- init static configuration fields ---
-
-  config->configuration_version = 1;
-  config->min_spatial_segmentation_idc = 0; // TODO: get this value from the VUI, 0 should be safe
-  config->parallelism_type = 0; // TODO, 0 should be safe
-  config->avg_frame_rate = 0; // makes no sense for HEIF
-  config->constant_frame_rate = 0; // makes no sense for HEIF
-  config->num_temporal_layers = 1; // makes no sense for HEIF
-
-  return Error::Ok;
-}
 
 
 static const char* webcodecs_plugin_name()
@@ -792,10 +604,10 @@ static struct heif_error webcodecs_decode_image_with_limits(void* decoder_raw,
   }
 
   HEVCDecoderConfigurationRecord config;
-  uint32_t w, h;              // visible size after applying the conformance window
-  uint32_t coded_w, coded_h;  // size of the coded picture
-  Error err = parse_sps_for_hvcC_configuration2(sps_nal_unit.data.data(), sps_nal_unit.data.size(),
-                                                &config, &w, &h, &coded_w, &coded_h);
+  uint32_t w, h;      // visible size after applying the conformance window
+  ImageSize coded{};  // size of the coded picture
+  Error err = parse_sps_for_hvcC_configuration(sps_nal_unit.data.data(), sps_nal_unit.data.size(),
+                                               &config, &w, &h, &coded);
   if (err != Error::Ok) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_Unspecified,
@@ -805,7 +617,7 @@ static struct heif_error webcodecs_decode_image_with_limits(void* decoder_raw,
   // Reject coded picture sizes beyond the security limits before handing the
   // bitstream to the browser. libheif checks the SPS stored in the hvcC box,
   // but this plugin honours the last SPS in the NAL stream, which may differ.
-  if (coded_w == 0 || coded_h == 0 || w == 0 || h == 0) {
+  if (coded.width == 0 || coded.height == 0 || w == 0 || h == 0) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_Invalid_image_size,
             "SPS declares a zero-sized image"};
@@ -813,8 +625,8 @@ static struct heif_error webcodecs_decode_image_with_limits(void* decoder_raw,
 
   if (limits && limits->max_image_size_pixels > 0) {
     const auto max_dim = static_cast<uint32_t>(std::numeric_limits<int>::max());
-    if (coded_w > max_dim || coded_h > max_dim ||
-        coded_w > limits->max_image_size_pixels / coded_h) {
+    if (coded.width > max_dim || coded.height > max_dim ||
+        coded.width > limits->max_image_size_pixels / coded.height) {
       return {heif_error_Memory_allocation_error,
               heif_suberror_Security_limit_exceeded,
               "SPS coded picture size exceeds the maximum image size"};
