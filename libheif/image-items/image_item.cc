@@ -891,53 +891,91 @@ void ImageItem::set_omaf_image_projection(heif_omaf_image_projection projection)
 
 namespace {
 
-// Depth-first walk of the decode reference graph, detecting cycles. `on_path`
-// holds the items on the current root-to-node path (a repeat is a cycle);
-// `verified` memoizes items whose subtree is already known acyclic, so a shared
+// Detect cycles in the decode reference graph reached from `root`, following the
+// same edges the decode recursion follows. This uses an explicit heap worklist
+// rather than recursion on purpose: the graph depth is influenced by the input
+// (a chain of derived items, and unbounded when the item-count limit is
+// disabled), so a recursive walk could exhaust the native stack and crash the
+// process before any decode, on the read path of an untrusted file. The worklist
+// grows on the heap instead, so depth is bounded only by available memory.
+//
+// It is a depth-first walk. `on_path` holds the items on the current
+// root-to-node path; reaching one that is already on the path is a cycle.
+// `verified` memoizes items whose subtree is already proven acyclic, so a shared
 // sub-image reached through several paths is visited once and the walk stays
 // linear rather than exponential in the number of root-to-item paths
 // (cf. the decode amplification bound, GHSA-x8xm-cm2c-cfc8).
-Error check_decode_reference_cycles(const ImageItem* item,
-                                    std::set<heif_item_id>& on_path,
-                                    std::set<heif_item_id>& verified)
+Error check_decode_reference_cycles(const ImageItem* root)
 {
-  heif_item_id id = item->get_id();
+  std::set<heif_item_id> on_path;    // items on the current DFS path
+  std::set<heif_item_id> verified;   // items whose subtree is proven acyclic
 
-  if (on_path.find(id) != on_path.end()) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Item_reference_cycle,
-            "Image reference cycle"};
-  }
-  if (verified.find(id) != verified.end()) {
-    return Error::Ok;
-  }
-
-  on_path.insert(id);
-
-  // Follow exactly the edges the decode recursion follows: the derived-image
-  // ('dimg') inputs (grid tiles, overlay inputs, the 'iden' base) and the alpha
-  // ('auxl') auxiliary image.
-  auto file = item->get_file();
-  auto iref = file ? file->get_iref_box() : nullptr;
-  if (iref) {
-    for (heif_item_id child_id : iref->get_references(id, fourcc("dimg"))) {
-      auto child = item->get_context()->get_image(child_id, true);
-      if (child) {
-        if (Error err = check_decode_reference_cycles(child.get(), on_path, verified)) {
-          return err;
+  // Collect the decode-input children of an item, in the exact order the decode
+  // recursion follows them: the derived-image ('dimg') inputs (grid tiles,
+  // overlay inputs, the 'iden' base) first, then the alpha ('auxl') auxiliary.
+  // The returned shared_ptrs keep the child ImageItems alive for as long as the
+  // frame that holds them stays on the worklist.
+  auto collect_children = [](const ImageItem* item) {
+    std::vector<std::shared_ptr<const ImageItem>> children;
+    auto file = item->get_file();
+    auto iref = file ? file->get_iref_box() : nullptr;
+    if (iref) {
+      for (heif_item_id child_id : iref->get_references(item->get_id(), fourcc("dimg"))) {
+        if (auto child = item->get_context()->get_image(child_id, true)) {
+          children.push_back(std::move(child));
         }
       }
     }
-  }
-
-  if (auto alpha = item->get_alpha_channel()) {
-    if (Error err = check_decode_reference_cycles(alpha.get(), on_path, verified)) {
-      return err;
+    if (const auto& alpha = item->get_alpha_channel()) {
+      children.push_back(alpha);
     }
+    return children;
+  };
+
+  // One worklist frame per item currently on the DFS path. `next` is the index
+  // of the child to descend into next; when it reaches the end, the item's whole
+  // subtree has been proven acyclic and the item leaves the path.
+  struct Frame {
+    const ImageItem* item;
+    std::vector<std::shared_ptr<const ImageItem>> children;
+    size_t next = 0;
+  };
+
+  std::vector<Frame> stack;
+  on_path.insert(root->get_id());
+  stack.push_back(Frame{root, collect_children(root), 0});
+
+  while (!stack.empty()) {
+    Frame& top = stack.back();
+
+    if (top.next >= top.children.size()) {
+      // All children proven acyclic: leave the DFS path and memoize the subtree.
+      heif_item_id done_id = top.item->get_id();
+      on_path.erase(done_id);
+      verified.insert(done_id);
+      stack.pop_back();
+      continue;
+    }
+
+    const ImageItem* child = top.children[top.next++].get();
+    // From here on `top` must not be used: the push_back below may reallocate
+    // `stack` and invalidate the reference.
+
+    heif_item_id child_id = child->get_id();
+    if (on_path.find(child_id) != on_path.end()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Item_reference_cycle,
+              "Image reference cycle"};
+    }
+    if (verified.find(child_id) != verified.end()) {
+      continue;  // subtree already proven acyclic; do not descend into it again
+    }
+
+    on_path.insert(child_id);
+    auto grandchildren = collect_children(child);
+    stack.push_back(Frame{child, std::move(grandchildren), 0});
   }
 
-  on_path.erase(id);
-  verified.insert(id);
   return Error::Ok;
 }
 
@@ -1050,12 +1088,8 @@ Error ImageItem::verify_decodable() const
 {
   // Always: reject a cyclic decode reference graph (both 'dimg' and 'auxl'
   // edges) before decoding. See the declaration in image_item.h.
-  {
-    std::set<heif_item_id> on_path;
-    std::set<heif_item_id> verified;
-    if (Error err = check_decode_reference_cycles(this, on_path, verified)) {
-      return err;
-    }
+  if (Error err = check_decode_reference_cycles(this)) {
+    return err;
   }
 
   // Optionally: enforce MIAF's restricted derived-image dependencies
