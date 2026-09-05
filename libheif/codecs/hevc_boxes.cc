@@ -669,6 +669,13 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
       !reader.get_uvlc(&value)) {
     return invalidUVLC;
   }
+  if (value > 3) {
+    // chroma_format_idc is in the range 0..3 (H.265 section 7.4.3.2.1). The
+    // value is later cast to heif_chroma, so it must not be left unchecked.
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS chroma_format_idc out of range"};
+  }
   config->chroma_format = (uint8_t) value;
 
   if (config->chroma_format == 3) {
