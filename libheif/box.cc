@@ -3978,6 +3978,29 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   while (!range.eof()) {
+    // Cap the total number of reference entries, matching the item-count caps in
+    // Box_iloc/Box_iinf/Box_ipma (and the per-entry nRefs cap below). Without it
+    // the entry count is bounded only by the file size. That is a linear,
+    // file-bounded allocation rather than an amplification, so this is a
+    // consistency limit and not a security fix, but it rejects a pathological
+    // 'iref' early with a clear error instead of parsing it in full.
+    //
+    // max_items is a heuristic ceiling here, not a semantically exact bound: the
+    // number of entries is not strictly limited by the number of items, because
+    // one item may be the source (from_item_ID) of several entries, one per
+    // reference type (e.g. 'dimg', 'thmb', 'cdsc'). A well-formed file stays far
+    // below max_items (default 1000) regardless, so the generous ceiling is fine
+    // as a sanity limit; raise max_items if a legitimate file ever exceeds it.
+    if (limits->max_items && m_references.size() >= limits->max_items) {
+      std::stringstream sstr;
+      sstr << "'iref' box contains more than " << limits->max_items
+           << " reference entries, which exceeds the security limit.";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
     Reference ref;
 
     Error err = ref.header.parse_header(range);
