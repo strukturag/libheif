@@ -88,6 +88,7 @@ add_libheif_test(iden_declared_size)
 add_libheif_test(item_properties)
 add_libheif_test(item_writing)
 add_libheif_test(overlay_amplification)
+add_libheif_test(error_item_decode)
 add_libheif_test(alpha_cycle_deadlock)
 add_libheif_test(parallel_grid_deadlock)
 # The deadlock regression tests decode on a worker thread guarded by a timeout.

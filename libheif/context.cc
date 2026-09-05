@@ -636,14 +636,14 @@ Error HeifContext::interpret_heif_file_images()
     std::vector<std::shared_ptr<Box>> properties;
     Error err = m_heif_file->get_properties(id, properties);
     if (err) {
-      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem = std::make_shared<ImageItem_Error>(this, imageItem->get_infe_type(), id, err);
     }
 
     imageItem->set_properties(properties);
 
     err = imageItem->initialize_decoder();
     if (err) {
-      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem = std::make_shared<ImageItem_Error>(this, imageItem->get_infe_type(), id, err);
       imageItem->set_properties(properties);
     } else {
       // The decoder's input data extent must be set before any codec-config

@@ -183,14 +183,14 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     std::stringstream sstr;
     sstr << "Image item of type '" << fourcc_to_string(item_type) << "' is not supported.";
     Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
-    return std::make_shared<ImageItem_Error>(item_type, id, err);
+    return std::make_shared<ImageItem_Error>(ctx, item_type, id, err);
 #endif
   }
   else if (item_type == fourcc("j2k1")) {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
   else if (item_type == fourcc("lhv1")) {
-    return std::make_shared<ImageItem_Error>(item_type, id,
+    return std::make_shared<ImageItem_Error>(ctx, item_type, id,
                                              Error{heif_error_Unsupported_feature,
                                                    heif_suberror_Unsupported_image_type,
                                                    "Layered HEVC images (lhv1) are not supported yet"});
@@ -912,14 +912,6 @@ Error check_decode_reference_cycles(const ImageItem* item,
     return Error::Ok;
   }
 
-  // An item that failed to parse is a detached error item with no context and
-  // no traversable references. It cannot be part of a cycle, so treat it as a
-  // leaf (and, crucially, do not dereference its null context via get_file()).
-  if (item->get_context() == nullptr) {
-    verified.insert(id);
-    return Error::Ok;
-  }
-
   on_path.insert(id);
 
   // Follow exactly the edges the decode recursion follows: the derived-image
@@ -1004,12 +996,6 @@ Error check_miaf_derivation_constraints(const ImageItem* item,
                  (parent_is_iden ? 2u : 0u) | (is_iden ? 1u : 0u);
   if (!verified.insert(key).second) {
     return Error::Ok;  // already verified in this context
-  }
-
-  // A failed-to-parse item is a detached error item (null context) with no
-  // traversable references; treat it as a leaf and do not dereference it.
-  if (item->get_context() == nullptr) {
-    return Error::Ok;
   }
 
   // Rank budget passed to this item's own 'dimg' inputs.
