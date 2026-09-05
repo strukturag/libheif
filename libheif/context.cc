@@ -214,6 +214,10 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
     dst->max_iso23001_17_pixel_size_bytes = src->max_iso23001_17_pixel_size_bytes;
   }
 
+  if (src->version >= 5) {
+    dst->always_apply_MIAF_derivation_constraints = src->always_apply_MIAF_derivation_constraints;
+  }
+
   // `parent` is an internal field; user-supplied limits are always treated as
   // a root context. dst is HeifContext::m_limits, which is registered.
   dst->parent = nullptr;

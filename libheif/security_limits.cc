@@ -26,7 +26,7 @@
 
 
 heif_security_limits global_security_limits{
-    .version = 4,
+    .version = 5,
 
     // --- version 1
 
@@ -63,13 +63,20 @@ heif_security_limits global_security_limits{
 
     .max_iso23001_17_pixel_size_bytes = 256,
 
-    .parent = nullptr
+    .parent = nullptr,
+
+    // --- version 5
+
+    // Enforce MIAF derived-image dependency constraints on all files by default,
+    // not just those declaring the 'miaf' brand (which an attacker could omit).
+    .always_apply_MIAF_derivation_constraints = 1
 };
 
 
 heif_security_limits disabled_security_limits{
-    .version = 4,
-    .parent = nullptr
+    .version = 5,
+    .parent = nullptr,
+    .always_apply_MIAF_derivation_constraints = 0
 };
 
 
@@ -100,7 +107,9 @@ heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limit
   // sMemoryUsage for total-memory accounting. If base is itself derived, walk
   // to the root so we keep the parent chain at one hop.
   result.parent = (base->version >= 4 && base->parent) ? base->parent : base;
-  result.version = 4;
+  // result is a full copy of *base, so all of base's versioned fields are
+  // present; keep base's version rather than pinning an outdated one.
+  result.version = base->version;
 
   if (ispe_width == 0 || ispe_height == 0) {
     return result;

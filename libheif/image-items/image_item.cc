@@ -1074,16 +1074,25 @@ Error ImageItem::verify_decodable() const
 
   // Optionally: enforce MIAF's restricted derived-image dependencies
   // (ISO/IEC 23000-22, clause 7.3.11). Applied when the file declares the 'miaf'
-  // brand.
-  //
-  // TODO(v1.24.x): also apply this when a security-limits flag
-  // (always_apply_MIAF_derivation_constraints) is set, so that a malicious file
-  // cannot bypass the check simply by omitting the 'miaf' brand. That flag is a
-  // heif_security_limits API addition and therefore has to wait for v1.24.x.
+  // brand, or unconditionally when the security limit
+  // always_apply_MIAF_derivation_constraints is set (which is the default). The
+  // latter closes the bypass of a malicious file simply omitting the brand.
   bool apply_miaf = false;
   if (auto file = get_file()) {
     if (auto ftyp = file->get_ftyp_box()) {
       apply_miaf = ftyp->has_compatible_brand(heif_brand2_miaf);
+    }
+  }
+  if (!apply_miaf) {
+    if (auto context = get_context()) {
+      // A context's security limits are always normalized to the current
+      // version (m_limits starts at the latest-version defaults and
+      // copy_security_limits never lowers the version), so the version-5
+      // field can be read without a version guard here.
+      const heif_security_limits* limits = context->get_security_limits();
+      if (limits && limits->always_apply_MIAF_derivation_constraints) {
+        apply_miaf = true;
+      }
     }
   }
 

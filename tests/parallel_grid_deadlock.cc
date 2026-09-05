@@ -234,8 +234,19 @@ std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary
 
 // Decode one item (by id) to completion and return the error. Self-contained so
 // it can run on a detached worker thread without touching caller-owned state.
-heif_error decode_item_blocking(const std::vector<uint8_t>& data, uint16_t item_id) {
+heif_error decode_item_blocking(const std::vector<uint8_t>& data, uint16_t item_id,
+                                bool force_miaf_off = false) {
   heif_context* ctx = heif_context_alloc();
+
+  if (force_miaf_off) {
+    // Opt out of the (default-on) MIAF derivation constraints, to test that the
+    // flag actually gates the check. Go through heif_context_set_security_limits()
+    // rather than the mutable getter, so this also exercises copy_security_limits()
+    // preserving the version-5 field.
+    heif_security_limits limits = *heif_context_get_security_limits(ctx);
+    limits.always_apply_MIAF_derivation_constraints = 0;
+    heif_context_set_security_limits(ctx, &limits);
+  }
 
   heif_error err = heif_context_read_from_memory_without_copy(
       ctx, data.data(), data.size(), nullptr);
@@ -264,19 +275,22 @@ heif_error decode_item_blocking(const std::vector<uint8_t>& data, uint16_t item_
 // regression: the decode deadlocked). The worker holds its state through a
 // shared_ptr so detaching it on timeout leaves no dangling references.
 bool decode_item_with_timeout(const std::vector<uint8_t>& data, uint16_t item_id,
-                              std::chrono::seconds timeout, heif_error& out_err) {
+                              std::chrono::seconds timeout, heif_error& out_err,
+                              bool force_miaf_off = false) {
   struct Job {
     std::vector<uint8_t> data;
     uint16_t item_id;
+    bool force_miaf_off;
     std::promise<heif_error> prom;
   };
   auto job = std::make_shared<Job>();
   job->data = data;
   job->item_id = item_id;
+  job->force_miaf_off = force_miaf_off;
   auto fut = job->prom.get_future();
 
   std::thread worker([job]() {
-    job->prom.set_value(decode_item_blocking(job->data, job->item_id));
+    job->prom.set_value(decode_item_blocking(job->data, job->item_id, job->force_miaf_off));
   });
 
   if (fut.wait_for(timeout) == std::future_status::timeout) {
@@ -431,8 +445,7 @@ TEST_CASE("parallel grid: a cyclic primary does not make valid sibling items und
 // A nested grid (a grid whose tile is itself a grid) violates MIAF's derivation
 // chain (ISO/IEC 23000-22 clause 7.3.11: a grid input must be a coded image).
 // The graph is acyclic, so the cycle check passes; verify_decodable() rejects it
-// only because of the MIAF derivation constraints, which apply here because the
-// file carries the 'miaf' brand.
+// only because of the MIAF derivation constraints.
 static std::vector<Item> nested_grid_items() {
   const std::vector<uint8_t> pixels(64 * 64, 0x7F);
   std::vector<Item> items;
@@ -453,15 +466,29 @@ TEST_CASE("MIAF: a nested grid is rejected when the file has the 'miaf' brand") 
   REQUIRE(err.code == heif_error_Invalid_input);
 }
 
-// The same nested grid, without the 'miaf' brand, is not subject to the MIAF
-// derivation constraints. It is acyclic and structurally decodable, so it is
-// not rejected by verify_decodable(). (This documents that the MIAF check is
-// brand-gated; a future security-limits flag will be able to force it on.)
-TEST_CASE("MIAF: without the 'miaf' brand a nested grid is not structurally rejected") {
+// The MIAF derivation check applies by default even without the 'miaf' brand,
+// because always_apply_MIAF_derivation_constraints defaults to on. So the same
+// nested grid, with no brand, is still rejected.
+TEST_CASE("MIAF: a nested grid without the brand is rejected by default") {
   auto data = build_file(nested_grid_items(), /*primary=*/1, /*with_miaf_brand=*/false);
 
   heif_error err{};
   bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Invalid_input);
+}
+
+// With the security limit always_apply_MIAF_derivation_constraints turned off
+// and no 'miaf' brand, the MIAF constraints do not apply: the acyclic nested
+// grid is structurally decodable, so it is not rejected by verify_decodable().
+// This proves the flag actually gates the check.
+TEST_CASE("MIAF: with the flag off and no brand, a nested grid is not rejected") {
+  auto data = build_file(nested_grid_items(), /*primary=*/1, /*with_miaf_brand=*/false);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err,
+                                            /*force_miaf_off=*/true);
 
   REQUIRE(completed);
   REQUIRE(err.code == heif_error_Ok);

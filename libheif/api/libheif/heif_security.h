@@ -85,6 +85,17 @@ typedef struct heif_security_limits
   // accounted against. nullptr means "this is a root context" (the registered
   // one). User code should leave this as nullptr; the field is set internally.
   const struct heif_security_limits* parent;
+
+  // --- version 5 (v1.24.0)
+
+  // When non-zero, enforce the MIAF (ISO/IEC 23000-22) derived-image dependency
+  // constraints (clause 7.3.11: coded -> [iden] -> grid -> [iden] -> overlay ->
+  // [iden]) on every decoded item, not only on items in a file that declares the
+  // 'miaf' brand. Because the brand is attacker-controlled, a malicious file
+  // could otherwise bypass those structural constraints simply by omitting the
+  // brand. Files that do declare the 'miaf' brand are always checked, regardless
+  // of this flag.
+  uint8_t always_apply_MIAF_derivation_constraints;
 } heif_security_limits;
 
 

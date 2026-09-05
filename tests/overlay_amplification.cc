@@ -230,6 +230,13 @@ heif_error decode_primary(const std::vector<uint8_t>& data, bool& read_ok) {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
 
+  // This suite exercises the overlay amplification / nesting guards on derived
+  // structures that are legal in base HEIF but not in MIAF (e.g. nested
+  // overlays). Opt out of the (default-on) MIAF derivation constraints so those
+  // structures reach the decode path under test instead of being rejected up
+  // front.
+  heif_context_get_security_limits(ctx)->always_apply_MIAF_derivation_constraints = 0;
+
   heif_error err = heif_context_read_from_memory_without_copy(
       ctx, data.data(), data.size(), nullptr);
   read_ok = (err.code == heif_error_Ok);
