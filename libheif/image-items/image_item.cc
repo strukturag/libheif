@@ -895,7 +895,8 @@ namespace {
 // holds the items on the current root-to-node path (a repeat is a cycle);
 // `verified` memoizes items whose subtree is already known acyclic, so a shared
 // sub-image reached through several paths is visited once and the walk stays
-// linear (cf. HeifFile::check_for_ref_cycle, GHSA-x8xm-cm2c-cfc8).
+// linear rather than exponential in the number of root-to-item paths
+// (cf. the decode amplification bound, GHSA-x8xm-cm2c-cfc8).
 Error check_decode_reference_cycles(const ImageItem* item,
                                     std::set<heif_item_id>& on_path,
                                     std::set<heif_item_id>& verified)
@@ -961,6 +962,14 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   // The matching insert lives inside decode_compressed_image() of derived
   // items (grid/overlay/iden), so the current item is in decode_state only
   // when called from one of its own descendants.
+  //
+  // Second-layer hardening, not required for correctness: the top-level decode
+  // already ran ImageItem::verify_decodable() (HeifContext::decode_image), which
+  // proves the whole reachable decode graph is acyclic before any recursion, so
+  // this per-path check can never fire on a graph that reached here. It is kept
+  // as a cheap in-decode backstop, and the same applies to the equivalent checks
+  // in decode_compressed_image() and in grid/overlay/iden. We may remove them in
+  // the future once verify_decodable() is the sole cycle guard.
   if (decode_state.processed_ids.contains(m_id)) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,

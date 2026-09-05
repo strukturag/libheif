@@ -624,12 +624,11 @@ Error HeifFile::parse_heif_images()
   m_idat_box = m_meta_box->get_child_box<Box_idat>();
 
   m_iref_box = m_meta_box->get_child_box<Box_iref>();
-  if (m_iref_box && m_pitm_box) {
-    Error error = check_for_ref_cycle(get_primary_image_ID(), m_iref_box);
-    if (error) {
-      return error;
-    }
-  }
+
+  // Note: reference cycles are not rejected at load. A cycle only matters when
+  // it is decoded, and it is caught there per item by ImageItem::verify_decodable()
+  // (following both 'dimg' and 'auxl' edges). Rejecting the whole file at load
+  // would also make its unaffected, independently valid items undecodable.
 
   m_grpl_box = m_meta_box->get_child_box<Box_grpl>();
 
@@ -647,51 +646,6 @@ Error HeifFile::parse_heif_sequences()
             "No mvhd box in image sequence."};
   }
 
-  return Error::Ok;
-}
-
-
-Error HeifFile::check_for_ref_cycle(heif_item_id ID,
-                                    const std::shared_ptr<Box_iref>& iref_box) const
-{
-  std::unordered_set<heif_item_id> parent_items;    // items on the current DFS path
-  std::unordered_set<heif_item_id> finished_items;  // items whose subtree is known acyclic
-  return check_for_ref_cycle_recursion(ID, iref_box, parent_items, finished_items);
-}
-
-
-Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
-                                    const std::shared_ptr<Box_iref>& iref_box,
-                                    std::unordered_set<heif_item_id>& parent_items,
-                                    std::unordered_set<heif_item_id>& finished_items) const {
-  if (parent_items.find(ID) != parent_items.end()) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Item_reference_cycle,
-                 "Image reference cycle");
-  }
-
-  // An item whose subtree we have already fully verified as acyclic cannot be
-  // part of a cycle when reached again through a different path. Without this
-  // memo the DFS visits every distinct root-to-item path, which is exponential
-  // for shared/nested derived-image references (e.g. many 'iden' items pointing
-  // at a common base), turning a tiny file into a file-open CPU DoS.
-  // (GHSA-x8xm-cm2c-cfc8)
-  if (finished_items.find(ID) != finished_items.end()) {
-    return Error::Ok;
-  }
-
-  parent_items.insert(ID);
-
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
-  for (heif_item_id reference_idx : image_references) {
-    Error error = check_for_ref_cycle_recursion(reference_idx, iref_box, parent_items, finished_items);
-    if (error) {
-      return error;
-    }
-  }
-
-  parent_items.erase(ID);
-  finished_items.insert(ID);
   return Error::Ok;
 }
 

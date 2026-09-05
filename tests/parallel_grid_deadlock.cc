@@ -394,3 +394,33 @@ TEST_CASE("parallel grid: a normal two-tile grid still decodes") {
   REQUIRE(completed);
   REQUIRE(err.code == heif_error_Ok);
 }
+
+// A reference cycle is not rejected at file load: the file still opens and its
+// independently valid items still decode. Only the cyclic item itself fails,
+// at decode time. Here the primary (item 1) is a grid whose two sub-grids form
+// a 'dimg' cycle, while item 4 is an unrelated valid mask.
+TEST_CASE("parallel grid: a cyclic primary does not make valid sibling items undecodable") {
+  const std::vector<uint8_t> big(32 * 64, 0x7F);
+  const std::vector<uint8_t> small(32 * 32, 0x7F);
+  std::vector<Item> items;
+  //             id  type    w   h   alpha dimg    auxl data
+  items.push_back({1, "grid", 64, 64, false, {2, 3}, {}, image_grid(1, 2, 64, 64)});  // cyclic primary
+  items.push_back({2, "grid", 32, 64, false, {3},    {}, image_grid(1, 1, 32, 64)});  // G1 -> G2
+  items.push_back({3, "grid", 32, 64, false, {2},    {}, image_grid(1, 1, 32, 64)});  // G2 -> G1
+  items.push_back({4, "mski", 32, 32, false, {},     {}, small});                      // valid, unrelated
+
+  auto data = build_file(items, /*primary=*/1);
+
+  // The valid sibling decodes. Because decode reads the file first, this also
+  // proves the file loaded despite the cyclic primary.
+  heif_error err_valid{};
+  bool completed_valid = decode_item_with_timeout(data, /*item=*/4, std::chrono::seconds(20), err_valid);
+  REQUIRE(completed_valid);
+  REQUIRE(err_valid.code == heif_error_Ok);
+
+  // The cyclic item is still rejected, at decode.
+  heif_error err_cyclic{};
+  bool completed_cyclic = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err_cyclic);
+  REQUIRE(completed_cyclic);
+  REQUIRE(err_cyclic.code == heif_error_Invalid_input);
+}
