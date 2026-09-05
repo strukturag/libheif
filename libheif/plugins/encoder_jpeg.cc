@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_jpeg.h"
+#include "encoder_input_check.h"
 #include <vector>
 #include <cstring>
 #include <cassert>
@@ -341,6 +342,14 @@ static void OnJpegError(j_common_ptr cinfo)
 heif_error jpeg_encode_image(void* encoder_raw, const heif_image* image,
                              heif_image_input_class input_class)
 {
+  // JPEG signals one sample precision for all components. The plugin always
+  // requests YCbCr input and does not implement greyscale JPEG encoding yet.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/false,
+                                                    {8});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   auto* encoder = (encoder_struct_jpeg*) encoder_raw;
 
 

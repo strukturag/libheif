@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_vvenc.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <string>   // apparently, this is a false positive of cpplint
 #include <cstring>
@@ -556,6 +557,14 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
 static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                               uintptr_t framenr)
 {
+  // VVC signals one bit depth for all planes, and this plugin only
+  // implements 8 bit encoding.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
   vvencEncoder* vvencoder = encoder->vvencoder;
 

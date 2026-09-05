@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_x265.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <sstream>
 #include <string>
@@ -1101,6 +1102,16 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  // HEVC can signal different luma and chroma bit depths, but x265 has a
+  // single internal bit depth and cannot produce such a stream. Whether this
+  // build of libx265 has 10 or 12 bit support is checked separately via
+  // x265_api_get().
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (!encoder->api) {

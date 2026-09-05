@@ -31,6 +31,7 @@
 #include <memory>
 #include <utility>
 #include "encoder_aom.h"
+#include "encoder_input_check.h"
 
 #include <deque>
 #include <aom/aom_encoder.h>
@@ -1237,6 +1238,14 @@ static heif_error aom_start_sequence_encoding(void* encoder_raw, const heif_imag
 static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                             uintptr_t frame_nr)
 {
+  // AV1 signals one bit depth for all planes, so an image whose color
+  // channels disagree cannot be encoded.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
   aom_codec_ctx_t& codec = encoder->codec;
 

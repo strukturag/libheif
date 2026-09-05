@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_x264.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <string>
 #include <cstring>
@@ -958,6 +959,14 @@ static heif_error x264_start_sequence_encoding(void* encoder_raw, const heif_ima
 static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  // H.264 can signal different luma and chroma bit depths, but x264 has a
+  // single bit depth and cannot produce such a stream.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_x264* encoder = (encoder_struct_x264*) encoder_raw;
   x264_param_t& param = encoder->param;
 

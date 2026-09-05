@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_svt.h"
+#include "encoder_input_check.h"
 #include <vector>
 #include <cstring>
 #include <cassert>
@@ -1022,6 +1023,14 @@ static heif_error read_encoder_output_packets(void* encoder_raw, bool done_sendi
 
 static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image* image, uintptr_t frame_nr)
 {
+  // AV1 signals one bit depth for all planes. SVT always requests YCbCr
+  // input, so a monochrome image would be missing the Cb/Cr planes read below.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/false,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   auto* encoder = (encoder_struct_svt*) encoder_raw;
   EbComponentType*& svt_encoder = encoder->svt_encoder;
   EbErrorType res = EB_ErrorNone;
