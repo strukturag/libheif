@@ -85,6 +85,14 @@ heif_error heif_image_handle_get_depth_image_handle(const heif_image_handle* han
     return err.error_struct(handle->image.get());
   }
 
+  // Reject an item that could not be parsed (e.g. an unsupported codec) here,
+  // like heif_context_get_image_handle() does, rather than handing out a handle
+  // that can only fail at decode.
+  if (Error error = depth_image->get_item_error()) {
+    *out_depth_handle = nullptr;
+    return error.error_struct(handle->image.get());
+  }
+
   *out_depth_handle = new heif_image_handle();
   (*out_depth_handle)->image = depth_image;
   (*out_depth_handle)->context = handle->context;
@@ -167,6 +175,10 @@ heif_error heif_image_handle_get_thumbnail(const heif_image_handle* handle,
   auto thumbnails = handle->image->get_thumbnails();
   for (const auto& thumb : thumbnails) {
     if (thumb->get_id() == thumbnail_id) {
+      if (Error error = thumb->get_item_error()) {
+        *out_thumbnail_handle = nullptr;
+        return error.error_struct(handle->image.get());
+      }
       *out_thumbnail_handle = new heif_image_handle();
       (*out_thumbnail_handle)->image = thumb;
       (*out_thumbnail_handle)->context = handle->context;
@@ -313,6 +325,9 @@ heif_error heif_image_handle_get_auxiliary_image_handle(const heif_image_handle*
   auto auxImages = main_image_handle->image->get_aux_images();
   for (const auto& aux : auxImages) {
     if (aux->get_id() == auxiliary_id) {
+      if (Error error = aux->get_item_error()) {
+        return error.error_struct(main_image_handle->image.get());
+      }
       *out_auxiliary_handle = new heif_image_handle();
       (*out_auxiliary_handle)->image = aux;
       (*out_auxiliary_handle)->context = main_image_handle->context;
