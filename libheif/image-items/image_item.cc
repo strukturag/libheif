@@ -912,6 +912,14 @@ Error check_decode_reference_cycles(const ImageItem* item,
     return Error::Ok;
   }
 
+  // An item that failed to parse is a detached error item with no context and
+  // no traversable references. It cannot be part of a cycle, so treat it as a
+  // leaf (and, crucially, do not dereference its null context via get_file()).
+  if (item->get_context() == nullptr) {
+    verified.insert(id);
+    return Error::Ok;
+  }
+
   on_path.insert(id);
 
   // Follow exactly the edges the decode recursion follows: the derived-image
@@ -941,14 +949,153 @@ Error check_decode_reference_cycles(const ImageItem* item,
   return Error::Ok;
 }
 
+
+// --- MIAF derived-image dependency constraints (ISO/IEC 23000-22, clause 7.3.11)
+//
+// MIAF restricts the derivation chain to a fixed order. From base to top it is:
+//   coded image(s) -> [iden] -> grid -> [iden] -> overlay -> [iden]
+// (7.3.11.1), plus: an 'iden' shall not be derived directly from another 'iden'
+// (7.3.11.2), and a grid tile that is an 'iden' must refer directly to a coded
+// image (7.3.11.4.1). So, ignoring 'iden', a chain may apply overlay above grid
+// above the coded base, each at most once. We model that with a "structural
+// rank": coded=0, grid=1, overlay=2. Walking from the top down, each derived
+// item must have rank <= the rank its position allows, and it lowers the rank
+// allowed for its own inputs (grid inputs must be coded; overlay inputs may be
+// grid or below). 'iden' is transparent to the rank but must not sit directly
+// on another 'iden'. Only the 'dimg' derivation is constrained here; auxiliary
+// images are checked as their own fresh chains.
+enum { MIAF_RANK_CODED = 0, MIAF_RANK_GRID = 1, MIAF_RANK_OVERLAY = 2 };
+
+int miaf_structural_rank(const ImageItem* item, bool& is_iden)
+{
+  uint32_t type = item->get_infe_type();
+  is_iden = (type == fourcc("iden"));
+  if (type == fourcc("iovl")) { return MIAF_RANK_OVERLAY; }
+  if (type == fourcc("grid")) { return MIAF_RANK_GRID; }
+  return MIAF_RANK_CODED;  // coded image, or 'iden' (rank unused when is_iden)
+}
+
+// `max_rank` is the highest structural rank allowed at this item's position;
+// `parent_is_iden` is true when the immediate parent on the derivation path is
+// an 'iden'. `verified` memoizes (item, max_rank, parent_is_iden) triples that
+// already passed, keeping a shared sub-image from being re-walked per path.
+Error check_miaf_derivation_constraints(const ImageItem* item,
+                                        int max_rank, bool parent_is_iden,
+                                        std::set<uint64_t>& verified)
+{
+  heif_item_id id = item->get_id();
+
+  bool is_iden = false;
+  int rank = miaf_structural_rank(item, is_iden);
+
+  if (is_iden) {
+    if (parent_is_iden) {
+      return {heif_error_Invalid_input, heif_suberror_Unspecified,
+              "MIAF: an 'iden' image is derived directly from another 'iden' image"};
+    }
+  }
+  else if (rank > max_rank) {
+    return {heif_error_Invalid_input, heif_suberror_Unspecified,
+            "MIAF: derived-image dependencies are not in the order allowed by ISO/IEC 23000-22"};
+  }
+
+  uint64_t key = (static_cast<uint64_t>(id) << 4) |
+                 (static_cast<uint64_t>(max_rank & 0x3) << 2) |
+                 (parent_is_iden ? 2u : 0u) | (is_iden ? 1u : 0u);
+  if (!verified.insert(key).second) {
+    return Error::Ok;  // already verified in this context
+  }
+
+  // A failed-to-parse item is a detached error item (null context) with no
+  // traversable references; treat it as a leaf and do not dereference it.
+  if (item->get_context() == nullptr) {
+    return Error::Ok;
+  }
+
+  // Rank budget passed to this item's own 'dimg' inputs.
+  int child_max_rank;
+  bool child_parent_is_iden;
+  if (is_iden) {
+    child_max_rank = max_rank;          // transparent: inputs keep this position
+    child_parent_is_iden = true;
+  }
+  else if (rank == MIAF_RANK_OVERLAY) {
+    child_max_rank = MIAF_RANK_GRID;    // overlay inputs: grid or below
+    child_parent_is_iden = false;
+  }
+  else if (rank == MIAF_RANK_GRID) {
+    child_max_rank = MIAF_RANK_CODED;   // grid inputs: coded (or iden -> coded)
+    child_parent_is_iden = false;
+  }
+  else {
+    return Error::Ok;                   // coded image: leaf of the derivation chain
+  }
+
+  auto file = item->get_file();
+  auto iref = file ? file->get_iref_box() : nullptr;
+  if (iref) {
+    for (heif_item_id child_id : iref->get_references(id, fourcc("dimg"))) {
+      auto child = item->get_context()->get_image(child_id, true);
+      if (child) {
+        if (Error err = check_miaf_derivation_constraints(child.get(), child_max_rank,
+                                                          child_parent_is_iden, verified)) {
+          return err;
+        }
+      }
+    }
+  }
+
+  // An auxiliary (e.g. alpha) image is a separate image whose own derivation
+  // chain must independently satisfy MIAF, so check it as a fresh chain.
+  if (auto alpha = item->get_alpha_channel()) {
+    if (Error err = check_miaf_derivation_constraints(alpha.get(), MIAF_RANK_OVERLAY,
+                                                      /*parent_is_iden=*/false, verified)) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
+}
+
 } // namespace
 
 
 Error ImageItem::verify_decodable() const
 {
-  std::set<heif_item_id> on_path;
-  std::set<heif_item_id> verified;
-  return check_decode_reference_cycles(this, on_path, verified);
+  // Always: reject a cyclic decode reference graph (both 'dimg' and 'auxl'
+  // edges) before decoding. See the declaration in image_item.h.
+  {
+    std::set<heif_item_id> on_path;
+    std::set<heif_item_id> verified;
+    if (Error err = check_decode_reference_cycles(this, on_path, verified)) {
+      return err;
+    }
+  }
+
+  // Optionally: enforce MIAF's restricted derived-image dependencies
+  // (ISO/IEC 23000-22, clause 7.3.11). Applied when the file declares the 'miaf'
+  // brand.
+  //
+  // TODO(v1.24.x): also apply this when a security-limits flag
+  // (always_apply_MIAF_derivation_constraints) is set, so that a malicious file
+  // cannot bypass the check simply by omitting the 'miaf' brand. That flag is a
+  // heif_security_limits API addition and therefore has to wait for v1.24.x.
+  bool apply_miaf = false;
+  if (auto file = get_file()) {
+    if (auto ftyp = file->get_ftyp_box()) {
+      apply_miaf = ftyp->has_compatible_brand(heif_brand2_miaf);
+    }
+  }
+
+  if (apply_miaf) {
+    std::set<uint64_t> verified;
+    if (Error err = check_miaf_derivation_constraints(this, MIAF_RANK_OVERLAY,
+                                                      /*parent_is_iden=*/false, verified)) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
 }
 
 

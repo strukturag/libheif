@@ -92,13 +92,16 @@ std::vector<uint8_t> image_grid(uint8_t rows, uint8_t cols, uint16_t w, uint16_t
 // (property index = item position, 1-based); the shared 'mskC' and 'auxC'
 // follow. Item payloads are stored in 'idat' and located with construction
 // method 1.
-std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary_id) {
+std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary_id,
+                                bool with_miaf_brand = true) {
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "heic");
   put_u32_be(ftyp_payload, 0);
   append_fourcc(ftyp_payload, "mif1");
   append_fourcc(ftyp_payload, "heic");
-  append_fourcc(ftyp_payload, "miaf");
+  if (with_miaf_brand) {
+    append_fourcc(ftyp_payload, "miaf");
+  }
   auto ftyp = make_box("ftyp", ftyp_payload);
 
   std::vector<uint8_t> hdlr_payload;
@@ -423,4 +426,43 @@ TEST_CASE("parallel grid: a cyclic primary does not make valid sibling items und
   bool completed_cyclic = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err_cyclic);
   REQUIRE(completed_cyclic);
   REQUIRE(err_cyclic.code == heif_error_Invalid_input);
+}
+
+// A nested grid (a grid whose tile is itself a grid) violates MIAF's derivation
+// chain (ISO/IEC 23000-22 clause 7.3.11: a grid input must be a coded image).
+// The graph is acyclic, so the cycle check passes; verify_decodable() rejects it
+// only because of the MIAF derivation constraints, which apply here because the
+// file carries the 'miaf' brand.
+static std::vector<Item> nested_grid_items() {
+  const std::vector<uint8_t> pixels(64 * 64, 0x7F);
+  std::vector<Item> items;
+  //           id  type    w   h   alpha dimg auxl data
+  items.push_back({1, "grid", 64, 64, false, {2}, {}, image_grid(1, 1, 64, 64)});  // grid over ...
+  items.push_back({2, "grid", 64, 64, false, {3}, {}, image_grid(1, 1, 64, 64)});  // ... a grid (invalid)
+  items.push_back({3, "mski", 64, 64, false, {},  {}, pixels});                     // coded base
+  return items;
+}
+
+TEST_CASE("MIAF: a nested grid is rejected when the file has the 'miaf' brand") {
+  auto data = build_file(nested_grid_items(), /*primary=*/1, /*with_miaf_brand=*/true);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Invalid_input);
+}
+
+// The same nested grid, without the 'miaf' brand, is not subject to the MIAF
+// derivation constraints. It is acyclic and structurally decodable, so it is
+// not rejected by verify_decodable(). (This documents that the MIAF check is
+// brand-gated; a future security-limits flag will be able to force it on.)
+TEST_CASE("MIAF: without the 'miaf' brand a nested grid is not structurally rejected") {
+  auto data = build_file(nested_grid_items(), /*primary=*/1, /*with_miaf_brand=*/false);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Ok);
 }
