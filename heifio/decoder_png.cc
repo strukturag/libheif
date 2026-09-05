@@ -74,7 +74,10 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 #else
   png_bytep png_profile_data;
 #endif
-  uint8_t* profile_data = nullptr;
+  // 'volatile' so the value survives a longjmp back to the setjmp handler below,
+  // where it is freed (a non-volatile local modified after setjmp() has an
+  // indeterminate value after longjmp()).
+  uint8_t* volatile profile_data = nullptr;
   png_uint_32 profile_length = 5;
 #ifdef PNG_cICP_SUPPORTED
   uint8_t color_primaries, transfer_characteristics, matrix_coefficients, video_full_range;
@@ -97,24 +100,47 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
    * was compiled with a compatible version of the library.  REQUIRED
    */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  assert(png_ptr != NULL);
+  if (png_ptr == NULL) {
+    fclose(fh);
+    struct heif_error err = {
+      .code = heif_error_Memory_allocation_error,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Could not create PNG read structure"};
+    return err;
+  }
 
   /* Allocate/initialize the memory for image information.  REQUIRED. */
   info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == NULL) {
     png_destroy_read_struct(&png_ptr, (png_infopp) NULL, (png_infopp) NULL);
-    assert(false); // , "could not create info_ptr");
+    fclose(fh);
+    struct heif_error err = {
+      .code = heif_error_Memory_allocation_error,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Could not create PNG info structure"};
+    return err;
   } // if
 
   /* Set error handling if you are using the setjmp/longjmp method (this is
    * the normal method of doing things with libpng).  REQUIRED unless you
    * set up your own error handlers in the png_create_read_struct() earlier.
+   *
+   * Note: this error path must NOT rely on assert(), which is compiled out in
+   * NDEBUG builds. If it did, a corrupt PNG would fall through and continue
+   * running with the now-destroyed (NULL) png_ptr/info_ptr and uninitialized
+   * width/height, leading to out-of-bounds reads written into the output.
    */
   if (setjmp(png_jmpbuf(png_ptr))) {
     /* Free all of the memory associated with the png_ptr and info_ptr */
     png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
+    free(profile_data);
+    fclose(fh);
     /* If we get here, we had a problem reading the file */
-    assert(false); // , "fatal error in png library");
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Error reading PNG file"};
+    return err;
   } // if
 
   /* If you are using replacement read functions, instead of calling
@@ -252,7 +278,17 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
 
   rowbytes = aligned_rowbytes;
   row_pointers[0] = (png_bytep)malloc(rowbytes * height);
-  assert(row_pointers[0] != NULL);
+  if (row_pointers[0] == NULL) {
+    delete[] row_pointers;
+    free(profile_data);
+    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
+    fclose(fh);
+    struct heif_error err = {
+      .code = heif_error_Memory_allocation_error,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Could not allocate memory for PNG image"};
+    return err;
+  }
   for (uint32_t y = 1; y < height; y++) {
     row_pointers[y] = row_pointers[0] + rowbytes * y;
   } // for

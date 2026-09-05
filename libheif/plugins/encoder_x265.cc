@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_x265.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <sstream>
 #include <string>
@@ -970,6 +971,23 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
     }
   }
 
+  // Write the pixel aspect ratio into the VUI. Extended_SAR stores sar_width/sar_height
+  // as u(16), so ratios that do not fit are only signalled through the pasp property.
+  // A 1:1 ratio is omitted (VUI absence already means unspecified/square).
+  // Set before the user parameters below so that an explicit "x265:sar" takes precedence.
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    std::stringstream sstr;
+    sstr << aspect_h << ':' << aspect_v;
+    api->param_parse(param, "sar", sstr.str().c_str());
+  }
+
   for (const auto& p : encoder->parameters) {
     if (p.name == heif_encoder_parameter_name_quality) {
       // quality=0   -> crf=50
@@ -1084,6 +1102,16 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  // HEVC can signal different luma and chroma bit depths, but x265 has a
+  // single internal bit depth and cannot produce such a stream. Whether this
+  // build of libx265 has 10 or 12 bit support is checked separately via
+  // x265_api_get().
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
 
   if (!encoder->api) {

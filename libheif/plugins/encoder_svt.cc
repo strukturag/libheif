@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_svt.h"
+#include "encoder_input_check.h"
 #include <vector>
 #include <cstring>
 #include <cassert>
@@ -28,6 +29,8 @@
 #include <deque>
 #include <memory>
 #include <limits>
+#include <cmath>
+#include <cstdio>
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
@@ -855,14 +858,25 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
 
   svt_config.rate_control_mode = 0; // constant rate factor
   //svt_config.enable_adaptive_quantization = 0;   // 2 is CRF (the default), 0 would be CQP
-  int qp;
+  float qp;
   if (encoder->qp_set) {
-    qp = encoder->qp;
+    qp = (float) encoder->qp;
   }
   else {
-    qp = ((100 - encoder->quality) * 63 + 50) / 100;
+    qp = (float) (100 - encoder->quality) * 63.0f / 100.0f;
   }
-  svt_config.qp = qp;
+#if SVT_AV1_CHECK_VERSION(4, 0, 0)
+  // Use quarter-QP precision. The fractional QP part is passed in 'extended_crf_qindex_offset'
+  // in units of quarter QP steps (one AV1 qindex step).
+  // We set these configuration fields directly instead of using
+  // svt_av1_enc_parse_parameter(&svt_config, "cqp", ...), because that would also
+  // set aq_mode=0, which switches the rate control from CRF to plain CQP.
+  uint32_t quarter_qp_steps = (uint32_t) std::lround(qp * 4.0f);
+  svt_config.qp = quarter_qp_steps / 4;
+  svt_config.extended_crf_qindex_offset = (uint8_t) (quarter_qp_steps % 4);
+#else
+  svt_config.qp = (uint32_t) std::lround(qp);
+#endif
   svt_config.min_qp_allowed = encoder->min_q;
   svt_config.max_qp_allowed = encoder->max_q;
 
@@ -1009,6 +1023,14 @@ static heif_error read_encoder_output_packets(void* encoder_raw, bool done_sendi
 
 static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image* image, uintptr_t frame_nr)
 {
+  // AV1 signals one bit depth for all planes. SVT always requests YCbCr
+  // input, so a monochrome image would be missing the Cb/Cr planes read below.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/false,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   auto* encoder = (encoder_struct_svt*) encoder_raw;
   EbComponentType*& svt_encoder = encoder->svt_encoder;
   EbErrorType res = EB_ErrorNone;
@@ -1088,7 +1110,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
 
     uint32_t uvWidth = get_subsampled_size_h(encoded_width, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
     uint32_t uvHeight = get_subsampled_size_v(encoded_height, heif_channel_Cb, heif_chroma_420, scaling_mode::round_up);
-    dummy_color_plane.resize(uvWidth * uvHeight);
+    dummy_color_plane.resize(uvWidth * uvHeight * bytesPerPixel);
 
     if (bitdepth_y <= 8) {
       uint8_t val = static_cast<uint8_t>(1 << (bitdepth_y - 1));
@@ -1152,7 +1174,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
 
   res = svt_av1_enc_send_picture(svt_encoder, &input_buffer);
   if (res != EB_ErrorNone) {
-    delete input_buffer.p_buffer;
+    // input_buffer.p_buffer is owned by the svt_io_format unique_ptr, which frees it on return.
     return heif_error_codec_library_error;
   }
 

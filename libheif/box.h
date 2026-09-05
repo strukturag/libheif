@@ -32,6 +32,7 @@
 
 #include <utility>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include <limits>
@@ -834,8 +835,18 @@ public:
 
   bool is_property_essential_for_item(heif_item_id itemId, int propertyIndex) const;
 
-  void add_property_for_item_ID(heif_item_id itemID,
-                                PropertyAssociation assoc);
+  // Associates the property with the item and returns the 1-based position of the property
+  // within this item's property list, i.e. the 'heif_property_id' that the public API uses.
+  // Note that this is not the index of the property in the 'ipco' box, as one 'ipco' is shared
+  // by all items of the file. If the property is already associated with the item, the position
+  // of the existing association is returned.
+  heif_property_id add_property_for_item_ID(heif_item_id itemID,
+                                            PropertyAssociation assoc);
+
+  // Returns the 1-based position of the property with the given 'ipco' index within the item's
+  // property list, or 0 if the property is not associated with the item. This matches the
+  // indices into the vector filled by Box_ipco::get_properties_for_item_ID().
+  heif_property_id get_property_id_for_item_ID(heif_item_id itemID, uint16_t property_index) const;
 
   void derive_box_version() override;
 
@@ -1098,6 +1109,17 @@ protected:
 
 private:
   std::vector<Reference> m_references;
+
+  // Index from 'from_item_ID' to the positions in m_references, so the
+  // reference queries run in O(matches) instead of O(m_references). It is kept
+  // in sync incrementally: parse() builds it, add_references() appends to it,
+  // and overwrite_reference() leaves it untouched (it only edits to_item_ID,
+  // not from_item_ID).
+  std::unordered_map<heif_item_id, std::vector<size_t>> m_from_id_index;
+
+  void build_index();
+
+  void add_to_index(size_t reference_index);
 };
 
 

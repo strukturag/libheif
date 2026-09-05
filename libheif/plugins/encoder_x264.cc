@@ -21,8 +21,8 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_x264.h"
+#include "encoder_input_check.h"
 #include <memory>
-#include <sstream>
 #include <string>
 #include <cstring>
 #include <cassert>
@@ -823,34 +823,39 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   // make sure NCLX profile is deleted at end of function
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
+  // Set the VUI fields directly instead of going through x264_param_parse(),
+  // which only accepts symbolic names ("bt709", ...), not the numeric code points.
+  // The VUI enums are the same CICP code points that nclx uses.
+
   if (nclx) {
-    x264_param_parse(&param, "range", nclx->full_range_flag ? "full" : "limited");
+    param.vui.b_fullrange = nclx->full_range_flag ? 1 : 0;
   }
   else {
-    x264_param_parse(&param, "range", "full");
+    param.vui.b_fullrange = 1;
   }
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
+    param.vui.i_colorprim = static_cast<int>(nclx->color_primaries);
+    param.vui.i_transfer = static_cast<int>(nclx->transfer_characteristics);
+    param.vui.i_colmatrix = static_cast<int>(nclx->matrix_coefficients);
+  }
 
-    {
-      std::stringstream sstr;
-      sstr << nclx->color_primaries;
-      x264_param_parse(&param, "colorprim", sstr.str().c_str());
-    }
+  // Write the pixel aspect ratio into the VUI. Extended_SAR stores sar_width/sar_height
+  // as u(16), so ratios that do not fit are only signalled through the pasp property.
+  // A 1:1 ratio is omitted (VUI absence already means unspecified/square).
+  // Set before the user parameters below so that an explicit "x264:sar" takes precedence.
 
-    {
-      std::stringstream sstr;
-      sstr << nclx->transfer_characteristics;
-      x264_param_parse(&param, "transfer", sstr.str().c_str());
-    }
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->matrix_coefficients;
-      x264_param_parse(&param, "colormatrix", sstr.str().c_str());
-    }
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    param.vui.i_sar_width = static_cast<int>(aspect_h);
+    param.vui.i_sar_height = static_cast<int>(aspect_v);
   }
 
   for (const auto& p : encoder->parameters) {
@@ -954,6 +959,14 @@ static heif_error x264_start_sequence_encoding(void* encoder_raw, const heif_ima
 static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  // H.264 can signal different luma and chroma bit depths, but x264 has a
+  // single bit depth and cannot produce such a stream.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_x264* encoder = (encoder_struct_x264*) encoder_raw;
   x264_param_t& param = encoder->param;
 

@@ -48,6 +48,41 @@ TEST_CASE("parse file layout") {
 }
 
 
+TEST_CASE("ftyp box parse error is returned, not masked as missing ftyp") {
+  // A failure while reading the 'ftyp' box content (here: provoked through a
+  // brands security limit smaller than the file's brand list) must be returned
+  // from FileLayout::read(). It used to be swallowed, leaving the ftyp box
+  // unset, so that the file was later rejected with a misleading
+  // "No 'ftyp' box" error (issue #1872).
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/uncompressed_comp_ABGR.heif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+
+  heif_security_limits limits = *heif_get_global_security_limits();
+  limits.max_number_of_file_brands = 1; // the file has two compatible brands
+
+  FileLayout file;
+  Error err = file.read(reader, &limits);
+
+  REQUIRE(err.error_code == heif_error_Memory_allocation_error);
+  REQUIRE(err.sub_error_code == heif_suberror_Security_limit_exceeded);
+}
+
+
+TEST_CASE("disabled security limits accept any number of ftyp brands") {
+  // With disabled security limits, all limit fields are zero, which means
+  // "no limit". In v1.21.x, the zero was taken literally and every file with
+  // a non-empty compatible-brands list was rejected (issue #1872).
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/uncompressed_comp_ABGR.heif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+
+  FileLayout file;
+  Error err = file.read(reader, heif_get_disabled_security_limits());
+
+  REQUIRE(err.error_code == heif_error_Ok);
+  REQUIRE(file.get_ftyp_box() != nullptr);
+}
+
+
 TEST_CASE("meta box with size 0 (extends to end of file)") {
   // The 'meta' box uses a box size of 0, which per ISO/IEC 14496-12 clause 4.2
   // means it extends to the end of the file (legal for the last box). In this

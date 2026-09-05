@@ -370,7 +370,14 @@ static heif_error generate_codestream(opj_image_t* image, encoder_struct_opj* en
 
   encoder->parameters.cp_disto_alloc = 1;
   encoder->parameters.tcp_numlayers = 1;
-  encoder->parameters.tcp_rates[0] = (float)(1 + (100 - encoder->quality)/2);
+  if (encoder->parameters.irreversible == 0) {
+    // Lossless: the reversible wavelet alone is not sufficient, the rate allocation must not
+    // truncate the codestream either. A rate of 0 means "no rate limit" in OpenJPEG.
+    encoder->parameters.tcp_rates[0] = 0;
+  }
+  else {
+    encoder->parameters.tcp_rates[0] = (float)(1 + (100 - encoder->quality)/2);
+  }
 
 #if 0
   //Insert a human readable comment into the codestream

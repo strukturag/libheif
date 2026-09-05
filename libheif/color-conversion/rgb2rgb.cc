@@ -300,6 +300,18 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
+  // DISABLED for the moment. This operator targets the RRGGBB(AA)_BE interleaved
+  // container, whose samples are 16 bits per channel, yet it only accepts 8-bit
+  // planar RGB input (checked below) and then allocates the interleaved output
+  // plane at 8 bits per channel. That combination (RRGGBB(AA)_BE with 8 bits per
+  // channel) is not valid and is now rejected by HeifPixelImage::add_channel(), so
+  // the operator always failed at runtime before writing anything. Offer no
+  // conversion state so the pipeline never selects it; the 8-bit RGB -> 16-bit
+  // RRGGBB_BE route is handled via Op_to_hdr_planes + Op_RGB_HDR_to_RRGGBBaa_BE
+  // instead. Re-enable once this operator widens the output bit depth before the
+  // add_channel() call.
+  return {};
+
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
       input_state.bits_per_pixel != 8) {

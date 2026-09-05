@@ -412,9 +412,43 @@ Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
   m_image_class = input_class;
 
 
+  // --- resolve the encoding options
+
+  // Build an effective options struct so that the rest of this function never
+  // has to look at the caller's pointer. 'in_options' may be NULL, which the API
+  // documents as "use the default options", so every field has to come from a
+  // fully populated struct instead. This also lets libheif resolve "auto" fields
+  // (e.g. content_kind) to concrete values before passing them to the encoder
+  // plugin. heif_sequence_encoding_options_copy is version-aware and ignores a
+  // NULL source, so callers built against older headers won't be read past their
+  // actual allocation and a NULL source simply leaves the defaults in place.
+
+  std::unique_ptr<heif_sequence_encoding_options, void(*)(heif_sequence_encoding_options*)>
+      effective_options(heif_sequence_encoding_options_alloc(),
+                        heif_sequence_encoding_options_release);
+  heif_sequence_encoding_options_copy(effective_options.get(), in_options);
+
+  // Resolve content_kind=auto based on this track's handler type. For auxiliary
+  // tracks (e.g. alpha) the parent track resolves the value before recursing in,
+  // so we never reach this branch with handler=auxv.
+  // TODO: in the future, "auto" could also factor in input frame rate or
+  // frame-to-frame similarity.
+  if (effective_options->content_kind == heif_sequence_content_kind_auto) {
+    switch (get_handler()) {
+      case heif_track_type_video:
+        effective_options->content_kind = heif_sequence_content_kind_video;
+        break;
+      case heif_track_type_image_sequence:
+      default:
+        effective_options->content_kind = heif_sequence_content_kind_image_sequence;
+        break;
+    }
+  }
+
+
   // --- If input has an alpha channel, add an alpha auxiliary track.
 
-  if (in_options->save_alpha_channel && image->has_alpha() && !m_aux_alpha_track &&
+  if (effective_options->save_alpha_channel && image->has_alpha() && !m_aux_alpha_track &&
       h_encoder->plugin->compression_format != heif_compression_uncompressed) { // TODO: ask plugin
     if (m_active_encoder) {
       return {
@@ -498,6 +532,16 @@ Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
     output_nclx = in_options->output_nclx_profile;
   }
   else {
+    // Note: this is the one place that still distinguishes "caller passed no
+    // options" from "caller passed options with a NULL output_nclx_profile",
+    // so it reads in_options rather than effective_options. Both cases mean
+    // "keep the input image's parameters", but they express it differently: a
+    // NULL profile lets compute_target_nclx_profile() derive them, while the
+    // branch below builds the profile here. The two differ only for an image
+    // that carries no NCLX at all, where the explicit undefined profile built
+    // below makes nclx_profile_matches_spec() request a conversion that a NULL
+    // profile would skip. Unifying them would change that behaviour, so it is
+    // left alone here.
     if (image->has_nclx_color_profile()) {
       nclx_profile input_nclx = image->get_color_profile_nclx();
 
@@ -520,7 +564,7 @@ Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
   Result<std::shared_ptr<HeifPixelImage> > srcImageResult = encoder->convert_colorspace_for_encoding(image,
                                                                                                      h_encoder,
                                                                                                      output_nclx,
-                                                                                                     in_options ? &in_options->color_conversion_options : nullptr,
+                                                                                                     &effective_options->color_conversion_options,
                                                                                                      m_heif_context->get_security_limits());
   if (!srcImageResult) {
     return srcImageResult.error();
@@ -535,33 +579,6 @@ Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
   m_height = static_cast<uint16_t>(colorConvertedImage->get_height());
 
   // --- encode image
-
-  // Build an effective options struct so libheif can resolve "auto" fields
-  // (e.g. content_kind) to concrete values before passing them to the encoder
-  // plugin. heif_sequence_encoding_options_copy is version-aware, so callers
-  // built against older headers won't be read past their actual allocation.
-
-  std::unique_ptr<heif_sequence_encoding_options, void(*)(heif_sequence_encoding_options*)>
-      effective_options(heif_sequence_encoding_options_alloc(),
-                        heif_sequence_encoding_options_release);
-  heif_sequence_encoding_options_copy(effective_options.get(), in_options);
-
-  // Resolve content_kind=auto based on this track's handler type. For auxiliary
-  // tracks (e.g. alpha) the parent track resolves the value before recursing in,
-  // so we never reach this branch with handler=auxv.
-  // TODO: in the future, "auto" could also factor in input frame rate or
-  // frame-to-frame similarity.
-  if (effective_options->content_kind == heif_sequence_content_kind_auto) {
-    switch (get_handler()) {
-      case heif_track_type_video:
-        effective_options->content_kind = heif_sequence_content_kind_video;
-        break;
-      case heif_track_type_image_sequence:
-      default:
-        effective_options->content_kind = heif_sequence_content_kind_image_sequence;
-        break;
-    }
-  }
 
   Error encodeError = encoder->encode_sequence_frame(colorConvertedImage, h_encoder,
                                                      *effective_options,

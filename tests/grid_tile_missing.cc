@@ -30,6 +30,7 @@
 #include "libheif/heif_tiling.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace {
@@ -254,6 +255,141 @@ std::vector<uint8_t> build_heif_grid_with_irot270() {
   return file;
 }
 
+// Build a minimal AVIF with one 'grid' item (id=1, 1x1, 64x64) whose single
+// tile (id=2, 'av01') is well-formed at the box level (valid infe, ispe, av1C)
+// but whose iloc extent points far beyond the end of the file, so reading the
+// compressed tile data fails at decode time. This models a file where every
+// tile fails to decode (issue #1876: e.g. no decoder plugin installed, or all
+// tile data unreadable). The tile is AV1 rather than HEVC so that the test also
+// runs on builds that leave out the HEVC codecs (issue #1900).
+std::vector<uint8_t> build_heif_grid_with_undecodable_tile() {
+  std::vector<uint8_t> ftyp_payload;
+  append_fourcc(ftyp_payload, "avif");
+  put_u32_be(ftyp_payload, 0);
+  append_fourcc(ftyp_payload, "mif1");
+  append_fourcc(ftyp_payload, "avif");
+  auto ftyp = make_box("ftyp", ftyp_payload);
+
+  std::vector<uint8_t> hdlr_payload;
+  put_u32_be(hdlr_payload, 0);
+  append_fourcc(hdlr_payload, "pict");
+  put_u32_be(hdlr_payload, 0);
+  put_u32_be(hdlr_payload, 0);
+  put_u32_be(hdlr_payload, 0);
+  hdlr_payload.push_back(0);
+  auto hdlr = make_box("hdlr", hdlr_payload, /*full=*/true);
+
+  std::vector<uint8_t> pitm_payload;
+  put_u16_be(pitm_payload, 1);
+  auto pitm = make_box("pitm", pitm_payload, /*full=*/true);
+
+  // iinf with two items: id=1 'grid', id=2 'av01'
+  std::vector<uint8_t> infe1_payload;
+  put_u16_be(infe1_payload, 1);
+  put_u16_be(infe1_payload, 0);
+  append_fourcc(infe1_payload, "grid");
+  infe1_payload.push_back(0);
+  auto infe1 = make_box("infe", infe1_payload, /*full=*/true, /*version=*/2);
+
+  std::vector<uint8_t> infe2_payload;
+  put_u16_be(infe2_payload, 2);
+  put_u16_be(infe2_payload, 0);
+  append_fourcc(infe2_payload, "av01");
+  infe2_payload.push_back(0);
+  auto infe2 = make_box("infe", infe2_payload, /*full=*/true, /*version=*/2);
+
+  std::vector<uint8_t> iinf_payload;
+  put_u16_be(iinf_payload, 2);
+  append(iinf_payload, infe1);
+  append(iinf_payload, infe2);
+  auto iinf = make_box("iinf", iinf_payload, /*full=*/true);
+
+  // ipco: ispe(64x64) as prop 1, minimal av1C (no configOBUs) as prop 2
+  std::vector<uint8_t> ispe_payload;
+  put_u32_be(ispe_payload, 64);
+  put_u32_be(ispe_payload, 64);
+  auto ispe = make_box("ispe", ispe_payload, /*full=*/true);
+
+  std::vector<uint8_t> av1C_payload;
+  av1C_payload.push_back(0x81);         // marker=1, version=1
+  av1C_payload.push_back(0x00);         // seq_profile=0 (Main), seq_level_idx_0=0
+  av1C_payload.push_back(0x0C);         // 8 bit, color, chroma_subsampling_x/y=1 (4:2:0)
+  av1C_payload.push_back(0x00);         // no initial_presentation_delay
+  auto av1C = make_box("av1C", av1C_payload);
+
+  std::vector<uint8_t> ipco_payload;
+  append(ipco_payload, ispe);
+  append(ipco_payload, av1C);
+  auto ipco = make_box("ipco", ipco_payload);
+
+  // ipma: item 1 -> ispe; item 2 -> ispe + essential av1C
+  std::vector<uint8_t> ipma_payload;
+  put_u32_be(ipma_payload, 2);          // entry_count
+  put_u16_be(ipma_payload, 1);          // item_ID 1
+  ipma_payload.push_back(1);            // association_count
+  ipma_payload.push_back(0x80 | 1);     // essential ispe
+  put_u16_be(ipma_payload, 2);          // item_ID 2
+  ipma_payload.push_back(2);            // association_count
+  ipma_payload.push_back(1);            // non-essential ispe
+  ipma_payload.push_back(0x80 | 2);     // essential av1C
+  auto ipma = make_box("ipma", ipma_payload, /*full=*/true);
+
+  std::vector<uint8_t> iprp_payload;
+  append(iprp_payload, ipco);
+  append(iprp_payload, ipma);
+  auto iprp = make_box("iprp", iprp_payload);
+
+  // iloc v1:
+  //   item 1: grid header via idat (construction_method 1)
+  //   item 2: file range far beyond EOF (construction_method 0), so the tile
+  //           data read fails only when the tile is actually decoded
+  std::vector<uint8_t> iloc_payload;
+  put_u16_be(iloc_payload, (4 << 12) | (4 << 8) | (0 << 4) | 0);  // sizes
+  put_u16_be(iloc_payload, 2);          // item_count
+  put_u16_be(iloc_payload, 1);          // item_ID
+  put_u16_be(iloc_payload, 0x0001);     // construction_method=1 (idat)
+  put_u16_be(iloc_payload, 0);          // data_reference_index
+  put_u16_be(iloc_payload, 1);          // extent_count
+  put_u32_be(iloc_payload, 0);          // extent_offset (within idat)
+  put_u32_be(iloc_payload, 8);          // extent_length
+  put_u16_be(iloc_payload, 2);          // item_ID
+  put_u16_be(iloc_payload, 0x0000);     // construction_method=0 (file offset)
+  put_u16_be(iloc_payload, 0);          // data_reference_index
+  put_u16_be(iloc_payload, 1);          // extent_count
+  put_u32_be(iloc_payload, 0x00FF0000); // extent_offset (beyond EOF)
+  put_u32_be(iloc_payload, 100);        // extent_length
+  auto iloc = make_box("iloc", iloc_payload, /*full=*/true, /*version=*/1);
+
+  // iref: grid (item 1) references tile item 2
+  std::vector<uint8_t> dimg_payload;
+  put_u16_be(dimg_payload, 1);
+  put_u16_be(dimg_payload, 1);
+  put_u16_be(dimg_payload, 2);
+  auto dimg = make_box("dimg", dimg_payload);
+  auto iref = make_box("iref", dimg, /*full=*/true);
+
+  // idat: ImageGrid header (v=0, flags=0, rows-1=0, cols-1=0, w=64, h=64)
+  std::vector<uint8_t> idat_payload = {0, 0, 0, 0};
+  put_u16_be(idat_payload, 64);
+  put_u16_be(idat_payload, 64);
+  auto idat = make_box("idat", idat_payload);
+
+  std::vector<uint8_t> meta_payload;
+  append(meta_payload, hdlr);
+  append(meta_payload, pitm);
+  append(meta_payload, iinf);
+  append(meta_payload, iprp);
+  append(meta_payload, iloc);
+  append(meta_payload, iref);
+  append(meta_payload, idat);
+  auto meta = make_box("meta", meta_payload, /*full=*/true);
+
+  std::vector<uint8_t> file;
+  append(file, ftyp);
+  append(file, meta);
+  return file;
+}
+
 } // namespace
 
 
@@ -376,6 +512,94 @@ TEST_CASE("grid: rotated grid rejects tile coord beyond displayed bounds") {
   err = heif_image_handle_get_grid_image_tile_id(
       handle, /*xform=*/1, /*tile_x=*/0, /*tile_y=*/1, &tile_id);
   REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
+
+// Regression for issue #1876: when *every* tile of a grid fails to decode,
+// non-strict decoding used to skip each tile with a warning, never create the
+// output canvas, and return a null image. The per-tile errors were dropped
+// together with the warnings and the caller only saw the meaningless
+// "Decoder plugin generated an error: Unspecified". The real per-tile error
+// must be returned instead.
+TEST_CASE("grid: real error is reported when all tiles fail to decode") {
+  // The expected error comes from reading the tile data, which only happens
+  // once a decoder for the tile has been found.
+  if (!heif_have_decoder_for_format(heif_compression_AV1)) {
+    SKIP("AV1 decoder not available, skipping test");
+  }
+
+  auto data = build_heif_grid_with_undecodable_tile();
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_error err = heif_context_read_from_memory_without_copy(
+      ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img,
+                          heif_colorspace_undefined, heif_chroma_undefined,
+                          nullptr);
+
+  INFO("error message: " << (err.message ? err.message : "(null)"));
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(img == nullptr);
+
+  // The tile's iloc extent points beyond EOF, so the underlying error is the
+  // failed data read, not a generic decoder error.
+  CHECK(err.code == heif_error_Invalid_input);
+  CHECK(err.subcode == heif_suberror_End_of_data);
+
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
+
+// Same file as above, but decoded with a decoder_id that does not exist.
+// This models the issue #1876 situation where no matching decoder (plugin)
+// is available for any tile: the plugin-lookup error must reach the caller
+// instead of being dropped with the null grid image.
+TEST_CASE("grid: missing decoder for tiles is reported instead of generic error") {
+  auto data = build_heif_grid_with_undecodable_tile();
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_error err = heif_context_read_from_memory_without_copy(
+      ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+
+  heif_decoding_options* options = heif_decoding_options_alloc();
+  REQUIRE(options != nullptr);
+  options->decoder_id = "nonexistent-decoder";
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img,
+                          heif_colorspace_undefined, heif_chroma_undefined,
+                          options);
+  heif_decoding_options_free(options);
+
+  INFO("error message: " << (err.message ? err.message : "(null)"));
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(img == nullptr);
+
+  CHECK(err.code == heif_error_Plugin_loading_error);
+  CHECK(std::string(err.message).find("No decoder with that ID found")
+        != std::string::npos);
 
   heif_image_handle_release(handle);
   heif_context_free(ctx);

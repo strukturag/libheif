@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_uvg266.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <string>   // apparently, this is a false positive of cpplint
 #include <cstring>
@@ -444,14 +445,17 @@ void encoder_struct_uvg266::append_chunk_data(uvg_data_chunk* data, int framenr)
 }
 
 
-static void copy_plane(uvg_pixel* out_p, size_t out_stride, const uint8_t* in_p, size_t in_stride, int w, int h, int padded_width, int padded_height)
+static void copy_plane(uvg_pixel* out_p, size_t out_stride, const uint8_t* in_p, size_t in_stride,
+                       int w, int h, int padded_width, int padded_height, int bit_depth)
 {
+  int bpp = (bit_depth > 8) ? 2 : 1;
+
   for (int y = 0; y < padded_height; y++) {
     int sy = std::min(y, h - 1); // source y
-    memcpy(out_p + y * out_stride, in_p + sy * in_stride, w);
+    memcpy(out_p + y * out_stride, in_p + sy * in_stride, w * bpp);
 
     if (padded_width > w) {
-      memset(out_p + y * out_stride + w, *(in_p + sy * in_stride + w - 1), padded_width - w);
+      memset(out_p + y * out_stride + w, *(in_p + sy * in_stride + w - 1), (padded_width - w) * bpp);
     }
   }
 }
@@ -586,6 +590,22 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
     config->vui.colormatrix = nclx->matrix_coefficients;
   }
 
+  // Write the pixel aspect ratio into the VUI. uvg266 emits aspect_ratio_info when both
+  // sar fields are >0. Extended_SAR stores sar_width/sar_height as u(16), so ratios that
+  // do not fit are only signalled through the pasp property. A 1:1 ratio is omitted
+  // (VUI absence already means unspecified/square).
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    config->vui.sar_width = (int32_t) aspect_h;
+    config->vui.sar_height = (int32_t) aspect_v;
+  }
+
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
 
@@ -633,12 +653,23 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
 static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                                uintptr_t framenr)
 {
+  // VVC signals one bit depth for all planes. Whether this build of uvg266
+  // supports the depth is checked separately via uvg_api_get().
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8, 10, 12});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
 
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
+
+  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+  int bit_depth_chroma = isGreyscale ? bit_depth : heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
 
   uint32_t encoded_width, encoded_height;
   uvg266_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
@@ -667,25 +698,25 @@ static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_ima
     size_t stride;
     const uint8_t* data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
 
-    copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+    copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height, bit_depth);
   }
   else {
     size_t stride;
     const uint8_t* data;
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Y, &stride);
-    copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height);
+    copy_plane(pic->y, pic->stride, data, stride, input_width, input_height, encoded_width, encoded_height, bit_depth);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cb, &stride);
     copy_plane(pic->u, pic->stride >> encoder->chroma_stride_shift, data, stride,
                encoder->input_chroma_width, encoder->input_chroma_height,
                encoded_width >> encoder->chroma_stride_shift,
-               encoded_height >> encoder->chroma_height_shift);
+               encoded_height >> encoder->chroma_height_shift, bit_depth_chroma);
 
     data = heif_image_get_plane_readonly2(image, heif_channel_Cr, &stride);
     copy_plane(pic->v, pic->stride >> encoder->chroma_stride_shift, data, stride,
                encoder->input_chroma_width, encoder->input_chroma_height,
-               encoded_width >> encoder->chroma_stride_shift, encoded_height >> encoder->chroma_height_shift);
+               encoded_width >> encoder->chroma_stride_shift, encoded_height >> encoder->chroma_height_shift, bit_depth_chroma);
   }
 
 

@@ -1119,7 +1119,52 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
 
 Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_security_limits* limits)
 {
-  uint32_t count = 0;
+  // A freshly parsed box has no children yet, so m_children.size() below tracks
+  // the number of children read so far.
+  assert(m_children.empty());
+
+  // Determine the applicable limit on the number of child boxes.
+  uint32_t max_children;
+  if (get_short_type() == fourcc("iinf")) {
+    max_children = limits->max_items;
+  }
+  else {
+    max_children = limits->max_children_per_box;
+  }
+
+  // If the number of children is known in advance, reject an excessive count
+  // directly instead of reading children until the accumulated count reaches
+  // the limit.
+  if (max_number != READ_CHILDREN_ALL) {
+    if (max_children && max_number > max_children) {
+      std::stringstream sstr;
+      sstr << "Number of child boxes (" << max_number << ") in '" << get_type_string()
+           << "' box exceeds the security limit of " << max_children << ".";
+
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
+    }
+
+    // The declared number of children cannot exceed what the remaining input
+    // could possibly hold (each box occupies at least an 8-byte header). A
+    // larger count means the box is truncated or malformed, so reject it
+    // before reading anything. This also bounds the reservation below, which
+    // matters when security limits are disabled and 'max_number' is otherwise
+    // unbounded.
+    size_t max_possible_children = range.get_remaining_bytes() / 8;
+    if (max_number > max_possible_children) {
+      std::stringstream sstr;
+      sstr << "'" << get_type_string() << "' box declares " << max_number
+           << " child boxes, but the remaining data can hold at most "
+           << max_possible_children << ".";
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data,
+                   sstr.str());
+    }
+
+    m_children.reserve(max_number);
+  }
 
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
@@ -1129,14 +1174,6 @@ Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_
     }
 
     if (max_number == READ_CHILDREN_ALL) {
-      uint32_t max_children;
-      if (get_short_type() == fourcc("iinf")) {
-        max_children = limits->max_items;
-      }
-      else {
-        max_children = limits->max_children_per_box;
-      }
-
       if (max_children && m_children.size() > max_children) {
         std::stringstream sstr;
         sstr << "Maximum number of child boxes (" << max_children << ") in '" << get_type_string() << "' box exceeded.";
@@ -1150,15 +1187,24 @@ Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_
 
     m_children.push_back(std::move(box));
 
-
-    // count the new child and end reading new children when we reached the expected number
-
-    count++;
-
+    // Stop once we have read the expected number of children.
     if (max_number != READ_CHILDREN_ALL &&
-        count == max_number) {
+        m_children.size() == max_number) {
       break;
     }
+  }
+
+  // If a specific number of children was expected, we must have read exactly
+  // that many. A short read means the box is truncated or malformed. Prefer
+  // this specific error over the lower-level range error below, which would
+  // otherwise mask it.
+  if (max_number != READ_CHILDREN_ALL && m_children.size() != max_number) {
+    std::stringstream sstr;
+    sstr << "'" << get_type_string() << "' box declares " << max_number
+         << " child boxes, but only " << m_children.size() << " could be read.";
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data,
+                 sstr.str());
   }
 
   return range.get_error();
@@ -1986,15 +2032,35 @@ Error Box_iloc::read_data(heif_item_id item_id,
                 "idat box referenced in iref box is not present in file"};
       }
 
+      // Honor the requested (offset, size) window, exactly like the in-memory
+      // and construction_method==0 branches above. Reading the whole extent and
+      // doing `size -= extent.length` unconditionally ignored the caller's
+      // sub-range: any partial read (size < extent.length) underflowed `size`
+      // and fell into the "Not enough data" check below, which broke per-tile
+      // and per-icef-unit reads of uncompressed items stored in 'idat'
+      // (unc_decoder::get_compressed_image_data_uncompressed()).
+      uint64_t skip_len = std::min(offset, extent.length);
+      offset -= skip_len;
+
+      uint64_t read_len = std::min(extent.length - skip_len, size);
+
+      if (offset > 0) {
+        continue;
+      }
+
+      if (read_len == 0) {
+        continue;
+      }
+
       Error err = idat->read_data(istr,
-                                  extent.offset + item->base_offset,
-                                  extent.length,
+                                  extent.offset + item->base_offset + skip_len,
+                                  read_len,
                                   *dest, limits);
       if (err) {
         return err;
       }
 
-      size -= extent.length;
+      size -= read_len;
     }
     else {
       std::stringstream sstr;
@@ -2620,6 +2686,17 @@ Error Box_iinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   if (item_count == 0) {
     return Error::Ok;
+  }
+
+  // Sanity check.
+  if (limits->max_items && item_count > limits->max_items) {
+    std::stringstream sstr;
+    sstr << "iinf box contains " << item_count << " items, which exceeds the security limit of "
+         << limits->max_items << " items.";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
   }
 
   return read_children(range, item_count, limits);
@@ -3367,8 +3444,8 @@ bool Box_ipma::is_property_essential_for_item(heif_item_id itemId, int propertyI
 }
 
 
-void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
-                                        PropertyAssociation assoc)
+heif_property_id Box_ipma::add_property_for_item_ID(heif_item_id itemID,
+                                                    PropertyAssociation assoc)
 {
   size_t idx;
   for (idx = 0; idx < m_entries.size(); idx++) {
@@ -3387,7 +3464,7 @@ void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
   // If the property is already associated with the item, skip.
   for (auto const& a : m_entries[idx].associations) {
     if (a.property_index == assoc.property_index) {
-      return;
+      return get_property_id_for_item_ID(itemID, assoc.property_index);
     }
 
     // TODO: should we check that the essential flag matches and return an internal error if not?
@@ -3395,6 +3472,43 @@ void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
 
   // add the property association
   m_entries[idx].associations.push_back(assoc);
+
+  return get_property_id_for_item_ID(itemID, assoc.property_index);
+}
+
+
+heif_property_id Box_ipma::get_property_id_for_item_ID(heif_item_id itemID, uint16_t property_index) const
+{
+  // Index 0 means "no property". It is skipped by Box_ipco::get_properties_for_item_ID() and
+  // hence has no position in the item's property list.
+  if (property_index == 0) {
+    return 0;
+  }
+
+  for (const auto& entry : m_entries) {
+    if (entry.item_ID != itemID) {
+      continue;
+    }
+
+    // Count the associations the way Box_ipco::get_properties_for_item_ID() does, i.e. skipping
+    // the associations with index 0, so that the returned id indexes the vector it produces.
+    heif_property_id id = 0;
+    for (const auto& assoc : entry.associations) {
+      if (assoc.property_index == 0) {
+        continue;
+      }
+
+      id++;
+
+      if (assoc.property_index == property_index) {
+        return id;
+      }
+    }
+
+    break;
+  }
+
+  return 0;
 }
 
 
@@ -4017,6 +4131,8 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 #endif
 
+  build_index();
+
   return range.get_error();
 }
 
@@ -4113,15 +4229,25 @@ std::string Box_iref::dump(Indent& indent) const
 }
 
 
+void Box_iref::build_index()
+{
+  m_from_id_index.clear();
+  m_from_id_index.reserve(m_references.size());
+  for (size_t i = 0; i < m_references.size(); i++) {
+    add_to_index(i);
+  }
+}
+
+
+void Box_iref::add_to_index(size_t reference_index)
+{
+  m_from_id_index[m_references[reference_index].from_item_ID].push_back(reference_index);
+}
+
+
 bool Box_iref::has_references(uint32_t itemID) const
 {
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
-      return true;
-    }
-  }
-
-  return false;
+  return m_from_id_index.find(itemID) != m_from_id_index.end();
 }
 
 
@@ -4129,9 +4255,11 @@ std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id item
 {
   std::vector<Reference> references;
 
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
-      references.push_back(ref);
+  auto iter = m_from_id_index.find(itemID);
+  if (iter != m_from_id_index.end()) {
+    references.reserve(iter->second.size());
+    for (size_t ref_idx : iter->second) {
+      references.push_back(m_references[ref_idx]);
     }
   }
 
@@ -4141,10 +4269,13 @@ std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id item
 
 std::vector<uint32_t> Box_iref::get_references(uint32_t itemID, uint32_t ref_type) const
 {
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID &&
-        ref.header.get_short_type() == ref_type) {
-      return ref.to_item_ID;
+  auto iter = m_from_id_index.find(itemID);
+  if (iter != m_from_id_index.end()) {
+    for (size_t ref_idx : iter->second) {
+      const Reference& ref = m_references[ref_idx];
+      if (ref.header.get_short_type() == ref_type) {
+        return ref.to_item_ID;
+      }
     }
   }
 
@@ -4162,6 +4293,7 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   assert(to_ids.size() <= 0xFFFF);
 
   m_references.push_back(ref);
+  add_to_index(m_references.size() - 1);
 }
 
 
@@ -4664,16 +4796,8 @@ Error Box_dref::parse(BitstreamRange& range, const heif_security_limits* limits)
                  "Too many entities in dref box.");
   }
 
-  Error err = read_children(range, (int)nEntities, limits);
-  if (err) {
-    return err;
-  }
-
-  if (m_children.size() != nEntities) {
-    // TODO return Error(
-  }
-
-  return err;
+  // read_children verifies that exactly nEntities children are present.
+  return read_children(range, (int)nEntities, limits);
 }
 
 

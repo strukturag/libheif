@@ -372,6 +372,23 @@ int main(int argc, char** argv)
     next_frame_pts += static_cast<uint64_t>(static_cast<double>(duration_ms) / option_speedup);
 
 
+    // --- verify that the decoded frame is large enough for the display window
+    //
+    // The SDL window/texture was sized from the track's declared resolution
+    // (VisualSampleEntry), which is attacker-controlled and may be larger than
+    // the actual decoded frame. The display routines copy 'rect.w * rect.h'
+    // samples from the decoded planes, so a smaller frame would be read out of
+    // bounds. Bail out instead.
+
+    int decoded_w = heif_image_get_width(out_image, heif_channel_Y);
+    int decoded_h = heif_image_get_height(out_image, heif_channel_Y);
+    if (decoded_w < (w & ~7) || decoded_h < (h & ~7)) {
+      std::cerr << "Decoded frame (" << decoded_w << "x" << decoded_h
+                << ") is smaller than the declared track resolution (" << w << "x" << h << ").\n";
+      heif_image_release(out_image);
+      return 1;
+    }
+
     // --- display image
 
     size_t stride_Y, stride_Cb, stride_Cr;

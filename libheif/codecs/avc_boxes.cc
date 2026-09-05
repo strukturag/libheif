@@ -377,7 +377,7 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
   uint32_t value;
   if (!reader.get_uvlc(&value)) { return invalidUVLC; } // SPS ID
 
-  if (std::set<int>{100, 110, 122, 244, 44, 83, 86}.contains(config->AVCProfileIndication)) {
+  if (std::set<int>{100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135}.contains(config->AVCProfileIndication)) {
     if (!reader.get_uvlc(&value)) {
       return invalidUVLC;
     }
@@ -446,32 +446,37 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
   reader.skip_bits(1);
 
   uint32_t pic_width_in_mbs_minus1;
-  uint32_t pic_height_in_mbs_minus1;
+  uint32_t pic_height_in_map_units_minus1;
   if (!reader.get_uvlc(&pic_width_in_mbs_minus1) ||
-      !reader.get_uvlc(&pic_height_in_mbs_minus1)) {
+      !reader.get_uvlc(&pic_height_in_map_units_minus1)) {
     return invalidUVLC;
   }
 
-  if (pic_width_in_mbs_minus1 > (UINT32_MAX / 16) - 1 ||
-      pic_height_in_mbs_minus1 > (UINT32_MAX / 16) - 1) {
+  uint32_t frame_mbs_only_flag = reader.get_bits(1);
+  if (!frame_mbs_only_flag) {
+    reader.skip_bits(1); // mb_adaptive_frame_field_flag
+  }
+  reader.skip_bits(1); // direct_8x8_inference_flag
+
+  // for interlaced content, a map unit covers two macroblock rows
+
+  uint64_t width64 = (static_cast<uint64_t>(pic_width_in_mbs_minus1) + 1) * 16;
+  uint64_t height64 = (static_cast<uint64_t>(pic_height_in_map_units_minus1) + 1) * 16 * (2 - frame_mbs_only_flag);
+
+  if (width64 > UINT32_MAX || height64 > UINT32_MAX) {
     return {heif_error_Invalid_input,
             heif_suberror_Invalid_image_size,
             "AVC SPS image size too large"};
   }
 
-  *width = (pic_width_in_mbs_minus1 + 1) * 16;
-  *height = (pic_height_in_mbs_minus1 + 1) * 16;
+  *width = static_cast<uint32_t>(width64);
+  *height = static_cast<uint32_t>(height64);
 
   if (coded_size) {
     coded_size->width = *width;
     coded_size->height = *height;
   }
 
-  uint32_t frame_mbs_only_flag = reader.get_bits(1);
-  if (!frame_mbs_only_flag) {
-    reader.skip_bits(1);
-  }
-  reader.skip_bits(1);
   uint32_t frame_cropping_flag = reader.get_bits(1);
   if (frame_cropping_flag) {
     uint32_t left, right, top, bottom;
@@ -482,9 +487,16 @@ Error parse_sps_for_avcC_configuration(const uint8_t* sps, size_t size,
       return invalidUVLC;
     }
 
-    uint64_t crop_horizontal = static_cast<uint64_t>(left) + right;
-    uint64_t crop_vertical = static_cast<uint64_t>(top) + bottom;
-    if (crop_horizontal > *width || crop_vertical > *height) {
+    // The crop offsets are not in luma samples, but in crop units, which depend on the
+    // chroma format and the frame_mbs_only_flag (CropUnitX/CropUnitY, H.264 7.4.2.1.1).
+
+    uint32_t crop_unit_x = (config->chroma_format == heif_chroma_420 ||
+                            config->chroma_format == heif_chroma_422) ? 2 : 1;
+    uint32_t crop_unit_y = ((config->chroma_format == heif_chroma_420) ? 2 : 1) * (2 - frame_mbs_only_flag);
+
+    uint64_t crop_horizontal = (static_cast<uint64_t>(left) + right) * crop_unit_x;
+    uint64_t crop_vertical = (static_cast<uint64_t>(top) + bottom) * crop_unit_y;
+    if (crop_horizontal >= *width || crop_vertical >= *height) {
       return {heif_error_Invalid_input,
               heif_suberror_Invalid_image_size,
               "AVC SPS cropping exceeds image size"};

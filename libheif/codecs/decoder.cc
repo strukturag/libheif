@@ -324,6 +324,71 @@ void Decoder::release_decoder()
 }
 
 
+// Names the compression format and, where one exists, an example decoder
+// implementation, so that users can tell which decoder plugin package or
+// build option is missing (issue #1876).
+static std::string missing_decoder_error_message(heif_compression_format format)
+{
+  const char* format_name = nullptr;
+  const char* example_decoder = nullptr;
+
+  switch (format) {
+    case heif_compression_HEVC:
+      format_name = "HEVC";
+      example_decoder = "libde265";
+      break;
+    case heif_compression_AVC:
+      format_name = "AVC";
+      example_decoder = "openh264";
+      break;
+    case heif_compression_JPEG:
+      format_name = "JPEG";
+      example_decoder = "libjpeg";
+      break;
+    case heif_compression_AV1:
+      format_name = "AV1";
+      example_decoder = "dav1d";
+      break;
+    case heif_compression_VVC:
+      format_name = "VVC";
+      example_decoder = "vvdec";
+      break;
+    case heif_compression_EVC:
+      format_name = "EVC";
+      break;
+    case heif_compression_JPEG2000:
+      format_name = "JPEG 2000";
+      example_decoder = "openjpeg";
+      break;
+    case heif_compression_HTJ2K:
+      format_name = "HT-J2K";
+      example_decoder = "openjpeg";
+      break;
+    case heif_compression_uncompressed:
+      format_name = "ISO/IEC 23001-17 uncompressed";
+      break;
+    case heif_compression_mask:
+      format_name = "mask image";
+      break;
+    case heif_compression_undefined:
+      break;
+  }
+
+  if (format_name == nullptr) {
+    return {};
+  }
+
+  std::string msg = format_name;
+  if (example_decoder) {
+    msg += " (a suitable decoder plugin is ";
+    msg += example_decoder;
+    msg += ")";
+  }
+
+  return msg;
+}
+
+
 Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
 {
   if (!m_decoder_plugin) {
@@ -337,7 +402,8 @@ Error Decoder::require_decoder_plugin(const heif_decoding_options& options)
 
     m_decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
     if (!m_decoder_plugin) {
-      return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
+      return {heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
+              missing_decoder_error_message(get_compression_format())};
     }
 
     if (m_decoder_plugin->plugin_api_version < 5) {

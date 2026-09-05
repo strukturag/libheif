@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_kvazaar.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <string>   // apparently, this is a false positive of cpplint
 #include <cstring>
@@ -569,6 +570,22 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
     config->vui.colormatrix = nclx->matrix_coefficients;
   }
 
+  // Write the pixel aspect ratio into the VUI. Kvazaar emits aspect_ratio_info when both
+  // sar fields are >0. Extended_SAR stores sar_width/sar_height as u(16), so ratios that
+  // do not fit are only signalled through the pasp property. A 1:1 ratio is omitted
+  // (VUI absence already means unspecified/square).
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    config->vui.sar_width = (int32_t) aspect_h;
+    config->vui.sar_height = (int32_t) aspect_v;
+  }
+
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
 
@@ -640,6 +657,14 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 static heif_error kvazaar_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  // HEVC can signal different luma and chroma bit depths, but kvazaar has a
+  // single hard-coded bit depth and cannot produce such a stream.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {KVZ_BIT_DEPTH});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
 
   // Note: it is ok to cast away the const, as the image content is not changed.
@@ -733,13 +758,6 @@ static heif_error kvazaar_encode_sequence_frame(void* encoder_raw, const heif_im
 
   if (!isGreyscale) {
     bit_depth_chroma = heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
-    if (bit_depth != bit_depth_chroma) {
-      return {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Unsupported_bit_depth,
-        "Luma bit depth must equal the chroma bit depth"
-      };
-    }
   }
 
   if (isGreyscale) {

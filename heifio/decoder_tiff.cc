@@ -83,6 +83,37 @@ static bool seekTIFF(TIFF* tif, toff_t offset, int whence) {
   return seekProc(handle, offset, whence) != static_cast<toff_t>(-1);
 }
 
+// Returns the total size of the underlying TIFF stream, or -1 if it cannot be
+// determined. Restores the original stream position on success.
+static int64_t sizeTIFF(TIFF* tif) {
+  TIFFSeekProc seekProc = TIFFGetSeekProc(tif);
+  if (!seekProc) {
+    return -1;
+  }
+
+  thandle_t handle = TIFFClientdata(tif);
+  if (!handle) {
+    return -1;
+  }
+
+  toff_t cur = seekProc(handle, 0, SEEK_CUR);
+  if (cur == static_cast<toff_t>(-1)) {
+    return -1;
+  }
+
+  toff_t end = seekProc(handle, 0, SEEK_END);
+  if (end == static_cast<toff_t>(-1)) {
+    return -1;
+  }
+
+  // restore original position
+  if (seekProc(handle, cur, SEEK_SET) == static_cast<toff_t>(-1)) {
+    return -1;
+  }
+
+  return static_cast<int64_t>(end);
+}
+
 static bool readTIFF(TIFF* tif, void* dest, size_t size) {
   TIFFReadWriteProc readProc = TIFFGetReadProc(tif);
   if (!readProc) {
@@ -203,18 +234,39 @@ std::unique_ptr<ExifTags> ExifTags::Parse(TIFF* tif) {
     tags->tags_.push_back(std::move(tag));
   }
 
+  const int64_t file_size = sizeTIFF(tif);
+
   for (const auto& tag : tags->tags_) {
-    size_t size = tag->len * TIFFDataWidth(static_cast<TIFFDataType>(tag->type));
+    // Compute the data size in 64-bit to avoid overflow when multiplying the
+    // file-supplied length by the type width.
+    uint64_t size = static_cast<uint64_t>(tag->len) *
+                    static_cast<uint64_t>(TIFFDataWidth(static_cast<TIFFDataType>(tag->type)));
     if (size <= 4) {
       continue;
+    }
+
+    // Reject tags whose data cannot fit in the file. Without this bound a
+    // crafted tag (e.g. len=0xFFFFFFFF) would request a multi-gigabyte
+    // allocation from a tiny file, and the resulting std::bad_alloc would
+    // propagate to std::terminate.
+    if (file_size < 0 ||
+        tag->offset > static_cast<uint64_t>(file_size) ||
+        size > static_cast<uint64_t>(file_size) - tag->offset) {
+      return nullptr;
     }
 
     if (!seekTIFF(tif, tag->offset, SEEK_SET)) {
       return nullptr;
     }
 
-    tag->data.resize(size);
-    if (!readTIFF(tif, tag->data.data(), size)) {
+    try {
+      tag->data.resize(static_cast<size_t>(size));
+    }
+    catch (const std::bad_alloc&) {
+      return nullptr;
+    }
+
+    if (!readTIFF(tif, tag->data.data(), static_cast<size_t>(size))) {
       return nullptr;
     }
   }
@@ -864,6 +916,16 @@ static YCbCrInfo getYCbCrInfo(TIFF* tif)
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric) && photometric == PHOTOMETRIC_YCBCR) {
     info.is_ycbcr = true;
     TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRSUBSAMPLING, &info.horiz_sub, &info.vert_sub);
+
+    // A file-supplied subsampling factor of 0 would cause a division by zero in
+    // the chroma-size computations below. libtiff normally rejects this at open
+    // time, but guard defensively against a value of 0 reaching us.
+    if (info.horiz_sub == 0) {
+      info.horiz_sub = 1;
+    }
+    if (info.vert_sub == 0) {
+      info.vert_sub = 1;
+    }
   }
   return info;
 }

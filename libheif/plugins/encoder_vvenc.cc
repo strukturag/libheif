@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_vvenc.h"
+#include "encoder_input_check.h"
 #include <memory>
 #include <string>   // apparently, this is a false positive of cpplint
 #include <cstring>
@@ -514,6 +515,24 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
     }
   }
 
+  // Write the pixel aspect ratio into the VUI. Extended_SAR (idc 255) stores
+  // sar_width/sar_height as u(16), so ratios that do not fit are only signalled through
+  // the pasp property. A 1:1 ratio is omitted (VUI absence already means unspecified/square).
+
+  uint32_t aspect_h = 1, aspect_v = 1;
+  heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+  if ((input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail) &&
+      aspect_h != aspect_v &&
+      aspect_h > 0 && aspect_v > 0 &&
+      aspect_h <= 0xFFFF && aspect_v <= 0xFFFF) {
+    params.m_vuiParametersPresent = 1;
+    params.m_aspectRatioInfoPresent = true;
+    params.m_aspectRatioIdc = 255; // Extended_SAR
+    params.m_sarWidth = static_cast<int>(aspect_h);
+    params.m_sarHeight = static_cast<int>(aspect_v);
+  }
+
   vvencEncoder* vvencoder = encoder->vvencoder = vvenc_encoder_create();
 
   //ret = vvenc_check_config(vvencoder, &params);
@@ -538,6 +557,14 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
 static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                               uintptr_t framenr)
 {
+  // VVC signals one bit depth for all planes, and this plugin only
+  // implements 8 bit encoding.
+  heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
+                                                    {8});
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
   encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
   vvencEncoder* vvencoder = encoder->vvencoder;
 

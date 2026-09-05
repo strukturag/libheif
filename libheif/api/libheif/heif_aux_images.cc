@@ -78,7 +78,7 @@ heif_error heif_image_handle_get_depth_image_handle(const heif_image_handle* han
 
   auto depth_image = handle->image->get_depth_channel();
 
-  if (depth_image->get_id() != depth_id) {
+  if (!depth_image || depth_image->get_id() != depth_id) {
     *out_depth_handle = nullptr;
 
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
@@ -114,7 +114,7 @@ int heif_image_handle_get_depth_image_representation_info(const heif_image_handl
       depth_image = handle->image->get_depth_channel();
     }
 
-    if (depth_image->has_depth_representation_info()) {
+    if (depth_image && depth_image->has_depth_representation_info()) {
       auto info = new heif_depth_representation_info;
       *info = depth_image->get_depth_representation_info();
       *out = info;

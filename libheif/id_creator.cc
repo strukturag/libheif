@@ -19,6 +19,24 @@
  */
 
 #include "id_creator.h"
+#include <cstdint>
+
+namespace {
+
+// The next free id after 'id', i.e. the value a counter should take once 'id'
+// has been handed out or reserved. When 'id' is the maximum representable value
+// there is no larger id, so the counter becomes 0 == "exhausted" and
+// get_new_id() will refuse to hand out another id. Computing this explicitly
+// (rather than 'id + 1') keeps the exhausted transition free of the unsigned
+// wrap that the 'integer' sanitizer flags, while guaranteeing the counter always
+// moves strictly past 'id' so no id is ever handed out twice.
+inline uint32_t next_id_after(uint32_t id)
+{
+  return id == UINT32_MAX ? 0u : id + 1u;
+}
+
+}
+
 
 Result<uint32_t> IDCreator::get_new_id(Namespace ns)
 {
@@ -28,7 +46,9 @@ Result<uint32_t> IDCreator::get_new_id(Namespace ns)
                    heif_suberror_Unspecified,
                    "ID namespace overflow");
     }
-    return m_next_id_global++;
+    uint32_t id = m_next_id_global;
+    m_next_id_global = next_id_after(id);
+    return id;
   }
 
   uint32_t* counter = nullptr;
@@ -50,12 +70,13 @@ Result<uint32_t> IDCreator::get_new_id(Namespace ns)
                  "ID namespace overflow");
   }
 
-  uint32_t id = (*counter)++;
+  uint32_t id = *counter;
+  *counter = next_id_after(id);
 
   // Keep the global counter ahead of all namespace counters so that switching to
   // unif mode later does not reuse an ID that was already handed out.
   if (m_next_id_global != 0 && id >= m_next_id_global) {
-    m_next_id_global = id + 1;
+    m_next_id_global = next_id_after(id);
   }
 
   return id;
@@ -77,13 +98,14 @@ void IDCreator::mark_id_used(Namespace ns, uint32_t id)
       break;
   }
 
-  // A counter value of 0 means "exhausted" (see get_new_id). id + 1 wraps to 0 exactly
-  // when id == 0xFFFFFFFF, which is the correct exhausted state.
+  // A counter value of 0 means "exhausted" (see get_new_id). Advancing past a
+  // just-used id keeps get_new_id() from ever handing out the same id again;
+  // marking 0xFFFFFFFF used moves the counter to 0 == exhausted.
   if (*counter != 0 && id >= *counter) {
-    *counter = id + 1;
+    *counter = next_id_after(id);
   }
 
   if (m_next_id_global != 0 && id >= m_next_id_global) {
-    m_next_id_global = id + 1;
+    m_next_id_global = next_id_after(id);
   }
 }

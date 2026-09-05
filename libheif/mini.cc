@@ -1551,9 +1551,13 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
   // mini's orientation field uses standard EXIF orientation values 1..8,
   // matching the heif_orientation enum.
   auto orientation = static_cast<heif_orientation>(get_orientation());
-  file->add_orientation_properties(1, orientation);
+  if (Error err = file->add_orientation_properties(1, orientation)) {
+    return err;
+  }
   if (get_alpha_item_data_size() != 0) {
-    file->add_orientation_properties(2, orientation);
+    if (Error err = file->add_orientation_properties(2, orientation)) {
+      return err;
+    }
   }
 
   auto iloc_box = std::make_shared<Box_iloc>();

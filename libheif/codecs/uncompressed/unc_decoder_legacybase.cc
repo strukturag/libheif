@@ -146,7 +146,6 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
   entry.dst_plane = img->get_component(m_uncC_index_to_comp_ids[component_id], &(entry.dst_plane_stride));
   entry.tile_width = m_tile_width;
   entry.tile_height = m_tile_height;
-  entry.other_chroma_dst_plane_stride = 0; // will be overwritten below if used
   if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
     if (m_uncC->get_sampling_type() == sampling_mode_422) {
       entry.tile_width /= 2;
@@ -155,12 +154,20 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
       entry.tile_width /= 2;
       entry.tile_height /= 2;
     }
-    if (entry.channel == heif_channel_Cb) {
-      entry.other_chroma_dst_plane = img->get_channel_memory(heif_channel_Cr, &(entry.other_chroma_dst_plane_stride));
-    }
-    else if (entry.channel == heif_channel_Cr) {
-      entry.other_chroma_dst_plane = img->get_channel_memory(heif_channel_Cb, &(entry.other_chroma_dst_plane_stride));
-    }
+
+    // chroma[0] is this entry's own plane; chroma[1] is the paired plane
+    // (Cr if this entry is Cb, or vice versa). Each plane's width is read
+    // from that plane itself -- Cb and Cr can be declared with different bit
+    // depths, and reusing chroma[0]'s width for chroma[1] overruns it
+    // (GHSA-x8r2-mggj-j6wr).
+    heif_channel paired_channel = (entry.channel == heif_channel_Cb) ? heif_channel_Cr : heif_channel_Cb;
+
+    entry.chroma_dst_plane[0] = entry.dst_plane;
+    entry.chroma_dst_plane_stride[0] = entry.dst_plane_stride;
+    entry.chroma_bytes_per_component_sample[0] = (component.component_bit_depth + 7) / 8;
+
+    entry.chroma_dst_plane[1] = img->get_channel_memory(paired_channel, &(entry.chroma_dst_plane_stride[1]));
+    entry.chroma_bytes_per_component_sample[1] = img->get_storage_bits_per_pixel(paired_channel) / 8;
   }
   entry.bits_per_component_sample = component.component_bit_depth;
   entry.component_alignment = component.component_align_size;

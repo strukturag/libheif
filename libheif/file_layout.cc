@@ -88,6 +88,9 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
   BitstreamRange ftyp_range(m_stream_reader, 0, ftyp_size);
   std::shared_ptr<Box> ftyp_box;
   err = Box::read(ftyp_range, &ftyp_box, limits);
+  if (err) {
+    return err;
+  }
 
   m_boxes.push_back(ftyp_box);
   m_ftyp_box = std::dynamic_pointer_cast<Box_ftyp>(ftyp_box);

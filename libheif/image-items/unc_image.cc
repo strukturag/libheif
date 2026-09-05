@@ -282,7 +282,9 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // Add transformative properties
 
-  ctx->get_heif_file()->add_orientation_properties(unci_id, encoding_options->image_orientation);
+  if (Error err = ctx->get_heif_file()->add_orientation_properties(unci_id, encoding_options->image_orientation)) {
+    return err;
+  }
 
 
   // Create empty image. If we use compression, we append the data piece by piece.

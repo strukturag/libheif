@@ -153,7 +153,7 @@ heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2
   auto brands = ftyp->list_brands();
   size_t nBrands = brands.size();
 
-  if (nBrands > security_limits->max_number_of_file_brands) {
+  if (security_limits->max_number_of_file_brands && nBrands > security_limits->max_number_of_file_brands) {
     return {
       heif_error_Memory_allocation_error,
       heif_suberror_Security_limit_exceeded,

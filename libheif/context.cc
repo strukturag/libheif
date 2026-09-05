@@ -1490,6 +1490,16 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
   }
 
+  // Reject un-decodable inputs before any decoding starts. In particular, a
+  // cycle in the decode reference graph ('dimg' inputs or the alpha 'auxl'
+  // edge) would let two parallel grid-tile workers take two item mutexes in
+  // opposite order and deadlock (GHSA-prgh-72vc-3xmc). Checked once here, at the
+  // single top-level decode entry, so the recursion below can assume an acyclic
+  // graph.
+  if (Error err = imgitem->verify_decodable()) {
+    return err;
+  }
+
   // Seed the traversal state for this top-level decode. The cycle-detection set
   // is carried over from the caller; the amplification budget (shared across all
   // recursion branches and parallel tile-decode threads) is created here, once.
@@ -1770,7 +1780,9 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     std::shared_ptr<ImageItem> heif_alpha_image = *alphaEncodingResult;
 
     m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {output_image_item->get_id()});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), output_image_item->get_auxC_alpha_channel_type());
+    if (Error err = m_heif_file->set_auxC_property(heif_alpha_image->get_id(), output_image_item->get_auxC_alpha_channel_type())) {
+      return err;
+    }
 
     if (pixel_image->is_premultiplied_alpha()) {
       m_heif_file->add_iref_reference(output_image_item->get_id(), fourcc("prem"), {heif_alpha_image->get_id()});
@@ -1982,8 +1994,17 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 }
 
 
-heif_property_id HeifContext::add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential)
+Result<heif_property_id> HeifContext::add_property(heif_item_id targetItem, const std::shared_ptr<Box>& property, bool essential)
 {
+  // Like writing, adding properties is only implemented for contexts that were built in memory.
+  // In a context read from a file, the item data still lives in the input file and the context
+  // cannot be written out again (see HeifContext::write()).
+  if (m_heif_file->get_reader()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unspecified,
+                 "Adding a property to a context that was read from a file is not supported");
+  }
+
   heif_property_id id;
 
   if (auto img = get_image(targetItem, false)) {
@@ -1991,6 +2012,12 @@ heif_property_id HeifContext::add_property(heif_item_id targetItem, const std::s
   }
   else {
     id = m_heif_file->add_property(targetItem, property, essential);
+  }
+
+  if (id == 0) {
+    return Error(heif_error_Encoding_error,
+                 heif_suberror_Unspecified,
+                 "Cannot add property to item");
   }
 
   return id;
@@ -2105,8 +2132,7 @@ Result<heif_property_id> HeifContext::add_text_property(heif_item_id itemId, con
   auto elng = std::make_shared<Box_elng>();
   elng->set_lang(std::string(language));
 
-  heif_property_id id = add_property(itemId, elng, false);
-  return id;
+  return add_property(itemId, elng, false);
 }
 
 
@@ -2132,8 +2158,7 @@ Result<heif_property_id> HeifContext::add_accessibility_text(heif_item_id itemId
   altt->set_alt_text(alt_text);
   altt->set_alt_lang(alt_lang);
 
-  heif_property_id id = add_property(itemId, altt, false);
-  return id;
+  return add_property(itemId, altt, false);
 }
 
 

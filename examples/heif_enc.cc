@@ -529,7 +529,7 @@ void show_help(const char* argv0)
             << "      --jpeg2000                 encode as JPEG 2000 (experimental)\n"
             << "      --htj2k                    encode as High Throughput JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
-            << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17)\n"
             << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
 #endif
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES

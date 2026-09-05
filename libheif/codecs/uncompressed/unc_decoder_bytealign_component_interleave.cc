@@ -104,8 +104,16 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
     comp[i].dst_plane = img->get_component(m_uncC_index_to_comp_ids[i], &comp[i].dst_plane_stride);
   }
 
-  const uint8_t* src = tile_data.data();
-  const uint8_t* src_end = src + tile_data.size();
+  const uint8_t* const src_base = tile_data.data();
+  const uint64_t src_size = tile_data.size();
+
+  // Track the read position as a 64-bit offset into tile_data rather than as a
+  // raw pointer. A crafted row_align_size can push bytes_per_row into the
+  // hundreds of megabytes, so `row_start + bytes_per_row` would overflow a
+  // 32-bit pointer and wrap to a small in-range address, defeating the
+  // src_end bounds check and causing an out-of-bounds read on 32-bit builds
+  // (OSS-Fuzz i386, sequence_fuzzer). Offset arithmetic in uint64_t cannot wrap.
+  uint64_t src_offset = 0;
 
   for (uint32_t c = 0; c < num_components; c++) {
     uint32_t aligned_bytes_per_sample = comp[c].bytes_per_sample;
@@ -113,17 +121,21 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
       skip_to_alignment(aligned_bytes_per_sample, components[c].component_align_size);
     }
 
-    uint32_t bytes_per_row = aligned_bytes_per_sample * m_tile_width;
+    uint64_t bytes_per_row = static_cast<uint64_t>(aligned_bytes_per_sample) * m_tile_width;
     skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
     for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
-      const uint8_t* row_start = src;
+      const uint64_t row_start_offset = src_offset;
 
       for (uint32_t tile_x = 0; tile_x < m_tile_width; tile_x++) {
-        if (src + aligned_bytes_per_sample > src_end) {
+        // Subtraction form to avoid any wrap: src_offset may legitimately be
+        // larger than src_size after a bytes_per_row row skip.
+        if (src_offset > src_size || aligned_bytes_per_sample > src_size - src_offset) {
           return {heif_error_Invalid_input, heif_suberror_Unspecified,
                   "Bytealign-component interleave: insufficient data"};
         }
+
+        const uint8_t* src = src_base + src_offset;
 
         if (comp[c].use) {
           uint32_t dst_x = out_x0 + tile_x;
@@ -232,11 +244,11 @@ Error unc_decoder_bytealign_component_interleave::decode_tile(const std::vector<
           }
         }
 
-        src += aligned_bytes_per_sample;
+        src_offset += aligned_bytes_per_sample;
       }
 
       // Skip row alignment padding
-      src = row_start + bytes_per_row;
+      src_offset = row_start_offset + bytes_per_row;
     }
   }
 

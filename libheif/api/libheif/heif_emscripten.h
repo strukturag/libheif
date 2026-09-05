@@ -92,19 +92,9 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
-  if (!ids) {
-    struct heif_error err;
-    err.code = heif_error_Memory_allocation_error;
-    err.subcode = heif_suberror_Security_limit_exceeded;
-    return emscripten::val(err);
-  }
+  std::vector<heif_item_id> ids(static_cast<size_t>(count));
 
-  int received = heif_context_get_list_of_top_level_image_IDs(context, ids, count);
-  if (!received) {
-    free(ids);
-    return result;
-  }
+  int received = heif_context_get_list_of_top_level_image_IDs(context, ids.data(), count);
 
   for (int i = 0; i < received; i++) {
     result.set(i, ids[i]);
@@ -126,15 +116,9 @@ static emscripten::val heif_js_context_get_list_of_item_IDs(
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
-  if (!ids) {
-    struct heif_error err;
-    err.code = heif_error_Memory_allocation_error;
-    err.subcode = heif_suberror_Security_limit_exceeded;
-    return emscripten::val(err);
-  }
+  std::vector<heif_item_id> ids(static_cast<size_t>(count));
 
-  int num_ids_received = heif_context_get_list_of_item_IDs(context, ids, count);
+  int num_ids_received = heif_context_get_list_of_item_IDs(context, ids.data(), count);
 
   for (int i = 0; i < num_ids_received; i++) {
     result.set(i, ids[i]);

@@ -118,6 +118,16 @@ uint32_t max_coding_unit_size_for_codec(heif_compression_format format);
 // (e.g. 128 for AV1/VVC, 64 for HEVC, 16 for AVC). The allowed coded
 // dimensions are (ispe + coding_unit_size) in each axis, since a codec may
 // pad the coded frame up to a coding-unit boundary.
+//
+// The allowed size never drops below MIN_TIGHTENED_CODED_IMAGE_PIXELS: the
+// HEVC/AVC conformance window may crop arbitrarily much, and hardware
+// encoders use minimum surface sizes far above tiny image dimensions (issue
+// #1856 has a conformant 2x2 HEIC coded as a 160x64 frame). The floor keeps
+// the worst-case allocation for a lying bitstream small while accepting such
+// padded coded frames; check_decoded_image_size() still validates the
+// decoded output against 'ispe' afterwards.
+static const uint64_t MIN_TIGHTENED_CODED_IMAGE_PIXELS = 65536;  // 256x256
+
 heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limits* base,
                                                        uint32_t ispe_width,
                                                        uint32_t ispe_height,

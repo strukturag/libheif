@@ -89,16 +89,25 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
           for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
             // TODO: row padding
             uint64_t dst_row_number = tile_y + channel_y0;
-            uint64_t dst_row_offset = dst_row_number * entry.dst_plane_stride;
+
+            uint64_t chroma_dst_row_offset[2];
+            chroma_dst_row_offset[0] = dst_row_number * entry.chroma_dst_plane_stride[0];
+            chroma_dst_row_offset[1] = dst_row_number * entry.chroma_dst_plane_stride[1];
+
             for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
               uint64_t dst_column_number = channel_x0 + tile_x;
-              uint64_t dst_column_offset = dst_column_number * entry.bytes_per_component_sample;
-              int val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
-              memcpy_to_native_endian(entry.dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
-              val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
 
-              uint64_t other_dst_row_offset = dst_row_number * entry.other_chroma_dst_plane_stride;
-              memcpy_to_native_endian(entry.other_chroma_dst_plane + other_dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
+              // The two chroma samples for this pixel are read in the same order
+              // as their components are declared in uncC (chroma[0] then chroma[1]).
+              // Each is written using its own plane's byte width -- Cb and Cr can be
+              // declared with different bit depths, so reusing one plane's width for
+              // the other overruns it (GHSA-x8r2-mggj-j6wr).
+              for (int c = 0; c < 2; c++) {
+                uint32_t bytes_per_sample = entry.chroma_bytes_per_component_sample[c];
+                uint64_t dst_column_offset = dst_column_number * bytes_per_sample;
+                int val = srcBits.get_bits(bytes_per_sample * 8);
+                memcpy_to_native_endian(entry.chroma_dst_plane[c] + chroma_dst_row_offset[c] + dst_column_offset, val, bytes_per_sample);
+              }
             }
             haveProcessedChromaForThisTile = true;
           }

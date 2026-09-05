@@ -127,21 +127,30 @@ Error unc_decoder_block_pixel_interleave::decode_tile(const std::vector<uint8_t>
     }
   }
 
-  const uint8_t* src_end = tile_data.data() + tile_data.size();
+  // Address tile_data by 64-bit offset, not by raw pointer. A crafted
+  // row_align_size can inflate bytes_per_row to hundreds of megabytes, so
+  // `tile_data.data() + tile_y * bytes_per_row` would overflow a 32-bit pointer
+  // and wrap to a small in-range address, defeating the src_end check below and
+  // causing an out-of-bounds read on 32-bit builds. Offset arithmetic in
+  // uint64_t cannot wrap; the bound is checked before the pointer is formed.
+  const uint8_t* const src_base = tile_data.data();
+  const uint64_t src_size = tile_data.size();
 
-  uint32_t bytes_per_row = m_tile_width * pixel_size;
+  uint64_t bytes_per_row = static_cast<uint64_t>(m_tile_width) * pixel_size;
   skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
   for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
-    const uint8_t* row_start = tile_data.data() + static_cast<uint64_t>(tile_y) * bytes_per_row;
+    const uint64_t row_start_offset = static_cast<uint64_t>(tile_y) * bytes_per_row;
 
     for (uint32_t tile_x = 0; tile_x < m_tile_width; tile_x++) {
-      const uint8_t* pixel_ptr = row_start + static_cast<uint64_t>(tile_x) * pixel_size;
+      const uint64_t pixel_offset = row_start_offset + static_cast<uint64_t>(tile_x) * pixel_size;
 
-      if (pixel_ptr + block_size > src_end) {
+      if (pixel_offset > src_size || block_size > src_size - pixel_offset) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified,
                 "Block-pixel interleave: insufficient data"};
       }
+
+      const uint8_t* pixel_ptr = src_base + pixel_offset;
 
       // Read block_size bytes into a uint64_t.
       uint64_t block_val = 0;
@@ -224,6 +233,7 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     return false;
   }
 
+  uint64_t total_component_bits = 0;
   for (const auto& component : uncC->get_components()) {
     if (component.component_bit_depth > 16) {
       return false;
@@ -231,6 +241,19 @@ bool unc_decoder_factory_block_pixel_interleave::can_decode(const std::shared_pt
     if (component.component_format != component_format_unsigned) {
       return false;
     }
+    total_component_bits += component.component_bit_depth;
+  }
+
+  // All components are packed into a single block and decode_tile() derives each
+  // component's bit shift by accumulating the component bit depths. If the depths
+  // sum to more than the block width, a shift reaches or exceeds 64 and the
+  // `block_val >> shift` on the uint64_t block (or, for pad_lsb, a uint32_t
+  // bit-offset underflow) is undefined behaviour. Requiring the components to fit
+  // within the block keeps every shift in [0, 63]. This mirrors the byte-granular
+  // check in check_hard_limits(); enforcing it in can_decode() makes the decoder
+  // safe no matter which decode path selected it.
+  if (total_component_bits > static_cast<uint64_t>(effective_block_size) * 8) {
+    return false;
   }
 
   return true;
