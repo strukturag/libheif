@@ -889,6 +889,68 @@ void ImageItem::set_omaf_image_projection(heif_omaf_image_projection projection)
 }
 
 
+namespace {
+
+// Depth-first walk of the decode reference graph, detecting cycles. `on_path`
+// holds the items on the current root-to-node path (a repeat is a cycle);
+// `verified` memoizes items whose subtree is already known acyclic, so a shared
+// sub-image reached through several paths is visited once and the walk stays
+// linear (cf. HeifFile::check_for_ref_cycle, GHSA-x8xm-cm2c-cfc8).
+Error check_decode_reference_cycles(const ImageItem* item,
+                                    std::set<heif_item_id>& on_path,
+                                    std::set<heif_item_id>& verified)
+{
+  heif_item_id id = item->get_id();
+
+  if (on_path.find(id) != on_path.end()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Item_reference_cycle,
+            "Image reference cycle"};
+  }
+  if (verified.find(id) != verified.end()) {
+    return Error::Ok;
+  }
+
+  on_path.insert(id);
+
+  // Follow exactly the edges the decode recursion follows: the derived-image
+  // ('dimg') inputs (grid tiles, overlay inputs, the 'iden' base) and the alpha
+  // ('auxl') auxiliary image.
+  auto file = item->get_file();
+  auto iref = file ? file->get_iref_box() : nullptr;
+  if (iref) {
+    for (heif_item_id child_id : iref->get_references(id, fourcc("dimg"))) {
+      auto child = item->get_context()->get_image(child_id, true);
+      if (child) {
+        if (Error err = check_decode_reference_cycles(child.get(), on_path, verified)) {
+          return err;
+        }
+      }
+    }
+  }
+
+  if (auto alpha = item->get_alpha_channel()) {
+    if (Error err = check_decode_reference_cycles(alpha.get(), on_path, verified)) {
+      return err;
+    }
+  }
+
+  on_path.erase(id);
+  verified.insert(id);
+  return Error::Ok;
+}
+
+} // namespace
+
+
+Error ImageItem::verify_decodable() const
+{
+  std::set<heif_item_id> on_path;
+  std::set<heif_item_id> verified;
+  return check_decode_reference_cycles(this, on_path, verified);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
                                                                 DecodeTraversalState decode_state) const

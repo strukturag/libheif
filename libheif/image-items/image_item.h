@@ -372,6 +372,18 @@ public:
                                                                uint32_t tile_y0,
                                                                DecodeTraversalState decode_state) const;
 
+  // Validate, before any decoding starts, that this item can be safely decoded:
+  // the graph of items reached by the decode recursion (derived-image 'dimg'
+  // inputs and the alpha 'auxl' auxiliary) must be acyclic. A reference cycle
+  // would otherwise let two parallel grid-tile workers take two item mutexes in
+  // opposite order and deadlock (GHSA-prgh-72vc-3xmc); the parse-time check only
+  // follows 'dimg' from the primary item and so misses the alpha edge and any
+  // non-primary subtree. Called once per top-level decode in
+  // HeifContext::decode_image(). This is the single place to add further
+  // decodability constraints (e.g. no alpha auxiliary on an alpha image, MIAF
+  // derivation-chain limits).
+  Error verify_decodable() const;
+
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0,
                                                                           uint32_t tile_y0,

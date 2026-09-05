@@ -89,9 +89,11 @@ add_libheif_test(item_properties)
 add_libheif_test(item_writing)
 add_libheif_test(overlay_amplification)
 add_libheif_test(alpha_cycle_deadlock)
-# The deadlock regression test decodes on a worker thread guarded by a timeout.
+add_libheif_test(parallel_grid_deadlock)
+# The deadlock regression tests decode on a worker thread guarded by a timeout.
 find_package(Threads REQUIRED)
 target_link_libraries(alpha_cycle_deadlock PRIVATE Threads::Threads)
+target_link_libraries(parallel_grid_deadlock PRIVATE Threads::Threads)
 add_libheif_test(region)
 add_libheif_test(sequence_no_track)
 add_libheif_test(sequence_null_options)

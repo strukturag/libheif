@@ -1490,6 +1490,16 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
   }
 
+  // Reject un-decodable inputs before any decoding starts. In particular, a
+  // cycle in the decode reference graph ('dimg' inputs or the alpha 'auxl'
+  // edge) would let two parallel grid-tile workers take two item mutexes in
+  // opposite order and deadlock (GHSA-prgh-72vc-3xmc). Checked once here, at the
+  // single top-level decode entry, so the recursion below can assume an acyclic
+  // graph.
+  if (Error err = imgitem->verify_decodable()) {
+    return err;
+  }
+
   // Seed the traversal state for this top-level decode. The cycle-detection set
   // is carried over from the caller; the amplification budget (shared across all
   // recursion branches and parallel tile-decode threads) is created here, once.
