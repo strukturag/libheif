@@ -202,6 +202,10 @@ static const char* const kParam_tune_valid_values[] = {
 };
 
 #if defined(AOM_HAVE_TUNE_IQ)
+// libaom's handle_tuning() enables chroma delta-q for AOM_TUNE_IQ, and validate_config()
+// then rejects that combination with lossless coding. Tracked upstream as
+// https://aomedia.g-issues.chromium.org/issues/383595066 (still present in libaom v3.15.0).
+// Once libaom lifts the restriction, this workaround can be dropped for those versions.
 static heif_error heif_error_lossless_with_tune_iq = {
   heif_error_Usage_error,
   heif_suberror_Invalid_parameter_value,
@@ -1112,6 +1116,7 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 
       // libaom turns on chroma delta-q for AOM_TUNE_IQ and then refuses to combine
       // that with lossless coding, so keep AOM_TUNE_SSIM for lossless images.
+      // See https://aomedia.g-issues.chromium.org/issues/383595066
       if (!is_identity_matrix && !is_lossless &&
           (cfg.g_usage == AOM_USAGE_ALL_INTRA || iq_supports_inter) &&
           aom_version >= aom_version_3_13_0) {
