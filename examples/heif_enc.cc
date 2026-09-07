@@ -55,6 +55,7 @@
 #include "heifio/decoder_raw.h"
 #include "heifio/decoder_y4m.h"
 #include "heifio/decoder_webp.h"
+#include "heifio/decoder_openjpeg.h"
 
 #include "benchmark.h"
 #include "common.h"
@@ -870,7 +871,7 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 
   enum
   {
-    PNG, JPEG, Y4M, TIFF, RAW, WEBP, HEIF
+    PNG, JPEG, Y4M, TIFF, RAW, WEBP, HEIF, JP2
   } filetype = JPEG;
   if (suffix == "png") {
     filetype = PNG;
@@ -890,6 +891,10 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
   else if (suffix == "heif" || suffix == "heic" || suffix == "hif" ||
            suffix == "avif" || suffix == "avifs") {
     filetype = HEIF;
+  }
+  else if (suffix == "jp2" || suffix == "jpx" || suffix == "jpf" ||
+           suffix == "j2k" || suffix == "j2c" || suffix == "jpc") {
+    filetype = JP2;
   }
 
   if (force_raw_input) {
@@ -942,6 +947,15 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
       exit(1);
     }
   }
+#if HAVE_OPENJP2
+  else if (filetype == JP2) {
+    heif_error err = loadJPEG2000(input_filename.c_str(), output_bit_depth, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load JPEG 2000 input image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+#endif
   else {
     heif_error err = loadJPEG(input_filename.c_str(), &input_image);
     if (err.code != heif_error_Ok) {
