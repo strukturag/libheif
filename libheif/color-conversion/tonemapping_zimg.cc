@@ -92,11 +92,7 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   const heif_color_conversion_options& options,
   const heif_color_conversion_options_ext& options_ext) const
 {
-  if (input_state.bits_per_pixel > 16 || input_state.bits_per_pixel < 8) {
-    return {};
-  }
-
-  if (input_state.alpha_bits_per_pixel != 0 && input_state.alpha_bits_per_pixel != input_state.bits_per_pixel) {
+  if (input_state.get_max_bits_per_pixel() > 16 || input_state.get_uniform_color_bits_per_pixel() < 8 || !input_state.all_channels_have_same_bpp()) {
     return {};
   }
 
@@ -120,10 +116,10 @@ Op_zimg::state_after_conversion(const ColorState& input_state,
   // --- output bit depth = input bit depth or target
 
   output_state = input_state;
-  bool islossy = input_state.bits_per_pixel > 8 && target_state.bits_per_pixel <= 8;
-  bool hasalpha = input_state.alpha_bits_per_pixel > 0;
-  output_state.bits_per_pixel = target_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = hasalpha ? target_state.alpha_bits_per_pixel : 0;
+  bool islossy = input_state.get_uniform_color_bits_per_pixel() > 8 && target_state.get_uniform_color_bits_per_pixel() <= 8;
+  bool hasalpha = input_state.has_alpha();
+  output_state.set_color_bits_per_pixel(target_state.get_uniform_color_bits_per_pixel());
+  output_state.bits_per_pixel_alpha = hasalpha ? target_state.bits_per_pixel_alpha : 0;
   // output planar
   if (target_state.colorspace == heif_colorspace_RGB) {
     output_state.chroma = heif_chroma_444;
@@ -274,8 +270,8 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   zimg_image_format image_format_out;
   image_format_out = image_format_in;
   // Bit depth
-  if (target_state.bits_per_pixel) {
-    image_format_out.depth = target_state.bits_per_pixel;
+  if (target_state.get_uniform_color_bits_per_pixel() > 0) {
+    image_format_out.depth = target_state.get_uniform_color_bits_per_pixel();
   }
   // Data type
   image_format_out.pixel_type = image_format_out.depth <= 8 ? ZIMG_PIXEL_BYTE : ZIMG_PIXEL_WORD;
@@ -350,13 +346,13 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
   descriptor_out.version = ZIMG_API_VERSION;
   switch (target_state.colorspace) {
   case heif_colorspace_YCbCr:
-    if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.get_bits_per_pixel(heif_channel_Y), limits)) {
       return err;
     }
-    if (auto err = outimg->add_channel(heif_channel_Cb, chroma_width(width, target_state.chroma), chroma_height(height, target_state.chroma), target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Cb, chroma_width(width, target_state.chroma), chroma_height(height, target_state.chroma), target_state.get_bits_per_pixel(heif_channel_Cb), limits)) {
       return err;
     }
-    if (auto err = outimg->add_channel(heif_channel_Cr, chroma_width(width, target_state.chroma), chroma_height(height, target_state.chroma), target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Cr, chroma_width(width, target_state.chroma), chroma_height(height, target_state.chroma), target_state.get_bits_per_pixel(heif_channel_Cr), limits)) {
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_out.plane[0].stride);
@@ -367,13 +363,13 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     descriptor_out.plane[2].mask = zimg_select_buffer_mask(chroma_height(slice_height, target_state.chroma));
     break;
   case heif_colorspace_RGB:
-    if (auto err = outimg->add_channel(heif_channel_R, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_R, width, height, target_state.get_bits_per_pixel(heif_channel_R), limits)) {
       return err;
     }
-    if (auto err = outimg->add_channel(heif_channel_G, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_G, width, height, target_state.get_bits_per_pixel(heif_channel_G), limits)) {
       return err;
     }
-    if (auto err = outimg->add_channel(heif_channel_B, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_B, width, height, target_state.get_bits_per_pixel(heif_channel_B), limits)) {
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_R, (size_t*)&descriptor_out.plane[0].stride);
@@ -384,7 +380,7 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     descriptor_out.plane[2].mask = zimg_select_buffer_mask(slice_height);
     break;
   case heif_colorspace_monochrome:
-    if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Y, width, height, target_state.get_bits_per_pixel(heif_channel_Y), limits)) {
       return err;
     }
     descriptor_out.plane[0].data = outimg->get_channel_memory(heif_channel_Y, (size_t*)&descriptor_out.plane[0].stride);
@@ -394,9 +390,9 @@ Op_zimg::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
     return Error::InternalError;
   }
   bool has_alpha = input->has_channel(heif_channel_Alpha);
-  bool want_alpha = target_state.has_alpha;
+  bool want_alpha = target_state.has_alpha();
   if (want_alpha) {
-    if (auto err = outimg->add_channel(heif_channel_Alpha, width, height, target_state.bits_per_pixel, limits)) {
+    if (auto err = outimg->add_channel(heif_channel_Alpha, width, height, target_state.bits_per_pixel_alpha, limits)) {
       return err;
     }
     if (has_alpha) {
