@@ -130,6 +130,8 @@ int heif_item_get_property_transform_rotation_ccw(const heif_context* context,
 // Returns the number of pixels that should be removed from the four edges.
 // Because of the way this data is stored, you have to pass the image size at the moment of the crop operation
 // to compute the cropped border sizes.
+// If the signaled offset places part of the clean aperture outside that image, the aperture is shifted
+// into the image while preserving its size.
 // If 'propertyId==0', it returns the first clap property found.
 // If the clap cannot be applied to the given image size (zero size or a size beyond the
 // supported coordinate range), all four borders are set to 0.
