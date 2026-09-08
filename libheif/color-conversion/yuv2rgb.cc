@@ -51,6 +51,7 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   int matrix = input_state.nclx.get_matrix_coefficients();
   if (matrix == 11 || matrix == 14 || matrix == 17) {
     return {};
+  }
   // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
   if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
     return {};
