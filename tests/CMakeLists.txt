@@ -105,6 +105,7 @@ add_libheif_test(sequence_raw_sample_errors)
 add_libheif_test(tai)
 add_libheif_test(text)
 add_libheif_test(cxx_wrapper)
+add_libheif_test(encoder_plugin_init_failure)
 add_libheif_test(component_descriptions)
 add_libheif_test(ffmpeg_decode_bitdepth)
 
