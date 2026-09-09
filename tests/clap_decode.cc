@@ -26,6 +26,7 @@
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
+#include "libheif/heif_properties.h"
 #include "test_utils.h"
 
 // Regression test for issue #1856. The per-decode tightened security limit
@@ -135,6 +136,70 @@ TEST_CASE("decode image with coded frame much larger than ispe")
   REQUIRE(heif_image_get_primary_height(img) == 1);
   heif_image_release(img);
 
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
+
+TEST_CASE("non-strict decoding adjusts clap to the decoded frame")
+{
+  if (!heif_have_decoder_for_format(heif_compression_HEVC)) {
+    SKIP("HEVC decoder not available, skipping test");
+  }
+
+  heif_context* ctx = get_context_for_test_file("ispe_mismatch_with_clap.heic");
+  heif_image_handle* handle = get_primary_image_handle(ctx);
+  REQUIRE(heif_image_handle_get_ispe_width(handle) == 464);
+  REQUIRE(heif_image_handle_get_ispe_height(handle) == 464);
+  REQUIRE(heif_image_handle_get_width(handle) == 461);
+  REQUIRE(heif_image_handle_get_height(handle) == 462);
+
+  int left = -1, top = -1, right = -1, bottom = -1;
+  heif_item_get_property_transform_crop_borders(ctx, heif_image_handle_get_item_id(handle), 0,
+                                                462, 462, &left, &top, &right, &bottom);
+  REQUIRE(left == 0);
+  REQUIRE(top == 0);
+  REQUIRE(right == 1);
+  REQUIRE(bottom == 0);
+
+  heif_decoding_options* options = heif_decoding_options_alloc();
+  heif_image* img = nullptr;
+
+  options->strict_decoding = 1;
+  heif_error err = heif_decode_image(handle, &img, heif_colorspace_undefined,
+                                     heif_chroma_undefined, options);
+  REQUIRE(err.code == heif_error_Invalid_input);
+  REQUIRE(err.subcode == heif_suberror_Invalid_image_size);
+
+  options->strict_decoding = 0;
+  err = heif_decode_image(handle, &img, heif_colorspace_undefined,
+                          heif_chroma_undefined, options);
+  INFO((err.message ? err.message : ""));
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(heif_image_get_primary_width(img) == 461);
+  REQUIRE(heif_image_get_primary_height(img) == 462);
+
+  heif_error warning;
+  REQUIRE(heif_image_get_decoding_warnings(img, 0, &warning, 1) == 1);
+  REQUIRE(warning.code == heif_error_Invalid_input);
+  REQUIRE(warning.subcode == heif_suberror_Invalid_image_size);
+  heif_image_release(img);
+
+  options->ignore_transformations = 1;
+  img = nullptr;
+  err = heif_decode_image(handle, &img, heif_colorspace_undefined,
+                          heif_chroma_undefined, options);
+  INFO((err.message ? err.message : ""));
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(heif_image_get_primary_width(img) == 462);
+  REQUIRE(heif_image_get_primary_height(img) == 462);
+
+  REQUIRE(heif_image_get_decoding_warnings(img, 0, &warning, 1) == 1);
+  REQUIRE(warning.code == heif_error_Invalid_input);
+  REQUIRE(warning.subcode == heif_suberror_Invalid_image_size);
+  heif_image_release(img);
+
+  heif_decoding_options_free(options);
   heif_image_handle_release(handle);
   heif_context_free(ctx);
 }

@@ -3930,6 +3930,51 @@ Result<Box_clap::Crop> Box_clap::get_crop(uint32_t image_width, uint32_t image_h
   return crop;
 }
 
+
+Result<Box_clap::Crop> Box_clap::get_crop_adjusted_to_image(uint32_t image_width, uint32_t image_height) const
+{
+  auto cropResult = get_crop(image_width, image_height);
+  if (!cropResult) {
+    return cropResult.error();
+  }
+
+  int64_t left = cropResult->left;
+  int64_t right = cropResult->right;
+  int64_t top = cropResult->top;
+  int64_t bottom = cropResult->bottom;
+  int64_t crop_width = right - left + 1;
+  int64_t crop_height = bottom - top + 1;
+
+  if (crop_width <= 0 || crop_height <= 0 ||
+      crop_width > static_cast<int64_t>(image_width) ||
+      crop_height > static_cast<int64_t>(image_height)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_clean_aperture,
+                 "Clean aperture is larger than the available image");
+  }
+
+  if (left < 0) {
+    right -= left;
+    left = 0;
+  }
+  else if (right >= image_width) {
+    left -= right - (static_cast<int64_t>(image_width) - 1);
+    right = static_cast<int64_t>(image_width) - 1;
+  }
+
+  if (top < 0) {
+    bottom -= top;
+    top = 0;
+  }
+  else if (bottom >= image_height) {
+    top -= bottom - (static_cast<int64_t>(image_height) - 1);
+    bottom = static_cast<int64_t>(image_height) - 1;
+  }
+
+  return Crop{static_cast<int>(left), static_cast<int>(top),
+              static_cast<int>(right), static_cast<int>(bottom)};
+}
+
 int Box_clap::get_width_rounded() const
 {
   return m_clean_aperture_width.round();

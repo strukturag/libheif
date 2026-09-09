@@ -1040,6 +1040,10 @@ public:
   // (zero size, or a size that exceeds the int32_t coordinate range).
   Result<Crop> get_crop(uint32_t image_width, uint32_t image_height) const;
 
+  // Preserves the clean-aperture size, but shifts it into the available image
+  // when its signaled offset would put part of it outside the image.
+  Result<Crop> get_crop_adjusted_to_image(uint32_t image_width, uint32_t image_height) const;
+
   double left(int image_width) const;
   double top(int image_height) const;
 
