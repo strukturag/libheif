@@ -604,7 +604,9 @@ else ()
     set(CMAKE_CXX_VISIBILITY_PRESET default)
 endif ()
 
-add_subdirectory(heifio)
+if(WITH_EXAMPLES OR BUILD_TESTING)
+    add_subdirectory(heifio)
+endif()
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
