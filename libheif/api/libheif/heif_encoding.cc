@@ -790,6 +790,11 @@ heif_error heif_context_add_overlay_image(heif_context* ctx,
 heif_error heif_context_set_primary_image(heif_context* ctx,
                                           heif_image_handle* image_handle)
 {
+  Error visibility_error = ctx->context->set_item_hidden(image_handle->image->get_id(), false);
+  if (visibility_error) {
+    return visibility_error.error_struct(ctx->context.get());
+  }
+
   ctx->context->set_primary_image(image_handle->image);
 
   return heif_error_success;

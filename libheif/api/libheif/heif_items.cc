@@ -77,6 +77,18 @@ int heif_item_is_item_hidden(const heif_context* ctx, heif_item_id item_id)
 }
 
 
+heif_error heif_item_set_item_hidden(heif_context* ctx,
+                                     heif_item_id item_id,
+                                     int hidden)
+{
+  if (!ctx) {
+    return heif_error_null_pointer_argument;
+  }
+
+  return ctx->context->set_item_hidden(item_id, hidden != 0).error_struct(ctx->context.get());
+}
+
+
 const char* heif_item_get_mime_item_content_type(const heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
