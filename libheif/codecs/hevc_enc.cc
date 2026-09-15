@@ -247,6 +247,17 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     return {};
   }
 
+  // The encoder can hand out parameter-set NALs before any slice data. x265,
+  // for example, emits VPS/SPS/PPS from encoder_headers() as soon as the
+  // sequence encoder is opened, so the first get_data() after
+  // start_sequence_encoding() sees only headers. Those are collected into
+  // m_hvcC and leave m_current_output_data unset, so there is no coded
+  // image to report yet. Without this check the dereferences below run on a
+  // disengaged std::optional.
+  if (!m_current_output_data) {
+    return {};
+  }
+
   if (!m_encoded_image_width || !m_encoded_image_height) {
     return Error(heif_error_Encoder_plugin_error,
                  heif_suberror_Invalid_image_size);
