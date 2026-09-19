@@ -127,6 +127,7 @@ if (NOT WITH_REDUCED_VISIBILITY)
     add_libheif_test(mini_box)
 endif()
 add_libheif_test(mini_decode)
+add_libheif_test(mini_security_limits)
 
 if (NOT WITH_REDUCED_VISIBILITY)
     add_libheif_test(omaf_boxes)
