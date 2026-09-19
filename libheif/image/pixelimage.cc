@@ -348,6 +348,20 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
                                 const heif_security_limits* limits,
                                 heif_component_datatype datatype)
 {
+  // An interleaved image carries its alpha inside the interleaved plane (the RGBA and RRGGBBAA
+  // formats). A separate alpha plane next to it would let the chroma format and the set of planes
+  // disagree about whether the image has alpha. The interleaved encoders of the uncompressed codec
+  // took the component list from the chroma format but the alpha decision from the planes and read
+  // past the end of the component list (GHSA-qfj5-c4pq-q998). Callers that want alpha have to use
+  // an interleaved format with alpha instead.
+
+  if (channel == heif_channel_Alpha && num_interleaved_components_per_plane(m_chroma) > 1) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Cannot add a separate alpha plane to an image with an interleaved chroma format. "
+            "Use an interleaved format with alpha (e.g. heif_chroma_interleaved_RGBA) instead."};
+  }
+
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
   if (m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {

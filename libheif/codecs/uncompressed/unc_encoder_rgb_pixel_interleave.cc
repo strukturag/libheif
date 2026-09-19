@@ -56,7 +56,11 @@ unc_encoder_rgb_pixel_interleave::unc_encoder_rgb_pixel_interleave(const std::sh
     : unc_encoder(image)
 {
   auto cmpd_ids = image->get_component_ids_interleaved();
-  bool save_alpha = image->has_alpha();
+
+  // Whether the pixels carry alpha is a property of the interleaved chroma format, which is also
+  // where the component list above comes from. has_alpha() would additionally report a separate
+  // alpha plane, which get_unc_encoder() rejects for interleaved images.
+  bool save_alpha = is_interleaved_with_alpha(image->get_chroma_format());
 
   m_bytes_per_pixel = save_alpha ? 4 : 3;
   assert(cmpd_ids.size() == m_bytes_per_pixel);

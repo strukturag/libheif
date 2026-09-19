@@ -371,6 +371,11 @@ heif_error heif_image_create(int width, int height,
  * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
  * instead of the preferred 8 bits. However, this use is deprecated.
  *
+ * <p>An image with an interleaved chroma format carries its alpha inside the interleaved
+ * plane. Adding a separate {@code heif_channel_Alpha} plane to such an image is rejected
+ * with an error. Use one of the interleaved formats with alpha
+ * (e.g. {@code heif_chroma_interleaved_RGBA}) instead.
+ *
  * @param image the parent image to add the channel plane to
  * @param channel the channel of the plane to add
  * @param width the width of the plane

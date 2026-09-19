@@ -676,9 +676,8 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
       };
     }
 
-    if (auto err = outimg->add_channel(heif_channel_Alpha, width, height, bpp, limits)) {
-      return err;
-    }
+    // The alpha samples go into the fourth component of the interleaved RRGGBBAA plane below.
+    // The output must not carry a separate alpha plane in addition to that.
   }
 
   uint8_t* out_p;
