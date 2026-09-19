@@ -863,6 +863,36 @@ TEST_CASE("pclr write and parse round trip")
 }
 
 
+TEST_CASE("pclr more than 255 entries round trip")
+{
+  // NE is a 16-bit field; get_num_entries() used to return uint8_t, so the
+  // writer emitted a truncated count for palettes above 255 entries.
+  auto pclr = std::make_shared<Box_pclr>();
+  pclr->set_columns(1, 8);
+  for (int i = 0; i < 300; i++) {
+    Box_pclr::PaletteEntry entry;
+    entry.columns = {static_cast<uint16_t>(i & 0xff)};
+    pclr->add_entry(entry);
+  }
+  REQUIRE(pclr->get_num_entries() == 300);
+
+  StreamWriter writer;
+  REQUIRE(pclr->write(writer) == Error::Ok);
+  const std::vector<uint8_t> bytes = writer.get_data();
+  REQUIRE(bytes.size() == 8 + 2 + 1 + 1 + 300);
+  REQUIRE(bytes[8] == 0x01);  // NE = 0x012c
+  REQUIRE(bytes[9] == 0x2c);
+
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err == Error::Ok);
+  auto parsed = std::dynamic_pointer_cast<Box_pclr>(box);
+  REQUIRE(parsed);
+  REQUIRE(parsed->get_num_entries() == 300);
+  REQUIRE(parsed->get_entries()[299].columns == std::vector<uint16_t>{299 & 0xff});
+}
+
+
 TEST_CASE("pclr zero columns rejected")
 {
   // NE=65535, NPC=0: the 11-byte box from the advisory.

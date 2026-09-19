@@ -222,14 +222,15 @@ public:
         return m_bitDepths;
     }
 
-    const uint8_t get_num_entries() const
+    // NE is a 16-bit field (1 to 1024 per ISO/IEC 15444-1 Table I.12).
+    uint16_t get_num_entries() const
     {
-        return (uint8_t)(m_entries.size());
+        return static_cast<uint16_t>(m_entries.size());
     }
 
-    const uint8_t get_num_columns() const
+    uint8_t get_num_columns() const
     {
-        return (uint8_t)(m_bitDepths.size());
+        return static_cast<uint8_t>(m_bitDepths.size());
     }
 
     void add_entry(const PaletteEntry& entry)
