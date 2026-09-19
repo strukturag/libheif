@@ -181,13 +181,29 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint16_t num_entries = range.read16();
   uint8_t num_palette_columns = range.read8();
+
+  // ISO/IEC 15444-1 (Table I.12) requires NPC to be in the range 1 to 255.
+  // A palette without columns carries no entry data, so the per-entry byte
+  // count below would be zero and could not bound num_entries. The entry loop
+  // then allocated up to 65535 empty PaletteEntry vectors from an 11-byte box,
+  // and nested 'j2kH' containers could repeat this hundreds of times without
+  // any of it being charged to the memory limits (GHSA-9c75-9g8r-4728).
+  if (num_palette_columns == 0) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream,
+                 "pclr box declares zero palette columns");
+  }
+
   for (uint8_t i = 0; i < num_palette_columns; i++) {
-    uint8_t bit_depth = range.read8();
-    if (bit_depth & 0x80) {
+    // B_i (Table I.13): the high bit marks signed values, the low 7 bits hold
+    // the column precision minus one (0..37 for 1..38 bits).
+    uint8_t b = range.read8();
+    if (b & 0x80) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
                    "pclr with signed data is not supported");
     }
+    uint8_t bit_depth = static_cast<uint8_t>((b & 0x7F) + 1);
     if (bit_depth > 16) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
@@ -195,20 +211,32 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
     m_bitDepths.push_back(bit_depth);
   }
-  // Number of bytes each palette entry occupies in the box. Used to bound
-  // num_entries by the data actually present, so a small header cannot force
-  // a large allocation (analogous to the 'cdef'/'j2kL' checks).
+  // Number of bytes each palette entry occupies in the box: each C_ji value is
+  // padded to a whole number of bytes (I.5.3.4). Used to bound num_entries by
+  // the data actually present, so a small header cannot force a large
+  // allocation (analogous to the 'cdef'/'j2kL' checks). The precision is at
+  // least 1 bit, so every entry occupies at least one byte.
   size_t bytes_per_entry = 0;
   for (uint8_t bd : m_bitDepths) {
-    bytes_per_entry += (bd <= 8) ? 1 : 2;
+    bytes_per_entry += (bd + 7) / 8;
   }
 
-  if (bytes_per_entry != 0 &&
-      num_entries > range.get_remaining_bytes() / bytes_per_entry) {
+  if (num_entries > range.get_remaining_bytes() / bytes_per_entry) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data,
                  "pclr box declares more entries than the box contains");
   }
+
+  // Each entry is stored as its own vector, so the palette costs noticeably
+  // more memory than the bytes it occupies in the file. Charge that storage
+  // to the memory limits before allocating it.
+  size_t bytes_per_stored_entry = sizeof(PaletteEntry) + num_palette_columns * sizeof(uint16_t);
+  if (auto err = m_memory_handle.alloc(num_entries, bytes_per_stored_entry,
+                                       limits, "the 'pclr' palette")) {
+    return err;
+  }
+
+  m_entries.reserve(num_entries);
 
   for (uint16_t j = 0; j < num_entries; j++) {
     PaletteEntry entry;
@@ -256,8 +284,8 @@ Error Box_pclr::write(StreamWriter& writer) const
 
   writer.write16(get_num_entries());
   writer.write8(get_num_columns());
-  for (uint8_t b : m_bitDepths) {
-    writer.write8(b);
+  for (uint8_t bd : m_bitDepths) {
+    writer.write8(static_cast<uint8_t>(bd - 1));  // B_i stores the precision minus one
   }
   for (PaletteEntry entry : m_entries) {
     for (unsigned long int i = 0; i < entry.columns.size(); i++) {

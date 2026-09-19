@@ -23,6 +23,7 @@
 
 #include "box.h"
 #include "file.h"
+#include "security_limits.h"
 #include "context.h"
 #include <cstdint>
 #include <string>
@@ -211,6 +212,9 @@ public:
     /**
      * Get the bit depths for the columns in this palette box.
      *
+     * These are the column precisions in bits (1 to 16), not the raw B_i
+     * field of the box, which stores the precision minus one.
+     *
      * @return the bit depths as a read-only vector.
      */
     const std::vector<uint8_t>& get_bit_depths() const
@@ -241,7 +245,7 @@ public:
      * This will reset any existing columns and entries.
      *
      * @param num_columns the number of columns (e.g. 3 for RGB)
-     * @param bit_depth the bit depth for each column (e.g. 8 for 24-bit RGB)
+     * @param bit_depth the bit depth for each column in bits, 1 to 16 (e.g. 8 for 24-bit RGB)
      */
     void set_columns(uint8_t num_columns, uint8_t bit_depth);
 
@@ -251,6 +255,7 @@ protected:
 private:
     std::vector<uint8_t> m_bitDepths;
     std::vector<PaletteEntry> m_entries;
+    MemoryHandle m_memory_handle;
 };
 
 

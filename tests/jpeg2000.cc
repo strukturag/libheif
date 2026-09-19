@@ -27,8 +27,13 @@
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
 #include "codecs/jpeg2000_boxes.h"
+#include "security_limits.h"
+#include "test-config.h"
 #include <cstdint>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 
 TEST_CASE( "cdef" )
@@ -131,7 +136,7 @@ TEST_CASE( "pclr" )
     Error err = pclr->write(writer);
     REQUIRE(err.error_code == heif_error_Ok);
     const std::vector<uint8_t> bytes = writer.get_data();
-    std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x14, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x08, 0x08, 0x08, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD};
+    std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x14, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x07, 0x07, 0x07, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD};
     REQUIRE(bytes == expected);
     Indent indent;
     std::string dump_output = pclr->dump(indent);
@@ -159,7 +164,7 @@ TEST_CASE( "pclr 12 bit" )
     Error err = pclr->write(writer);
     REQUIRE(err.error_code == heif_error_Ok);
     const std::vector<uint8_t> bytes = writer.get_data();
-    std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x1A, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x0C, 0x0C, 0x0C, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x0F, 0xFF, 0x0F, 0xFE, 0x0F, 0xFD};
+    std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x1A, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x0B, 0x0B, 0x0B, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x0F, 0xFF, 0x0F, 0xFE, 0x0F, 0xFD};
     REQUIRE(bytes == expected);
     Indent indent;
     std::string dump_output = pclr->dump(indent);
@@ -726,4 +731,199 @@ TEST_CASE( "codestream - COD + SIZ + CAP other" )
     REQUIRE(uut.get_chroma_format() == heif_chroma_monochrome);
     REQUIRE(uut.get_precision(0) == 8);
     REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+
+// --- 'pclr' parsing (GHSA-9c75-9g8r-4728) ----------------------------------
+//
+// A 'pclr' box with zero palette columns declares no entry data, so the entry
+// count was not bounded by the box size and each declared entry allocated an
+// empty vector. Nested 'j2kH' containers repeated this hundreds of times from
+// a few KB of input. The parser now rejects zero columns, bounds the entry
+// count by the box payload, and charges the palette to the memory limits.
+
+// Parses a single box from raw bytes, as it would be encountered inside a
+// 'j2kH' container.
+static Error parse_box(const std::vector<uint8_t>& bytes,
+                       const heif_security_limits* limits,
+                       std::shared_ptr<Box>* box)
+{
+  auto reader = std::make_shared<StreamReader_memory>(bytes.data(), bytes.size(), false);
+  BitstreamRange range(reader, bytes.size());
+  return Box::read(range, box, limits);
+}
+
+// Box header (size, 'pclr') followed by the payload.
+static std::vector<uint8_t> pclr_box(std::vector<uint8_t> payload)
+{
+  uint32_t size = static_cast<uint32_t>(8 + payload.size());
+  std::vector<uint8_t> bytes{static_cast<uint8_t>(size >> 24), static_cast<uint8_t>(size >> 16),
+                             static_cast<uint8_t>(size >> 8), static_cast<uint8_t>(size),
+                             'p', 'c', 'l', 'r'};
+  bytes.insert(bytes.end(), payload.begin(), payload.end());
+  return bytes;
+}
+
+
+TEST_CASE("pclr parse")
+{
+  // NE=2, NPC=2, B={7,11} (8 and 12 bits), entries (0x10, 0x0123) and (0x20, 0x0456)
+  auto bytes = pclr_box({0x00, 0x02, 0x02, 0x07, 0x0b,
+                         0x10, 0x01, 0x23,
+                         0x20, 0x04, 0x56});
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err == Error::Ok);
+
+  auto pclr = std::dynamic_pointer_cast<Box_pclr>(box);
+  REQUIRE(pclr);
+  REQUIRE(pclr->get_bit_depths() == std::vector<uint8_t>{8, 12});
+  REQUIRE(pclr->get_entries().size() == 2);
+  REQUIRE(pclr->get_entries()[0].columns == std::vector<uint16_t>{0x10, 0x0123});
+  REQUIRE(pclr->get_entries()[1].columns == std::vector<uint16_t>{0x20, 0x0456});
+}
+
+
+TEST_CASE("pclr bit depth field is precision minus one")
+{
+  // Table I.13: B_i = 0 is a 1-bit column stored in one byte, B_i = 15 is a
+  // 16-bit column stored in two bytes. NE=1, NPC=2, entry (1, 0xFFFF).
+  auto bytes = pclr_box({0x00, 0x01, 0x02, 0x00, 0x0f,
+                         0x01, 0xff, 0xff});
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err == Error::Ok);
+
+  auto pclr = std::dynamic_pointer_cast<Box_pclr>(box);
+  REQUIRE(pclr);
+  REQUIRE(pclr->get_bit_depths() == std::vector<uint8_t>{1, 16});
+  REQUIRE(pclr->get_entries().size() == 1);
+  REQUIRE(pclr->get_entries()[0].columns == std::vector<uint16_t>{1, 0xffff});
+}
+
+
+TEST_CASE("pclr rejects unsupported bit depths")
+{
+  SECTION("17 bits does not fit the 16-bit entry storage") {
+    // NE=1, NPC=1, B=16 (17 bits), entry 0x000001
+    auto bytes = pclr_box({0x00, 0x01, 0x01, 0x10, 0x00, 0x00, 0x01});
+    std::shared_ptr<Box> box;
+    Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+    REQUIRE(err.error_code == heif_error_Unsupported_feature);
+  }
+
+  SECTION("signed columns") {
+    // NE=1, NPC=1, B=0x87 (signed 8 bits), entry 0x01
+    auto bytes = pclr_box({0x00, 0x01, 0x01, 0x87, 0x01});
+    std::shared_ptr<Box> box;
+    Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+    REQUIRE(err.error_code == heif_error_Unsupported_feature);
+  }
+}
+
+
+TEST_CASE("pclr one-bit columns still bound the entry count")
+{
+  // The smallest possible column (B_i = 0, 1 bit) still occupies one byte per
+  // entry, so the byte bound must reject NE=65535 with no entry data. This is
+  // the case a naive ceil(B_i / 8) would let through.
+  auto bytes = pclr_box({0xff, 0xff, 0x01, 0x00});
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err.error_code == heif_error_Invalid_input);
+  REQUIRE(err.sub_error_code == heif_suberror_End_of_data);
+}
+
+
+TEST_CASE("pclr write and parse round trip")
+{
+  auto pclr = std::make_shared<Box_pclr>();
+  pclr->set_columns(3, 12);
+  Box_pclr::PaletteEntry entry0;
+  entry0.columns = {0x001, 0x002, 0xfff};
+  pclr->add_entry(entry0);
+  Box_pclr::PaletteEntry entry1;
+  entry1.columns = {0x800, 0x000, 0x7ff};
+  pclr->add_entry(entry1);
+
+  StreamWriter writer;
+  REQUIRE(pclr->write(writer) == Error::Ok);
+  const std::vector<uint8_t> bytes = writer.get_data();
+
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err == Error::Ok);
+
+  auto parsed = std::dynamic_pointer_cast<Box_pclr>(box);
+  REQUIRE(parsed);
+  REQUIRE(parsed->get_bit_depths() == pclr->get_bit_depths());
+  REQUIRE(parsed->get_entries().size() == 2);
+  REQUIRE(parsed->get_entries()[0].columns == entry0.columns);
+  REQUIRE(parsed->get_entries()[1].columns == entry1.columns);
+}
+
+
+TEST_CASE("pclr zero columns rejected")
+{
+  // NE=65535, NPC=0: the 11-byte box from the advisory.
+  auto bytes = pclr_box({0xff, 0xff, 0x00});
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err.error_code == heif_error_Invalid_input);
+  REQUIRE(std::dynamic_pointer_cast<Box_pclr>(box) == nullptr);
+}
+
+
+TEST_CASE("pclr entry count bounded by box payload")
+{
+  // NE=65535, NPC=1, B=7 (8 bits), but no entry data at all.
+  auto bytes = pclr_box({0xff, 0xff, 0x01, 0x07});
+  std::shared_ptr<Box> box;
+  Error err = parse_box(bytes, heif_get_global_security_limits(), &box);
+  REQUIRE(err.error_code == heif_error_Invalid_input);
+  REQUIRE(err.sub_error_code == heif_suberror_End_of_data);
+}
+
+
+TEST_CASE("pclr palette charged to memory limits")
+{
+  // NE=256, NPC=1, B=7 (8 bits), with all 256 entry bytes present. This is a
+  // valid palette, but it costs 256 PaletteEntry vectors in memory.
+  std::vector<uint8_t> payload{0x01, 0x00, 0x01, 0x07};
+  for (int i = 0; i < 256; i++) {
+    payload.push_back(static_cast<uint8_t>(i));
+  }
+  auto bytes = pclr_box(payload);
+
+  heif_security_limits limits = *heif_get_global_security_limits();
+  TotalMemoryTracker tracker(&limits);
+
+  SECTION("accepted within the budget") {
+    std::shared_ptr<Box> box;
+    Error err = parse_box(bytes, &limits, &box);
+    REQUIRE(err == Error::Ok);
+    auto pclr = std::dynamic_pointer_cast<Box_pclr>(box);
+    REQUIRE(pclr);
+    REQUIRE(pclr->get_entries().size() == 256);
+  }
+
+  SECTION("rejected when it exceeds max_total_memory") {
+    limits.max_total_memory = 1024;
+    std::shared_ptr<Box> box;
+    Error err = parse_box(bytes, &limits, &box);
+    REQUIRE(err.error_code == heif_error_Memory_allocation_error);
+    REQUIRE(err.sub_error_code == heif_suberror_Security_limit_exceeded);
+  }
+}
+
+
+TEST_CASE("pclr zero columns in nested j2kH rejects the file")
+{
+  // The advisory's reproducer: 200 zero-column 'pclr' boxes spread over
+  // nested 'j2kH' properties. It used to parse successfully at ~330 MB RSS.
+  heif_context* ctx = heif_context_alloc();
+  std::string path = tests_data_directory + "/pclr_zero_columns.heic";
+  heif_error err = heif_context_read_from_file(ctx, path.c_str(), nullptr);
+  REQUIRE(err.code == heif_error_Invalid_input);
+  heif_context_free(ctx);
 }
