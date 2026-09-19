@@ -1252,6 +1252,28 @@ protected:
 };
 
 
+class Box_stem : public Box_EntityToGroup
+{
+public:
+  Box_stem()
+  {
+    set_short_type(fourcc("stem"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const char* debug_box_name() const override { return "Stereo pair with monoscopic fallback"; }
+
+  heif_item_id get_left_image() const { return entity_ids.size() > 0 ? entity_ids[0] : 0; }
+  heif_item_id get_right_image() const { return entity_ids.size() > 1 ? entity_ids[1] : 0; }
+  heif_item_id get_monoscopic_image() const { return entity_ids.size() > 2 ? entity_ids[2] : 0; }
+
+protected:
+
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+};
+
+
 class Box_pymd : public Box_EntityToGroup
 {
 public:
