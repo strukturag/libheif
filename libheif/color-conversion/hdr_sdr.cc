@@ -36,6 +36,11 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // Every plane, alpha included, is widened from 8 bits, so all of them must be 8 bits.
+  if (!input_state.all_channels_have_same_bpp()) {
+    return {};
+  }
+
   // This operation increases the bit depth of an 8-bit input by replicating
   // the input bit pattern: out = (in << (m-8)) | (in >> (16-m)). That identity
   // only holds for target bit depths m in (8, 16]; a larger m would both make

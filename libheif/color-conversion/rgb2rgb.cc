@@ -41,6 +41,11 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // The interleaved output has one depth for all components.
+  if (!input_state.color_channels_have_same_bpp()) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
@@ -169,6 +174,11 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   }
 
   if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
+    return {};
+  }
+
+  // The interleaved output has one depth for all components.
+  if (!input_state.color_channels_have_same_bpp()) {
     return {};
   }
 

@@ -91,6 +91,11 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     return {};
   }
 
+  // Planar input is handed to libsharpyuv with a single sample width and stride.
+  if (!input_state.color_channels_have_same_bpp()) {
+    return {};
+  }
+
   if (target_state.chroma != heif_chroma_420) {
     return {};
   }

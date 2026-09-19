@@ -45,6 +45,12 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // All three colour planes are read through the same 'Pixel' type and converted with one
+  // set of range constants, so they must share one bit depth.
+  if (!input_state.color_channels_have_same_bpp()) {
+    return {};
+  }
+
   if (has_samples_wider_than_16bit(input_state)) {
     return {};
   }

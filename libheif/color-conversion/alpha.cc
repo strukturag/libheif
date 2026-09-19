@@ -136,10 +136,12 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  // TODO: this Op only works when all channels are either HDR or all are SDR
-  //       (see ColorState::all_channels_sdr() / all_channels_hdr()).
-
-  if ((input_state.get_color_bits_per_pixel() > 8) != hdr) {
+  // The colour planes and the alpha plane are all read through the single 'Pixel' type
+  // below, so every plane must be SDR (one byte per sample) for the uint8_t instance and
+  // HDR (two bytes per sample) for the uint16_t instance. A file may declare a different
+  // depth per plane ('unci'); reading a one-byte plane as two-byte samples would run past
+  // its end (GHSA-r7gr-2xm2-23wf). Decline a mixture instead.
+  if (hdr ? !input_state.all_channels_hdr() : !input_state.all_channels_sdr()) {
     return {};
   }
 
