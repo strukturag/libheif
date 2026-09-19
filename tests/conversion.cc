@@ -172,17 +172,17 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
   std::vector<Plane> planes;
   if (state.colorspace == heif_colorspace_monochrome) {
     if (state.chroma != heif_chroma_monochrome) return {};
-    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel});
-    if (state.has_alpha) {
+    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel_Y});
+    if (state.has_alpha()) {
       planes.push_back(
-          {heif_channel_Alpha, width, height, state.bits_per_pixel});
+          {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
     }
   } else if (state.colorspace == heif_colorspace_YCbCr) {
     if (state.chroma != heif_chroma_444 && state.chroma != heif_chroma_422 &&
         state.chroma != heif_chroma_420 && state.chroma != heif_chroma_monochrome) {
       return {};
     }
-    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel});
+    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel_Y});
     if (state.chroma != heif_chroma_monochrome) {
       int chroma_width = state.chroma == heif_chroma_444 ? width : width / 2;
       int chroma_height =
@@ -190,13 +190,13 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
               ? height
               : height / 2;
       planes.push_back(
-          {heif_channel_Cb, chroma_width, chroma_height, state.bits_per_pixel});
+          {heif_channel_Cb, chroma_width, chroma_height, state.bits_per_pixel_Cb});
       planes.push_back(
-          {heif_channel_Cr, chroma_width, chroma_height, state.bits_per_pixel});
+          {heif_channel_Cr, chroma_width, chroma_height, state.bits_per_pixel_Cr});
     }
-    if (state.has_alpha) {
+    if (state.has_alpha()) {
       planes.push_back(
-          {heif_channel_Alpha, width, height, state.bits_per_pixel});
+          {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
     }
   } else if (state.colorspace == heif_colorspace_RGB) {
     // heif_chroma_planar is a synonym for heif_chroma_444 in the RGB
@@ -212,16 +212,17 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
       return {};
     }
     if (state.chroma == heif_chroma_444 || state.chroma == heif_chroma_planar) {
-      planes.push_back({heif_channel_R, width, height, state.bits_per_pixel});
-      planes.push_back({heif_channel_G, width, height, state.bits_per_pixel});
-      planes.push_back({heif_channel_B, width, height, state.bits_per_pixel});
-      if (state.has_alpha) {
+      planes.push_back({heif_channel_R, width, height, state.bits_per_pixel_R});
+      planes.push_back({heif_channel_G, width, height, state.bits_per_pixel_G});
+      planes.push_back({heif_channel_B, width, height, state.bits_per_pixel_B});
+      if (state.has_alpha()) {
         planes.push_back(
-            {heif_channel_Alpha, width, height, state.bits_per_pixel});
+            {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
       }
     } else {
+      // Interleaved formats are represented by their per-component depth in R/G/B.
       planes.push_back(
-          {heif_channel_interleaved, width, height, state.bits_per_pixel});
+          {heif_channel_interleaved, width, height, state.bits_per_pixel_R});
     }
   } else {
     return {};  // Unsupported colorspace.
@@ -321,16 +322,15 @@ void TestConversion(const std::string& test_name, ColorState input_state,
   REQUIRE(out_image != nullptr);
   CHECK(out_image->get_colorspace() == target_state.colorspace);
   CHECK(out_image->get_chroma_format() == target_state.chroma);
-  CHECK(out_image->has_alpha() == target_state.has_alpha);
+  CHECK(out_image->has_alpha() == target_state.has_alpha());
   for (const Plane& plane : GetPlanes(target_state, width, height)) {
     INFO("Channel: " << plane.channel);
     size_t stride;
     CHECK(out_image->get_channel_memory(plane.channel, &stride) != nullptr);
-    CHECK(out_image->get_bits_per_pixel(plane.channel) ==
-          target_state.bits_per_pixel);
+    CHECK(out_image->get_bits_per_pixel(plane.channel) == plane.bit_depth);
     // If an alpha plane was created from nothing, check that it's filled
     // with the max alpha value.
-    if (plane.channel == heif_channel_Alpha && !input_state.has_alpha) {
+    if (plane.channel == heif_channel_Alpha && !input_state.has_alpha()) {
       double alpha_psnr = GetPsnr(*out_image, *out_image, heif_channel_Alpha,
                                   /*expect_alpha_max=*/true);
       REQUIRE(alpha_psnr == 100.f);
@@ -347,10 +347,10 @@ void TestConversion(const std::string& test_name, ColorState input_state,
     std::shared_ptr<HeifPixelImage> recovered_image = *recovered_image_result;
     // If the alpha plane was lost in the target state, it should come back
     // as the max value for the given bpp, i.e. (1<<bpp)-1
-    bool expect_alpha_max = !target_state.has_alpha;
+    bool expect_alpha_max = !target_state.has_alpha();
     bool expect_lossless =
         input_state.colorspace == target_state.colorspace &&
-        input_state.bits_per_pixel == target_state.bits_per_pixel &&
+        input_state.get_color_bits_per_pixel() == target_state.get_color_bits_per_pixel() &&
         (input_state.chroma == target_state.chroma ||
          (input_state.chroma != heif_chroma_420 &&
           input_state.chroma != heif_chroma_422 &&
@@ -777,7 +777,7 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("10-bit color, 8-bit alpha -> interleaved RGBA 8-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 10);
-    input_state.alpha_bits_per_pixel = 8;
+    input_state.bits_per_pixel_alpha = 8;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
@@ -790,7 +790,7 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("8-bit color, 10-bit alpha -> interleaved RGBA 8-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 8);
-    input_state.alpha_bits_per_pixel = 10;
+    input_state.bits_per_pixel_alpha = 10;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
@@ -803,11 +803,11 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("10-bit color, 8-bit alpha -> planar RGB 10-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 10);
-    input_state.alpha_bits_per_pixel = 8;
+    input_state.bits_per_pixel_alpha = 8;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_444, true, 10);
-    target_state.alpha_bits_per_pixel = 10;
+    target_state.bits_per_pixel_alpha = 10;
 
     ColorConversionPipeline pipeline;
     bool supported = pipeline.construct_pipeline(input_state, target_state, options, *options_ext);

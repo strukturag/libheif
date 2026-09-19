@@ -45,7 +45,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.bits_per_pixel_Y > 8) != hdr) {
     return {};
   }
 
@@ -69,9 +69,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_420;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -273,7 +272,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.bits_per_pixel_Y > 8) != hdr) {
     return {};
   }
 
@@ -297,9 +296,8 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_422;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -479,7 +477,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.bits_per_pixel_Y > 8) != hdr) {
     return {};
   }
 
@@ -499,9 +497,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -764,7 +761,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.bits_per_pixel_Y > 8) != hdr) {
     return {};
   }
 
@@ -784,9 +781,8 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);

@@ -71,8 +71,8 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.has_alpha == false ||
-      target_state.has_alpha == true) {
+      !input_state.has_alpha() ||
+      target_state.has_alpha()) {
     return {};
   }
 
@@ -87,7 +87,7 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
   // --- drop alpha plane
 
   output_state = input_state;
-  output_state.has_alpha = false;
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Trivial);
 
@@ -136,10 +136,10 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  // TODO: this Op only works when all channels are either HDR or all are SDR.
-  //       But there is currently no easy way to check that.
+  // TODO: this Op only works when all channels are either HDR or all are SDR
+  //       (see ColorState::all_channels_sdr() / all_channels_hdr()).
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.get_color_bits_per_pixel() > 8) != hdr) {
     return {};
   }
 
@@ -147,7 +147,7 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.get_color_bits_per_pixel()) {
     return {};
   }
 
@@ -157,8 +157,8 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.has_alpha == false ||
-      target_state.has_alpha == true) {
+      !input_state.has_alpha() ||
+      target_state.has_alpha()) {
     return {};
   }
 
@@ -173,7 +173,7 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
   // --- drop alpha plane
 
   output_state = input_state;
-  output_state.has_alpha = false;
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Trivial);
 
@@ -200,7 +200,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                                    heif_colorspace_RGB,
                                                                                    heif_chroma_444,
                                                                                    input_state.nclx,
-                                                                                   input_state.bits_per_pixel,
+                                                                                   input_state.get_color_bits_per_pixel(),
                                                                                    options, &options_ext_skip_alpha,
                                                                                    limits);
     if (!convInput) {
@@ -223,7 +223,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
   for (heif_channel channel : {heif_channel_R,
                                heif_channel_G,
                                heif_channel_B}) {
-    outimg->add_channel(channel, width, height, target_state.bits_per_pixel, limits);
+    outimg->add_channel(channel, width, height, target_state.get_bits_per_pixel(channel), limits);
 
     const Pixel* p_alpha;
     size_t stride_alpha;
@@ -331,7 +331,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                               input_raw->get_colorspace(),
                                                                               input_raw->get_chroma_format(),
                                                                               input_state.nclx,
-                                                                              input_state.bits_per_pixel,
+                                                                              input_state.get_color_bits_per_pixel(),
                                                                               options, &options_ext_skip_alpha,
                                                                               limits);
     if (!convOutput) {
@@ -357,8 +357,8 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
                                                   const heif_color_conversion_options_ext& options_ext) const
 {
   // Only applicable when alpha BPP differs from color BPP
-  if (!input_state.has_alpha ||
-      input_state.get_alpha_bits_per_pixel() == input_state.bits_per_pixel) {
+  if (!input_state.has_alpha() ||
+      input_state.bits_per_pixel_alpha == input_state.get_color_bits_per_pixel()) {
     return {};
   }
 
@@ -379,7 +379,7 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state = input_state;
-  output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.bits_per_pixel_alpha = input_state.get_color_bits_per_pixel();
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -414,7 +414,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   int input_alpha_bpp = input->get_bits_per_pixel(heif_channel_Alpha);
-  int target_bpp = input_state.bits_per_pixel;
+  int target_bpp = input_state.get_color_bits_per_pixel();
 
   uint32_t alpha_width = input->get_width(heif_channel_Alpha);
   uint32_t alpha_height = input->get_height(heif_channel_Alpha);

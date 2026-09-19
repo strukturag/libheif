@@ -60,18 +60,18 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  if ((input_state.bits_per_pixel_Y > 8) != hdr) {
     return {};
   }
 
   // TODO: add support for <8 bpp
-  if (input_state.bits_per_pixel < 8) {
+  if (input_state.bits_per_pixel_Y < 8) {
     return {};
   }
 
   // The YCgCo-Re conversion computes with int16_t intermediates. 14 bpp input is the
   // maximum for which these cannot overflow.
-  if (matrix == 16 && input_state.bits_per_pixel > 14) {
+  if (matrix == 16 && input_state.bits_per_pixel_Y > 14) {
     return {};
   }
 
@@ -88,9 +88,8 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -327,8 +326,8 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel != 8 ||
-      input_state.has_alpha == true) {
+      input_state.bits_per_pixel_Y != 8 ||
+      input_state.has_alpha()) {
     return {};
   }
 
@@ -348,8 +347,8 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RGB;
-  output_state.has_alpha = false;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -460,11 +459,11 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel != 8) {
+      input_state.bits_per_pixel_Y != 8) {
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_Y) {
     return {};
   }
 
@@ -484,8 +483,8 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RGBA;
-  output_state.has_alpha = true;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = 8;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -594,7 +593,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel <= 8) {
+      input_state.bits_per_pixel_Y <= 8) {
     return {};
   }
 
@@ -602,7 +601,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_Y) {
     return {};
   }
 
@@ -618,19 +617,19 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   // --- convert to YCbCr
 
   output_state.colorspace = heif_colorspace_RGB;
-  output_state.chroma = (input_state.has_alpha ?
+  output_state.chroma = (input_state.has_alpha() ?
                          heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE);
-  output_state.has_alpha = input_state.has_alpha;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
 
   output_state.colorspace = heif_colorspace_RGB;
-  output_state.chroma = (input_state.has_alpha ?
+  output_state.chroma = (input_state.has_alpha() ?
                          heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
-  output_state.has_alpha = input_state.has_alpha;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 

@@ -40,15 +40,16 @@ Op_bayer_bilinear_to_RGB24_32::state_after_conversion(const ColorState& input_st
 
   ColorState output_state;
   output_state.colorspace = heif_colorspace_RGB;
-  output_state.has_alpha = false;
 
-  if (input_state.bits_per_pixel == 8) {
+  int bpp = input_state.bits_per_pixel_filter_array;
+
+  if (bpp == 8) {
     output_state.chroma = heif_chroma_interleaved_RGB;
-    output_state.bits_per_pixel = 8;
+    output_state.set_color_bits_per_pixel(8);
   }
-  else if (input_state.bits_per_pixel > 8 && input_state.bits_per_pixel <= 16) {
+  else if (bpp > 8 && bpp <= 16) {
     output_state.chroma = heif_chroma_interleaved_RRGGBB_LE;
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(bpp);
   }
   else {
     return {};

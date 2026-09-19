@@ -33,11 +33,11 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 {
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
-      input_state.bits_per_pixel != 8) {
+      input_state.bits_per_pixel_R != 8) {
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
     return {};
   }
 
@@ -50,8 +50,8 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RGBA;
-  output_state.has_alpha = true;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = 8;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -59,8 +59,8 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RGB;
-  output_state.has_alpha = false;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -77,7 +77,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
                                        const heif_security_limits* limits) const
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
-  bool want_alpha = target_state.has_alpha;
+  bool want_alpha = target_state.has_alpha();
 
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
       input->get_bits_per_pixel(heif_channel_G) != 8 ||
@@ -160,7 +160,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
-      input_state.bits_per_pixel <= 8) {
+      input_state.bits_per_pixel_R <= 8) {
     return {};
   }
 
@@ -168,7 +168,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
     return {};
   }
 
@@ -178,11 +178,11 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   // --- convert to RRGGBB_BE
 
-  if (input_state.has_alpha == false) {
+  if (!input_state.has_alpha()) {
     output_state.colorspace = heif_colorspace_RGB;
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = 0;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -192,8 +192,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
-  output_state.has_alpha = true;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_R;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -217,7 +217,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   bool input_has_alpha = input->has_channel(heif_channel_Alpha);
-  bool output_has_alpha = input_has_alpha || target_state.has_alpha;
+  bool output_has_alpha = input_has_alpha || target_state.has_alpha();
 
   if (input_has_alpha) {
     if (input->get_bits_per_pixel(heif_channel_Alpha) <= 8) {
@@ -318,11 +318,11 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
-      input_state.bits_per_pixel != 8) {
+      input_state.bits_per_pixel_R != 8) {
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
     return {};
   }
 
@@ -332,11 +332,11 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   // --- convert to RRGGBB_BE
 
-  if (input_state.has_alpha == false) {
+  if (!input_state.has_alpha()) {
     output_state.colorspace = heif_colorspace_RGB;
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = 0;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -346,8 +346,8 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
-  output_state.has_alpha = true;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_R;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -372,7 +372,7 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
   //int bpp = input->get_bits_per_pixel(heif_channel_R);
 
   bool input_has_alpha = input->has_channel(heif_channel_Alpha);
-  bool output_has_alpha = input_has_alpha || target_state.has_alpha;
+  bool output_has_alpha = input_has_alpha || target_state.has_alpha();
 
   if (input_has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) != 8) {
     return Error::InternalError;
@@ -454,7 +454,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
   if (input_state.colorspace != heif_colorspace_RGB ||
       (input_state.chroma != heif_chroma_interleaved_RRGGBB_BE &&
        input_state.chroma != heif_chroma_interleaved_RRGGBBAA_BE) ||
-      input_state.bits_per_pixel <= 8) {
+      input_state.bits_per_pixel_R <= 8) {
     return {};
   }
 
@@ -470,9 +470,8 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = target_state.has_alpha;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+  output_state.bits_per_pixel_alpha = target_state.has_alpha() ? input_state.bits_per_pixel_R : 0;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -490,7 +489,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
 {
   bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
                     input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE);
-  bool want_alpha = target_state.has_alpha;
+  bool want_alpha = target_state.has_alpha();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -575,7 +574,7 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
   if (input_state.colorspace != heif_colorspace_RGB ||
       (input_state.chroma != heif_chroma_interleaved_RGB &&
        input_state.chroma != heif_chroma_interleaved_RGBA) ||
-      input_state.bits_per_pixel != 8) {
+      input_state.bits_per_pixel_R != 8) {
     return {};
   }
 
@@ -587,9 +586,8 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_RGB;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = target_state.has_alpha;
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+  output_state.bits_per_pixel_alpha = target_state.has_alpha() ? input_state.bits_per_pixel_R : 0;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -606,7 +604,7 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
                                        const heif_security_limits* limits) const
 {
   bool has_alpha = input->get_chroma_format() == heif_chroma_interleaved_RGBA;
-  bool want_alpha = target_state.has_alpha;
+  bool want_alpha = target_state.has_alpha();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -702,8 +700,8 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
       output_state.chroma = heif_chroma_interleaved_RRGGBB_LE;
     }
 
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = 0;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -722,8 +720,8 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
       output_state.chroma = heif_chroma_interleaved_RRGGBBAA_LE;
     }
 
-    output_state.has_alpha = true;
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }

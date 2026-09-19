@@ -32,7 +32,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.bits_per_pixel != 8) { // TODO: support for <8 bpp
+      input_state.get_color_bits_per_pixel() != 8) { // TODO: support for <8 bpp
     return {};
   }
 
@@ -41,8 +41,8 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // only holds for target bit depths m in (8, 16]; a larger m would both make
   // the right shift exponent negative (undefined behavior) and exceed the range
   // of the uint16_t output plane. Only offer the conversion within that range.
-  if (target_state.bits_per_pixel <= 8 ||
-      target_state.bits_per_pixel > 16) {
+  if (target_state.get_color_bits_per_pixel() <= 8 ||
+      target_state.get_color_bits_per_pixel() > 16) {
     return {};
   }
 
@@ -53,8 +53,10 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // --- increase bit depth
 
   output_state = input_state;
-  output_state.bits_per_pixel = target_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = target_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(target_state.get_color_bits_per_pixel());
+  if (output_state.has_alpha()) {
+    output_state.bits_per_pixel_alpha = target_state.get_color_bits_per_pixel();
+  }
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -87,12 +89,12 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
     if (input->has_channel(channel)) {
       uint32_t width = input->get_width(channel);
       uint32_t height = input->get_height(channel);
-      if (auto err = outimg->add_channel(channel, width, height, target_state.bits_per_pixel, limits)) {
+      if (auto err = outimg->add_channel(channel, width, height, target_state.get_color_bits_per_pixel(), limits)) {
         return err;
       }
 
       int input_bits = input->get_bits_per_pixel(channel);
-      int output_bits = target_state.bits_per_pixel;
+      int output_bits = target_state.get_color_bits_per_pixel();
 
       // Guard against unsupported bit-depth combinations. state_after_conversion()
       // only offers this operation for 8-bit input and 8 < output <= 16, but a
@@ -140,11 +142,11 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.bits_per_pixel == 8) {
+      input_state.get_color_bits_per_pixel() == 8) {
     return {};
   }
 
-  if (target_state.bits_per_pixel != 8) {
+  if (target_state.get_color_bits_per_pixel() != 8) {
     return {};
   }
 
@@ -161,8 +163,10 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
   // --- output bit depth = 8
 
   output_state = input_state;
-  output_state.bits_per_pixel = 8;
-  output_state.alpha_bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  if (output_state.has_alpha()) {
+    output_state.bits_per_pixel_alpha = 8;
+  }
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 

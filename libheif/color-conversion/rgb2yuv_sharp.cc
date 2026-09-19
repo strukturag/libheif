@@ -86,13 +86,17 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     return {};
   }
 
-  if (input_state.bits_per_pixel != 8 && input_state.bits_per_pixel != 10 &&
-      input_state.bits_per_pixel != 12 && input_state.bits_per_pixel != 16) {
+  if (input_state.bits_per_pixel_R != 8 && input_state.bits_per_pixel_R != 10 &&
+      input_state.bits_per_pixel_R != 12 && input_state.bits_per_pixel_R != 16) {
     return {};
   }
 
-  if (target_state.bits_per_pixel != 8 && target_state.bits_per_pixel != 10 &&
-      target_state.bits_per_pixel != 12) {
+  if (target_state.chroma != heif_chroma_420) {
+    return {};
+  }
+
+  if (target_state.bits_per_pixel_Y != 8 && target_state.bits_per_pixel_Y != 10 &&
+      target_state.bits_per_pixel_Y != 12) {
     return {};
   }
 
@@ -105,11 +109,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
   // color channels, so 10-bit R/G/B next to an 8-bit alpha is normal here. Decline it,
   // exactly as every other RGB operator does; the pipeline then inserts
   // Op_adjust_alpha_bit_depth first and hands us a matched-depth image.
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
-    return {};
-  }
-
-  if (target_state.chroma != heif_chroma_420) {
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
     return {};
   }
 
@@ -124,8 +124,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_420;
-  output_state.has_alpha = target_state.has_alpha;
-  output_state.bits_per_pixel = target_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(target_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = target_state.has_alpha() ? target_state.bits_per_pixel_Y : 0;
   output_state.nclx = target_state.nclx;
   states.emplace_back(output_state, SpeedCosts_Slow);
 
@@ -167,9 +167,9 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
       input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
       (input->get_chroma_format() == heif_chroma_444 &&
        input->has_channel(heif_channel_Alpha));
-  bool want_alpha = target_state.has_alpha;
+  bool want_alpha = target_state.has_alpha();
 
-  int output_bits = target_state.bits_per_pixel;
+  int output_bits = target_state.bits_per_pixel_Y;
   if (auto err = outimg->add_channel(heif_channel_Y, width, height, output_bits, limits) ||
                  outimg->add_channel(heif_channel_Cb, chroma_width, chroma_height, output_bits, limits) ||
                  outimg->add_channel(heif_channel_Cr, chroma_width, chroma_height, output_bits, limits)) {
