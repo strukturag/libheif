@@ -215,13 +215,15 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
   // padded to a whole number of bytes (I.5.3.4). Used to bound num_entries by
   // the data actually present, so a small header cannot force a large
   // allocation (analogous to the 'cdef'/'j2kL' checks). The precision is at
-  // least 1 bit, so every entry occupies at least one byte.
+  // least 1 bit, so every entry occupies at least one byte and the bound is
+  // never vacuous. num_entries is a uint16_t and bytes_per_entry is at most
+  // 255 * 2, so the product cannot overflow.
   size_t bytes_per_entry = 0;
   for (uint8_t bd : m_bitDepths) {
     bytes_per_entry += (bd + 7) / 8;
   }
 
-  if (num_entries > range.get_remaining_bytes() / bytes_per_entry) {
+  if (static_cast<size_t>(num_entries) * bytes_per_entry > range.get_remaining_bytes()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data,
                  "pclr box declares more entries than the box contains");
