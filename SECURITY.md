@@ -108,6 +108,10 @@ metadata, region and uncompressed-codec (`unci`) code paths.
 * Issues that require the caller to violate the documented API contract, for example passing
   inconsistent plane sizes to the encoder. These are still fixed, because libheif tries to
   validate its inputs, but they are not vulnerabilities in libheif.
+* Issues that are only reachable with a codec library version that has a known, already fixed
+  vulnerability (for example an old OpenJPEG without its CVE-2020-6851 patch). libheif adds
+  pre-decode checks for such cases where they are cheap, but the vulnerability and its CVE
+  belong to the codec library. Build against a maintained codec version before reporting.
 * Issues in the example programs (`heif-enc`, `heif-dec`, `heif-info`, ...) that are not in the
   library itself, for example in the JPEG/PNG/TIFF/Y4M input readers.
 * Issues in APIs that are only available with `ENABLE_EXPERIMENTAL_FEATURES=ON`. These APIs
