@@ -27,6 +27,7 @@
 #include "file.h"
 #include <iomanip>
 #include <limits>
+#include <algorithm>
 #include <string>
 #include <cstring>
 
@@ -560,4 +561,174 @@ bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, co
   reader.skip_bits(1); // separate_uv_delta
 
   return true;
+}
+
+
+// Parse a single OBU_SEQUENCE_HEADER payload far enough to recover the coded
+// frame size (max_frame_width_minus_1 / max_frame_height_minus_1). The reader
+// must be positioned at the first bit of the sequence_header_obu() payload.
+//
+// Returns false when the header could not be parsed within the available data
+// (i.e. the reader ran past its end), in which case the recovered size is
+// unreliable and must be ignored. This mirrors the bit layout in
+// fill_av1C_configuration_from_stream() up to the frame size fields; it is kept
+// separate so the security scan cannot be perturbed by the colour-config parsing.
+static bool parse_av1_seq_header_max_frame_size(BitReader& reader,
+                                                uint32_t* out_max_width,
+                                                uint32_t* out_max_height)
+{
+  uint32_t dummy; // throw away value
+
+  bool decoder_model_info_present = false;
+  int buffer_delay_length_minus1 = 0;
+
+  reader.get_bits(3); // seq_profile
+  reader.get_bits(1); // still_picture
+
+  bool reduced_still_picture = reader.get_bits(1);
+  if (reduced_still_picture) {
+    reader.get_bits(5); // seq_level_idx[0]
+  }
+  else {
+    bool timing_info_present_flag = reader.get_bits(1);
+    if (timing_info_present_flag) {
+      // --- skip timing info
+      reader.skip_bytes(2 * 4);
+      bool equal_picture_interval = reader.get_bits(1);
+      if (equal_picture_interval) {
+        reader.get_uvlc(&dummy);
+      }
+
+      // --- skip decoder_model_info
+      decoder_model_info_present = reader.get_bits(1);
+      if (decoder_model_info_present) {
+        buffer_delay_length_minus1 = reader.get_bits(5);
+        reader.skip_bits(32);
+        reader.skip_bits(10);
+      }
+    }
+
+    bool initial_display_delay_present_flag = reader.get_bits(1);
+    int operating_points_cnt_minus1 = reader.get_bits(5);
+    for (int i = 0; i <= operating_points_cnt_minus1; i++) {
+      reader.skip_bits(12); // operating_point_idc
+      auto level = (int) reader.get_bits(5);
+      if (level > 7) {
+        reader.skip_bits(1); // tier
+      }
+
+      if (decoder_model_info_present) {
+        bool decoder_model_present_for_this = reader.get_bits(1);
+        if (decoder_model_present_for_this) {
+          int n = buffer_delay_length_minus1 + 1;
+          reader.skip_bits(n);
+          reader.skip_bits(n);
+          reader.skip_bits(1);
+        }
+      }
+
+      if (initial_display_delay_present_flag) {
+        bool initial_display_delay_present_for_this = reader.get_bits(1);
+        if (initial_display_delay_present_for_this) {
+          reader.get_bits(4);
+        }
+      }
+    }
+  }
+
+  int frame_width_bits_minus1 = reader.get_bits(4);
+  int frame_height_bits_minus1 = reader.get_bits(4);
+  uint32_t max_frame_width_minus1 = reader.get_bits(frame_width_bits_minus1 + 1);
+  uint32_t max_frame_height_minus1 = reader.get_bits(frame_height_bits_minus1 + 1);
+
+  // If parsing consumed more bits than the buffer held, get_bits() returned
+  // zero-padded values and the size is not trustworthy. Reject it so we neither
+  // wrongly accept nor wrongly reject based on garbage.
+  if (reader.get_bits_remaining() < 0) {
+    return false;
+  }
+
+  *out_max_width = max_frame_width_minus1 + 1;
+  *out_max_height = max_frame_height_minus1 + 1;
+  return true;
+}
+
+
+bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
+                                       uint32_t* out_max_width, uint32_t* out_max_height)
+{
+  // The combined AV1 bitstream that libheif pushes to a decoder plugin consists
+  // of the av1C configOBUs followed by the item/sample data. A conforming AVIF
+  // carries exactly one OBU_SEQUENCE_HEADER in the item data (and may duplicate
+  // it in configOBUs). We walk every OBU and keep the largest frame size found
+  // in any sequence header, because that is the buffer a decoder will allocate,
+  // independent of the (possibly much smaller) 'ispe' dimensions.
+
+  if (data == nullptr || dataSize == 0 ||
+      dataSize > (size_t) std::numeric_limits<int>::max()) {
+    return false;
+  }
+
+  BitReader reader(data, (int) dataSize);
+
+  bool found = false;
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+
+  while (reader.get_bits_remaining() >= 8) {
+    obu_header_info header = read_obu_header_type(reader);
+
+    // read_obu_header_type() may read past the end on truncated input.
+    if (reader.get_bits_remaining() < 0) {
+      break;
+    }
+
+    // The reader is byte-aligned after the OBU header; this is where the payload
+    // begins. We parse a sequence header from a separate reader bounded to the
+    // payload so that neither the seq-header parse nor a following OBU can read
+    // across the declared OBU boundary.
+    size_t payload_start = reader.get_current_byte_index();
+    if (payload_start >= dataSize) {
+      break;
+    }
+
+    if (header.type == HEIF_OBU_SEQUENCE_HEADER) {
+      size_t avail = dataSize - payload_start;
+      size_t payload_len = avail;
+      if (header.has_size && header.size < payload_len) {
+        payload_len = (size_t) header.size;
+      }
+
+      BitReader seq_reader(data + payload_start, (int) payload_len);
+      uint32_t w = 0, h = 0;
+      if (parse_av1_seq_header_max_frame_size(seq_reader, &w, &h)) {
+        found = true;
+        // Track the largest width and height independently. A conforming file
+        // has a single sequence header (the AVIF spec even requires identical
+        // headers when several are present), so this equals that header's size.
+        // For a non-conforming file with differing headers it over-approximates
+        // rather than under-approximates the buffer any frame could demand,
+        // which is the safe direction for a security gate.
+        max_width = std::max(max_width, w);
+        max_height = std::max(max_height, h);
+      }
+    }
+
+    // Advance to the next OBU. Without an explicit size we cannot locate it.
+    if (!header.has_size) {
+      break;
+    }
+    if (header.size > (uint64_t) std::numeric_limits<int>::max()) {
+      break;
+    }
+
+    reader.skip_bytes((uint32_t) header.size);
+  }
+
+  if (found) {
+    *out_max_width = max_width;
+    *out_max_height = max_height;
+  }
+
+  return found;
 }

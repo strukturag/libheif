@@ -24,6 +24,7 @@
 #include "context.h"
 #include "plugins/nalu_utils.h"
 
+#include <algorithm>
 #include <string>
 
 
@@ -57,23 +58,52 @@ int Decoder_VVC::get_chroma_bits_per_pixel() const
 }
 
 
-Result<std::optional<ImageSize>> Decoder_VVC::get_coded_image_size_from_config() const
+Result<std::optional<ImageSize>> Decoder_VVC::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
 {
-  const std::vector<uint8_t>* sps = m_vvcC->get_first_nal_of_type(VVC_NAL_UNIT_SPS_NUT);
-  if (!sps || sps->empty()) {
+  // `compressed_data` is the combined configuration + bitstream buffer about to be
+  // pushed to the decoder. Scan it for every SPS NAL unit and return the largest coded picture
+  // size any of them declares. An SPS carried in the item data (not just in vvcC)
+  // drives the decoder's buffer allocation and can be far larger than the
+  // container 'ispe', so the config record alone is not a sufficient gate.
+  bool found = false;
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+
+  for (const auto& nal : split_nal_units_4byte_length_prefixed(compressed_data.data(), compressed_data.size())) {
+    const uint8_t* nal_data = nal.first;
+    size_t nal_size = nal.second;
+
+    // VVC NAL unit header (2 bytes): forbidden_zero_bit(1), nuh_reserved_zero_bit(1),
+    // nuh_layer_id(6), nal_unit_type(5), nuh_temporal_id_plus1(3)
+    if (nal_size < 2) {
+      continue;
+    }
+    int nal_type = (nal_data[1] >> 3) & 0x1F;
+    if (nal_type != VVC_NAL_UNIT_SPS_NUT) {
+      continue;
+    }
+
+    Box_vvcC::configuration scratch = m_vvcC->get_configuration();
+    uint32_t cropped_w = 0, cropped_h = 0;
+    ImageSize coded{};
+    Error e = parse_sps_for_vvcC_configuration(nal_data, nal_size, &scratch,
+                                               &cropped_w, &cropped_h, &coded);
+    if (e) {
+      // A malformed SPS we cannot parse is skipped rather than failing the whole
+      // decode; the decoder plugin applies its own limits when it reaches it.
+      continue;
+    }
+
+    found = true;
+    max_width = std::max(max_width, coded.width);
+    max_height = std::max(max_height, coded.height);
+  }
+
+  if (!found) {
     return std::optional<ImageSize>{};
   }
 
-  Box_vvcC::configuration scratch = m_vvcC->get_configuration();
-  uint32_t cropped_w = 0, cropped_h = 0;
-  ImageSize coded{};
-  Error e = parse_sps_for_vvcC_configuration(sps->data(), sps->size(), &scratch,
-                                             &cropped_w, &cropped_h, &coded);
-  if (e) {
-    return e;
-  }
-
-  return std::optional<ImageSize>{coded};
+  return std::optional<ImageSize>{ImageSize{max_width, max_height}};
 }
 
 

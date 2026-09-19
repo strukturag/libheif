@@ -47,7 +47,7 @@ public:
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
-  Result<std::optional<ImageSize>> get_coded_image_size_from_config() const override;
+  Result<std::optional<ImageSize>> get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const override;
 
 private:
   const std::shared_ptr<const Box_vvcC> m_vvcC;

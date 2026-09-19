@@ -38,6 +38,31 @@ Result<std::vector<uint8_t>> Decoder_AVIF::read_bitstream_configuration_data() c
 }
 
 
+Result<std::optional<ImageSize>> Decoder_AVIF::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
+{
+  // The AV1 sequence header carries the coded frame size
+  // (max_frame_width_minus_1 / max_frame_height_minus_1). Per the AVIF
+  // specification it is present in the image item data, and it may additionally
+  // be duplicated in the av1C configOBUs. A decoder allocates buffers for that
+  // coded size, which can be far larger than the (possibly deliberately small)
+  // 'ispe' dimensions on which the container-level size checks are based.
+  //
+  // `compressed_data` is the combined configOBUs + item data buffer that is about
+  // to be pushed to the decoder plugin. Scan it for the largest sequence-header
+  // frame size so the shared decode path can reject over-limit inputs before ANY
+  // AV1 plugin (aom, dav1d, ffmpeg, ...) allocates a frame buffer.
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+  if (!find_max_av1_frame_size_in_stream(compressed_data.data(), compressed_data.size(),
+                                         &max_width, &max_height)) {
+    // No parseable sequence header (e.g. a non-sync frame in a sequence).
+    return std::optional<ImageSize>{};
+  }
+
+  return std::optional<ImageSize>{ImageSize{max_width, max_height}};
+}
+
+
 int Decoder_AVIF::get_luma_bits_per_pixel() const
 {
   Box_av1C::configuration config = m_av1C->get_configuration();

@@ -22,7 +22,9 @@
 #include "avc_boxes.h"
 #include "error.h"
 #include "context.h"
+#include "plugins/nalu_utils.h"
 
+#include <algorithm>
 #include <string>
 
 
@@ -47,26 +49,51 @@ int Decoder_AVC::get_chroma_bits_per_pixel() const
 }
 
 
-Result<std::optional<ImageSize>> Decoder_AVC::get_coded_image_size_from_config() const
+Result<std::optional<ImageSize>> Decoder_AVC::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
 {
-  const auto& sps_set = m_avcC->getSequenceParameterSets();
+  // `compressed_data` is the combined configuration + bitstream buffer about to be
+  // pushed to the decoder. Scan it for every SPS NAL unit and return the largest coded picture
+  // size any of them declares. An SPS carried in the item data (not just in avcC)
+  // drives the decoder's buffer allocation and can be far larger than the
+  // container 'ispe', so the config record alone is not a sufficient gate.
+  bool found = false;
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
 
-  for (const auto& sps : sps_set) {
-    if (sps.empty()) continue;
+  for (const auto& nal : split_nal_units_4byte_length_prefixed(compressed_data.data(), compressed_data.size())) {
+    const uint8_t* nal_data = nal.first;
+    size_t nal_size = nal.second;
+
+    // AVC NAL unit header (1 byte): forbidden_zero_bit(1), nal_ref_idc(2), nal_unit_type(5)
+    if (nal_size < 1) {
+      continue;
+    }
+    int nal_type = nal_data[0] & 0x1F;
+    if (nal_type != AVC_NAL_UNIT_SPS_NUT) {
+      continue;
+    }
+
     Box_avcC::configuration scratch = m_avcC->get_configuration();
     uint32_t cropped_w = 0, cropped_h = 0;
     ImageSize coded{};
-
-    Error e = parse_sps_for_avcC_configuration(sps.data(), sps.size(), &scratch,
+    Error e = parse_sps_for_avcC_configuration(nal_data, nal_size, &scratch,
                                                &cropped_w, &cropped_h, &coded);
     if (e) {
-      return e;
+      // A malformed SPS we cannot parse is skipped rather than failing the whole
+      // decode; the decoder plugin applies its own limits when it reaches it.
+      continue;
     }
 
-    return std::optional<ImageSize>{coded};
+    found = true;
+    max_width = std::max(max_width, coded.width);
+    max_height = std::max(max_height, coded.height);
   }
 
-  return std::optional<ImageSize>{};
+  if (!found) {
+    return std::optional<ImageSize>{};
+  }
+
+  return std::optional<ImageSize>{ImageSize{max_width, max_height}};
 }
 
 

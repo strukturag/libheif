@@ -56,7 +56,15 @@ Error Decoder_JPEG::parse_SOF()
     return dataResult.error();
   }
 
-  const std::vector<uint8_t>& data = *dataResult;
+  return parse_SOF(*dataResult);
+}
+
+
+Error Decoder_JPEG::parse_SOF(const std::vector<uint8_t>& data)
+{
+  if (m_config) {
+    return Error::Ok;
+  }
 
   Error error_invalidSOF{heif_error_Invalid_input,
                                heif_suberror_Unspecified,
@@ -71,6 +79,9 @@ Error Decoder_JPEG::parse_SOF()
 
       ConfigInfo info;
       info.sample_precision = data[i + 4];
+      // SOF layout: FF Cx | Lf(2) | precision(1) | Y=height(2) | X=width(2) | Nf(1)
+      info.coded_height = (uint32_t(data[i + 5]) << 8) | data[i + 6];
+      info.coded_width  = (uint32_t(data[i + 7]) << 8) | data[i + 8];
       info.nComponents = data[i + 9];
 
       if (i + 11 + 3 * info.nComponents >= data.size()) {
@@ -137,6 +148,26 @@ int Decoder_JPEG::get_luma_bits_per_pixel() const
 int Decoder_JPEG::get_chroma_bits_per_pixel() const
 {
   return get_luma_bits_per_pixel();
+}
+
+
+Result<std::optional<ImageSize>> Decoder_JPEG::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
+{
+  // The JPEG coded size lives in the SOF marker inside the bitstream (there is no
+  // separate configuration record that carries it). `compressed_data` is the
+  // buffer about to be handed to the decoder, so an oversized SOF is caught here
+  // before libjpeg allocates, regardless of the (possibly tiny) 'ispe'.
+  Error err = const_cast<Decoder_JPEG*>(this)->parse_SOF(compressed_data);
+  if (err) {
+    // No parseable SOF marker: skip the gate and let the decoder handle it.
+    return std::optional<ImageSize>{};
+  }
+
+  if (m_config->coded_width == 0 || m_config->coded_height == 0) {
+    return std::optional<ImageSize>{};
+  }
+
+  return std::optional<ImageSize>{ImageSize{m_config->coded_width, m_config->coded_height}};
 }
 
 

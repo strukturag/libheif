@@ -45,6 +45,19 @@ struct ImageSize
 };
 
 
+// Split a buffer of NAL units, each prefixed by a 4-byte big-endian length, into
+// non-owning (pointer, length) spans that point into `data`. Parsing stops at the
+// first malformed length (a prefix or payload that runs past the end of the
+// buffer); NAL units already collected are still returned.
+//
+// This mirrors exactly how the AVC/HEVC/VVC decoder plugins walk the combined
+// configuration+bitstream buffer they are handed (see e.g. decoder_libde265.cc),
+// so the returned spans are the same NAL units the codec will actually see. It is
+// used to scan for in-band SPS NAL units when enforcing the security limits.
+std::vector<std::pair<const uint8_t*, size_t>>
+split_nal_units_4byte_length_prefixed(const uint8_t* data, size_t size);
+
+
 // Specifies the input data for decoding.
 // For images, this points to the iloc extents.
 // For sequences, this points to the track data.
@@ -106,19 +119,25 @@ public:
   // Returns a stream of packets. Each packet is starts with a 4-byte size (MSB first).
   [[nodiscard]] virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const = 0;
 
-  // Returns the *coded* picture size from the codec configuration record (the
-  // SPS for HEVC/AVC/VVC) — i.e. the buffer dimensions the decoder will
-  // actually allocate, BEFORE conformance-window cropping. The cropped output
-  // size is unsuitable for security checks: a malicious file can declare a
-  // huge SPS picture size with a near-equal-sized conformance window, so the
-  // displayed image looks small while the decoder still allocates the full
-  // uncropped buffer.
+  // Returns the largest *coded* picture size declared anywhere in `compressed_data`
+  // (the exact buffer that will be pushed to the decoder), i.e. the buffer
+  // dimensions the decoder will actually allocate, BEFORE conformance-window
+  // cropping. The cropped output size is unsuitable for security checks: a
+  // malicious file can declare a huge coded size with a near-equal-sized
+  // conformance window, so the displayed image looks small while the decoder
+  // still allocates the full uncropped buffer.
   //
-  // Returns nullopt when the codec does not store dimensions in its
-  // configuration record (e.g. AV1's av1C) or when no SPS NAL is present.
-  // Returns Error only on a structurally invalid configuration record.
+  // The coded size lives in the bitstream, not (only) in the codec configuration
+  // record: the SPS for AVC/HEVC/VVC (which may appear in the item data, not just
+  // in avcC/hvcC/vvcC), the Sequence Header OBU for AV1/AVIF, or the SOF marker
+  // for JPEG. Overrides therefore scan the whole passed buffer and return the
+  // maximum, so an over-limit size cannot be smuggled past the container 'ispe'.
+  //
+  // Returns nullopt when the codec exposes no coded size in this buffer (e.g. no
+  // SPS/sequence-header/SOF present, as in a non-sync sequence frame).
+  // Returns Error only on a structurally invalid header.
   [[nodiscard]] virtual Result<std::optional<ImageSize>>
-  get_coded_image_size_from_config() const
+  get_max_coded_image_size(const std::vector<uint8_t>& /*compressed_data*/) const
   {
     return std::optional<ImageSize>{};
   }

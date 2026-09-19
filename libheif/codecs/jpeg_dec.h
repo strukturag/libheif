@@ -48,6 +48,8 @@ public:
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
+  Result<std::optional<ImageSize>> get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const override;
+
 private:
   const std::shared_ptr<const Box_jpgC> m_jpgC; // Optional jpgC box. May be NULL.
 
@@ -58,11 +60,16 @@ private:
     uint8_t nComponents = 0;
     uint8_t h_sampling[3]{};
     uint8_t v_sampling[3]{};
+
+    // Coded frame size from the SOF marker (the buffer the decoder allocates).
+    uint32_t coded_width = 0;
+    uint32_t coded_height = 0;
   };
 
   std::optional<ConfigInfo> m_config;
 
   Error parse_SOF();
+  Error parse_SOF(const std::vector<uint8_t>& data);
 };
 
 #endif

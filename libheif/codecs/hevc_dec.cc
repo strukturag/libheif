@@ -24,6 +24,7 @@
 #include "context.h"
 #include "plugins/nalu_utils.h"
 
+#include <algorithm>
 #include <string>
 
 
@@ -51,29 +52,51 @@ int Decoder_HEVC::get_chroma_bits_per_pixel() const
 }
 
 
-Result<std::optional<ImageSize>> Decoder_HEVC::get_coded_image_size_from_config() const
+Result<std::optional<ImageSize>> Decoder_HEVC::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
 {
-  const auto& nal_arrays = m_hvcC->get_configuration().m_nal_array;
+  // `compressed_data` is the combined configuration + bitstream buffer about to be
+  // pushed to the decoder. Scan it for every SPS NAL unit and return the largest coded picture
+  // size any of them declares. An SPS carried in the item data (not just in hvcC)
+  // drives the decoder's buffer allocation and can be far larger than the
+  // container 'ispe', so the config record alone is not a sufficient gate.
+  bool found = false;
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
 
-  for (const auto& arr : nal_arrays) {
-    if (arr.m_NAL_unit_type != HEVC_NAL_UNIT_SPS_NUT || arr.m_nal_units.empty()) {
+  for (const auto& nal : split_nal_units_4byte_length_prefixed(compressed_data.data(), compressed_data.size())) {
+    const uint8_t* nal_data = nal.first;
+    size_t nal_size = nal.second;
+
+    // HEVC NAL unit header (2 bytes): forbidden_zero_bit(1), nal_unit_type(6), ...
+    if (nal_size < 2) {
+      continue;
+    }
+    int nal_type = (nal_data[0] >> 1) & 0x3F;
+    if (nal_type != HEVC_NAL_UNIT_SPS_NUT) {
       continue;
     }
 
-    const std::vector<uint8_t>& sps = arr.m_nal_units[0];
     HEVCDecoderConfigurationRecord scratch = m_hvcC->get_configuration();
     uint32_t cropped_w = 0, cropped_h = 0;
     ImageSize coded{};
-    Error e = parse_sps_for_hvcC_configuration(sps.data(), sps.size(), &scratch,
+    Error e = parse_sps_for_hvcC_configuration(nal_data, nal_size, &scratch,
                                                &cropped_w, &cropped_h, &coded);
     if (e) {
-      return e;
+      // A malformed SPS we cannot parse is skipped rather than failing the whole
+      // decode; the decoder plugin applies its own limits when it reaches it.
+      continue;
     }
 
-    return std::optional<ImageSize>{coded};
+    found = true;
+    max_width = std::max(max_width, coded.width);
+    max_height = std::max(max_height, coded.height);
   }
 
-  return std::optional<ImageSize>{};
+  if (!found) {
+    return std::optional<ImageSize>{};
+  }
+
+  return std::optional<ImageSize>{ImageSize{max_width, max_height}};
 }
 
 
