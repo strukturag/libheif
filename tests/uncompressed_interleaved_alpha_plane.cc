@@ -40,16 +40,17 @@
 // valid configuration. It is now rejected when the plane is added, and the
 // uncompressed encoder additionally refuses such an image should it be
 // assembled by another route.
+//
+// This file only uses the public API and builds in every configuration. The
+// encoder-side check needs library-internal classes and is tested in
+// uncompressed_interleaved_alpha_plane_internal.cc, which only builds with full
+// symbol visibility.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
-#include "api_structs.h"
-#include "image/pixelimage.h"
-#include "codecs/uncompressed/unc_encoder.h"
 #include "test_utils.h"
 
 #include <cstring>
-#include <memory>
 
 namespace {
 
@@ -178,39 +179,3 @@ TEST_CASE("Planar RGB images still accept a separate alpha plane")
   heif_image_release(image);
 }
 
-
-// transfer_channel_from_image_as() moves a plane between images without going through
-// add_channel(). This is how a decoded alpha auxiliary image is attached to the main
-// image, so an interleaved image with a separate alpha plane can still be assembled
-// inside the library. The uncompressed encoder must refuse it instead of reading past
-// the end of the interleaved component list.
-TEST_CASE("Uncompressed encoder refuses an interleaved image carrying a separate alpha plane")
-{
-  const heif_security_limits* limits = heif_get_global_security_limits();
-
-  for (const auto& fmt : interleaved_formats) {
-    INFO(fmt.name);
-
-    auto image = std::make_shared<HeifPixelImage>();
-    image->create(WIDTH, HEIGHT, heif_colorspace_RGB, fmt.chroma);
-    REQUIRE(image->fill_new_channel(heif_channel_interleaved, 0x80, WIDTH, HEIGHT, fmt.bit_depth, limits).error_code == heif_error_Ok);
-
-    auto alpha = std::make_shared<HeifPixelImage>();
-    alpha->create(WIDTH, HEIGHT, heif_colorspace_monochrome, heif_chroma_monochrome);
-    REQUIRE(alpha->fill_new_channel(heif_channel_Y, 0xFF, WIDTH, HEIGHT, fmt.bit_depth, limits).error_code == heif_error_Ok);
-
-    REQUIRE(image->transfer_channel_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha).error_code == heif_error_Ok);
-    REQUIRE(image->has_channel(heif_channel_Alpha));
-
-    // The encoder factory is where the interleaved encoders are instantiated.
-    heif_encoding_options* options = heif_encoding_options_alloc();
-    auto encoder = unc_encoder_factory::get_unc_encoder(image, *options);
-    heif_encoding_options_free(options);
-    CHECK(!encoder);
-
-    // Same through the public encode entry point.
-    heif_image wrapper;
-    wrapper.image = image;
-    CHECK(encode_uncompressed(&wrapper).code != heif_error_Ok);
-  }
-}
