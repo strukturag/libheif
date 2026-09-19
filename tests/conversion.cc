@@ -28,6 +28,9 @@
 #include "catch_amalgamated.hpp"
 #include "color-conversion/colorconversion.h"
 #include "color-conversion/hdr_sdr.h"
+#include "color-conversion/monochrome.h"
+#include "color-conversion/rgb2yuv.h"
+#include "color-conversion/yuv2rgb.h"
 #include "image/pixelimage.h"
 #include <cmath>
 
@@ -955,6 +958,48 @@ TEST_CASE("Mismatched alpha bit depth - conversion correctness") {
     CHECK(a16[(height - 1) * (stride / 2) + (width - 1)] == 803);
   }
 #endif
+}
+
+
+// An 'unci' component may be 32, 64 or 128 bits wide. HeifPixelImage stores such planes with
+// 4, 8 or 16 bytes per sample, but every conversion operator reads samples through uint8_t
+// or uint16_t pointers. An operator must therefore decline such input in
+// state_after_conversion() based on the sample width (not on an 8-bit SDR/HDR split, which
+// would treat a 64-bit plane like a 16-bit one), so that no pipeline is ever built for it.
+TEST_CASE("Conversion operators decline planes wider than 16 bits", "[heif_image]")
+{
+  heif_color_conversion_options options{};
+  std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+      options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+  ColorState rgb8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+  ColorState rrggbb16(heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 16);
+  ColorState ycbcr8(heif_colorspace_YCbCr, heif_chroma_444, false, 8);
+  nclx_default_if_undefined(ycbcr8);
+
+  for (int bits : {32, 64, 128}) {
+    INFO("bits=" << bits);
+
+    ColorState ycbcr(heif_colorspace_YCbCr, heif_chroma_444, false, bits);
+    nclx_default_if_undefined(ycbcr);
+    ColorState rgb(heif_colorspace_RGB, heif_chroma_444, false, bits);
+    ColorState mono(heif_colorspace_monochrome, heif_chroma_monochrome, false, bits);
+
+    CHECK(ycbcr.get_bytes_per_sample(heif_channel_Y) > 2);
+    CHECK_FALSE(ycbcr.color_channels_have_bytes_per_sample(2));
+
+    // The individual operators must not offer themselves ...
+    CHECK(Op_YCbCr_to_RGB<uint16_t>().state_after_conversion(ycbcr, rgb, options, *options_ext).empty());
+    CHECK(Op_RGB_to_YCbCr<uint16_t>().state_after_conversion(rgb, ycbcr, options, *options_ext).empty());
+    CHECK(Op_mono_to_YCbCr420().state_after_conversion(mono, ycbcr, options, *options_ext).empty());
+    CHECK(Op_to_sdr_planes().state_after_conversion(rgb, rgb8, options, *options_ext).empty());
+
+    // ... and consequently no pipeline can be built from such an input.
+    ColorConversionPipeline pipeline;
+    CHECK_FALSE(pipeline.construct_pipeline(ycbcr, rgb8, options, *options_ext));
+    CHECK_FALSE(pipeline.construct_pipeline(rgb, rrggbb16, options, *options_ext));
+    CHECK_FALSE(pipeline.construct_pipeline(mono, ycbcr8, options, *options_ext));
+  }
 }
 
 

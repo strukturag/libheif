@@ -134,18 +134,12 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
                                                       const heif_color_conversion_options& options,
                                                       const heif_color_conversion_options_ext& options_ext) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   // The colour planes and the alpha plane are all read through the single 'Pixel' type
-  // below, so every plane must be SDR (one byte per sample) for the uint8_t instance and
-  // HDR (two bytes per sample) for the uint16_t instance. A file may declare a different
-  // depth per plane ('unci'); reading a one-byte plane as two-byte samples would run past
-  // its end (GHSA-r7gr-2xm2-23wf). Decline a mixture instead.
-  if (hdr ? !input_state.all_channels_hdr() : !input_state.all_channels_sdr()) {
-    return {};
-  }
-
-  if (has_samples_wider_than_16bit(input_state)) {
+  // below, so every plane must be stored with sizeof(Pixel) bytes per sample. A file may
+  // declare a different depth per plane ('unci'); reading a one-byte plane as two-byte
+  // samples would run past its end (GHSA-r7gr-2xm2-23wf), and a plane wider than two
+  // bytes cannot be read through either instance. Decline anything else.
+  if (!input_state.all_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -255,11 +249,9 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
     size_t stride_out;
     p_out = (Pixel*)outimg->get_channel_memory(channel, &stride_out);
 
-    if (sizeof(Pixel) == 2) {
-      stride_alpha /= 2;
-      stride_in /= 2;
-      stride_out /= 2;
-    }
+    stride_alpha /= sizeof(Pixel);
+    stride_in /= sizeof(Pixel);
+    stride_out /= sizeof(Pixel);
 
     if (options_ext.alpha_composition_mode == heif_alpha_composition_mode_solid_color ||
         (options_ext.alpha_composition_mode == heif_alpha_composition_mode_checkerboard && options_ext.checkerboard_square_size == 0)) {
@@ -374,7 +366,8 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
 
   // Rewrites the alpha plane from its own bit depth to the colour bit depth, so both
   // ends have to be accessible as 8- or 16-bit samples.
-  if (has_samples_wider_than_16bit(input_state)) {
+  if (input_state.get_bytes_per_sample(heif_channel_Alpha) > 2 ||
+      bytes_per_sample_for_bit_depth(input_state.get_color_bits_per_pixel()) > 2) {
     return {};
   }
 
@@ -425,7 +418,10 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
     return err;
   }
 
-  if (input_alpha_bpp <= 8 && target_bpp > 8) {
+  int input_bytes = bytes_per_sample_for_bit_depth(input_alpha_bpp);
+  int target_bytes = bytes_per_sample_for_bit_depth(target_bpp);
+
+  if (input_bytes == 1 && target_bytes == 2) {
     // Upscale: 8-bit alpha -> HDR using bit replication
     const uint8_t* p_in;
     size_t stride_in;
@@ -442,7 +438,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         p_out[y * stride_out + x] = (uint16_t) replicate_sample_bits(in, input_alpha_bpp, target_bpp);
       }
   }
-  else if (input_alpha_bpp > 8 && target_bpp <= 8) {
+  else if (input_bytes == 2 && target_bytes == 1) {
     // Downscale: HDR alpha -> 8-bit
     const uint16_t* p_in;
     size_t stride_in;
@@ -460,7 +456,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         p_out[y * stride_out + x] = (uint8_t) (p_in[y * stride_in + x] >> shift);
       }
   }
-  else if (input_alpha_bpp > 8 && target_bpp > 8) {
+  else if (input_bytes == 2 && target_bytes == 2) {
     // HDR alpha -> different HDR: rescale within uint16_t
     const uint16_t* p_in;
     size_t stride_in;
@@ -487,7 +483,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         }
     }
   }
-  else {
+  else if (input_bytes == 1 && target_bytes == 1) {
     // SDR alpha -> different SDR (both <= 8)
     const uint8_t* p_in;
     size_t stride_in;
@@ -511,6 +507,11 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
           p_out[y * stride_out + x] = (uint8_t) (p_in[y * stride_in + x] >> shift);
         }
     }
+  }
+  else {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "Alpha bit depth adjustment only supports 8- and 16-bit sample storage."};
   }
 
   return outimg;

@@ -432,12 +432,7 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
   m_datatype = datatype;
 
   // Cache bytes-per-pixel for the inner-loop get_bytes_per_pixel().
-  int bytes_per_component;
-  if (bit_depth <= 8)        bytes_per_component = 1;
-  else if (bit_depth <= 16)  bytes_per_component = 2;
-  else if (bit_depth <= 32)  bytes_per_component = 4;
-  else if (bit_depth <= 64)  bytes_per_component = 8;
-  else                       bytes_per_component = 16;
+  int bytes_per_component = bytes_per_sample_for_bit_depth(bit_depth);
 
   // m_bytes_per_pixel is a uint8_t. bytes_per_component * num_interleaved_components can
   // exceed 255 even though num_interleaved_components itself is already bounded to <= 255

@@ -187,13 +187,9 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     }
   }
 
-  int input_bytes_per_sample =
-      (input_chroma == heif_chroma_interleaved_RGB ||
-       input_chroma == heif_chroma_interleaved_RGBA ||
-       (input_chroma == heif_chroma_444 &&
-        input->get_bits_per_pixel(heif_channel_R) <= 8))
-      ? 1
-      : 2;
+  int input_bytes_per_sample = bytes_per_sample_for_bit_depth(
+      input->get_bits_per_pixel(input_chroma == heif_chroma_444 ? heif_channel_R
+                                                                 : heif_channel_interleaved));
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
   size_t in_stride = 0;

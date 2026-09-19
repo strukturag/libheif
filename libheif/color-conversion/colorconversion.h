@@ -84,11 +84,19 @@ struct ColorState
   // True if all existing planes, including alpha, have the same bit depth.
   bool all_channels_have_same_bpp() const;
 
-  // True if all existing planes, including alpha, have at most 8 bits.
-  bool all_channels_sdr() const;
+  // Number of bytes HeifPixelImage stores per sample of the given plane (1, 2, 4, 8 or 16),
+  // 0 if the plane does not exist. Operators access samples through uint8_t or uint16_t
+  // pointers, so they declare the sample width they can handle, not just a bit depth range.
+  int get_bytes_per_sample(heif_channel channel) const;
 
-  // True if all existing planes, including alpha, have more than 8 bits.
-  bool all_channels_hdr() const;
+  // Largest sample width over all existing planes, including alpha.
+  int get_max_bytes_per_sample() const;
+
+  // True if all existing colour planes (R/G/B or Y/Cb/Cr) are stored with 'bytes' per sample.
+  bool color_channels_have_bytes_per_sample(int bytes) const;
+
+  // True if all existing planes, including alpha, are stored with 'bytes' per sample.
+  bool all_channels_have_bytes_per_sample(int bytes) const;
 
   bool operator==(const ColorState&) const;
 };
@@ -96,24 +104,13 @@ struct ColorState
 std::ostream& operator<<(std::ostream& ostr, const ColorState& state);
 
 
-// True if 'state' has a colour or alpha component wider than 16 bits.
-//
-// Every conversion operator reads and writes sample data through uint8_t* or uint16_t*
-// and derives shift amounts from the bit depth, so none of them can handle a wider
-// component. Images with wider components do exist: 'unci' components may be up to 256
-// bits and we store up to 128 of them (64-bit integers, 32/64-bit floats, complex
-// numbers) so that they can be read through the component API.
-//
-// An operator that cannot handle a bit depth must not offer itself to the pipeline for
-// it, so each operator states its own supported range in state_after_conversion(). This
-// helper spells out the upper bound they currently all share; operators with a tighter
-// or different range (an exact 8 bits, or an explicit list) say so themselves instead.
-// When an operator gains support for wider samples it simply stops calling this, and the
-// catch-all in convert_colorspace() can go away.
-inline bool has_samples_wider_than_16bit(const ColorState& state)
-{
-  return state.get_max_bits_per_pixel() > 16;
-}
+// Note on sample widths: HeifPixelImage stores a plane with 1, 2, 4, 8 or 16 bytes per
+// sample depending on its bit depth (bytes_per_sample_for_bit_depth() in pixelimage.h);
+// 'unci' components may be up to 128 bits wide. Every conversion operator, however, reads
+// samples through uint8_t* or uint16_t*. An operator therefore declares in
+// state_after_conversion() which sample width it accepts (ColorState::
+// color_channels_have_bytes_per_sample() and friends) instead of relying on an 8-bit
+// SDR/HDR split, which would misread any plane wider than 16 bits.
 
 // These are some integer constants for typical color conversion Op speed costs.
 // The integer value is the speed cost. Any other integer can be assigned to the speed cost.

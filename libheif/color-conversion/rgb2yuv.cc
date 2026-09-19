@@ -34,24 +34,16 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const heif_color_conversion_options& options,
                                                const heif_color_conversion_options_ext& options_ext) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444) {
     return {};
   }
 
-  if ((input_state.bits_per_pixel_R > 8) != hdr) {
-    return {};
-  }
-
   // All three colour planes are read through the same 'Pixel' type and converted with one
-  // set of range constants, so they must share one bit depth.
-  if (!input_state.color_channels_have_same_bpp()) {
-    return {};
-  }
-
-  if (has_samples_wider_than_16bit(input_state)) {
+  // set of range constants, so they must share one bit depth and be stored with
+  // sizeof(Pixel) bytes per sample.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -116,8 +108,6 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
                                            const heif_color_conversion_options_ext& options_ext,
                                            const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
 
@@ -126,7 +116,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int subV = chroma_v_subsampling(chroma);
 
   int bpp = input->get_bits_per_pixel(heif_channel_R);
-  if (bpp < 8 || (bpp > 8) != hdr) {
+  if (bpp < 8 || bytes_per_sample_for_bit_depth(bpp) != static_cast<int>(sizeof(Pixel))) {
     return Error::InternalError;
   }
 
@@ -188,14 +178,12 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     out_a = nullptr;
   }
 
-  if (hdr) {
-    in_r_stride /= 2;
-    in_g_stride /= 2;
-    in_b_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_r_stride /= sizeof(Pixel);
+  in_g_stride /= sizeof(Pixel);
+  in_b_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
   int32_t fullRange = (1 << bpp) - 1;
@@ -312,7 +300,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
   if (has_alpha) {
     int bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
-    int alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+    size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
 
     for (y = 0; y < height; y++) {
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
@@ -350,7 +338,8 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  if (has_samples_wider_than_16bit(input_state)) {
+  // The interleaved samples are assembled from two bytes each.
+  if (!input_state.color_channels_have_bytes_per_sample(2)) {
     return {};
   }
 

@@ -155,9 +155,8 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  // Every channel, alpha included, is read through a uint16_t* and shifted down by
-  // (bits_per_pixel - 8).
-  if (has_samples_wider_than_16bit(input_state)) {
+  // Every channel, alpha included, is read as uint8_t or uint16_t samples.
+  if (input_state.get_max_bytes_per_sample() > 2) {
     return {};
   }
 
@@ -204,8 +203,9 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                heif_channel_Alpha}) {
     if (input->has_channel(channel)) {
       int input_bits = input->get_bits_per_pixel(channel);
+      int input_bytes = bytes_per_sample_for_bit_depth(input_bits);
 
-      if (input_bits > 8) {
+      if (input_bytes == 2) {
         uint32_t width = input->get_width(channel);
         uint32_t height = input->get_height(channel);
         if (auto err = outimg->add_channel(channel, width, height, 8, limits)) {
@@ -270,8 +270,12 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) ((in * mulFactor) >> 8);
           }
-      } else {
+      } else if (input_bits == 8) {
         outimg->copy_new_channel_from(input, channel, channel, limits);
+      } else {
+        return Error{heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_bit_depth,
+                     "Op_to_sdr_planes: only 8- and 16-bit sample storage is supported"};
       }
     }
   }

@@ -42,12 +42,13 @@ Op_bayer_bilinear_to_RGB24_32::state_after_conversion(const ColorState& input_st
   output_state.colorspace = heif_colorspace_RGB;
 
   int bpp = input_state.bits_per_pixel_filter_array;
+  int bytes_per_sample = input_state.get_bytes_per_sample(heif_channel_filter_array);
 
   if (bpp == 8) {
     output_state.chroma = heif_chroma_interleaved_RGB;
     output_state.set_color_bits_per_pixel(8);
   }
-  else if (bpp > 8 && bpp <= 16) {
+  else if (bytes_per_sample == 2) {
     output_state.chroma = heif_chroma_interleaved_RRGGBB_LE;
     output_state.set_color_bits_per_pixel(bpp);
   }
@@ -102,9 +103,13 @@ Op_bayer_bilinear_to_RGB24_32::convert_colorspace(const std::shared_ptr<const He
   }
 
   int bpp = input->get_bits_per_pixel(heif_channel_filter_array);
-  bool hdr = bpp > 8;
+  int bytes_per_sample = bytes_per_sample_for_bit_depth(bpp);
 
-  heif_chroma out_chroma = hdr ? heif_chroma_interleaved_RRGGBB_LE : heif_chroma_interleaved_RGB;
+  if (bytes_per_sample != 1 && bytes_per_sample != 2) {
+    return Error::InternalError;
+  }
+
+  heif_chroma out_chroma = (bytes_per_sample == 2) ? heif_chroma_interleaved_RRGGBB_LE : heif_chroma_interleaved_RGB;
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -201,7 +206,7 @@ Op_bayer_bilinear_to_RGB24_32::convert_colorspace(const std::shared_ptr<const He
     }
   };
 
-  if (hdr) {
+  if (bytes_per_sample == 2) {
     demosaic(reinterpret_cast<const uint16_t*>(in_p),
              reinterpret_cast<uint16_t*>(out_p),
              in_stride / 2, out_stride / 2);

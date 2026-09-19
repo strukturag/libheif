@@ -33,7 +33,8 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (has_samples_wider_than_16bit(input_state)) {
+  // The luma plane is read as uint8_t or uint16_t samples; alpha is copied at its own width.
+  if (input_state.get_bytes_per_sample(heif_channel_Y) > 2) {
     return {};
   }
 
@@ -90,7 +91,9 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   }
 
 
-  if (input_bpp <= 8) {
+  int bytes_per_sample = bytes_per_sample_for_bit_depth(input_bpp);
+
+  if (bytes_per_sample == 1) {
     uint8_t* out_cb, * out_cr, * out_y;
     size_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
 
@@ -114,7 +117,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
              width);
     }
   }
-  else {
+  else if (bytes_per_sample == 2) {
     uint16_t* out_cb, * out_cr, * out_y;
     size_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
 
@@ -144,6 +147,11 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
              width * 2);
     }
   }
+  else {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "Monochrome to YCbCr conversion only supports 8- and 16-bit sample storage."};
+  }
 
   if (has_alpha) {
     const uint8_t* in_a;
@@ -154,7 +162,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
     in_a = input->get_channel_memory(heif_channel_Alpha, &in_a_stride);
     out_a = outimg->get_channel_memory(heif_channel_Alpha, &out_a_stride);
 
-    uint32_t memory_width = (alpha_bpp > 8 ? width * 2 : width);
+    size_t memory_width = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(alpha_bpp));
 
     for (uint32_t y = 0; y < height; y++) {
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], memory_width);

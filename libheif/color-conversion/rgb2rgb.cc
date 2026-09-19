@@ -169,7 +169,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (has_samples_wider_than_16bit(input_state)) {
+  // All planes, alpha included, are read as uint16_t samples.
+  if (!input_state.all_channels_have_bytes_per_sample(2)) {
     return {};
   }
 
@@ -220,9 +221,9 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
                                               const heif_color_conversion_options_ext& options_ext,
                                               const heif_security_limits* limits) const
 {
-  if (input->get_bits_per_pixel(heif_channel_R) <= 8 ||
-      input->get_bits_per_pixel(heif_channel_G) <= 8 ||
-      input->get_bits_per_pixel(heif_channel_B) <= 8) {
+  if (bytes_per_sample_for_bit_depth(input->get_bits_per_pixel(heif_channel_R)) != 2 ||
+      bytes_per_sample_for_bit_depth(input->get_bits_per_pixel(heif_channel_G)) != 2 ||
+      bytes_per_sample_for_bit_depth(input->get_bits_per_pixel(heif_channel_B)) != 2) {
     return Error::InternalError;
   }
 
@@ -230,7 +231,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   bool output_has_alpha = input_has_alpha || target_state.has_alpha();
 
   if (input_has_alpha) {
-    if (input->get_bits_per_pixel(heif_channel_Alpha) <= 8) {
+    if (bytes_per_sample_for_bit_depth(input->get_bits_per_pixel(heif_channel_Alpha)) != 2) {
       return Error::InternalError;
     }
 
@@ -468,7 +469,8 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (has_samples_wider_than_16bit(input_state)) {
+  // Interleaved RRGGBB samples are two bytes each.
+  if (!input_state.color_channels_have_bytes_per_sample(2)) {
     return {};
   }
 
@@ -689,7 +691,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
   // Swaps the two bytes of each component, which is only meaningful for components
   // that are stored in 16 bits.
-  if (has_samples_wider_than_16bit(input_state)) {
+  if (!input_state.color_channels_have_bytes_per_sample(2)) {
     return {};
   }
 

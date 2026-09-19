@@ -57,6 +57,28 @@ std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace 
 
 
 
+// Number of bytes HeifPixelImage uses to store one sample of the given bit depth
+// (1, 2, 4, 8 or 16). This is the single source of truth for the sample width: plane
+// allocation uses it, and so does every code path that reinterprets plane memory as
+// uint8_t/uint16_t samples (color conversion in particular), so that they cannot drift.
+inline int bytes_per_sample_for_bit_depth(int bit_depth)
+{
+  if (bit_depth <= 8) {
+    return 1;
+  }
+  if (bit_depth <= 16) {
+    return 2;
+  }
+  if (bit_depth <= 32) {
+    return 4;
+  }
+  if (bit_depth <= 64) {
+    return 8;
+  }
+  return 16;
+}
+
+
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ImageDescription,
                        public ErrorBuffer

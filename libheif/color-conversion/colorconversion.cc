@@ -326,15 +326,34 @@ bool ColorState::all_channels_have_same_bpp() const
 }
 
 
-bool ColorState::all_channels_sdr() const
+int ColorState::get_bytes_per_sample(heif_channel channel) const
 {
-  return all_existing_planes_satisfy(*this, true, [](int bpp) { return bpp <= 8; });
+  int bpp = get_bits_per_pixel(channel);
+  return bpp != 0 ? bytes_per_sample_for_bit_depth(bpp) : 0;
 }
 
 
-bool ColorState::all_channels_hdr() const
+int ColorState::get_max_bytes_per_sample() const
 {
-  return all_existing_planes_satisfy(*this, true, [](int bpp) { return bpp > 8; });
+  // The bit depth to sample width mapping is monotonic, so the widest plane is the deepest.
+  int max_bpp = get_max_bits_per_pixel();
+  return max_bpp != 0 ? bytes_per_sample_for_bit_depth(max_bpp) : 0;
+}
+
+
+bool ColorState::color_channels_have_bytes_per_sample(int bytes) const
+{
+  return all_existing_planes_satisfy(*this, false, [bytes](int bpp) {
+    return bytes_per_sample_for_bit_depth(bpp) == bytes;
+  });
+}
+
+
+bool ColorState::all_channels_have_bytes_per_sample(int bytes) const
+{
+  return all_existing_planes_satisfy(*this, true, [bytes](int bpp) {
+    return bytes_per_sample_for_bit_depth(bpp) == bytes;
+  });
 }
 
 
@@ -848,15 +867,16 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 
   ColorConversionPipeline pipeline;
   bool success = pipeline.construct_pipeline(input_state, output_state, options, *options_ext);
-  if (!success) {
-    return Error{heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_color_conversion};
-  }
 
-  if (pipeline.is_nop()) {
+  if (success && pipeline.is_nop()) {
     return input;
   }
-  else {
+
+  {
+    // The two checks below also run when no pipeline could be built, so that the caller
+    // gets the specific reason (a plane wider than 16 bits, or YCbCr planes of differing
+    // depth) instead of the generic "unsupported color conversion" error.
+    //
     // Every color-conversion operator is written for 8-bit or 16-bit integer samples.
     // They access the planes through uint8_t* / uint16_t* and derive shift amounts and
     // midpoint values from the bit depth (e.g. '128 << (bpp - 8)' in Op_mono_to_YCbCr420).
@@ -868,11 +888,12 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     // the image through untouched, so wide components stay accessible to the caller.
     //
     // This is a backstop, not the primary defence. The constraint belongs in each
-    // operator's state_after_conversion(), and every operator now declares it there
-    // (most through has_samples_wider_than_16bit()), so construct_pipeline() above
-    // already fails for a wider input and a real conversion never reaches this loop.
-    // Keep it until an operator actually supports more than 16 bits per component,
-    // then remove it together with that operator's call to the helper.
+    // operator's state_after_conversion(), and every operator declares there which
+    // sample width it can read (ColorState::color_channels_have_bytes_per_sample() and
+    // friends, derived from the same bit depth to storage width mapping that
+    // HeifPixelImage uses), so construct_pipeline() above already fails for a wider
+    // input and a real conversion never reaches this loop. Keep it until an operator
+    // actually supports more than 16 bits per component, then remove it.
 
     for (heif_channel channel : channels) {
       if (input->get_bits_per_pixel(channel) > 16) {
@@ -904,9 +925,14 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
                      "Color conversion of YCbCr images with differing luma and chroma bit depths is not supported."};
       }
     }
-
-    return pipeline.convert_image(input, limits);
   }
+
+  if (!success) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion};
+  }
+
+  return pipeline.convert_image(input, limits);
 }
 
 
