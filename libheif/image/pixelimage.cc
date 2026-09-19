@@ -624,6 +624,22 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
 
 Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits)
 {
+  // This function only ever grows the image. A target smaller than the current
+  // size is out of contract: the per-row right-edge fill below computes its
+  // memset length as (subsampled_width - old_width), which would underflow to a
+  // huge value on a shrink request and write past the end of the pixel plane.
+  // Reject it up front (GHSA-hqc2-cx5m-g6ff).
+  if (width < m_width || height < m_height) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Cannot extend an image to a size smaller than its current size."};
+  }
+
+  // Nothing to do when the target already matches the current size.
+  if (width == m_width && height == m_height) {
+    return Error::Ok;
+  }
+
   for (auto& component : m_storage) {
     // See extend_padding_to_size(): get_subsampled_size() assumes a non-Cb/Cr
     // component has the full logical image size, so we cannot compute a correct

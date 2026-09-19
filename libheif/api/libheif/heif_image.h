@@ -298,6 +298,10 @@ heif_error heif_image_scale_image(const heif_image* input,
 
 // Extends the image size to match the given size by extending the right and bottom borders.
 // The border areas are filled with zero.
+// The target 'width' and 'height' must each be at least the image's current size; this
+// function only grows the image and cannot shrink it. If a smaller size is requested,
+// 'heif_error_Usage_error' / 'heif_suberror_Invalid_parameter_value' is returned and the
+// image is left unchanged.
 LIBHEIF_API
 heif_error heif_image_extend_to_size_fill_with_zero(heif_image* image,
                                                     uint32_t width, uint32_t height);
