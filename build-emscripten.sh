@@ -103,7 +103,7 @@ fi
 
 CONFIGURE_ARGS_OPENJPEG=""
 if [ "$ENABLE_OPENJPEG" = "1" ]; then
-    [ -s "openjpeg-${OPENJPEG__VERSION}.tar.gz" ] || curl \
+    [ -s "openjpeg-${OPENJPEG_VERSION}.tar.gz" ] || curl \
         -L \
         -o openjpeg-${OPENJPEG_VERSION}.tar.gz \
 	"https://github.com/uclouvain/openjpeg/archive/refs/tags/v${OPENJPEG_VERSION}.tar.gz"
@@ -137,19 +137,22 @@ if [ "$ENABLE_UNCOMPRESSED" = "1" ]; then
     CONFIGURE_ARGS_UNCOMPRESSED="-DWITH_UNCOMPRESSED_CODEC=ON"
 fi
 
-EXTRA_EXE_LINKER_FLAGS="-lembind"
 EXTRA_COMPILER_FLAGS=""
 if [ "$STANDALONE" = "1" ]; then
-    EXTRA_EXE_LINKER_FLAGS=""
     EXTRA_COMPILER_FLAGS="-D__EMSCRIPTEN_STANDALONE_WASM__=1"
 fi
 
-CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DENABLE_PLUGIN_LOADING=OFF"
+# Only the static library is needed here. The unit tests are never run in the
+# JavaScript build, and their configure step probes for pthreads with a plain C
+# link, which fails on Emscripten >= 6.0.6 when embind is on the linker line.
+# Everything JavaScript-specific (embind, exports, memory settings) is passed to
+# the final link below instead of to CMake.
+CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DBUILD_TESTING=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DENABLE_PLUGIN_LOADING=OFF"
 emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="${EXTRA_COMPILER_FLAGS}" \
     -DCMAKE_CXX_FLAGS="${EXTRA_COMPILER_FLAGS}" \
-    -DCMAKE_EXE_LINKER_FLAGS="${LIBRARY_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="${LIBRARY_LINKER_FLAGS}" \
     $CONFIGURE_ARGS_LIBDE265 \
     $CONFIGURE_ARGS_AOM \
     $CONFIGURE_ARGS_WEBCODECS \
@@ -190,13 +193,14 @@ if [ "$USE_ES6" = "1" ]; then
     BUILD_FLAGS="$BUILD_FLAGS -sEXPORT_ES6"
 fi
 
-emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
+# Link with em++ rather than emcc: since Emscripten 6.0.6 (DEFAULT_TO_CXX=0),
+# emcc no longer adds the C++ runtime when it is only given an archive.
+em++ -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
     -sEXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_free,_malloc,_memcpy" \
     -sMODULARIZE \
     -sEXPORT_NAME="libheif" \
     -sWASM_ASYNC_COMPILATION=0 \
     -sALLOW_MEMORY_GROWTH \
-    -std=c++11 \
     $LIBRARY_INCLUDE_FLAGS \
     $LIBRARY_LINKER_FLAGS \
     $BUILD_FLAGS \

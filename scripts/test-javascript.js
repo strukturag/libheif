@@ -24,21 +24,27 @@ const fs = require('fs');
 
 console.log('Running libheif JavaScript tests ...');
 
-const libheif = require('../libheif.js')();
+// Emscripten >= 4.0.12 always returns a Promise from the module factory, even
+// with WASM_ASYNC_COMPILATION=0. Older versions return the module object
+// directly. Promise.resolve() accepts both.
+Promise.resolve(require('../libheif.js')()).then((libheif) => {
+  // Test Embind API.
+  console.log('Loaded libheif.js', libheif.heif_get_version());
 
-// Test Embind API.
-console.log('Loaded libheif.js', libheif.heif_get_version());
+  // Test internal C API.
+  assert(libheif.heif_get_version_number_major() === 1, 'libheif major version should be 1')
 
-// Test internal C API.
-assert(libheif.heif_get_version_number_major() === 1, 'libheif major version should be 1')
+  // Test enum values.
+  assert(libheif.heif_error_Ok.value === 0, 'heif_error_Ok should be 0')
 
-// Test enum values.
-assert(libheif.heif_error_Ok.value === 0, 'heif_error_Ok should be 0')
+  // Decode the example file and make sure at least one image is returned.
+  const data = fs.readFileSync('examples/example.heic');
+  const decoder = new libheif.HeifDecoder();
+  const image_data = decoder.decode(data);
 
-// Decode the example file and make sure at least one image is returned.
-const data = fs.readFileSync('examples/example.heic');
-const decoder = new libheif.HeifDecoder();
-const image_data = decoder.decode(data);
-
-console.log('Loaded images:', image_data.length);
-assert(image_data.length > 0, "Should have loaded images")
+  console.log('Loaded images:', image_data.length);
+  assert(image_data.length > 0, "Should have loaded images")
+}).catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
