@@ -344,6 +344,25 @@ void HeifPixelImage::register_component_descriptions(ComponentStorage& plane,
 }
 
 
+static const char* channel_name(heif_channel channel)
+{
+  switch (channel) {
+    case heif_channel_Y: return "Y";
+    case heif_channel_Cb: return "Cb";
+    case heif_channel_Cr: return "Cr";
+    case heif_channel_R: return "R";
+    case heif_channel_G: return "G";
+    case heif_channel_B: return "B";
+    case heif_channel_Alpha: return "alpha";
+    case heif_channel_interleaved: return "interleaved";
+    case heif_channel_filter_array: return "filter_array";
+    case heif_channel_depth: return "depth";
+    case heif_channel_disparity: return "disparity";
+    default: return "unknown";
+  }
+}
+
+
 Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, int bit_depth,
                                 const heif_security_limits* limits,
                                 heif_component_datatype datatype)
@@ -898,6 +917,118 @@ bool HeifPixelImage::has_standard_plane_sizes() const
   }
 
   return true;
+}
+
+
+Error HeifPixelImage::check_plane_layout() const
+{
+  std::vector<heif_channel> colour_planes;
+  bool separate_alpha_allowed = true;
+
+  auto layout_error = [this](const std::string& what) {
+    std::stringstream sstr;
+    sstr << what << " (colorspace " << static_cast<int>(m_colorspace)
+         << ", chroma " << static_cast<int>(m_chroma) << ")";
+    return Error{heif_error_Usage_error, heif_suberror_Invalid_parameter_value, sstr.str()};
+  };
+
+  switch (m_colorspace) {
+    case heif_colorspace_RGB:
+      switch (m_chroma) {
+        case heif_chroma_444:
+          colour_planes = {heif_channel_R, heif_channel_G, heif_channel_B};
+          break;
+        case heif_chroma_interleaved_RGB:
+        case heif_chroma_interleaved_RGBA:
+        case heif_chroma_interleaved_RRGGBB_BE:
+        case heif_chroma_interleaved_RRGGBB_LE:
+        case heif_chroma_interleaved_RRGGBBAA_BE:
+        case heif_chroma_interleaved_RRGGBBAA_LE:
+          colour_planes = {heif_channel_interleaved};
+          separate_alpha_allowed = false; // alpha, if any, is inside the interleaved plane
+          break;
+        default:
+          return layout_error("Chroma format is not valid for an RGB image");
+      }
+      break;
+
+    case heif_colorspace_YCbCr:
+      switch (m_chroma) {
+        case heif_chroma_444:
+        case heif_chroma_422:
+        case heif_chroma_420:
+          colour_planes = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+          break;
+        case heif_chroma_monochrome:
+          colour_planes = {heif_channel_Y};
+          break;
+        default:
+          return layout_error("Chroma format is not valid for a YCbCr image");
+      }
+      break;
+
+    case heif_colorspace_monochrome:
+      if (m_chroma != heif_chroma_monochrome) {
+        return layout_error("Chroma format is not valid for a monochrome image");
+      }
+      colour_planes = {heif_channel_Y};
+      break;
+
+    case heif_colorspace_filter_array:
+      if (m_chroma != heif_chroma_planar) {
+        return layout_error("Chroma format is not valid for a filter-array image");
+      }
+      colour_planes = {heif_channel_filter_array};
+      separate_alpha_allowed = false;
+      break;
+
+    default:
+      return layout_error("Colorspace has no defined plane layout");
+  }
+
+  // Every known plane has to belong to the layout, appear once, and have the size of its channel.
+
+  std::set<heif_channel> seen;
+
+  for (const auto& component : m_storage) {
+    heif_channel channel = component.m_channel;
+
+    if (channel == heif_channel_unknown) {
+      continue; // multi-component data without colour meaning, tolerated and ignored
+    }
+
+    bool belongs = (channel == heif_channel_Alpha && separate_alpha_allowed);
+    for (heif_channel c : colour_planes) {
+      if (c == channel) {
+        belongs = true;
+      }
+    }
+
+    if (!belongs) {
+      return layout_error(std::string("Image has a ") + channel_name(channel) + " plane that does not belong to its format");
+    }
+
+    if (!seen.insert(channel).second) {
+      return layout_error(std::string("Image has more than one ") + channel_name(channel) + " plane");
+    }
+
+    uint32_t expected_w = channel_width(m_width, m_chroma, channel);
+    uint32_t expected_h = channel_height(m_height, m_chroma, channel);
+    if (component.m_width != expected_w || component.m_height != expected_h) {
+      std::stringstream sstr;
+      sstr << "The " << channel_name(channel) << " plane has size " << component.m_width << "x" << component.m_height
+           << ", expected " << expected_w << "x" << expected_h;
+      return layout_error(sstr.str());
+    }
+  }
+
+  for (heif_channel channel : colour_planes) {
+    if (seen.count(channel) == 0) {
+      return layout_error(std::string("Image has no ") + channel_name(channel) + " plane");
+    }
+  }
+
+  return Error::Ok;
 }
 
 

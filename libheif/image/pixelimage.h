@@ -148,6 +148,21 @@ public:
   // undersized single plane.
   bool has_standard_plane_sizes() const;
 
+  // Checks that the stored planes are exactly those of the image's colorspace and chroma
+  // format: the colour planes of that layout (R/G/B, Y/Cb/Cr, Y alone, the interleaved plane,
+  // or the filter array), optionally one separate alpha plane on the planar layouts, each
+  // present exactly once and with the size its channel implies (chroma-subsampled for Cb/Cr,
+  // the image size otherwise). Planes with channel heif_channel_unknown carry multi-component
+  // data without a colour meaning (e.g. the padding components of 'unci'); they are tolerated
+  // and ignored. A custom colorspace has no defined layout and is rejected; a caller that
+  // accepts such images (the uncompressed encoder) has to test for it first.
+  //
+  // This is a check at the entry of the color conversion pipeline and of the encoders, not a
+  // constraint on HeifPixelImage itself: an image may hold any set of planes, including several
+  // of the same channel (multi-spectral images consist of several monochrome planes).
+  // Returns a Usage_error naming the offending plane.
+  Error check_plane_layout() const;
+
   heif_chroma get_chroma_format() const { return m_chroma; }
 
   heif_colorspace get_colorspace() const { return m_colorspace; }

@@ -60,6 +60,16 @@ public:
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
+  // Checks that an image handed to this encoder has a plane layout the encoder plugins can rely
+  // on: exactly the planes of its colorspace and chroma format, each once and at the size its
+  // channel implies (HeifPixelImage::check_plane_layout()). Planes with channel
+  // heif_channel_unknown are tolerated. Images with a custom colorspace pass unchecked: they
+  // have no defined layout, and the uncompressed encoder writes their components as they are.
+  // This is the libheif-side check, made before the image is colour-converted for the plugin
+  // (or handed over unchanged when no conversion is needed). A plugin that supports only a
+  // subset of the layouts checks its input itself (see plugins/encoder_input_check.h).
+  virtual Error check_input_image_layout(const HeifPixelImage& image) const;
+
   Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                           heif_encoder* encoder,
                                                                           const heif_color_profile_nclx* user_requested_output_nclx,

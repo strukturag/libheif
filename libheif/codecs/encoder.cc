@@ -113,6 +113,16 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 
 extern void fill_default_color_conversion_options_ext(heif_color_conversion_options_ext& options);
 
+Error Encoder::check_input_image_layout(const HeifPixelImage& image) const
+{
+  if (image.get_colorspace() == heif_colorspace_custom) {
+    return Error::Ok;
+  }
+
+  return image.check_plane_layout();
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                                  heif_encoder* encoder,
                                                                                  const heif_color_profile_nclx* user_requested_output_nclx,
@@ -127,6 +137,10 @@ Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding
     output_nclx_profile = user_requested_output_nclx;
   }
 
+
+  if (Error err = check_input_image_layout(*image)) {
+    return err;
+  }
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();

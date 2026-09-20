@@ -765,6 +765,18 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 
   // --- prepare conversion
 
+  // The operators read the planes that the colorspace and chroma format imply, with the sizes
+  // they imply. Refuse anything else up front instead of letting an operator run into a missing,
+  // duplicate or undersized plane: a plane set that does not match the format, or a colorspace
+  // without a defined layout (custom multi-component data has nothing to convert). Planes with
+  // channel heif_channel_unknown (the padding components of 'unci') are tolerated; they belong
+  // to no colour model and are not carried into the output.
+  if (Error err = input->check_plane_layout()) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_image_type,
+                 "Color conversion: " + err.message};
+  }
+
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
