@@ -59,8 +59,11 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
 
 
   // The three colour planes are read through the same 'Pixel' type, so they must be stored
-  // with sizeof(Pixel) bytes per sample. The alpha plane is copied through at its own width.
-  if (!input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -306,9 +309,11 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
     }
   }
 
+  // All three planes are read as 8-bit samples, so they must all be 8 bits
+  // (get_uniform_color_bits_per_pixel() is 0 when they differ).
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel_Y != 8 ||
+      input_state.get_uniform_color_bits_per_pixel() != 8 ||
       input_state.has_alpha()) {
     return {};
   }
@@ -439,9 +444,11 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
 
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
+  // All three planes are read as 8-bit samples, so they must all be 8 bits
+  // (get_uniform_color_bits_per_pixel() is 0 when they differ).
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel_Y != 8) {
+      input_state.get_uniform_color_bits_per_pixel() != 8) {
     return {};
   }
 
@@ -573,9 +580,11 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
     }
   }
 
+  // The conversion derives its shifts from one bit depth, so the three planes must share
+  // it (get_uniform_color_bits_per_pixel() is 0 when they differ) and it must be > 8.
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel_Y <= 8) {
+      input_state.get_uniform_color_bits_per_pixel() <= 8) {
     return {};
   }
 

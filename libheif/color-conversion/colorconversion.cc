@@ -901,9 +901,9 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   }
 
   {
-    // The two checks below also run when no pipeline could be built, so that the caller
-    // gets the specific reason (a plane wider than 16 bits, or YCbCr planes of differing
-    // depth) instead of the generic "unsupported color conversion" error.
+    // The check below also runs when no pipeline could be built, so that the caller gets
+    // the specific reason (a plane wider than 16 bits) instead of the generic "unsupported
+    // color conversion" error.
     //
     // Every color-conversion operator is written for 8-bit or 16-bit integer samples.
     // They access the planes through uint8_t* / uint16_t* and derive shift amounts and
@@ -922,35 +922,19 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     // HeifPixelImage uses), so construct_pipeline() above already fails for a wider
     // input and a real conversion never reaches this loop. Keep it until an operator
     // actually supports more than 16 bits per component, then remove it.
+    //
+    // Planes of differing depth within one image (GHSA-w7mc-p8jc-p853 read 8-bit chroma
+    // planes with the 16-bit luma sample width) are handled the same way: each operator
+    // declares in state_after_conversion() whether it needs the colour planes to share
+    // one depth (ColorState::color_channels_have_same_bpp()), so no pipeline is built
+    // through an operator that cannot handle the image, while Op_to_sdr_planes, which
+    // lowers every plane on its own, can still equalize such an image to 8 bits.
 
     for (heif_channel channel : channels) {
       if (input->get_bits_per_pixel(channel) > 16) {
         return Error{heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_bit_depth,
                      "Color conversion of images with more than 16 bits per component is not supported."};
-      }
-    }
-
-    // The YCbCr color-conversion operators assume that luma and chroma share a
-    // single bit depth: several of them read the chroma planes with a sample width
-    // derived from the luma bit depth. A file may however declare per-component bit
-    // depths (e.g. 'unci'), so we reject a real (non-nop) conversion of any YCbCr
-    // image whose Y/Cb/Cr channels do not agree, rather than over-reading a narrower
-    // chroma plane (GHSA-w7mc-p8jc-p853). An identity decode (is_nop() above)
-    // returns the image untouched and is unaffected. RGB is intentionally not
-    // restricted here: the RGB operators support differing per-channel bit depths
-    // (e.g. 5/6/5). Alpha is handled separately by the individual operators.
-
-    if (input->get_colorspace() == heif_colorspace_YCbCr &&
-        input->has_channel(heif_channel_Y) &&
-        input->has_channel(heif_channel_Cb) &&
-        input->has_channel(heif_channel_Cr)) {
-      int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
-      if (input->get_bits_per_pixel(heif_channel_Cb) != bpp_y ||
-          input->get_bits_per_pixel(heif_channel_Cr) != bpp_y) {
-        return Error{heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_bit_depth,
-                     "Color conversion of YCbCr images with differing luma and chroma bit depths is not supported."};
       }
     }
   }

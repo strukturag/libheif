@@ -44,8 +44,11 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
   }
 
   // The three colour planes are read through the same 'Pixel' type, so they must be stored
-  // with sizeof(Pixel) bytes per sample. The alpha plane is copied through at its own width.
-  if (!input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -254,8 +257,11 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
   }
 
   // The three colour planes are read through the same 'Pixel' type, so they must be stored
-  // with sizeof(Pixel) bytes per sample. The alpha plane is copied through at its own width.
-  if (!input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -442,8 +448,11 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
   }
 
   // The three colour planes are read through the same 'Pixel' type, so they must be stored
-  // with sizeof(Pixel) bytes per sample. The alpha plane is copied through at its own width.
-  if (!input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -709,8 +718,11 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
   }
 
   // The three colour planes are read through the same 'Pixel' type, so they must be stored
-  // with sizeof(Pixel) bytes per sample. The alpha plane is copied through at its own width.
-  if (!input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
