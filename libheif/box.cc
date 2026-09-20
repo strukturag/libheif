@@ -4045,11 +4045,10 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-  // --- check for duplicate references
-
-  if (auto error = check_for_double_references()) {
-    return error;
-  }
+  // Note: the same item may be listed several times within one reference entry.
+  // ISO/IEC 14496-12 does not forbid it, and derived images rely on it: an 'iovl'
+  // that places the same input image at two positions references it twice in its
+  // 'dimg' entry (one offset per reference). Conformance file C021 does this.
 
 
 #if 0
@@ -4148,26 +4147,6 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-Error Box_iref::check_for_double_references() const
-{
-  for (const auto& ref : m_references) {
-    std::set<heif_item_id> to_ids;
-    for (const auto to_id : ref.to_item_ID) {
-      if (to_ids.find(to_id) == to_ids.end()) {
-        to_ids.insert(to_id);
-      }
-      else {
-        return {heif_error_Invalid_input,
-                heif_suberror_Unspecified,
-                "'iref' has double references"};
-      }
-    }
-  }
-
-  return Error::Ok;
-}
-
-
 void Box_iref::derive_box_version()
 {
   uint8_t version = 0;
@@ -4192,10 +4171,6 @@ void Box_iref::derive_box_version()
 
 Error Box_iref::write(StreamWriter& writer) const
 {
-  if (auto error = check_for_double_references()) {
-    return error;
-  }
-
   size_t box_start = reserve_box_header_space(writer);
 
   int id_size = ((get_version() == 0) ? 2 : 4);

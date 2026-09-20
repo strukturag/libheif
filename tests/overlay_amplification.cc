@@ -202,8 +202,9 @@ std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary
 
 // Build the exponential amplification gadget: a chain of `depth` overlays where
 // each overlay composites the next one twice, through two distinct 'iden' items
-// (a direct double reference would be rejected by Box_iref). Without the fix,
-// decoding the primary overlay decodes the base 2^depth times.
+// (listing the same item twice in one 'dimg' entry is legal too, but the two
+// items keep the gadget independent of that). Without the fix, decoding the
+// primary overlay decodes the base 2^depth times.
 //
 // Item layout: id 1 = base ('mski'); then per level k = 0..depth-1:
 //   iovl_k  = 2 + 3*k

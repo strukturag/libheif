@@ -1105,8 +1105,6 @@ protected:
 
   void derive_box_version() override;
 
-  Error check_for_double_references() const;
-
 private:
   std::vector<Reference> m_references;
 
