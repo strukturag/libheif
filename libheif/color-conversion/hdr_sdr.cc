@@ -35,6 +35,14 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but the loop below only handles
+  // the Y/Cb/Cr/R/G/B/alpha planes and would return an image without any plane. Decline it,
+  // so that the Bayer operator demosaics first and the depth change applies to its RGB result.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
+    return {};
+  }
+
   // Every plane, alpha included, is widened from 8 bits, so all of them must be 8 bits
   // (get_uniform_bits_per_pixel() is 0 when the planes differ).
   if (input_state.get_uniform_bits_per_pixel() != 8) { // TODO: support for <8 bpp
@@ -147,6 +155,14 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
       input_state.chroma != heif_chroma_420 &&
       input_state.chroma != heif_chroma_422 &&
       input_state.chroma != heif_chroma_444) {
+    return {};
+  }
+
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but the loop below only handles
+  // the Y/Cb/Cr/R/G/B/alpha planes and would return an image without any plane. Decline it,
+  // so that the Bayer operator demosaics first and the depth change applies to its RGB result.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
     return {};
   }
 
