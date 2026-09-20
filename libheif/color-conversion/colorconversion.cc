@@ -342,16 +342,14 @@ static bool all_existing_planes_satisfy(const ColorState& s, bool include_alpha,
 
 int ColorState::get_bytes_per_sample(heif_channel channel) const
 {
-  int bpp = get_bits_per_pixel(channel);
-  return bpp != 0 ? bytes_per_sample_for_bit_depth(bpp) : 0;
+  return bytes_per_sample_for_bit_depth(get_bits_per_pixel(channel)); // 0 if the plane does not exist
 }
 
 
 int ColorState::get_max_bytes_per_sample() const
 {
   // The bit depth to sample width mapping is monotonic, so the widest plane is the deepest.
-  int max_bpp = get_max_bits_per_pixel();
-  return max_bpp != 0 ? bytes_per_sample_for_bit_depth(max_bpp) : 0;
+  return bytes_per_sample_for_bit_depth(get_max_bits_per_pixel());
 }
 
 

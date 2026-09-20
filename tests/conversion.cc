@@ -1481,3 +1481,25 @@ TEST_CASE("Op_to_sdr_planes equalizes mixed colour depths", "[heif_image]")
     CHECK(op.state_after_conversion(uniform8, target, options, *options_ext).empty());
   }
 }
+
+
+// bytes_per_sample_for_bit_depth() is the single source of truth for the storage width of a
+// plane. A depth of 0 is what get_bits_per_pixel() reports for a plane that does not exist;
+// it must not map to the width of a valid one-byte plane.
+TEST_CASE("bytes_per_sample_for_bit_depth", "[heif_image]")
+{
+  CHECK(bytes_per_sample_for_bit_depth(0) == 0);
+  CHECK(bytes_per_sample_for_bit_depth(-1) == 0);
+
+  for (int bits = 1; bits <= 128; bits++) {
+    int expected = (bits <= 8) ? 1 : (bits <= 16) ? 2 : (bits <= 32) ? 4 : (bits <= 64) ? 8 : 16;
+    INFO("bits = " << bits);
+    CHECK(bytes_per_sample_for_bit_depth(bits) == expected);
+  }
+
+  // The ColorState wrappers agree, including for a missing plane.
+  ColorState s(heif_colorspace_RGB, heif_chroma_444, false, 12);
+  CHECK(s.get_bytes_per_sample(heif_channel_R) == 2);
+  CHECK(s.get_bytes_per_sample(heif_channel_Alpha) == 0);
+  CHECK(s.get_max_bytes_per_sample() == 2);
+}

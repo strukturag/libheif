@@ -61,8 +61,15 @@ std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace 
 // (1, 2, 4, 8 or 16). This is the single source of truth for the sample width: plane
 // allocation uses it, and so does every code path that reinterprets plane memory as
 // uint8_t/uint16_t samples (color conversion in particular), so that they cannot drift.
+//
+// A bit depth of 0 is what get_bits_per_pixel() reports for a plane that does not exist.
+// It maps to 0 bytes, so that a missing plane can never pass for a valid one-byte plane
+// at the call sites that compare the width against sizeof(uint8_t).
 inline int bytes_per_sample_for_bit_depth(int bit_depth)
 {
+  if (bit_depth <= 0) {
+    return 0;
+  }
   if (bit_depth <= 8) {
     return 1;
   }
