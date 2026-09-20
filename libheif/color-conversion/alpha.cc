@@ -219,7 +219,14 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
   for (heif_channel channel : {heif_channel_R,
                                heif_channel_G,
                                heif_channel_B}) {
-    outimg->add_channel(channel, width, height, target_state.get_bits_per_pixel(channel), limits);
+    // 'input' was converted to planar RGB above, so its planes carry the depth we composite
+    // at. Do not take the depth from target_state: this operation keeps the source
+    // colorspace, so for a YCbCr or monochrome target the R/G/B fields there are 0 (plane
+    // absent). add_channel() refuses a zero depth and the loops below would then write
+    // through a null plane pointer.
+    if (Error err = outimg->add_channel(channel, width, height, input->get_bits_per_pixel(channel), limits)) {
+      return err;
+    }
 
     const Pixel* p_alpha;
     size_t stride_alpha;
