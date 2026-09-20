@@ -1931,19 +1931,6 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 }
 
 
-uint32_t negate_negative_int32(int32_t x)
-{
-  assert(x <= 0);
-
-  if (x == INT32_MIN) {
-    return static_cast<uint32_t>(INT32_MAX) + 1;
-  }
-  else {
-    return static_cast<uint32_t>(-x);
-  }
-}
-
-
 Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy)
 {
   // This function places the overlay using the full-resolution (dx,dy) offset
@@ -2007,95 +1994,52 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
     uint32_t out_h = get_height(channel);
 
 
-    // --- check whether overlay image overlaps with current image
+    // --- compute the overlapping area
+    //
+    // The overlay covers [dx, dx+in_w) x [dy, dy+in_h) in canvas coordinates and
+    // may start outside the canvas on any side (ISO/IEC 23008-12 6.6.2.2.3 allows
+    // negative offsets; pixels outside the canvas are simply not shown). Intersect
+    // it with the canvas [0, out_w) x [0, out_h). All terms fit into int64_t, so
+    // this cannot overflow for int32 offsets and uint32 sizes. The copy region is
+    // then described by its size and by its top-left corner in both images, which
+    // keeps the loop below free of any "end coordinate vs. count" ambiguity.
     // Note: all components share the logical image size, so if the overlay
     // image lies completely outside for one component it does so for all of
     // them -> we can return instead of just skipping the current component.
 
-    if (dx > 0 && static_cast<uint32_t>(dx) >= out_w) {
-      // the overlay image is completely outside the right border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dx < 0 && in_w <= negate_negative_int32(dx)) {
-      // the overlay image is completely outside the left border -> skip overlaying
-      return Error::Ok;
-    }
+    const int64_t x0 = std::max<int64_t>(dx, 0);
+    const int64_t y0 = std::max<int64_t>(dy, 0);
+    const int64_t x1 = std::min<int64_t>(static_cast<int64_t>(dx) + in_w, out_w);
+    const int64_t y1 = std::min<int64_t>(static_cast<int64_t>(dy) + in_h, out_h);
 
-    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
-      // the overlay image is completely outside the bottom border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
-      // the overlay image is completely outside the top border -> skip overlaying
+    if (x1 <= x0 || y1 <= y0) {
+      // the overlay image is completely outside the canvas -> nothing to draw
       return Error::Ok;
     }
 
+    const uint32_t copy_w = static_cast<uint32_t>(x1 - x0);
+    const uint32_t copy_h = static_cast<uint32_t>(y1 - y0);
 
-    // --- compute overlapping area
+    // top-left corner of the copied region in the canvas (out_*) and in the overlay (in_*)
+    const uint32_t out_x0 = static_cast<uint32_t>(x0);
+    const uint32_t out_y0 = static_cast<uint32_t>(y0);
+    const uint32_t in_x0 = static_cast<uint32_t>(x0 - dx);
+    const uint32_t in_y0 = static_cast<uint32_t>(y0 - dy);
 
-    // top-left points where to start copying in source and destination
-    uint32_t in_x0;
-    uint32_t in_y0;
-    uint32_t out_x0;
-    uint32_t out_y0;
+    // --- composite the overlay in the overlapping area
 
-    // right border
-    if (dx + static_cast<int64_t>(in_w) > out_w) {
-      // overlay image extends partially outside of right border
-      // Notes:
-      // - (out_w-dx) cannot underflow because dx<out_w is ensured above
-      // - (out_w-dx) cannot overflow (for dx<0) because, as just checked, out_w-dx < in_w
-      //              and in_w fits into uint32_t
-      in_w = static_cast<uint32_t>(static_cast<int64_t>(out_w) - dx);
-    }
+    for (uint32_t y = 0; y < copy_h; y++) {
+      const uint8_t* in_row = in_p + in_x0 + static_cast<size_t>(in_y0 + y) * in_stride;
+      uint8_t* out_row = out_p + out_x0 + static_cast<size_t>(out_y0 + y) * out_stride;
 
-    // bottom border
-    if (dy + static_cast<int64_t>(in_h) > out_h) {
-      // overlay image extends partially outside of bottom border
-      in_h = static_cast<uint32_t>(static_cast<int64_t>(out_h) - dy);
-    }
-
-    // left border
-    if (dx < 0) {
-      // overlay image starts partially outside of left border
-
-      in_x0 = negate_negative_int32(dx);
-      out_x0 = 0;
-      in_w = in_w - in_x0; // in_x0 < in_w because in_w > -dx = in_x0
-    }
-    else {
-      in_x0 = 0;
-      out_x0 = static_cast<uint32_t>(dx);
-    }
-
-    // top border
-    if (dy < 0) {
-      // overlay image started partially outside of top border
-
-      in_y0 = negate_negative_int32(dy);
-      out_y0 = 0;
-      in_h = in_h - in_y0; // in_y0 < in_h because in_h > -dy = in_y0
-    }
-    else {
-      in_y0 = 0;
-      out_y0 = static_cast<uint32_t>(dy);
-    }
-
-    // --- computer overlay in overlapping area
-
-    for (uint32_t y = in_y0; y < in_h; y++) {
       if (!has_alpha) {
-        memcpy(out_p + out_x0 + (out_y0 + y - in_y0) * out_stride,
-               in_p + in_x0 + y * in_stride,
-               in_w);
+        memcpy(out_row, in_row, copy_w);
       }
       else {
-        for (uint32_t x = in_x0; x < in_w; x++) {
-          uint8_t* outptr = &out_p[out_x0 + (out_y0 + y - in_y0) * out_stride + x];
-          uint8_t in_val = in_p[in_x0 + y * in_stride + x];
-          uint8_t alpha_val = alpha_p[in_x0 + y * alpha_stride + x];
+        const uint8_t* alpha_row = alpha_p + in_x0 + static_cast<size_t>(in_y0 + y) * alpha_stride;
 
-          *outptr = (uint8_t) ((in_val * alpha_val + *outptr * (255 - alpha_val)) / 255);
+        for (uint32_t x = 0; x < copy_w; x++) {
+          out_row[x] = static_cast<uint8_t>((in_row[x] * alpha_row[x] + out_row[x] * (255 - alpha_row[x])) / 255);
         }
       }
     }
