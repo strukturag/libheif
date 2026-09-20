@@ -1172,6 +1172,18 @@ static std::shared_ptr<HeifPixelImage> make_ycbcr_alpha_image(heif_chroma chroma
   return img;
 }
 
+static std::shared_ptr<HeifPixelImage> make_mono_alpha_image(uint32_t width, uint32_t height,
+                                                             int bpp, uint16_t luma, uint16_t alpha,
+                                                             const nclx_profile& nclx)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
+  img->fill_new_channel(heif_channel_Y, luma, width, height, bpp, nullptr);
+  img->fill_new_channel(heif_channel_Alpha, alpha, width, height, bpp, nullptr);
+  img->set_color_profile_nclx(nclx);
+  return img;
+}
+
 // The operator computes (p * a + bkg * (alpha_max - a)) >> bpp_alpha. With neutral chroma
 // and a full-range BT.601 matrix, the RGB gray level equals the luma, so the composited
 // luma is predictable up to the rounding of the two matrix conversions.
@@ -1300,29 +1312,124 @@ TEST_CASE("Alpha compositing into a YCbCr or monochrome target", "[heif_image]")
     CHECK(std::abs(p[2] - expected) <= 2);
   }
 
+  // A luma-only image is composited directly on its Y plane against the BT.601 luma of the
+  // background colour (there is no RGB to monochrome operator for the round trip the colour
+  // path takes). Nothing but integer arithmetic is involved, so the results are exact.
+
   SECTION("8-bit monochrome -> monochrome with a solid background") {
-    // The crash also covered a monochrome target (bits_per_pixel_R/G/B are 0 there too).
-    // Compositing a monochrome image is not actually supported: the operator converts
-    // the input to RGB, composites, and has no operator to convert back to monochrome,
-    // so the request fails with Unsupported_color_conversion (unchanged from v1.23.4).
-    // Pin that it declines cleanly instead of crashing; if monochrome compositing is
-    // implemented, replace the error check by a check of the composited luma.
-    auto img = std::make_shared<HeifPixelImage>();
-    img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
-    img->fill_new_channel(heif_channel_Y, 100, width, height, 8, nullptr);
-    img->fill_new_channel(heif_channel_Alpha, 128, width, height, 8, nullptr);
-    img->set_color_profile_nclx(nclx);
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
 
     auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
                                      nclx, 0, options, &options_ext,
                                      heif_get_disabled_security_limits());
-    if (result) {
-      CHECK(!(*result)->has_channel(heif_channel_Alpha));
-    }
-    else {
-      CHECK(result.error().error_code == heif_error_Unsupported_feature);
-      CHECK(result.error().sub_error_code == heif_suberror_Unsupported_color_conversion);
-    }
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_colorspace() == heif_colorspace_monochrome);
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 8);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(p_y[0] == expected);
+    CHECK(p_y[(height - 1) * stride + (width - 1)] == expected);
+  }
+
+  SECTION("10-bit monochrome -> monochrome (16-bit operator)") {
+    auto img = make_mono_alpha_image(width, height, 10, 400, 512, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 10);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+    const uint16_t* y16 = reinterpret_cast<const uint16_t*>(p_y);
+
+    int expected = expected_composited_luma(400, 512, 1023, 10);
+    CHECK(y16[0] == expected);
+    CHECK(y16[(height - 1) * (stride / 2) + (width - 1)] == expected);
+  }
+
+  SECTION("8-bit monochrome -> interleaved RGB") {
+    // The planner flattens the monochrome image first (cheapest) and converts afterwards.
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_chroma_format() == heif_chroma_interleaved_RGB);
+
+    size_t stride;
+    const uint8_t* p = out->get_channel_memory(heif_channel_interleaved, &stride);
+    REQUIRE(p != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(p[0] == expected);
+    CHECK(p[1] == expected);
+    CHECK(p[2] == expected);
+  }
+
+  SECTION("8-bit monochrome with a checkerboard") {
+    heif_color_conversion_options_ext checker = options_ext;
+    checker.alpha_composition_mode = heif_alpha_composition_mode_checkerboard;
+    checker.secondary_background_red = 0;
+    checker.secondary_background_green = 0;
+    checker.secondary_background_blue = 0;
+    checker.checkerboard_square_size = 8;
+
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &checker,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    // parity = (x/8 + y/8) % 2 selects the secondary (black) square at (0,0) and the
+    // primary (white) square at (8,0).
+    CHECK(p_y[0] == expected_composited_luma(100, 128, 0, 8));
+    CHECK(p_y[8] == expected_composited_luma(100, 128, 255, 8));
+  }
+
+  SECTION("8-bit monochrome with a coloured background uses its BT.601 luma") {
+    heif_color_conversion_options_ext red = options_ext;
+    red.background_red = 0xFFFF;
+    red.background_green = 0;
+    red.background_blue = 0;
+
+    // Fully transparent, so the output is the background's luma: 0.299 * 65535 = 19595
+    // as a 16-bit value, 76 at 8 bits.
+    auto img = make_mono_alpha_image(width, height, 8, 100, 0, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &red,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+    CHECK(p_y[0] == expected_composited_luma(100, 0, 76, 8));
   }
 }
 
