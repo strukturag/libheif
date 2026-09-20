@@ -38,26 +38,27 @@ void writevec(uint8_t* data, size_t& idx, I value, int len)
 }
 
 
+// Read a two's complement field of 'len' (2 or 4) bytes.
+// Note: the former implementation complemented all 32 bits of the loaded value,
+// which is only correct for 4-byte fields. A negative 2-byte offset such as -640
+// (0xFD80) came out as about -2^31, so the overlay image was placed far outside
+// the canvas and silently skipped (conformance files C019 and C021).
 static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int len)
 {
-  const uint32_t high_bit = UINT32_C(0x80) << ((len - 1) * 8);
+  assert(len == 2 || len == 4);
 
   uint32_t val = 0;
-  while (len--) {
+  for (int i = 0; i < len; i++) {
     val <<= 8;
     val |= data[ptr++];
   }
 
-  bool negative = (val & high_bit) != 0;
-
-  if (negative) {
-    return -static_cast<int32_t>((~val) & 0x7fffffff) -1;
+  if (len == 2) {
+    return static_cast<int16_t>(val);
   }
   else {
     return static_cast<int32_t>(val);
   }
-
-  return val;
 }
 
 
