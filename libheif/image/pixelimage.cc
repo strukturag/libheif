@@ -979,6 +979,10 @@ Error HeifPixelImage::check_plane_layout() const
         return layout_error("Chroma format is not valid for a filter-array image");
       }
       colour_planes = {heif_channel_filter_array};
+      // A filter array with an alpha plane is representable in 'unci', but nothing produces or
+      // consumes it yet: the uncompressed decoder only recognizes the filter-array component on
+      // its own, Op_bayer_bilinear_to_RGB24_32 carries no alpha, and Op_drop_alpha_plane does not
+      // copy a filter-array plane. Once those handle it, this may be allowed.
       separate_alpha_allowed = false;
       break;
 
