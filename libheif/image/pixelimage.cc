@@ -30,6 +30,8 @@
 #include <limits>
 #include <algorithm>
 #include <map>
+#include <string>
+#include <sstream>
 #include <color-conversion/colorconversion.h>
 
 #include "codecs/uncompressed/unc_types.h"
