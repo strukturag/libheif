@@ -263,6 +263,9 @@ typedef enum heif_suberror_code
 
   heif_suberror_Unsupported_track_type = 3008,
 
+  // A lossy tone mapping from HDR to SDR occured
+  heif_suberror_Lossy_Tonemapping = 3009,
+
   // --- Encoder_plugin_error ---
 
   heif_suberror_Unsupported_bit_depth = 4000,
