@@ -268,18 +268,46 @@ void ColorState::set_color_bits_per_pixel(int bpp)
 }
 
 
-int ColorState::get_color_bits_per_pixel() const
+int ColorState::get_uniform_color_bits_per_pixel() const
 {
-  if (bits_per_pixel_Y != 0) {
-    return bits_per_pixel_Y;
+  int uniform = 0;
+
+  for (int bpp : {bits_per_pixel_R, bits_per_pixel_G, bits_per_pixel_B,
+                  bits_per_pixel_Y, bits_per_pixel_Cb, bits_per_pixel_Cr,
+                  bits_per_pixel_filter_array}) {
+    if (bpp == 0) {
+      continue; // plane does not exist
+    }
+
+    if (uniform == 0) {
+      uniform = bpp;
+    }
+    else if (bpp != uniform) {
+      return 0;
+    }
   }
-  if (bits_per_pixel_R != 0) {
-    return bits_per_pixel_R;
+
+  return uniform;
+}
+
+
+int ColorState::get_uniform_bits_per_pixel() const
+{
+  int uniform = get_uniform_color_bits_per_pixel();
+
+  if (uniform != 0 && bits_per_pixel_alpha != 0 && bits_per_pixel_alpha != uniform) {
+    return 0;
   }
-  if (bits_per_pixel_filter_array != 0) {
-    return bits_per_pixel_filter_array;
-  }
-  return 0;
+
+  return uniform;
+}
+
+
+int ColorState::get_max_color_bits_per_pixel() const
+{
+  return std::max({bits_per_pixel_R, bits_per_pixel_G, bits_per_pixel_B,
+                   bits_per_pixel_Y, bits_per_pixel_Cb, bits_per_pixel_Cr,
+                   bits_per_pixel_filter_array});
 }
 
 
@@ -309,20 +337,6 @@ static bool all_existing_planes_satisfy(const ColorState& s, bool include_alpha,
   }
 
   return true;
-}
-
-
-bool ColorState::color_channels_have_same_bpp() const
-{
-  int ref = get_color_bits_per_pixel();
-  return all_existing_planes_satisfy(*this, false, [ref](int bpp) { return bpp == ref; });
-}
-
-
-bool ColorState::all_channels_have_same_bpp() const
-{
-  int ref = get_color_bits_per_pixel();
-  return all_existing_planes_satisfy(*this, true, [ref](int bpp) { return bpp == ref; });
 }
 
 
@@ -835,6 +849,14 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     output_color_bpp = 8;
   }
 
+  // The depth that the input's colour planes share, or 0 if they differ ('unci' declares a
+  // depth per component). Where a single input depth is needed below and the planes do not
+  // agree, the widest plane is used: that is the lossless choice, and a conversion that cannot
+  // widen the narrower planes to it is declined by the operators, instead of one plane's depth
+  // being picked silently.
+  int uniform_input_bpp = input_state.get_uniform_color_bits_per_pixel();
+  int input_color_bpp = (uniform_input_bpp != 0) ? uniform_input_bpp : input_state.get_max_color_bits_per_pixel();
+
   // interleaved RRGGBB formats have to be >8-bit.
   // If we don't know a target bit-depth, use 10 bit.
 
@@ -842,28 +864,34 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
        target_chroma == heif_chroma_interleaved_RRGGBB_BE ||
        target_chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
        target_chroma == heif_chroma_interleaved_RRGGBBAA_BE) &&
-      (output_color_bpp != 0 ? output_color_bpp : input_state.get_color_bits_per_pixel()) <= 8) {
+      (output_color_bpp != 0 ? output_color_bpp : input_color_bpp) <= 8) {
     output_color_bpp = 10;
   }
 
   bool same_plane_layout = (target_colorspace == input_state.colorspace &&
                             target_chroma == input_state.chroma);
 
+  int output_alpha_bpp;
+
   if (output_color_bpp == 0 && same_plane_layout) {
-    // No depth change requested and the plane layout stays the same: keep the input
-    // planes exactly as they are, even when their depths differ from each other.
-    output_color_bpp = input_state.get_color_bits_per_pixel();
+    // No depth change requested and the plane layout stays the same: keep the colour planes
+    // exactly as they are, even when their depths differ from each other. The alpha plane is
+    // brought to the colour depth when there is one (the operators expect them to agree);
+    // when the colour planes differ, it is kept as it is, too.
+    output_alpha_bpp = (uniform_input_bpp != 0) ? uniform_input_bpp : input_state.bits_per_pixel_alpha;
   }
   else {
     if (output_color_bpp == 0) {
-      output_color_bpp = input_state.get_color_bits_per_pixel();
+      output_color_bpp = input_color_bpp;
     }
 
     output_state.set_color_bits_per_pixel(output_color_bpp);
+
+    // Output alpha should always match the output color BPP
+    output_alpha_bpp = output_color_bpp;
   }
 
-  // Output alpha should always match the output color BPP
-  output_state.bits_per_pixel_alpha = output_has_alpha ? output_color_bpp : 0;
+  output_state.bits_per_pixel_alpha = output_has_alpha ? output_alpha_bpp : 0;
 
   ColorConversionPipeline pipeline;
   bool success = pipeline.construct_pipeline(input_state, output_state, options, *options_ext);

@@ -143,7 +143,10 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
     return {};
   }
 
-  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.get_color_bits_per_pixel()) {
+  // The colour planes are converted to RGB at one common depth and the alpha plane is
+  // composited at that depth, so all of them have to agree (0 = the colour planes differ).
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (color_bpp == 0 || (input_state.has_alpha() && input_state.bits_per_pixel_alpha != color_bpp)) {
     return {};
   }
 
@@ -188,6 +191,16 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
 {
   std::shared_ptr<const HeifPixelImage> input = input_raw;
 
+  // The colour planes are converted at, and the alpha plane is composited at, one common depth.
+  // state_after_conversion() only offers this operation when the planes agree; a direct caller
+  // may not have checked.
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (color_bpp == 0) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion,
+                 "Op_flatten_alpha_plane: colour planes with differing bit depths"};
+  }
+
   heif_color_conversion_options_ext options_ext_skip_alpha = options_ext;
   options_ext_skip_alpha.alpha_composition_mode = heif_alpha_composition_mode_none;
 
@@ -196,7 +209,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                                    heif_colorspace_RGB,
                                                                                    heif_chroma_444,
                                                                                    input_state.nclx,
-                                                                                   input_state.get_color_bits_per_pixel(),
+                                                                                   color_bpp,
                                                                                    options, &options_ext_skip_alpha,
                                                                                    limits);
     if (!convInput) {
@@ -332,7 +345,7 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                                               input_raw->get_colorspace(),
                                                                               input_raw->get_chroma_format(),
                                                                               input_state.nclx,
-                                                                              input_state.get_color_bits_per_pixel(),
+                                                                              color_bpp,
                                                                               options, &options_ext_skip_alpha,
                                                                               limits);
     if (!convOutput) {
@@ -357,9 +370,13 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
                                                   const heif_color_conversion_options& options,
                                                   const heif_color_conversion_options_ext& options_ext) const
 {
-  // Only applicable when alpha BPP differs from color BPP
+  // Only applicable when the colour planes share one depth and the alpha plane differs from
+  // it. With mixed colour depths there is no depth to bring the alpha plane to; such images
+  // are equalized, alpha included, by Op_to_sdr_planes instead.
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
   if (!input_state.has_alpha() ||
-      input_state.bits_per_pixel_alpha == input_state.get_color_bits_per_pixel()) {
+      color_bpp == 0 ||
+      input_state.bits_per_pixel_alpha == color_bpp) {
     return {};
   }
 
@@ -374,14 +391,14 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
   // Rewrites the alpha plane from its own bit depth to the colour bit depth, so both
   // ends have to be accessible as 8- or 16-bit samples.
   if (input_state.get_bytes_per_sample(heif_channel_Alpha) > 2 ||
-      bytes_per_sample_for_bit_depth(input_state.get_color_bits_per_pixel()) > 2) {
+      bytes_per_sample_for_bit_depth(color_bpp) > 2) {
     return {};
   }
 
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state = input_state;
-  output_state.bits_per_pixel_alpha = input_state.get_color_bits_per_pixel();
+  output_state.bits_per_pixel_alpha = color_bpp;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -416,7 +433,13 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   int input_alpha_bpp = input->get_bits_per_pixel(heif_channel_Alpha);
-  int target_bpp = input_state.get_color_bits_per_pixel();
+  int target_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (target_bpp == 0) {
+    // Only reachable by a direct caller; state_after_conversion() declines mixed colour depths.
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion,
+                 "Op_adjust_alpha_bit_depth: colour planes with differing bit depths"};
+  }
 
   uint32_t alpha_width = input->get_width(heif_channel_Alpha);
   uint32_t alpha_height = input->get_height(heif_channel_Alpha);

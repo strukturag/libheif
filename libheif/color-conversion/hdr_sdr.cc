@@ -28,16 +28,16 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
                                          const heif_color_conversion_options& options,
                                          const heif_color_conversion_options_ext& options_ext) const
 {
-  if ((input_state.chroma != heif_chroma_monochrome &&
-       input_state.chroma != heif_chroma_420 &&
-       input_state.chroma != heif_chroma_422 &&
-       input_state.chroma != heif_chroma_444) ||
-      input_state.get_color_bits_per_pixel() != 8) { // TODO: support for <8 bpp
+  if (input_state.chroma != heif_chroma_monochrome &&
+      input_state.chroma != heif_chroma_420 &&
+      input_state.chroma != heif_chroma_422 &&
+      input_state.chroma != heif_chroma_444) {
     return {};
   }
 
-  // Every plane, alpha included, is widened from 8 bits, so all of them must be 8 bits.
-  if (!input_state.all_channels_have_same_bpp()) {
+  // Every plane, alpha included, is widened from 8 bits, so all of them must be 8 bits
+  // (get_uniform_bits_per_pixel() is 0 when the planes differ).
+  if (input_state.get_uniform_bits_per_pixel() != 8) { // TODO: support for <8 bpp
     return {};
   }
 
@@ -46,8 +46,8 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // only holds for target bit depths m in (8, 16]; a larger m would both make
   // the right shift exponent negative (undefined behavior) and exceed the range
   // of the uint16_t output plane. Only offer the conversion within that range.
-  if (target_state.get_color_bits_per_pixel() <= 8 ||
-      target_state.get_color_bits_per_pixel() > 16) {
+  int target_bpp = target_state.get_uniform_color_bits_per_pixel(); // 0 if the target planes differ
+  if (target_bpp <= 8 || target_bpp > 16) {
     return {};
   }
 
@@ -58,9 +58,9 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // --- increase bit depth
 
   output_state = input_state;
-  output_state.set_color_bits_per_pixel(target_state.get_color_bits_per_pixel());
+  output_state.set_color_bits_per_pixel(target_bpp);
   if (output_state.has_alpha()) {
-    output_state.bits_per_pixel_alpha = target_state.get_color_bits_per_pixel();
+    output_state.bits_per_pixel_alpha = target_bpp;
   }
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -94,12 +94,12 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
     if (input->has_channel(channel)) {
       uint32_t width = input->get_width(channel);
       uint32_t height = input->get_height(channel);
-      if (auto err = outimg->add_channel(channel, width, height, target_state.get_color_bits_per_pixel(), limits)) {
+      if (auto err = outimg->add_channel(channel, width, height, target_state.get_uniform_color_bits_per_pixel(), limits)) {
         return err;
       }
 
       int input_bits = input->get_bits_per_pixel(channel);
-      int output_bits = target_state.get_color_bits_per_pixel();
+      int output_bits = target_state.get_uniform_color_bits_per_pixel();
 
       // Guard against unsupported bit-depth combinations. state_after_conversion()
       // only offers this operation for 8-bit input and 8 < output <= 16, but a
@@ -143,15 +143,22 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
                                          const heif_color_conversion_options& options,
                                          const heif_color_conversion_options_ext& options_ext) const
 {
-  if ((input_state.chroma != heif_chroma_monochrome &&
-       input_state.chroma != heif_chroma_420 &&
-       input_state.chroma != heif_chroma_422 &&
-       input_state.chroma != heif_chroma_444) ||
-      input_state.get_color_bits_per_pixel() == 8) {
+  if (input_state.chroma != heif_chroma_monochrome &&
+      input_state.chroma != heif_chroma_420 &&
+      input_state.chroma != heif_chroma_422 &&
+      input_state.chroma != heif_chroma_444) {
     return {};
   }
 
-  if (target_state.get_color_bits_per_pixel() != 8) {
+  // Nothing to do when every colour plane is already 8 bits. The planes may differ from each
+  // other ('unci' declares a depth per component); the loop below handles each plane on its
+  // own, so a mixed image such as 8/8/16 is equalized to 8/8/8 here. For such an image
+  // get_uniform_color_bits_per_pixel() is 0, which does not match the 8, so it is offered.
+  if (input_state.get_uniform_color_bits_per_pixel() == 8) {
+    return {};
+  }
+
+  if (target_state.get_uniform_color_bits_per_pixel() != 8) {
     return {};
   }
 

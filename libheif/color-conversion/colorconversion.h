@@ -70,19 +70,28 @@ struct ColorState
   // Call this after 'colorspace' and 'chroma' have been set.
   void set_color_bits_per_pixel(int bpp);
 
-  // Bit depth of the first colour plane (Y for YCbCr/monochrome, R for RGB, or the filter array).
-  // This only characterizes the whole image when all colour planes have the same depth,
-  // see color_channels_have_same_bpp().
-  int get_color_bits_per_pixel() const;
+  // The bit depth shared by all existing colour planes (R/G/B, Y/Cb/Cr, or the filter array).
+  // Returns 0 if the colour planes have different depths or if there is no colour plane.
+  // There is deliberately no accessor for "the" depth of an image whose planes differ: a
+  // caller that needs one depth for all planes has to handle the 0 (usually by declining
+  // the conversion) and cannot silently pick up the depth of just one plane.
+  int get_uniform_color_bits_per_pixel() const;
+
+  // Like get_uniform_color_bits_per_pixel(), but an alpha plane, if present, must have that
+  // same depth too.
+  int get_uniform_bits_per_pixel() const;
+
+  // Maximum bit depth over all existing colour planes (alpha excluded), 0 if there is none.
+  int get_max_color_bits_per_pixel() const;
 
   // Maximum bit depth over all existing planes, including alpha.
   int get_max_bits_per_pixel() const;
 
   // True if all existing colour planes (R/G/B or Y/Cb/Cr) have the same bit depth.
-  bool color_channels_have_same_bpp() const;
+  bool color_channels_have_same_bpp() const { return get_uniform_color_bits_per_pixel() != 0; }
 
   // True if all existing planes, including alpha, have the same bit depth.
-  bool all_channels_have_same_bpp() const;
+  bool all_channels_have_same_bpp() const { return get_uniform_bits_per_pixel() != 0; }
 
   // Number of bytes HeifPixelImage stores per sample of the given plane (1, 2, 4, 8 or 16),
   // 0 if the plane does not exist. Operators access samples through uint8_t or uint16_t

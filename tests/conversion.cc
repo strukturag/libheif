@@ -353,7 +353,7 @@ void TestConversion(const std::string& test_name, ColorState input_state,
     bool expect_alpha_max = !target_state.has_alpha();
     bool expect_lossless =
         input_state.colorspace == target_state.colorspace &&
-        input_state.get_color_bits_per_pixel() == target_state.get_color_bits_per_pixel() &&
+        input_state.get_uniform_color_bits_per_pixel() == target_state.get_uniform_color_bits_per_pixel() &&
         (input_state.chroma == target_state.chroma ||
          (input_state.chroma != heif_chroma_420 &&
           input_state.chroma != heif_chroma_422 &&
@@ -1323,5 +1323,161 @@ TEST_CASE("Alpha compositing into a YCbCr or monochrome target", "[heif_image]")
       CHECK(result.error().error_code == heif_error_Unsupported_feature);
       CHECK(result.error().sub_error_code == heif_suberror_Unsupported_color_conversion);
     }
+  }
+}
+
+
+// ColorState only reports one colour depth when all colour planes agree. The former accessor
+// returned the depth of the first colour plane, which made planning decisions depend on the
+// order of the planes in an image with mixed depths ('unci' declares a depth per component).
+
+static const int kMixedRgbDepths[3][3] = {{8, 8, 16}, {16, 8, 8}, {8, 16, 8}};
+
+TEST_CASE("ColorState uniform bit depth accessors", "[heif_image]")
+{
+  SECTION("uniform planes report their depth") {
+    ColorState rgb(heif_colorspace_RGB, heif_chroma_444, true, 10);
+    CHECK(rgb.get_uniform_color_bits_per_pixel() == 10);
+    CHECK(rgb.get_uniform_bits_per_pixel() == 10);
+    CHECK(rgb.get_max_color_bits_per_pixel() == 10);
+    CHECK(rgb.color_channels_have_same_bpp());
+    CHECK(rgb.all_channels_have_same_bpp());
+
+    ColorState ycc(heif_colorspace_YCbCr, heif_chroma_420, false, 12);
+    CHECK(ycc.get_uniform_color_bits_per_pixel() == 12);
+    CHECK(ycc.get_uniform_bits_per_pixel() == 12);
+
+    ColorState mono(heif_colorspace_monochrome, heif_chroma_monochrome, false, 8);
+    CHECK(mono.get_uniform_color_bits_per_pixel() == 8);
+  }
+
+  SECTION("mixed colour planes report 0 in every plane order") {
+    for (const int* d : kMixedRgbDepths) {
+      INFO("R/G/B = " << d[0] << "/" << d[1] << "/" << d[2]);
+      ColorState s;
+      s.colorspace = heif_colorspace_RGB;
+      s.chroma = heif_chroma_444;
+      s.bits_per_pixel_R = d[0];
+      s.bits_per_pixel_G = d[1];
+      s.bits_per_pixel_B = d[2];
+      CHECK(s.get_uniform_color_bits_per_pixel() == 0);
+      CHECK(s.get_uniform_bits_per_pixel() == 0);
+      CHECK(s.get_max_color_bits_per_pixel() == 16);
+      CHECK_FALSE(s.color_channels_have_same_bpp());
+      CHECK_FALSE(s.all_channels_have_same_bpp());
+    }
+
+    ColorState ycc(heif_colorspace_YCbCr, heif_chroma_444, false, 12);
+    ycc.bits_per_pixel_Cr = 8;
+    CHECK(ycc.get_uniform_color_bits_per_pixel() == 0);
+    CHECK(ycc.get_max_color_bits_per_pixel() == 12);
+  }
+
+  SECTION("a differing alpha plane only affects the all-planes variant") {
+    ColorState s(heif_colorspace_RGB, heif_chroma_444, true, 8);
+    s.bits_per_pixel_alpha = 16;
+    CHECK(s.get_uniform_color_bits_per_pixel() == 8);
+    CHECK(s.get_uniform_bits_per_pixel() == 0);
+    CHECK(s.get_max_color_bits_per_pixel() == 8);
+    CHECK(s.get_max_bits_per_pixel() == 16);
+    CHECK(s.color_channels_have_same_bpp());
+    CHECK_FALSE(s.all_channels_have_same_bpp());
+  }
+
+  SECTION("no colour plane") {
+    ColorState s;
+    CHECK(s.get_uniform_color_bits_per_pixel() == 0);
+    CHECK(s.get_uniform_bits_per_pixel() == 0);
+    CHECK(s.get_max_color_bits_per_pixel() == 0);
+  }
+}
+
+
+// Op_to_sdr_planes lowers every plane to 8 bits on its own, so it can equalize an image whose
+// colour planes have different depths. It used to be offered only when the first colour plane
+// was wider than 8 bits, so 8/8/16 failed with "unsupported color conversion" while the same
+// planes in the order 16/8/8 converted fine.
+
+// 100 at 8 bits; at wider depths the same value with a few extra low bits, so that the shift
+// down to 8 bits has something to drop.
+static uint16_t sample_at_depth(int bits)
+{
+  return static_cast<uint16_t>((100u << (bits - 8)) | (bits > 8 ? 0x5u : 0u));
+}
+
+static std::shared_ptr<HeifPixelImage> make_rgb_planar(uint32_t width, uint32_t height,
+                                                       int r_bits, int g_bits, int b_bits)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
+  img->fill_new_channel(heif_channel_R, sample_at_depth(r_bits), width, height, r_bits, nullptr);
+  img->fill_new_channel(heif_channel_G, sample_at_depth(g_bits), width, height, g_bits, nullptr);
+  img->fill_new_channel(heif_channel_B, sample_at_depth(b_bits), width, height, b_bits, nullptr);
+  return img;
+}
+
+TEST_CASE("Op_to_sdr_planes equalizes mixed colour depths", "[heif_image]")
+{
+  heif_color_conversion_options options{};
+  const uint32_t width = 8;
+  const uint32_t height = 4;
+
+  SECTION("mixed planes -> 8-bit interleaved RGB, in every plane order") {
+    for (const int* d : kMixedRgbDepths) {
+      INFO("R/G/B = " << d[0] << "/" << d[1] << "/" << d[2]);
+      auto img = make_rgb_planar(width, height, d[0], d[1], d[2]);
+
+      auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                                       nclx_profile::defaults(), 0, options, nullptr,
+                                       heif_get_disabled_security_limits());
+      REQUIRE(result);
+
+      size_t stride;
+      const uint8_t* p = (*result)->get_channel_memory(heif_channel_interleaved, &stride);
+      REQUIRE(p != nullptr);
+      CHECK(p[0] == 100);
+      CHECK(p[1] == 100);
+      CHECK(p[2] == 100);
+      CHECK(p[(height - 1) * stride + (width - 1) * 3 + 2] == 100);
+    }
+  }
+
+  SECTION("mixed planes -> 8-bit planar RGB (requested depth 8)") {
+    auto img = make_rgb_planar(width, height, 8, 8, 16);
+
+    auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444,
+                                     nclx_profile::defaults(), 8, options, nullptr,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+
+    for (heif_channel ch : {heif_channel_R, heif_channel_G, heif_channel_B}) {
+      CHECK((*result)->get_bits_per_pixel(ch) == 8);
+      size_t stride;
+      const uint8_t* p = (*result)->get_channel_memory(ch, &stride);
+      REQUIRE(p != nullptr);
+      CHECK(p[0] == 100);
+    }
+  }
+
+  SECTION("offered for mixed input, declined for uniform 8-bit input") {
+    std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+        options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+    Op_to_sdr_planes op;
+    ColorState target(heif_colorspace_RGB, heif_chroma_444, false, 8);
+
+    ColorState mixed;
+    mixed.colorspace = heif_colorspace_RGB;
+    mixed.chroma = heif_chroma_444;
+    mixed.bits_per_pixel_R = 8;
+    mixed.bits_per_pixel_G = 8;
+    mixed.bits_per_pixel_B = 16;
+
+    auto states = op.state_after_conversion(mixed, target, options, *options_ext);
+    REQUIRE(states.size() == 1);
+    CHECK(states[0].color_state.get_uniform_color_bits_per_pixel() == 8);
+
+    ColorState uniform8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+    CHECK(op.state_after_conversion(uniform8, target, options, *options_ext).empty());
   }
 }
