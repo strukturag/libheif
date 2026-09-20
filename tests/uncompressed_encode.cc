@@ -1130,15 +1130,18 @@ TEST_CASE("Add tile rejects images that do not match the unci configuration")
   };
 
   SECTION("component plane larger than the tile") {
-    heif_image *prototype = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, TW / 2, TH / 2, TW / 2, TH / 2);
-    // Declares the correct tile size, but its Cb plane is far larger than the
-    // subsampled size the encoder allocates for.
-    heif_image *tile = createImage_YCbCr_customPlanes(TW, TH, heif_chroma_420, 200, 200, TW / 2, TH / 2);
+    // A tile whose Cb plane is far larger than the subsampled size can no longer be
+    // built: heif_image_add_plane() now rejects a Cb/Cr plane that is not the
+    // chroma-subsampled size of the image (GHSA-j2rv-58fh-w8pw), so such a tile can
+    // never reach the encoder's per-tile guard. Verify the rejection at construction.
+    heif_image *tile;
+    REQUIRE(heif_image_create(TW, TH, heif_colorspace_YCbCr, heif_chroma_420, &tile).code == heif_error_Ok);
+    REQUIRE(heif_image_add_plane(tile, heif_channel_Y, TW, TH, 8).code == heif_error_Ok);
 
-    REQUIRE(add_tile(prototype, tile).code != heif_error_Ok);
+    // Cb should be TW/2 x TH/2; 200 x 200 is far too large.
+    REQUIRE(heif_image_add_plane(tile, heif_channel_Cb, 200, 200, 8).code != heif_error_Ok);
 
     heif_image_release(tile);
-    heif_image_release(prototype);
   }
 
   SECTION("chroma format differs from the prototype") {

@@ -381,6 +381,28 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
             "Use an interleaved format with alpha (e.g. heif_chroma_interleaved_RGBA) instead."};
   }
 
+  // A Cb/Cr plane must have exactly the chroma-subsampled size of the logical image
+  // (round_up), the invariant has_standard_plane_sizes() and check_plane_layout()
+  // enforce elsewhere. Building one at a different size makes the plane's actual
+  // allocation disagree with the size that code derives from the logical image
+  // dimensions, and that mismatch is a memory-safety hazard: an oversized plane
+  // fooled the per-row fill in extend_to_size_with_zero() into an unsigned underflow
+  // and a ~4 GB out-of-bounds write (GHSA-j2rv-58fh-w8pw), an undersized one caused
+  // out-of-bounds reads during RGB conversion (issue #1796). Reject the mismatch at
+  // construction so the inconsistent image cannot be built in the first place. Only
+  // Cb/Cr are constrained; alpha, depth, disparity and other auxiliary planes may
+  // legitimately have a size that differs from the colour planes.
+  if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
+    uint32_t expected_width, expected_height;
+    get_subsampled_size(m_width, m_height, channel, m_chroma, &expected_width, &expected_height);
+
+    if (width != expected_width || height != expected_height) {
+      return {heif_error_Usage_error,
+              heif_suberror_Invalid_parameter_value,
+              "A Cb/Cr plane must have the chroma-subsampled size of the image."};
+    }
+  }
+
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
   if (m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
@@ -671,6 +693,27 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
   // Nothing to do when the target already matches the current size.
   if (width == m_width && height == m_height) {
     return Error::Ok;
+  }
+
+  // Preflight: no plane may shrink. Even when the logical target is not smaller
+  // than the image, get_subsampled_size() can map it to a per-component size that
+  // is smaller than a plane's current size, e.g. a Cb/Cr plane that was added
+  // larger than the target's subsampled chroma extent. The per-row right-edge fill
+  // below would then compute its length as (subsampled_width - old_width), underflow
+  // uint32_t, and write past the end of the plane. Validate every plane before
+  // touching any so a rejected request cannot leave the image partially modified
+  // (GHSA-j2rv-58fh-w8pw, a follow-up to GHSA-hqc2-cx5m-g6ff whose logical-size
+  // guard above does not cover an individually oversized chroma plane).
+  for (const auto& component : m_storage) {
+    uint32_t subsampled_width, subsampled_height;
+    get_subsampled_size(width, height, component.m_channel, m_chroma,
+                        &subsampled_width, &subsampled_height);
+
+    if (subsampled_width < component.m_width || subsampled_height < component.m_height) {
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Invalid_parameter_value,
+                   "Cannot extend an image to a size smaller than an existing plane."};
+    }
   }
 
   for (auto& component : m_storage) {

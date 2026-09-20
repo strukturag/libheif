@@ -168,14 +168,22 @@ TEST_CASE("check_plane_layout rejects non-canonical layouts")
   }
 
   SECTION("chroma plane with the wrong size") {
+    // add_channel() now refuses to build a Cb/Cr plane whose size is not the
+    // chroma-subsampled size of the image, so the inconsistent state that
+    // check_plane_layout()'s "Cb plane has size" branch used to catch can no
+    // longer be constructed. Verify the rejection happens at construction.
     auto img = std::make_shared<HeifPixelImage>();
     img->create(W, H, heif_colorspace_YCbCr, heif_chroma_420);
     REQUIRE(!img->add_channel(heif_channel_Y, W, H, 8, nullptr));
-    REQUIRE(!img->add_channel(heif_channel_Cb, W, H, 8, nullptr)); // should be W/2 x H/2
-    REQUIRE(!img->add_channel(heif_channel_Cr, W / 2, H / 2, 8, nullptr));
-    Error err = img->check_plane_layout();
+
+    Error err = img->add_channel(heif_channel_Cb, W, H, 8, nullptr); // should be W/2 x H/2
     REQUIRE(err);
-    CHECK(mentions(err, "Cb plane has size"));
+    CHECK(err.error_code == heif_error_Usage_error);
+
+    // The correctly-sized planes are still accepted.
+    REQUIRE(!img->add_channel(heif_channel_Cb, W / 2, H / 2, 8, nullptr));
+    REQUIRE(!img->add_channel(heif_channel_Cr, W / 2, H / 2, 8, nullptr));
+    CHECK(!img->check_plane_layout());
   }
 
   SECTION("alpha next to a filter array") {
