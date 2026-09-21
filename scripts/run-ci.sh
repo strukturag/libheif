@@ -156,6 +156,20 @@ CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_COMPILE_WARNING_AS_ERROR=1"
 # compilation mode
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
 
+# Run the test suite with the libstdc++ hardening assertions (container bounds checks, access
+# to a disengaged std::optional, ...). They are independent of NDEBUG, so they also fire in
+# this Release build. Distributions like Fedora build with this flag; that is how the crash
+# fixed in #1907 was found.
+# With the assertions enabled, GCC 13 at -O3 reports bogus -Wstringop-overflow errors for
+# std::vector range inserts all over the tree ("writing N bytes into a region of size 0" in
+# stl_algobase.h). The same build is warning-free without the assertions, so keep that
+# diagnostic visible but non-fatal here.
+# Only the test job gets the flag: the other jobs run more compiler versions, which would each
+# need to be checked for further false positives under -Werror.
+if [ ! -z "$TESTS" ]; then
+    export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-D_GLIBCXX_ASSERTIONS -Wno-error=stringop-overflow"
+fi
+
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
