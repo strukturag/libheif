@@ -75,6 +75,17 @@ std::vector<uint8_t> make_spec(bool long_fields, const std::vector<uint32_t>& ra
   return s;
 }
 
+// Two's complement value of an 'nbits' wide field, computed with plain 64-bit
+// arithmetic. The implementation relies on the modular unsigned-to-signed
+// conversion that C++20 [conv.integral]/3 guarantees; the expectation here
+// deliberately does not, so a compiler that got that rule wrong would fail the
+// test instead of agreeing with the implementation.
+int64_t twos_complement(uint32_t v, int nbits)
+{
+  const int64_t range = int64_t{1} << nbits;
+  return (v >= range / 2) ? static_cast<int64_t>(v) - range : static_cast<int64_t>(v);
+}
+
 // Parse one overlay holding all 'values' as x offsets and their bitwise
 // complements as y offsets, and compare each decoded pair with the expected
 // two's complement interpretation. Using the complement for y makes a wrong
@@ -101,8 +112,9 @@ void check_offset_fields(bool long_fields, const std::vector<uint32_t>& values)
     const uint32_t v = values[i];
     const uint32_t v_compl = ~v & field_mask;
 
-    const int32_t expected_x = long_fields ? static_cast<int32_t>(v) : static_cast<int16_t>(v);
-    const int32_t expected_y = long_fields ? static_cast<int32_t>(v_compl) : static_cast<int16_t>(v_compl);
+    const int nbits = long_fields ? 32 : 16;
+    const int64_t expected_x = twos_complement(v, nbits);
+    const int64_t expected_y = twos_complement(v_compl, nbits);
 
     int32_t x = 0, y = 0;
     ovl.get_offset(i, &x, &y);
