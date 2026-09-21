@@ -106,6 +106,10 @@
 #include "plugins/decoder_openjpeg.h"
 #endif
 
+#if HAVE_JASPER_DECODER
+#include "plugins/decoder_jasper.h"
+#endif
+
 #include "plugins/encoder_mask.h"
 
 #if HAVE_OPENJPH_ENCODER
@@ -213,6 +217,10 @@ void register_default_plugins()
 
 #if HAVE_OPENJPEG_DECODER
   register_decoder(get_decoder_plugin_openjpeg());
+#endif
+
+#if HAVE_JASPER_DECODER
+  register_decoder(get_decoder_plugin_jasper());
 #endif
 
 #if HAVE_OPENJPH_ENCODER
