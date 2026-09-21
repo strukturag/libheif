@@ -42,6 +42,11 @@ extern "C"
 }
 
 
+// Plugins are compiled with LIBHEIF_EXPORTS, so on MSVC a reference to the exported
+// data object heif_error_success does not resolve against libheif (issue #1854).
+// Use a file-local success object instead.
+static const heif_error kSuccess = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 struct ffmpeg_decoder
 {
   // --- input data
@@ -198,7 +203,7 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
   }
 
 
-  return heif_error_success;
+  return kSuccess;
 }
 
 static heif_error ffmpeg_new_decoder(void** dec)
@@ -333,7 +338,7 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
 
   decoder->input_data.emplace_back(std::move(pkt));
 
-  return heif_error_success;
+  return kSuccess;
 }
 
 static heif_error ffmpeg_push_data(void *decoder_raw, const void *data, size_t size)
@@ -607,7 +612,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
                           av_frame->width, av_frame->height, shift, byte_swap);
     }
 
-    return heif_error_success;
+    return kSuccess;
   }
 
   heif_chroma chroma = ffmpeg_get_chroma_format(pix_fmt);
@@ -680,7 +685,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
                           w, h, shift, byte_swap);
     }
 
-    return heif_error_success;
+    return kSuccess;
   }
   else {
     const char* fmt_name = av_get_pix_fmt_name(static_cast<AVPixelFormat>(av_frame->format));
@@ -707,7 +712,7 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   heif_color_profile_nclx* nclx = NULL;
   int ret = 0;
 
-  heif_error err = heif_error_success;
+  heif_error err = kSuccess;
 
   if (!decoder->input_data.empty()) {
     uint8_t* parse_av_data = NULL;
