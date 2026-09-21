@@ -15,7 +15,7 @@ For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 libheif can be built with a subset of the supported codecs to keep the size and the number of dependencies low.
 Alternatively, the libheif codecs can also be built as separate plugins that can be installed and loaded dynamically when used.
 
-> **Project status (August 2026).** libheif and libde265 are maintained by a single independent developer with almost
+> **Project status (September 2026).** libheif and libde265 are maintained by a single independent developer with almost
 > no recurring funding, while 61 security advisories had to be investigated, fixed and released in 2026 alone.
 > If libheif is part of your product or service, please read [Funding](#funding) and [Commercial support](#commercial-support).
 > Security issues are reported as described in [SECURITY.md](SECURITY.md).
