@@ -525,19 +525,36 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
   config->framerate_num = framerate_num;
   config->framerate_denom = framerate_denom;
 
+  // Set the input format through config_parse() instead of writing config->input_format directly.
+  // kvazaar git master (since July 2026) keeps the encoder chroma format in separate kvz_config
+  // fields that default to 4:2:0 and are only updated by the "input-format" parser. A direct
+  // assignment leaves them at 4:2:0, and the encoder then dereferences the NULL chroma planes of
+  // a 4:0:0 input picture. Released kvazaar versions derive the chroma format from input_format,
+  // so the parser works for them as well. The parser also rejects the chroma formats a kvazaar
+  // build does not support (4:2:2 and 4:4:4 in released versions), which becomes an error here
+  // instead of an encoder running in a mode it was not built for.
+  const char* input_format;
   if (isGreyscale) {
-    config->input_format = KVZ_FORMAT_P400;
+    input_format = "P400";
   }
   else if (chroma == heif_chroma_420) {
-    config->input_format = KVZ_FORMAT_P420;
+    input_format = "P420";
   }
   else if (chroma == heif_chroma_422) {
-    config->input_format = KVZ_FORMAT_P422;
+    input_format = "P422";
   }
   else if (chroma == heif_chroma_444) {
-    config->input_format = KVZ_FORMAT_P444;
+    input_format = "P444";
   }
   else {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_image_type,
+      kError_unsupported_chroma
+    };
+  }
+
+  if (!api->config_parse(config, "input-format", input_format)) {
     return heif_error{
       heif_error_Encoder_plugin_error,
       heif_suberror_Unsupported_image_type,
