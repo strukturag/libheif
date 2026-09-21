@@ -142,9 +142,9 @@ static void test_ispe_size(heif_compression_format compression,
 }
 
 
-TEST_CASE( "ispe odd size", "[heif_context]" ) {
+TEST_CASE( "HEVC ispe odd size", "[heif_context]" ) {
   if (!heif_have_encoder_for_format(heif_compression_HEVC)) {
-     SKIP("HEVC encoder not available, skipping test");
+    SKIP("HEVC encoder not available, skipping test");
   }
 
   // HEVC encoders typically encode with even dimensions only
@@ -156,7 +156,7 @@ TEST_CASE( "ispe odd size", "[heif_context]" ) {
 
 TEST_CASE( "AVIF ispe odd size", "[heif_context]" ) {
   if (!heif_have_encoder_for_format(heif_compression_AV1)) {
-     SKIP("AV1 encoder not available, skipping test");
+    SKIP("AV1 encoder not available, skipping test");
   }
 
   // AVIF encoders typically encode with odd dimensions
