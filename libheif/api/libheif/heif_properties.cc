@@ -248,7 +248,7 @@ void heif_item_get_property_transform_crop_borders(const heif_context* context,
     return;
   }
 
-  auto crop = (*clap)->get_crop(image_width, image_height);
+  auto crop = (*clap)->get_crop_adjusted_to_image(image_width, image_height);
   if (!crop) {
     // The clean aperture cannot be applied to an image of this size (zero size, negative
     // size, or a size beyond the supported coordinate range). This function has no error

@@ -1198,8 +1198,24 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
 
   // --- validate the decoded image against the signaled size (pre-transform)
 
+  Error decoded_size_warning;
+  bool needs_clap_recovery = false;
+
   if (Error err = check_decoded_image_size(*img, decode_tile_only, tile_x0, tile_y0)) {
-    return err;
+    // Some encoders signal a padded ispe even though the codec conformance window
+    // has already removed part of that padding. Non-strict decoding may use the
+    // smaller frame when its planes are consistent and it does not exceed ispe.
+    if (options.strict_decoding || decode_tile_only ||
+        img->get_width() > get_ispe_width() || img->get_height() > get_ispe_height() ||
+        !img->has_standard_plane_sizes()) {
+      return err;
+    }
+
+    decoded_size_warning = err;
+    needs_clap_recovery = !options.ignore_transformations;
+    if (options.ignore_transformations) {
+      img->add_warning(err);
+    }
   }
 
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
@@ -1214,9 +1230,14 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     }
 
     const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
-
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
+        // Rotating or mirroring differently-sized canvases changes their coordinate mapping.
+        // A clap must first reduce the signaled canvas to the available decoded pixels.
+        if (needs_clap_recovery) {
+          return decoded_size_warning;
+        }
+
         auto rotateResult = img->rotate_ccw(rot->get_rotation_ccw(), m_heif_context->get_security_limits());
         if (!rotateResult) {
           return rotateResult.error();
@@ -1227,6 +1248,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
 
 
       if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
+        if (needs_clap_recovery) {
+          return decoded_size_warning;
+        }
+
         auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction(),
                                                 get_context()->get_security_limits());
         if (!mirrorResult) {
@@ -1245,21 +1270,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
           uint32_t img_width = img->get_width();
           uint32_t img_height = img->get_height();
 
-          auto clapCrop = clap->get_crop(img_width, img_height);
+          auto clapCrop = clap->get_crop_adjusted_to_image(img_width, img_height);
           if (!clapCrop) {
-            return clapCrop.error();
+            return needs_clap_recovery ? decoded_size_warning : clapCrop.error();
           }
 
           int left = clapCrop->left;
           int right = clapCrop->right;
           int top = clapCrop->top;
           int bottom = clapCrop->bottom;
-
-          if (left < 0) { left = 0; }
-          if (top < 0) { top = 0; }
-
-          if ((uint32_t) right >= img_width) { right = img_width - 1; }
-          if ((uint32_t) bottom >= img_height) { bottom = img_height - 1; }
 
           if (left > right ||
               top > bottom) {
@@ -1273,6 +1292,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
           }
 
           img = *cropResult;
+          needs_clap_recovery = false;
         }
       }
 
@@ -1282,6 +1302,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
                      heif_suberror_Unspecified,
                      "Image scaling (iscl) transformative property is not yet supported");
       }
+    }
+
+    if (decoded_size_warning && needs_clap_recovery) {
+      return decoded_size_warning;
+    }
+    else if (decoded_size_warning) {
+      img->add_warning(decoded_size_warning);
     }
   }
 
