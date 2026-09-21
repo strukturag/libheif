@@ -29,7 +29,7 @@
 #include <string>
 
 static const int JASPER_PLUGIN_PRIORITY = 100;
-static const int JASPER_JPG_PLUGIN_PRIORITY = 90;
+static const int JASPER_JPG_PLUGIN_PRIORITY = 70;
 
 struct jasper_decoder
 {
@@ -55,6 +55,8 @@ static const char* jasper_plugin_name()
 static void jasper_init_plugin()
 {
   jas_conf_clear();
+  // Assume ENABLE_PARALLEL_TILE_DECODING as plugins are dynamically linked, enable multithreading.
+  jas_conf_set_multithread(1);
   jas_init_library();
   jas_init_thread();
 }
