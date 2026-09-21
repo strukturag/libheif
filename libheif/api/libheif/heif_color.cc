@@ -139,9 +139,10 @@ heif_error heif_image_handle_get_raw_color_profile(const heif_image_handle* hand
 
   auto raw_profile = handle->image->get_color_profile_icc();
   if (raw_profile) {
-    memcpy(out_data,
-           raw_profile->get_data().data(),
-           raw_profile->get_data().size());
+    const auto& profile_data = raw_profile->get_data();
+    if (!profile_data.empty()) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      memcpy(out_data, profile_data.data(), profile_data.size());
+    }
   }
   else {
     Error err(heif_error_Color_profile_does_not_exist,
@@ -347,9 +348,10 @@ heif_error heif_image_get_raw_color_profile(const heif_image* image,
 
   auto raw_profile = image->image->get_color_profile_icc();
   if (raw_profile) {
-    memcpy(out_data,
-           raw_profile->get_data().data(),
-           raw_profile->get_data().size());
+    const auto& profile_data = raw_profile->get_data();
+    if (!profile_data.empty()) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      memcpy(out_data, profile_data.data(), profile_data.size());
+    }
   }
   else {
     Error err(heif_error_Color_profile_does_not_exist,

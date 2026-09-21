@@ -79,9 +79,11 @@ Result<Encoder::CodedImageData> Encoder_JPEG::encode(const std::shared_ptr<HeifP
       break;
     }
 
-    size_t oldsize = vec.size();
-    vec.resize(oldsize + size);
-    memcpy(vec.data() + oldsize, data, size);
+    if (size > 0) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      size_t oldsize = vec.size();
+      vec.resize(oldsize + size);
+      memcpy(vec.data() + oldsize, data, size);
+    }
   }
 
 #if 0

@@ -79,7 +79,9 @@ StreamReader_memory::StreamReader_memory(const uint8_t* data, size_t size, bool 
 {
   if (copy) {
     m_owned_data = new uint8_t[m_length];
-    memcpy(m_owned_data, data, size);
+    if (size > 0) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see read()
+      memcpy(m_owned_data, data, size);
+    }
 
     m_data = m_owned_data;
   }
@@ -112,7 +114,14 @@ bool StreamReader_memory::read(void* data, size_t size)
     return false;
   }
 
-  memcpy(data, &m_data[m_position], size);
+  // Do not call memcpy() with a NULL pointer, even when size == 0. 'data' is NULL when the
+  // caller reads into an empty std::vector (e.g. a box with an empty payload), and passing
+  // NULL to memcpy() is undefined behaviour in C17 and C++. It trips UBSan's nonnull-attribute
+  // check on glibc's memcpy() declaration. C2y (WG14 N3322) makes zero-length operations on
+  // NULL pointers well-defined, but we cannot rely on that for many years.
+  if (size > 0) {
+    memcpy(data, &m_data[m_position], size);
+  }
   m_position += size;
 
   return true;
@@ -1053,7 +1062,9 @@ void StreamWriter::write(const std::vector<uint8_t>& vec)
     m_data.resize(required_size);
   }
 
-  memcpy(m_data.data() + m_position, vec.data(), vec.size());
+  if (!vec.empty()) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+    memcpy(m_data.data() + m_position, vec.data(), vec.size());
+  }
   m_position += vec.size();
 }
 
@@ -1068,7 +1079,9 @@ void StreamWriter::write(const StreamWriter& writer)
 
   const auto& data = writer.get_data();
 
-  memcpy(m_data.data() + m_position, data.data(), data.size());
+  if (!data.empty()) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+    memcpy(m_data.data() + m_position, data.data(), data.size());
+  }
 
   m_position += data.size();
 }

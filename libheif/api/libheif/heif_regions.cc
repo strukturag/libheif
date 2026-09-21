@@ -748,7 +748,9 @@ heif_error heif_region_get_inline_mask_data(const heif_region* region,
     *y = mask->y;
     *width = mask->width;
     *height = mask->height;
-    memcpy(data, mask->mask_data.data(), mask->mask_data.size());
+    if (!mask->mask_data.empty()) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      memcpy(data, mask->mask_data.data(), mask->mask_data.size());
+    }
     return heif_error_success;
   }
   return heif_error_invalid_parameter_value;

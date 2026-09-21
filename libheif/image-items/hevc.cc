@@ -169,36 +169,41 @@ void ImageItem_HEVC::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
         first = false;
       }
       else {
-        std::vector<uint8_t> nal_data;
+        assert(prev_start_code_start >= 0);
         size_t length = start_code_start - (prev_start_code_start + 3);
 
-        nal_data.resize(length);
+        // Skip empty NAL units (two consecutive start codes). Besides being invalid, an empty
+        // NAL unit would read nal_data[0] of an empty vector and pass NULL to memcpy(), which
+        // is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read().
+        if (length > 0) {
+          std::vector<uint8_t> nal_data;
+          nal_data.resize(length);
 
-        assert(prev_start_code_start >= 0);
-        memcpy(nal_data.data(), data.data() + prev_start_code_start + 3, length);
+          memcpy(nal_data.data(), data.data() + prev_start_code_start + 3, length);
 
-        int nal_type = (nal_data[0] >> 1);
+          int nal_type = (nal_data[0] >> 1);
 
-        switch (nal_type) {
-          case 0x20:
-          case 0x21:
-          case 0x22:
-            hvcC->append_nal_data(nal_data);
-            break;
+          switch (nal_type) {
+            case 0x20:
+            case 0x21:
+            case 0x22:
+              hvcC->append_nal_data(nal_data);
+              break;
 
-          default: {
-            std::vector<uint8_t> nal_data_with_size;
-            nal_data_with_size.resize(nal_data.size() + 4);
+            default: {
+              std::vector<uint8_t> nal_data_with_size;
+              nal_data_with_size.resize(nal_data.size() + 4);
 
-            memcpy(nal_data_with_size.data() + 4, nal_data.data(), nal_data.size());
-            nal_data_with_size[0] = ((nal_data.size() >> 24) & 0xFF);
-            nal_data_with_size[1] = ((nal_data.size() >> 16) & 0xFF);
-            nal_data_with_size[2] = ((nal_data.size() >> 8) & 0xFF);
-            nal_data_with_size[3] = ((nal_data.size() >> 0) & 0xFF);
+              memcpy(nal_data_with_size.data() + 4, nal_data.data(), nal_data.size());
+              nal_data_with_size[0] = ((nal_data.size() >> 24) & 0xFF);
+              nal_data_with_size[1] = ((nal_data.size() >> 16) & 0xFF);
+              nal_data_with_size[2] = ((nal_data.size() >> 8) & 0xFF);
+              nal_data_with_size[3] = ((nal_data.size() >> 0) & 0xFF);
 
-            get_file()->append_iloc_data(get_id(), nal_data_with_size, 0);
+              get_file()->append_iloc_data(get_id(), nal_data_with_size, 0);
+            }
+              break;
           }
-            break;
         }
       }
 

@@ -312,7 +312,9 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
 {
   std::vector<uint8_t> nal;
   nal.resize(size);
-  memcpy(nal.data(), data, size);
+  if (size > 0) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+    memcpy(nal.data(), data, size);
+  }
 
   append_nal_data(nal);
 }

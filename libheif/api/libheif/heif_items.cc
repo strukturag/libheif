@@ -167,7 +167,9 @@ heif_error heif_item_get_item_data(const heif_context* ctx,
 
   if (out_data) {
     *out_data = new uint8_t[dataResult->size()];
-    memcpy(*out_data, dataResult->data(), dataResult->size());
+    if (!dataResult->empty()) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      memcpy(*out_data, dataResult->data(), dataResult->size());
+    }
   }
 
   return heif_error_success;

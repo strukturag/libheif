@@ -1982,8 +1982,10 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
   else {
     // uncompressed data, plain copy
 
-    data_array.resize(size);
-    memcpy(data_array.data(), data, size);
+    if (size > 0) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      data_array.resize(size);
+      memcpy(data_array.data(), data, size);
+    }
   }
 
   // copy the data into the file, store the pointer to it in an iloc box entry
