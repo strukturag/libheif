@@ -206,3 +206,36 @@ TEST_CASE("x265 rejects oversized images", "[heif_encoder]") {
   heif_encoder_release(enc);
   heif_context_free(ctx);
 }
+
+
+TEST_CASE("kvazaar encodes monochrome image", "[heif_encoder]") {
+  const heif_encoder_descriptor* descriptor = nullptr;
+  int n = heif_get_encoder_descriptors(heif_compression_HEVC, "kvazaar", &descriptor, 1);
+  if (n == 0) {
+    SKIP("kvazaar encoder not available, skipping test");
+  }
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc = nullptr;
+  heif_error err = heif_context_get_encoder(ctx, descriptor, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  const int w = 128;
+  const int h = 128;
+  heif_image* img = nullptr;
+  err = heif_image_create(w, h, heif_colorspace_monochrome, heif_chroma_monochrome, &img);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(img, heif_channel_Y, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+
+  heif_image_handle_release(handle);
+  heif_image_release(img);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+}
+

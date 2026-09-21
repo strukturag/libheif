@@ -525,17 +525,34 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
   config->framerate_num = framerate_num;
   config->framerate_denom = framerate_denom;
 
+  const char* format_str = "P420";
   if (isGreyscale) {
+    format_str = "P400";
     config->input_format = KVZ_FORMAT_P400;
+    config->chroma_format = KVZ_CSP_400;
+    config->chroma_shift_w = 0;
+    config->chroma_shift_h = 0;
   }
   else if (chroma == heif_chroma_420) {
+    format_str = "P420";
     config->input_format = KVZ_FORMAT_P420;
+    config->chroma_format = KVZ_CSP_420;
+    config->chroma_shift_w = 1;
+    config->chroma_shift_h = 1;
   }
   else if (chroma == heif_chroma_422) {
+    format_str = "P422";
     config->input_format = KVZ_FORMAT_P422;
+    config->chroma_format = KVZ_CSP_422;
+    config->chroma_shift_w = 1;
+    config->chroma_shift_h = 0;
   }
   else if (chroma == heif_chroma_444) {
+    format_str = "P444";
     config->input_format = KVZ_FORMAT_P444;
+    config->chroma_format = KVZ_CSP_444;
+    config->chroma_shift_w = 0;
+    config->chroma_shift_h = 0;
   }
   else {
     return heif_error{
@@ -544,6 +561,8 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
       kError_unsupported_chroma
     };
   }
+
+  api->config_parse(config, "input-format", format_str);
 
 
   heif_color_profile_nclx* nclx = nullptr;
