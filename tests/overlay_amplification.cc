@@ -37,7 +37,6 @@
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
 #include "test_utils.h"
-
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -57,6 +56,37 @@ std::vector<uint8_t> make_overlay_spec(uint16_t canvas_w, uint16_t canvas_h, siz
   for (size_t i = 0; i < num_images; i++) {
     put_u16_be(s, 0);       // x offset
     put_u16_be(s, 0);       // y offset
+  }
+  return s;
+}
+
+// ImageOverlay payload with explicit signed offsets. flags==0 uses 16-bit
+// fields for both the canvas size and the offsets; flags==1 uses 32-bit fields
+// (matching the field_len logic in ImageOverlay::parse).
+std::vector<uint8_t> make_overlay_spec_with_offsets(uint8_t flags,
+                                                    uint16_t canvas_w, uint16_t canvas_h,
+                                                    const std::vector<int32_t>& xs,
+                                                    const std::vector<int32_t>& ys) {
+  const bool long_fields = (flags & 1) != 0;
+  std::vector<uint8_t> s;
+  s.push_back(0);           // version
+  s.push_back(flags);
+  for (int i = 0; i < 4; i++) { put_u16_be(s, 0); }  // background color RGBA (black)
+  if (long_fields) {
+    put_u32_be(s, canvas_w);
+    put_u32_be(s, canvas_h);
+  } else {
+    put_u16_be(s, canvas_w);
+    put_u16_be(s, canvas_h);
+  }
+  for (size_t i = 0; i < xs.size(); i++) {
+    if (long_fields) {
+      put_u32_be(s, static_cast<uint32_t>(xs[i]));
+      put_u32_be(s, static_cast<uint32_t>(ys[i]));
+    } else {
+      put_u16_be(s, static_cast<uint16_t>(xs[i]));
+      put_u16_be(s, static_cast<uint16_t>(ys[i]));
+    }
   }
   return s;
 }
@@ -255,6 +285,41 @@ heif_error decode_primary(const std::vector<uint8_t>& data, bool& read_ok) {
   return err;
 }
 
+// Like decode_primary but targets an RGB24 image (directly readable with
+// heif_channel_interleaved) and returns it for pixel inspection. The caller owns
+// the returned image.
+heif_image* decode_primary_as_rgb24(const std::vector<uint8_t>& data, bool& read_ok) {
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_error err = heif_context_read_from_memory_without_copy(
+      ctx, data.data(), data.size(), nullptr);
+  read_ok = (err.code == heif_error_Ok);
+  if (!read_ok) {
+    heif_context_free(ctx);
+    return nullptr;
+  }
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  if (err.code != heif_error_Ok) {
+    heif_context_free(ctx);
+    return nullptr;
+  }
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
+
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+
+  if (err.code != heif_error_Ok) {
+    if (img) { heif_image_release(img); }
+    return nullptr;
+  }
+  return img;
+}
+
 } // namespace
 
 
@@ -290,7 +355,6 @@ TEST_CASE("overlay amplification: overlay with too many input images is rejected
   items.push_back({2, "iovl", refs, make_overlay_spec(8, 8, refs.size())});
 
   auto data = build_file(items, /*primary=*/2);
-
   bool read_ok = false;
   heif_error err = decode_primary(data, read_ok);
 
@@ -314,4 +378,67 @@ TEST_CASE("overlay amplification: a shallow legitimate overlay still decodes") {
 
   REQUIRE(read_ok);
   REQUIRE(err.code == heif_error_Ok);
+}
+
+// Regression test: a 16-bit negative iovl offset must place (and clip) the
+// child, not be mis-sign-extended to ~-2^31 and silently dropped as "completely
+// outside the canvas" (readvec_signed in overlay.cc).
+//
+// Canvas 8x8, background black, child placed at (-1, 0): columns 0..6 show the
+// base mask value 0x7F, column 7 shows the background.
+TEST_CASE("overlay: 16-bit negative offset places the child instead of dropping it") {
+  std::vector<Item> items;
+  items.push_back({1, "mski", {}, std::vector<uint8_t>(64, 0x7F)});
+  items.push_back({2, "iovl", {1},
+                   make_overlay_spec_with_offsets(0, 8, 8, {-1}, {0})});
+
+  auto data = build_file(items, /*primary=*/2);
+  bool read_ok = false;
+  heif_image* img = decode_primary_as_rgb24(data, read_ok);
+  REQUIRE(read_ok);
+  REQUIRE(img != nullptr);
+
+  size_t stride = 0;
+  uint8_t* p = heif_image_get_plane2(img, heif_channel_interleaved, &stride);
+  REQUIRE(p != nullptr);
+
+  for (int x = 0; x < 7; x++) {
+    REQUIRE(p[x * 3 + 0] == 0x7F);  // R
+    REQUIRE(p[x * 3 + 1] == 0x7F);  // G
+    REQUIRE(p[x * 3 + 2] == 0x7F);  // B
+  }
+  REQUIRE(p[7 * 3 + 0] == 0x00);  // clipped: column 7 is background
+  REQUIRE(p[7 * 3 + 1] == 0x00);
+  REQUIRE(p[7 * 3 + 2] == 0x00);
+
+  heif_image_release(img);
+}
+
+// Control: the 32-bit offset path (flags==1) already decoded -1 correctly, so a
+// 32-bit negative offset must produce exactly the same placement.
+TEST_CASE("overlay: 32-bit negative offset places the child (control)") {
+  std::vector<Item> items;
+  items.push_back({1, "mski", {}, std::vector<uint8_t>(64, 0x7F)});
+  items.push_back({2, "iovl", {1}, make_overlay_spec_with_offsets(1, 8, 8, {-1}, {0})});
+  auto data = build_file(items, /*primary=*/2);
+
+  bool read_ok = false;
+  heif_image* img = decode_primary_as_rgb24(data, read_ok);
+  REQUIRE(read_ok);
+  REQUIRE(img != nullptr);
+
+  size_t stride = 0;
+  uint8_t* p = heif_image_get_plane2(img, heif_channel_interleaved, &stride);
+  REQUIRE(p != nullptr);
+
+  for (int x = 0; x < 7; x++) {
+    REQUIRE(p[x * 3 + 0] == 0x7F);
+    REQUIRE(p[x * 3 + 1] == 0x7F);
+    REQUIRE(p[x * 3 + 2] == 0x7F);
+  }
+  REQUIRE(p[7 * 3 + 0] == 0x00);
+  REQUIRE(p[7 * 3 + 1] == 0x00);
+  REQUIRE(p[7 * 3 + 2] == 0x00);
+
+  heif_image_release(img);
 }
