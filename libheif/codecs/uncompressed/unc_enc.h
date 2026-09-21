@@ -42,7 +42,7 @@ public:
 
   std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
 
-  bool encode_sequence_started() const override { return m_codedImageData.has_value(); }
+  bool encode_sequence_started() const override { return m_sequence_started; }
 
   Error encode_sequence_frame(const std::shared_ptr<HeifPixelImage>& image,
                                       heif_encoder* encoder,
@@ -64,6 +64,7 @@ public:
 
     m_codedImageData->frame_nr = frame_number;
     m_codedImageData->is_sync_frame = true;
+    m_sequence_started = true;
 
     return {};
   }
@@ -73,13 +74,14 @@ public:
     return {};
   }
 
-  std::optional<CodedImageData> encode_sequence_get_data() override
+  std::optional<CodedImageData> encode_sequence_extract_data() override
   {
-    return std::move(m_codedImageData);
+    return std::exchange(m_codedImageData, std::nullopt);
   }
 
 private:
   std::optional<CodedImageData> m_codedImageData;
+  bool m_sequence_started = false;
 };
 
 

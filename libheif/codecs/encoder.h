@@ -94,7 +94,11 @@ public:
 
   virtual Error encode_sequence_flush(heif_encoder* encoder) { return {}; }
 
-  virtual std::optional<CodedImageData> encode_sequence_get_data() { return std::nullopt; }
+  // Hands out the coded data collected since the previous call and leaves nothing pending
+  // in the encoder, so that the next call returns std::nullopt until new data has arrived.
+  // The result may carry only properties (e.g. the codec configuration box that some
+  // encoders attach at the end of the sequence) and an empty bitstream.
+  virtual std::optional<CodedImageData> encode_sequence_extract_data() { return std::nullopt; }
 
   virtual std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const { return {}; }
 };

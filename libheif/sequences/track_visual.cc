@@ -651,9 +651,10 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 {
   auto encoder = m_chunks.back()->get_encoder();
 
-  std::optional<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_get_data();
+  std::optional<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_extract_data();
   if (!encodingResult) {
-    return {};
+    // nothing pending in the encoder
+    return {false};
   }
 
   const Encoder::CodedImageData& data = *encodingResult;

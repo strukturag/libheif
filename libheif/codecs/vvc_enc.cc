@@ -25,6 +25,7 @@
 #include "api_structs.h"
 
 #include <string>
+#include <utility>
 
 #include "plugins/nalu_utils.h"
 
@@ -175,16 +176,14 @@ Error Encoder_VVC::encode_sequence_flush(heif_encoder* encoder)
 }
 
 
-std::optional<Encoder::CodedImageData> Encoder_VVC::encode_sequence_get_data()
+std::optional<Encoder::CodedImageData> Encoder_VVC::encode_sequence_extract_data()
 {
-  return std::move(m_current_output_data);
+  return std::exchange(m_current_output_data, std::nullopt);
 }
 
 Error Encoder_VVC::get_data(heif_encoder* encoder)
 {
   //CodedImageData codedImage;
-
-  bool got_some_data = false;
 
   for (;;) {
     uint8_t* data;
@@ -200,8 +199,6 @@ Error Encoder_VVC::get_data(heif_encoder* encoder)
     if (data == nullptr) {
       break;
     }
-
-    got_some_data = true;
 
     const uint8_t nal_type = (data[1] >> 3);
     const bool is_sync = (nal_type == 7 || nal_type == 8 || nal_type == 9);
@@ -249,17 +246,9 @@ Error Encoder_VVC::get_data(heif_encoder* encoder)
     }
   }
 
-  if (!got_some_data) {
-    return {};
-  }
-
-  // The encoder can hand out parameter-set NALs before any slice data. x265,
-  // for example, emits VPS/SPS/PPS from encoder_headers() as soon as the
-  // sequence encoder is opened, so the first get_data() after
-  // start_sequence_encoding() sees only headers. Those are collected into
-  // m_vvcC and leave m_current_output_data unset, so there is no coded
-  // image to report yet. Without this check the dereferences below run on a
-  // disengaged std::optional.
+  // No coded image to report when the encoder returned no NALs, or only parameter sets
+  // (an encoder may emit VPS/SPS/PPS as soon as the sequence encoder is opened, before any
+  // slice data). Those went into m_vvcC above and m_current_output_data stays disengaged.
   if (!m_current_output_data) {
     return {};
   }
