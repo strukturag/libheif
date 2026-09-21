@@ -286,7 +286,9 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   //     Postprocess decoded image, attach metadata.
 
   if (m_stts) {
-    image->set_sample_duration(m_stts->get_sample_duration(sample_idx_in_chunk));
+    uint32_t out_sample_idx = m_presentation_timeline.empty() ? 0 :
+        m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()].sampleIdx;
+    image->set_sample_duration(m_stts->get_sample_duration(out_sample_idx));
   }
 
   // --- assign alpha if we have an assigned alpha track
@@ -571,6 +573,7 @@ Error Track_Visual::encode_image(const std::shared_ptr<HeifPixelImage>& image,
   }
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = *srcImageResult;
+  colorConvertedImage->set_sample_duration(image->get_sample_duration());
 
   // integer range is checked at beginning of function.
   assert(colorConvertedImage->get_width() == image->get_width());

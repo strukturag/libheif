@@ -213,7 +213,9 @@ heif_error heif_track_decode_next_image(heif_track* track_ptr,
       return conversion_result.error_struct(track_ptr->context.get());
     }
     else {
+      uint32_t duration = img->get_sample_duration();
       img = *conversion_result;
+      img->set_sample_duration(duration);
     }
 
     *out_img = new heif_image();
