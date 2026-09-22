@@ -73,8 +73,8 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
  * cases where the native pixel format is something else. That's why RGBA is
  * used as a fallback format, b/c the browser can always convert to it.
  */
-EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uintptr_t hvcc_record_ptr, size_t hvcc_record_size, uintptr_t data_ptr, size_t data_size), {
-  return Asyncify.handleSleep((callback) => {
+EM_ASYNC_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uintptr_t hvcc_record_ptr, size_t hvcc_record_size, uintptr_t data_ptr, size_t data_size), {
+  return await new Promise((resolve) => {
     const codec = UTF8ToString(codec_ptr);
     const data = HEAPU8.subarray(data_ptr, data_ptr + data_size);
     const description = HEAPU8.subarray(hvcc_record_ptr, hvcc_record_ptr + hvcc_record_size);
@@ -85,7 +85,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         returnedError = true;
 
         console.error(err);
-        callback({'error': err.stack});
+        resolve({'error': err.stack});
       }
     }
 
@@ -102,7 +102,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
       const data = imageData.data;
       const format = 'RGBA';
       const planes = [{offset: 0, stride: width * 4}];
-      callback(Emval.toHandle({
+      resolve(Emval.toHandle({
         'buffer': data,
         'format': format,
         'planes': planes,
@@ -157,7 +157,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         Promise.resolve().then(
           () => decoded.copyTo(buffer, formatOptions)
         ).then((planes) => {
-          callback(Emval.toHandle({
+          resolve(Emval.toHandle({
             'buffer': buffer,
             'format': format,
             'planes': planes,

@@ -26,7 +26,8 @@ LIBDE265_VERSION="${LIBDE265_VERSION:-1.0.15}"
 ENABLE_AOM="${ENABLE_AOM:-0}"
 AOM_VERSION="${AOM_VERSION:-3.6.1}"
 
-# Webcodecs is not on by default b/c asyncify increases the binary size considerably
+# Webcodecs is not on by default b/c JSPI (JS Promise Integration) is not
+# baseline available https://webassembly.org/features/
 ENABLE_WEBCODECS="${ENABLE_WEBCODECS:-0}"
 
 ENABLE_UNCOMPRESSED="${ENABLE_UNCOMPRESSED:-0}"
@@ -166,7 +167,7 @@ echo "Running Emscripten..."
 BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM -sDYNAMIC_EXECUTION=$USE_UNSAFE_EVAL"
 
 if [ "$ENABLE_WEBCODECS" = "1" ]; then
-    BUILD_FLAGS="$BUILD_FLAGS -sASYNCIFY -sASYNCIFY_IMPORTS=['decode_with_browser_hevc']"
+    BUILD_FLAGS="$BUILD_FLAGS -sJSPI"
 fi
 
 if [ "$USE_TYPESCRIPT" = "1" ]; then
