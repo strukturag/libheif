@@ -354,6 +354,7 @@ static heif_error ffmpeg_push_data(void *decoder_raw, const void *data, size_t s
 static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8:
+    case AV_PIX_FMT_GRAY9:
     case AV_PIX_FMT_GRAY10:
     case AV_PIX_FMT_GRAY12:
     case AV_PIX_FMT_GRAY14:
@@ -362,6 +363,7 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
 
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUV420P9:
     case AV_PIX_FMT_YUV420P10:
     case AV_PIX_FMT_YUV420P12:
     case AV_PIX_FMT_YUV420P14:
@@ -369,6 +371,7 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_420;
 
     case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUV422P9:
     case AV_PIX_FMT_YUV422P10:
     case AV_PIX_FMT_YUV422P12:
     case AV_PIX_FMT_YUV422P14:
@@ -376,10 +379,20 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_422;
 
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUV444P9:
     case AV_PIX_FMT_YUV444P10:
     case AV_PIX_FMT_YUV444P12:
     case AV_PIX_FMT_YUV444P14:
     case AV_PIX_FMT_YUV444P16:
+      return heif_chroma_444;
+
+    // FFmpeg's HEVC decoder outputs planar GBR for 4:4:4 streams signaling
+    // matrix_coefficients 0. Its G, B, R planes map onto Y, Cb, Cr, which is
+    // exactly how libheif stores images with the identity matrix.
+    case AV_PIX_FMT_GBRP:
+    case AV_PIX_FMT_GBRP9:
+    case AV_PIX_FMT_GBRP10:
+    case AV_PIX_FMT_GBRP12:
       return heif_chroma_444;
 
     default:
@@ -428,16 +441,25 @@ static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
     case AV_PIX_FMT_YUVJ420P:
     case AV_PIX_FMT_YUV422P:
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_GBRP:
       return 8;
+    case AV_PIX_FMT_GRAY9:
+    case AV_PIX_FMT_YUV420P9:
+    case AV_PIX_FMT_YUV422P9:
+    case AV_PIX_FMT_YUV444P9:
+    case AV_PIX_FMT_GBRP9:
+      return 9;
     case AV_PIX_FMT_GRAY10:
     case AV_PIX_FMT_YUV420P10:
     case AV_PIX_FMT_YUV422P10:
     case AV_PIX_FMT_YUV444P10:
+    case AV_PIX_FMT_GBRP10:
       return 10;
     case AV_PIX_FMT_GRAY12:
     case AV_PIX_FMT_YUV420P12:
     case AV_PIX_FMT_YUV422P12:
     case AV_PIX_FMT_YUV444P12:
+    case AV_PIX_FMT_GBRP12:
       return 12;
     case AV_PIX_FMT_GRAY14:
     case AV_PIX_FMT_YUV420P14:
