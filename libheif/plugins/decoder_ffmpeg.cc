@@ -63,14 +63,12 @@ struct ffmpeg_decoder
   // --- decoder
 
   const AVCodec* av_codec = NULL;
-  AVCodecParserContext* av_codec_parser_context = NULL;
   AVCodecContext* av_codec_context = NULL;
 
   std::string error_message;
 
   ~ffmpeg_decoder()
   {
-    if (av_codec_parser_context) av_parser_close(av_codec_parser_context);
     if (av_codec_context) avcodec_free_context(&av_codec_context);
   }
 };
@@ -185,11 +183,6 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
 
   if (!decoder->av_codec) {
     return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_find_decoder() returned error" };
-  }
-
-  decoder->av_codec_parser_context = av_parser_init(decoder->av_codec->id);
-  if (!decoder->av_codec_parser_context) {
-    return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "av_parser_init returned error" };
   }
 
   decoder->av_codec_context = avcodec_alloc_context3(decoder->av_codec);
@@ -715,9 +708,6 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   heif_error err = kSuccess;
 
   if (!decoder->input_data.empty()) {
-    uint8_t* parse_av_data = NULL;
-    int parse_av_data_size = 0;
-
     ffmpeg_decoder::Packet& first_pkt = decoder->input_data.front();
 
     if (first_pkt.data.empty()) {
@@ -737,49 +727,17 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
         return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "av_packet_alloc returned error" };
       }
 
-      parse_av_data = first_pkt.data.data();
-      parse_av_data_size = (int) first_pkt.data.size();
-      size_t n_bytes_consumed = 0;
+      // Every pushed chunk is a complete access unit, so it goes to the decoder
+      // as one packet. Running av_parser_parse2() over it first only parsed all
+      // NAL units a second time before the decoder parsed them again.
+      av_pkt->data = first_pkt.data.data();
+      av_pkt->size = (int) first_pkt.data.size();
+      av_pkt->pts = first_pkt.user_data;
 
-      while (parse_av_data_size > 0) {
-        decoder->av_codec_parser_context->flags = PARSER_FLAG_COMPLETE_FRAMES;
-        ret = av_parser_parse2(decoder->av_codec_parser_context, decoder->av_codec_context, &av_pkt->data, &av_pkt->size,
-                               parse_av_data, parse_av_data_size,
-                               AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        if (ret < 0) {
-          return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "av_parser_parse2 returned error"};
-        }
-
-        // std::cout << "decode packet of size: " << ret << "\n";
-
-        parse_av_data += ret;
-        parse_av_data_size -= ret;
-        n_bytes_consumed += ret;
-
-        if (av_pkt->size) {
-          av_pkt->pts = first_pkt.user_data;
-
-          ret = avcodec_send_packet(decoder->av_codec_context, av_pkt);
-          if (ret < 0) {
-            char buf[100];
-            av_make_error_string(buf, 100, ret);
-            return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
-          }
-        }
-        else {
-          break;
-        }
-      }
-
-      if (n_bytes_consumed == first_pkt.data.size()) {
-        decoder->input_data.pop_front();
-      }
-      else {
-        if (n_bytes_consumed > 0) {
-          memmove(first_pkt.data.data(), first_pkt.data.data() + n_bytes_consumed,
-                  first_pkt.data.size() - n_bytes_consumed);
-          decoder->input_data.resize(decoder->input_data.size() - n_bytes_consumed);
-        }
+      ret = avcodec_send_packet(decoder->av_codec_context, av_pkt);
+      decoder->input_data.pop_front();
+      if (ret < 0) {
+        return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Error in avcodec_send_packet"};
       }
     }
   }
