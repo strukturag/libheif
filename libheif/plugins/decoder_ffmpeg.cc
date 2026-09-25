@@ -197,6 +197,11 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
     return { heif_error_Memory_allocation_error, heif_suberror_Unspecified, "avcodec_alloc_context3 returned error" };
   }
 
+  // Crop exactly as the bitstream signals. Otherwise FFmpeg rounds a left crop
+  // down to keep the plane pointers aligned, and the decoded image comes out
+  // wider than the size signaled in the file.
+  decoder->av_codec_context->flags |= AV_CODEC_FLAG_UNALIGNED;
+
   /* open it */
   if (avcodec_open2(decoder->av_codec_context, decoder->av_codec, NULL) < 0) {
     return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_open2 returned error" };
