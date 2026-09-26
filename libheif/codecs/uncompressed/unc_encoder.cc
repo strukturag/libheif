@@ -188,6 +188,28 @@ Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder
                    "Image has an interleaved chroma format and a separate alpha plane. "
                    "Alpha has to be part of the interleaved format."};
     }
+
+    // Each interleaved chroma format fixes the storage width of its samples: the RGB(A) formats
+    // store one byte per component, the RRGGBB(AA) formats two. The interleaved encoders take the
+    // number of bytes per pixel from the plane's bit depth while addressing the plane through the
+    // sample layout the chroma format implies, so the two have to agree. If they do not, an
+    // encoder sizes its output buffer for one layout and copies with the other: an 8-bit plane on
+    // an RRGGBB format, for instance, gives the block-pixel encoder a three-byte-per-pixel buffer
+    // that its writer fills four bytes at a time, overrunning it by one byte per pixel.
+    //
+    // add_channel() already refuses such a plane, but transfer_channel_from_image_as() assembles
+    // planes without going through it.
+    uint16_t storage_bpp = prototype_image->get_storage_bits_per_pixel(heif_channel_interleaved);
+    bool chroma_stores_16bit_samples = (prototype_image->get_chroma_format() != heif_chroma_interleaved_RGB &&
+                                        prototype_image->get_chroma_format() != heif_chroma_interleaved_RGBA);
+    uint16_t expected_storage_bpp = chroma_stores_16bit_samples ? 16 : 8;
+
+    if (storage_bpp != expected_storage_bpp) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "Bit depth of the interleaved plane does not match the sample size of the "
+                   "interleaved chroma format."};
+    }
   }
   else if (prototype_image->get_used_planar_component_ids().empty()) {
     return Error{heif_error_Invalid_input,

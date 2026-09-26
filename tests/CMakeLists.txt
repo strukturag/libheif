@@ -86,6 +86,10 @@ if (NOT WITH_REDUCED_VISIBILITY AND WITH_UNCOMPRESSED_CODEC)
     # uncompressed encoder factory with a HeifPixelImage assembled through
     # internal calls, so it needs full symbol visibility.
     add_libheif_test(uncompressed_interleaved_alpha_plane_internal)
+
+    # Interleaved bit depth against interleaved chroma format. Builds the mismatching
+    # HeifPixelImage through internal calls and drives the encoder factory with it.
+    add_libheif_test(uncompressed_interleaved_bit_depth)
 endif()
 
 # --- tests that only access the public API
