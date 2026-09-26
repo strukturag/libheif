@@ -199,11 +199,12 @@ Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder
     //
     // add_channel() already refuses such a plane, but transfer_channel_from_image_as() assembles
     // planes without going through it.
-    uint16_t bpp = prototype_image->get_bits_per_pixel(heif_channel_interleaved);
+    uint16_t storage_bpp = prototype_image->get_storage_bits_per_pixel(heif_channel_interleaved);
     bool chroma_stores_16bit_samples = (prototype_image->get_chroma_format() != heif_chroma_interleaved_RGB &&
                                         prototype_image->get_chroma_format() != heif_chroma_interleaved_RGBA);
+    uint16_t expected_storage_bpp = chroma_stores_16bit_samples ? 16 : 8;
 
-    if (chroma_stores_16bit_samples != (bpp > 8)) {
+    if (storage_bpp != expected_storage_bpp) {
       return Error{heif_error_Invalid_input,
                    heif_suberror_Unspecified,
                    "Bit depth of the interleaved plane does not match the sample size of the "
