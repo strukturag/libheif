@@ -123,11 +123,11 @@ Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
     uint8_t byte = 0;
 
     for (int b = 0; b < 8; b++) {
+      byte = (uint8_t) (byte << 1);
+
       if (general_constraint_indicator_flags[i * 8 + b]) {
         byte |= 1;
       }
-
-      byte = (uint8_t) (byte << 1);
     }
 
     writer.write8(byte);
@@ -625,9 +625,11 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   config->general_profile_idc = reader.get_bits8(5);
   config->general_profile_compatibility_flags = reader.get_bits32(32);
 
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
+  // general_progressive_source_flag up to the last of the constraint flags. Within the range
+  // extensions and the screen content coding extensions, they tell the profiles apart.
+  for (int i = 0; i < HEVCDecoderConfigurationRecord::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+    config->general_constraint_indicator_flags[i] = (reader.get_bits(1) != 0);
+  }
 
   config->general_level_idc = reader.get_bits8(8);
 
