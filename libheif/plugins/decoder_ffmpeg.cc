@@ -371,6 +371,7 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_420;
 
     case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUVJ422P:
     case AV_PIX_FMT_YUV422P9:
     case AV_PIX_FMT_YUV422P10:
     case AV_PIX_FMT_YUV422P12:
@@ -379,6 +380,7 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_422;
 
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUVJ444P:
     case AV_PIX_FMT_YUV444P9:
     case AV_PIX_FMT_YUV444P10:
     case AV_PIX_FMT_YUV444P12:
@@ -444,7 +446,9 @@ static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
     case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUVJ422P:
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUVJ444P:
     case AV_PIX_FMT_GBRP:
       return 8;
     case AV_PIX_FMT_GRAY9:
