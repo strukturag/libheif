@@ -131,12 +131,15 @@ macro(hm_variant variant function)
     # values, and the version with the screen content coding tools reads the element in front
     # of the table g_quantScales when the palette mode is used for lossless coding
     # (TEncSearch::xCalcPixelPred(); the value is not used).
+    #
+    # For the same reason, HM is optimized in debug builds of libheif too. Without
+    # optimization, it takes four times as long.
     add_library(${hm_namespace} OBJECT ${hm_wrappers} hm_as_library.h)
     set_target_properties(${hm_namespace} PROPERTIES CXX_STANDARD 11)
     if (MSVC)
         target_compile_options(${hm_namespace} PRIVATE /w)
     else ()
-        target_compile_options(${hm_namespace} PRIVATE -w -Wno-error -fno-sanitize=all)
+        target_compile_options(${hm_namespace} PRIVATE -w -Wno-error -fno-sanitize=all $<$<CONFIG:Debug>:-O2>)
     endif ()
 
     # Our code that uses HM.
@@ -153,9 +156,12 @@ macro(hm_variant variant function)
                 POSITION_INDEPENDENT_CODE ON
                 CXX_VISIBILITY_PRESET hidden
                 VISIBILITY_INLINES_HIDDEN ON)
+        # NDEBUG: an assertion of HM must not end the process. It is defined in all build types
+        # and for our code that uses HM too, which sees the inline functions of the HM headers.
         target_compile_definitions(${hm_target} PRIVATE
                 HEIF_HM_NAMESPACE=${hm_namespace}
-                RExt__HIGH_BIT_DEPTH_SUPPORT=1)
+                RExt__HIGH_BIT_DEPTH_SUPPORT=1
+                NDEBUG)
         target_include_directories(${hm_target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
         # The HM headers are full of warnings, so their directories are declared as system directories.
