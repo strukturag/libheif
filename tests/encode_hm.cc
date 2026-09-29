@@ -28,15 +28,21 @@
 // support. These tests encode without loss and compare the decoded samples with the input.
 // They are skipped when libheif was built without the HM plugin. The comparison needs
 // libde265, the only decoder that handles all bit depths.
+//
+// The plugin can contain two versions of HM. The tests of the screen content coding tools
+// are skipped when the plugin was built without the version that has them. The other tests
+// run with whatever version the plugin uses for them.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
 #include "libheif/heif_sequences.h"
 #include "test_utils.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -59,6 +65,26 @@ bool have_hm_encoder()
 {
   const heif_encoder_descriptor* descriptor = nullptr;
   return heif_get_encoder_descriptors(heif_compression_HEVC, "hm", &descriptor, 1) == 1;
+}
+
+// The screen content coding tools are parameters of the plugin only when it contains a
+// version of HM that has them.
+bool have_screen_content_coding_tools()
+{
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* encoder = get_hm_encoder(ctx);
+  REQUIRE(encoder != nullptr);
+
+  bool found = false;
+  for (const heif_encoder_parameter* const* p = heif_encoder_list_parameters(encoder); *p; p++) {
+    if (strcmp(heif_encoder_parameter_get_name(*p), "palette-mode") == 0) {
+      found = true;
+    }
+  }
+
+  heif_encoder_release(encoder);
+  heif_context_free(ctx);
+  return found;
 }
 
 bool have_libde265()
@@ -85,7 +111,40 @@ uint16_t pattern(uint32_t x, uint32_t y, int channel, int bit_depth)
   return static_cast<uint16_t>((x * 37 + y * 101 + x * y + static_cast<uint32_t>(channel) * 1237) & maxval);
 }
 
-void add_plane(heif_image* img, heif_channel channel, int channel_index, uint32_t w, uint32_t h, int bit_depth)
+// What the screen content coding tools are made for: few colours, sharp edges, and the same
+// shapes again and again.
+uint16_t screen_pattern(uint32_t x, uint32_t y, int channel, int bit_depth)
+{
+  static const char* const glyph[8] = {
+    "..##..#.",
+    ".#..#.#.",
+    ".#..#.##",
+    ".####.#.",
+    ".#..#.#.",
+    ".#..#.#.",
+    ".#..#.##",
+    "........"
+  };
+
+  static const uint32_t colours[4][3] = {
+    {235, 128, 128},
+    {16,  128, 128},
+    {81,  90,  240},
+    {145, 54,  34}
+  };
+
+  const bool window = ((x / 40 + y / 32) % 2) != 0;
+  const bool ink = (glyph[y % 8][x % 8] == '#' && (y / 8) % 3 != 2);
+  const int colour = ink ? (window ? 2 : 1) : (window ? 3 : 0);
+
+  const uint32_t maxval = (1u << bit_depth) - 1;
+  return static_cast<uint16_t>(colours[colour][channel] * maxval / 255);
+}
+
+typedef uint16_t (* pattern_function)(uint32_t x, uint32_t y, int channel, int bit_depth);
+
+void add_plane(heif_image* img, heif_channel channel, int channel_index, uint32_t w, uint32_t h, int bit_depth,
+               pattern_function pattern_of, uint32_t subsampling_x, uint32_t subsampling_y)
 {
   heif_error err = heif_image_add_plane(img, channel, w, h, bit_depth);
   REQUIRE(err.code == heif_error_Ok);
@@ -96,7 +155,7 @@ void add_plane(heif_image* img, heif_channel channel, int channel_index, uint32_
 
   for (uint32_t y = 0; y < h; y++) {
     for (uint32_t x = 0; x < w; x++) {
-      const uint16_t value = pattern(x, y, channel_index, bit_depth);
+      const uint16_t value = pattern_of(x * subsampling_x, y * subsampling_y, channel_index, bit_depth);
       if (bit_depth > 8) {
         memcpy(p + y * stride + 2 * x, &value, 2);
       }
@@ -107,7 +166,7 @@ void add_plane(heif_image* img, heif_channel channel, int channel_index, uint32_
   }
 }
 
-heif_image* create_image(uint32_t w, uint32_t h, heif_chroma chroma, int bit_depth)
+heif_image* create_image(uint32_t w, uint32_t h, heif_chroma chroma, int bit_depth, bool screen_content = false)
 {
   heif_image* img = nullptr;
   heif_error err = heif_image_create(w, h,
@@ -115,13 +174,19 @@ heif_image* create_image(uint32_t w, uint32_t h, heif_chroma chroma, int bit_dep
                                      chroma, &img);
   REQUIRE(err.code == heif_error_Ok);
 
-  add_plane(img, heif_channel_Y, 0, w, h, bit_depth);
+  // The test pattern is a function of the position in the plane, the screen content is
+  // a picture that the chroma planes show in their resolution.
+  const pattern_function pattern_of = screen_content ? screen_pattern : pattern;
+
+  add_plane(img, heif_channel_Y, 0, w, h, bit_depth, pattern_of, 1, 1);
 
   if (chroma != heif_chroma_monochrome) {
     const uint32_t cw = (chroma == heif_chroma_444) ? w : (w + 1) / 2;
     const uint32_t ch = (chroma == heif_chroma_420) ? (h + 1) / 2 : h;
-    add_plane(img, heif_channel_Cb, 1, cw, ch, bit_depth);
-    add_plane(img, heif_channel_Cr, 2, cw, ch, bit_depth);
+    const uint32_t sx = (screen_content && chroma != heif_chroma_444) ? 2 : 1;
+    const uint32_t sy = (screen_content && chroma == heif_chroma_420) ? 2 : 1;
+    add_plane(img, heif_channel_Cb, 1, cw, ch, bit_depth, pattern_of, sx, sy);
+    add_plane(img, heif_channel_Cr, 2, cw, ch, bit_depth, pattern_of, sx, sy);
   }
 
   return img;
@@ -155,13 +220,15 @@ heif_error write_to_vector(heif_context*, const void* data, size_t size, void* u
   return heif_error_success;
 }
 
-EncodeResult encode_lossless(heif_image* img, const char* tool = nullptr)
+typedef std::vector<std::pair<const char*, bool>> CodingTools;
+
+EncodeResult encode(heif_image* img, bool lossless, const CodingTools& tools)
 {
   heif_context* ctx = heif_context_alloc();
   heif_encoder* encoder = get_hm_encoder(ctx);
   REQUIRE(encoder != nullptr);
 
-  heif_error err = heif_encoder_set_lossless(encoder, 1);
+  heif_error err = heif_encoder_set_lossless(encoder, lossless ? 1 : 0);
   REQUIRE(err.code == heif_error_Ok);
 
   if (heif_image_get_chroma_format(img) != heif_chroma_monochrome) {
@@ -169,8 +236,9 @@ EncodeResult encode_lossless(heif_image* img, const char* tool = nullptr)
     REQUIRE(err.code == heif_error_Ok);
   }
 
-  if (tool) {
-    err = heif_encoder_set_parameter_boolean(encoder, tool, 1);
+  for (const auto& tool : tools) {
+    err = heif_encoder_set_parameter_boolean(encoder, tool.first, tool.second ? 1 : 0);
+    INFO("coding tool " << tool.first);
     REQUIRE(err.code == heif_error_Ok);
   }
 
@@ -189,6 +257,33 @@ EncodeResult encode_lossless(heif_image* img, const char* tool = nullptr)
   heif_context_free(ctx);
   return result;
 }
+
+
+EncodeResult encode_lossless(heif_image* img, const char* tool = nullptr)
+{
+  CodingTools tools;
+  if (tool) {
+    tools.emplace_back(tool, true);
+  }
+
+  return encode(img, true, tools);
+}
+
+
+// general_profile_idc of the HEVC image in the file. It is the second byte of the
+// HEVCDecoderConfigurationRecord in the 'hvcC' box.
+int hevc_profile_idc(const std::vector<uint8_t>& file)
+{
+  static const uint8_t fourcc[4] = {'h', 'v', 'c', 'C'};
+
+  auto box = std::search(file.begin(), file.end(), fourcc, fourcc + 4);
+  REQUIRE(file.end() - box > 6);
+
+  return box[5] & 0x1F;
+}
+
+const int HEVC_PROFILE_FORMAT_RANGE_EXTENSIONS = 4;
+const int HEVC_PROFILE_SCREEN_CONTENT_CODING = 9;
 
 
 void check_decodes_to(const std::vector<uint8_t>& file, const heif_image* expected, int bit_depth)
@@ -414,4 +509,157 @@ TEST_CASE("HM does not encode image sequences")
 
   INFO("error: " << message);
   CHECK(code == heif_error_Unsupported_feature);
+}
+
+
+TEST_CASE("HM encodes with the screen content coding tools")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  if (!have_screen_content_coding_tools()) {
+    SKIP("the HM encoder plugin was built without the HM version that has the screen content coding tools");
+  }
+
+  // There is no decoder in libheif for these images. The reference decoder of HM decodes
+  // them, which was verified when the tests were written, but it is no library. So we check
+  // what can be seen from the outside: the image is encoded in a screen content coding
+  // profile, and the coding tool changes the coded data.
+
+  struct tool
+  {
+    const char* name;
+    bool enable;
+    bool makes_image_smaller; // for the picture that we encode
+    bool needs_444;
+  };
+
+  const tool t = GENERATE(tool{"palette-mode", true, true, false},
+                          tool{"intra-block-copy", true, true, false},
+                          tool{"adaptive-colour-transform", true, false, true},
+                          tool{"intra-boundary-filter", false, false, false});
+
+  const heif_chroma chroma = GENERATE(heif_chroma_monochrome, heif_chroma_420, heif_chroma_444);
+  const int bit_depth = GENERATE(8, 10);
+  const bool lossless = GENERATE(false, true);
+
+  if (t.needs_444 && chroma != heif_chroma_444) {
+    return;
+  }
+
+  INFO("coding tool " << t.name << ", chroma " << chroma << ", bit depth " << bit_depth << ", lossless " << lossless);
+
+  heif_image* img = create_image(160, 96, chroma, bit_depth, true);
+
+  EncodeResult without_tool = encode(img, lossless, {});
+  INFO("encode error (" << without_tool.code << "/" << without_tool.subcode << "): " << without_tool.message);
+  REQUIRE(without_tool.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(without_tool.file) != HEVC_PROFILE_SCREEN_CONTENT_CODING);
+
+  EncodeResult with_tool = encode(img, lossless, {{t.name, t.enable}});
+  INFO("encode error (" << with_tool.code << "/" << with_tool.subcode << "): " << with_tool.message);
+  REQUIRE(with_tool.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(with_tool.file) == HEVC_PROFILE_SCREEN_CONTENT_CODING);
+
+  CHECK(with_tool.file != without_tool.file);
+  if (t.makes_image_smaller) {
+    CHECK(with_tool.file.size() < without_tool.file.size());
+  }
+
+  heif_image_release(img);
+}
+
+
+TEST_CASE("HM combines the screen content coding tools with those of the range extensions")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  if (!have_screen_content_coding_tools()) {
+    SKIP("the HM encoder plugin was built without the HM version that has the screen content coding tools");
+  }
+
+  heif_image* img = create_image(160, 96, heif_chroma_444, 10, true);
+
+  EncodeResult result = encode(img, false, {{"palette-mode",               true},
+                                            {"intra-block-copy",           true},
+                                            {"adaptive-colour-transform",  true},
+                                            {"intra-boundary-filter",      false},
+                                            {"cross-component-prediction", true},
+                                            {"implicit-rdpcm",             true},
+                                            {"explicit-rdpcm",             true},
+                                            {"transform-skip-rotation",    true},
+                                            {"transform-skip-context",     true},
+                                            {"persistent-rice-adaptation", true},
+                                            {"intra-smoothing",            false}});
+  INFO("encode error (" << result.code << "/" << result.subcode << "): " << result.message);
+  REQUIRE(result.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(result.file) == HEVC_PROFILE_SCREEN_CONTENT_CODING);
+
+  heif_image_release(img);
+}
+
+
+TEST_CASE("HM refuses what the screen content coding profiles do not allow")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  if (!have_screen_content_coding_tools()) {
+    SKIP("the HM encoder plugin was built without the HM version that has the screen content coding tools");
+  }
+
+  struct combination
+  {
+    const char* description;
+    heif_chroma chroma;
+    int bit_depth;
+    CodingTools tools;
+  };
+
+  const combination c = GENERATE(combination{"more than 10 bits", heif_chroma_444, 12, {{"palette-mode", true}}},
+                                 combination{"chroma 4:2:2", heif_chroma_422, 8, {{"palette-mode", true}}},
+                                 combination{"colour transform without 4:4:4", heif_chroma_420, 8, {{"adaptive-colour-transform", true}}},
+                                 combination{"extended precision", heif_chroma_444, 8, {{"intra-block-copy", true}, {"extended-precision", true}}},
+                                 combination{"aligned bypass bins", heif_chroma_444, 8, {{"intra-boundary-filter", false}, {"cabac-bypass-alignment", true}}});
+
+  INFO(c.description);
+
+  heif_image* img = create_image(160, 96, c.chroma, c.bit_depth, true);
+
+  EncodeResult refused = encode(img, false, c.tools);
+  INFO("encode error (" << refused.code << "/" << refused.subcode << "): " << refused.message);
+  CHECK(refused.code == heif_error_Encoder_plugin_error);
+  CHECK(refused.subcode == heif_suberror_Invalid_parameter_value);
+
+  // The same image is encoded when the screen content coding tools are not used.
+
+  EncodeResult accepted = encode(img, false, {});
+  INFO("encode error (" << accepted.code << "/" << accepted.subcode << "): " << accepted.message);
+  CHECK(accepted.code == heif_error_Ok);
+
+  heif_image_release(img);
+}
+
+
+TEST_CASE("HM uses the profiles of the range extensions without screen content coding tools")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  // This also holds when the version of HM with the screen content coding tools is the only
+  // one in the plugin and encodes all images.
+
+  heif_image* img = create_image(72, 56, heif_chroma_444, 12);
+
+  EncodeResult result = encode_lossless(img, "implicit-rdpcm");
+  INFO("encode error (" << result.code << "/" << result.subcode << "): " << result.message);
+  REQUIRE(result.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(result.file) == HEVC_PROFILE_FORMAT_RANGE_EXTENSIONS);
+
+  heif_image_release(img);
 }
