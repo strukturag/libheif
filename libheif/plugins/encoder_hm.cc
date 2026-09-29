@@ -676,7 +676,9 @@ static const char* hm_profile(const encoder_struct_hm* encoder, heif_chroma chro
 
   switch (chroma) {
     case heif_chroma_monochrome:
-      return bit_depth <= 8 ? "monochrome" : "monochrome12";
+      // HM does not know the Monochrome 10 profile. Main 10 Intra allows monochrome too, and
+      // unlike Monochrome 12 it is one of the profiles of MIAF.
+      return bit_depth <= 8 ? "monochrome" : bit_depth <= 10 ? "main_10_intra" : "monochrome12";
     case heif_chroma_422:
       return bit_depth <= 10 ? "main_422_10_intra" : "main_422_12_intra";
     default:
