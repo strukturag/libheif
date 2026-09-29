@@ -283,7 +283,33 @@ int hevc_profile_idc(const std::vector<uint8_t>& file)
 }
 
 const int HEVC_PROFILE_FORMAT_RANGE_EXTENSIONS = 4;
+const int HEVC_PROFILE_HIGH_THROUGHPUT = 5;
 const int HEVC_PROFILE_SCREEN_CONTENT_CODING = 9;
+
+
+// The compatible brands in the 'ftyp' box, which is the first box of the file.
+std::vector<std::string> compatible_brands(const std::vector<uint8_t>& file)
+{
+  REQUIRE(file.size() >= 16);
+  REQUIRE(memcmp(file.data() + 4, "ftyp", 4) == 0);
+
+  const size_t box_size = (size_t{file[0]} << 24) | (size_t{file[1]} << 16) | (size_t{file[2]} << 8) | file[3];
+  REQUIRE(box_size <= file.size());
+
+  // box header, major brand, minor version
+  std::vector<std::string> brands;
+  for (size_t p = 16; p + 4 <= box_size; p += 4) {
+    brands.emplace_back(file.begin() + p, file.begin() + p + 4);
+  }
+
+  return brands;
+}
+
+bool has_brand(const std::vector<uint8_t>& file, const char* brand)
+{
+  const std::vector<std::string> brands = compatible_brands(file);
+  return std::find(brands.begin(), brands.end(), brand) != brands.end();
+}
 
 
 void check_decodes_to(const std::vector<uint8_t>& file, const heif_image* expected, int bit_depth)
@@ -562,6 +588,11 @@ TEST_CASE("HM encodes with the screen content coding tools")
   REQUIRE(with_tool.code == heif_error_Ok);
   CHECK(hevc_profile_idc(with_tool.file) == HEVC_PROFILE_SCREEN_CONTENT_CODING);
 
+  // There is no brand for the screen content coding profiles.
+  CHECK(has_brand(with_tool.file, "mif1"));
+  CHECK_FALSE(has_brand(with_tool.file, "heic"));
+  CHECK_FALSE(has_brand(with_tool.file, "heix"));
+
   CHECK(with_tool.file != without_tool.file);
   if (t.makes_image_smaller) {
     CHECK(with_tool.file.size() < without_tool.file.size());
@@ -640,6 +671,34 @@ TEST_CASE("HM refuses what the screen content coding profiles do not allow")
   EncodeResult accepted = encode(img, false, {});
   INFO("encode error (" << accepted.code << "/" << accepted.subcode << "): " << accepted.message);
   CHECK(accepted.code == heif_error_Ok);
+
+  heif_image_release(img);
+}
+
+
+TEST_CASE("HM images in a high throughput profile have no HEVC brand")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  // The alignment of the bypass bins selects the High Throughput 4:4:4 16 Intra profile.
+  // 'heix' is for the Main 10 profile and the format range extensions profiles only.
+
+  heif_image* img = create_image(72, 56, heif_chroma_444, 12);
+
+  EncodeResult high_throughput = encode_lossless(img, "cabac-bypass-alignment");
+  INFO("encode error (" << high_throughput.code << "/" << high_throughput.subcode << "): " << high_throughput.message);
+  REQUIRE(high_throughput.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(high_throughput.file) == HEVC_PROFILE_HIGH_THROUGHPUT);
+  CHECK(has_brand(high_throughput.file, "mif1"));
+  CHECK_FALSE(has_brand(high_throughput.file, "heix"));
+
+  EncodeResult range_extensions = encode_lossless(img);
+  INFO("encode error (" << range_extensions.code << "/" << range_extensions.subcode << "): " << range_extensions.message);
+  REQUIRE(range_extensions.code == heif_error_Ok);
+  CHECK(hevc_profile_idc(range_extensions.file) == HEVC_PROFILE_FORMAT_RANGE_EXTENSIONS);
+  CHECK(has_brand(range_extensions.file, "heix"));
 
   heif_image_release(img);
 }
