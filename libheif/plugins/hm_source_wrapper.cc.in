@@ -1,0 +1,10 @@
+// Generated from libheif/plugins/hm_source_wrapper.cc.in. Do not edit.
+//
+// Compiles one source file of the HEVC reference software HM inside of the namespace of
+// an HM variant. See hm_as_library.h.
+
+#include "hm_as_library.h"
+
+namespace HEIF_HM_NAMESPACE {
+#include "@HM_WRAPPED_SOURCE@"
+}

@@ -18,25 +18,26 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// How HM is used here
-// -------------------
-// HM consists of an encoder library and a command line application. The library takes a
-// picture in memory and returns NAL units in memory, but it expects several hundred
-// parameters that fit to each other, and it does not check them: the checks, and the
-// derivation of the dependent values, are part of the application.
+// The variants of HM
+// ------------------
+// The plugin can contain two versions of the HEVC reference software HM, which are selected
+// with CMake options:
 //
-// So we use two classes of the application as well. TAppEncCfg holds the configuration.
-// It reads it from a list of options, which we pass in memory, the same options that
-// can be given on the command line of HM. TAppEncTop applies the configuration to the
-// encoder. We do not use the parts of the application that read and write files.
+// ENABLE_HM_VARIANT_LATEST  The latest version of HM.
+// ENABLE_HM_VARIANT_SCC     The latest version of HM that has the screen content coding (SCC)
+//                           tools. They never became part of the main line of HM.
 //
-// HM prints to stdout and calls exit() on errors. hm_as_library.h, which is included into
-// all HM source files when HM is built, redirects both: the text is collected in a
-// buffer, and exit() throws heif_hm_exit.
+// When both are compiled in, the SCC variant encodes the images that use an SCC tool, and
+// the latest version encodes all others. The SCC variant also has everything that this
+// plugin needs for images without SCC tools, so it takes over when it is the only variant.
+//
+// All code that depends on HM is in encoder_hm_variant.cc, which is compiled once for each
+// variant. Here, a variant is a function that takes HM command line options and a picture.
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_hm.h"
+#include "encoder_hm_variant.h"
 #include "encoder_input_check.h"
 
 #include <algorithm>
@@ -44,28 +45,11 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
-#include <list>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
-
-// third-party/hm.cmd builds HM with HIGH_BITDEPTH, which changes the data types in the
-// HM headers. CMake verifies that the HM build we link to has this setting.
-#define RExt__HIGH_BIT_DEPTH_SUPPORT 1
-
-#define LIBHEIF_HM_PLUGIN 1
-#include "hm_as_library.h"
-
-// The symbols of HM are hidden, see third-party/hm.cmd.
-#if defined(__GNUC__)
-#pragma GCC visibility push(hidden)
-#endif
-#include "TAppEncTop.h"
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif
 
 
 static const char* kError_out_of_memory = "Out of memory";
@@ -83,28 +67,47 @@ static const char* const kParam_chroma_valid_values[] = {
   "420", "422", "444", nullptr
 };
 
-// Coding tools of the HEVC range extensions. They are disabled by default, since not
-// every decoder implements all of them.
+// The screen content coding profiles of HEVC that HM supports end at 10 bits.
+static const int HM_MAX_BIT_DEPTH_SCREEN_CONTENT_CODING = 10;
+
+enum hm_tool_set
+{
+  // Coding tools of the HEVC range extensions. Table A.2 of ITU-T H.265 only allows them
+  // in the profiles for 4:4:4.
+  hm_tool_set_range_extensions,
+
+  // Coding tools of the HEVC screen content coding extensions. Only a variant of HM with
+  // these tools has them, and they need one of the screen content coding profiles.
+  hm_tool_set_screen_content_coding
+};
+
+// The coding tools keep the defaults of HEVC version 1, since not every decoder implements
+// all of the others.
 struct hm_coding_tool
 {
   const char* parameter_name;
   const char* hm_option;
   bool default_value;
+  hm_tool_set tool_set;
 
-  // Tools that Table A.2 of ITU-T H.265 only allows in the profiles for 4:4:4.
-  bool needs_444_profile;
+  // The option of HM disables the tool.
+  bool hm_option_is_inverted;
 };
 
 static const hm_coding_tool hm_coding_tools[] = {
-  {"cross-component-prediction", "CrossComponentPrediction",      false, true},
-  {"implicit-rdpcm",             "ImplicitResidualDPCM",          false, true},
-  {"explicit-rdpcm",             "ExplicitResidualDPCM",          false, true},
-  {"transform-skip-rotation",    "ResidualRotation",              false, true},
-  {"transform-skip-context",     "SingleSignificanceMapContext",  false, true},
-  {"persistent-rice-adaptation", "GolombRiceParameterAdaptation", false, true},
-  {"intra-smoothing",            "IntraReferenceSmoothing",       true,  true},
-  {"extended-precision",         "ExtendedPrecision",             false, true},
-  {"cabac-bypass-alignment",     "AlignCABACBeforeBypass",        false, true},
+  {"cross-component-prediction", "CrossComponentPrediction",      false, hm_tool_set_range_extensions,      false},
+  {"implicit-rdpcm",             "ImplicitResidualDPCM",          false, hm_tool_set_range_extensions,      false},
+  {"explicit-rdpcm",             "ExplicitResidualDPCM",          false, hm_tool_set_range_extensions,      false},
+  {"transform-skip-rotation",    "ResidualRotation",              false, hm_tool_set_range_extensions,      false},
+  {"transform-skip-context",     "SingleSignificanceMapContext",  false, hm_tool_set_range_extensions,      false},
+  {"persistent-rice-adaptation", "GolombRiceParameterAdaptation", false, hm_tool_set_range_extensions,      false},
+  {"intra-smoothing",            "IntraReferenceSmoothing",       true,  hm_tool_set_range_extensions,      false},
+  {"extended-precision",         "ExtendedPrecision",             false, hm_tool_set_range_extensions,      false},
+  {"cabac-bypass-alignment",     "AlignCABACBeforeBypass",        false, hm_tool_set_range_extensions,      false},
+  {"palette-mode",               "PaletteMode",                   false, hm_tool_set_screen_content_coding, false},
+  {"intra-block-copy",           "IntraBlockCopyEnabled",         false, hm_tool_set_screen_content_coding, false},
+  {"adaptive-colour-transform",  "ColourTransform",               false, hm_tool_set_screen_content_coding, false},
+  {"intra-boundary-filter",      "IntraBoundaryFilterDisabled",   true,  hm_tool_set_screen_content_coding, true},
 };
 
 static const int HM_NUM_CODING_TOOLS = sizeof(hm_coding_tools) / sizeof(hm_coding_tools[0]);
@@ -113,7 +116,8 @@ enum
 {
   hm_tool_intra_smoothing = 6,
   hm_tool_extended_precision = 7,
-  hm_tool_cabac_bypass_alignment = 8
+  hm_tool_cabac_bypass_alignment = 8,
+  hm_tool_adaptive_colour_transform = 11
 };
 
 static const char* kParam_transform_skip_max_size = "transform-skip-log2-max-size";
@@ -127,8 +131,16 @@ struct encoder_struct_hm
   bool lossless = false;
   heif_chroma chroma = heif_chroma_420;
 
+  // Also holds the tools that no variant of HM in this plugin has. They keep their defaults.
   bool coding_tool[HM_NUM_CODING_TOOLS] = {};
   int transform_skip_log2_max_size = 2;
+
+  encoder_struct_hm()
+  {
+    for (int i = 0; i < HM_NUM_CODING_TOOLS; i++) {
+      coding_tool[i] = hm_coding_tools[i].default_value;
+    }
+  }
 
   // --- output
 
@@ -140,8 +152,40 @@ struct encoder_struct_hm
 };
 
 
-// HM keeps part of its state in global variables.
+// HM keeps part of its state in global variables. Each variant has its own, but one lock
+// for all of them is enough.
 static std::mutex hm_mutex;
+
+
+// --- variants of HM
+
+static const hm_variant* hm_variant_latest()
+{
+#if HAVE_HM_VARIANT_LATEST
+  return get_hm_variant_latest();
+#else
+  return nullptr;
+#endif
+}
+
+static const hm_variant* hm_variant_screen_content_coding()
+{
+#if HAVE_HM_VARIANT_SCC
+  return get_hm_variant_scc();
+#else
+  return nullptr;
+#endif
+}
+
+#if !HAVE_HM_VARIANT_LATEST && !HAVE_HM_VARIANT_SCC
+#error "The HM encoder plugin needs at least one variant of HM"
+#endif
+
+static bool hm_is_coding_tool_available(const hm_coding_tool& tool)
+{
+  return (tool.tool_set != hm_tool_set_screen_content_coding ||
+          hm_variant_screen_content_coding() != nullptr);
+}
 
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -153,7 +197,15 @@ static void hm_set_default_parameters(void* encoder);
 
 static const char* hm_plugin_name()
 {
-  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "HM HEVC reference encoder %s (experimental)", NV_VERSION);
+  std::string versions;
+  for (const hm_variant* variant : {hm_variant_latest(), hm_variant_screen_content_coding()}) {
+    if (variant) {
+      versions += (versions.empty() ? "" : " + ");
+      versions += variant->version;
+    }
+  }
+
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "HM HEVC reference encoder %s (experimental)", versions.c_str());
   return plugin_name;
 }
 
@@ -200,6 +252,10 @@ static void hm_init_parameters()
   d[i++] = p++;
 
   for (const hm_coding_tool& tool : hm_coding_tools) {
+    if (!hm_is_coding_tool_available(tool)) {
+      continue;
+    }
+
     assert(i < MAX_NPARAMETERS);
     p->version = 2;
     p->name = tool.parameter_name;
@@ -269,7 +325,8 @@ static void hm_free_encoder(void* encoder_raw)
 static int hm_find_coding_tool(const char* name)
 {
   for (int i = 0; i < HM_NUM_CODING_TOOLS; i++) {
-    if (strcmp(name, hm_coding_tools[i].parameter_name) == 0) {
+    if (hm_is_coding_tool_available(hm_coding_tools[i]) &&
+        strcmp(name, hm_coding_tools[i].parameter_name) == 0) {
       return i;
     }
   }
@@ -565,17 +622,41 @@ static const char* hm_level_for_picture_size(uint32_t width, uint32_t height)
 }
 
 
+static bool hm_uses_coding_tools_of(const encoder_struct_hm* encoder, hm_tool_set tool_set)
+{
+  for (int i = 0; i < HM_NUM_CODING_TOOLS; i++) {
+    if (hm_coding_tools[i].tool_set == tool_set &&
+        encoder->coding_tool[i] != hm_coding_tools[i].default_value) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+// The variant of HM that encodes the image.
+static const hm_variant* hm_select_variant(const encoder_struct_hm* encoder)
+{
+  if (hm_uses_coding_tools_of(encoder, hm_tool_set_screen_content_coding) ||
+      hm_variant_latest() == nullptr) {
+    return hm_variant_screen_content_coding();
+  }
+
+  return hm_variant_latest();
+}
+
+
 // The profile with the tightest constraints that the image fits into. All our pictures
 // are intra pictures.
 static const char* hm_profile(const encoder_struct_hm* encoder, heif_chroma chroma, int bit_depth)
 {
-  bool needs_444_profile = false;
-  for (int i = 0; i < HM_NUM_CODING_TOOLS; i++) {
-    if (hm_coding_tools[i].needs_444_profile &&
-        encoder->coding_tool[i] != hm_coding_tools[i].default_value) {
-      needs_444_profile = true;
-    }
+  if (hm_uses_coding_tools_of(encoder, hm_tool_set_screen_content_coding)) {
+    // HM chooses one of the Screen-Extended Main profiles by the bit depth and the chroma format.
+    return "main-SCC";
   }
+
+  bool needs_444_profile = hm_uses_coding_tools_of(encoder, hm_tool_set_range_extensions);
 
   if (encoder->transform_skip_log2_max_size != 2) {
     needs_444_profile = true;
@@ -604,7 +685,37 @@ static const char* hm_profile(const encoder_struct_hm* encoder, heif_chroma chro
 }
 
 
-static std::vector<std::string> hm_options(const encoder_struct_hm* encoder, const heif_image* image,
+// The screen content coding profiles are narrower than the range extensions profiles.
+// Returns an empty string when the image can be encoded with the coding tools that are set.
+static std::string hm_check_screen_content_coding(const encoder_struct_hm* encoder, heif_chroma chroma, int bit_depth)
+{
+  if (!hm_uses_coding_tools_of(encoder, hm_tool_set_screen_content_coding)) {
+    return {};
+  }
+
+  if (bit_depth > HM_MAX_BIT_DEPTH_SCREEN_CONTENT_CODING) {
+    return "The screen content coding tools can only be used with up to 10 bits per sample.";
+  }
+
+  if (chroma == heif_chroma_422) {
+    return "The screen content coding tools cannot be used with chroma 4:2:2.";
+  }
+
+  if (encoder->coding_tool[hm_tool_adaptive_colour_transform] && chroma != heif_chroma_444) {
+    return "The adaptive colour transform can only be used with chroma 4:4:4.";
+  }
+
+  if (encoder->coding_tool[hm_tool_extended_precision] ||
+      encoder->coding_tool[hm_tool_cabac_bypass_alignment]) {
+    return "The screen content coding tools cannot be combined with 'extended-precision' or 'cabac-bypass-alignment'.";
+  }
+
+  return {};
+}
+
+
+static std::vector<std::string> hm_options(const encoder_struct_hm* encoder, const hm_variant* variant,
+                                           const heif_image* image,
                                            heif_image_input_class input_class,
                                            uint32_t width, uint32_t height)
 {
@@ -676,10 +787,23 @@ static std::vector<std::string> hm_options(const encoder_struct_hm* encoder, con
   options.push_back(hm_option("TransformSkipFast", 1));
   options.push_back(hm_option("SEIDecodedPictureHash", 0));
 
-  // --- coding tools of the range extensions
+  // --- coding tools of the range extensions and of the screen content coding extensions
 
   for (int i = 0; i < HM_NUM_CODING_TOOLS; i++) {
-    options.push_back(hm_option(hm_coding_tools[i].hm_option, encoder->coding_tool[i] ? 1 : 0));
+    const hm_coding_tool& tool = hm_coding_tools[i];
+
+    if (tool.tool_set == hm_tool_set_screen_content_coding && !variant->has_screen_content_coding) {
+      // This variant of HM does not know the option.
+      continue;
+    }
+
+    const bool enable = (encoder->coding_tool[i] != tool.hm_option_is_inverted);
+    options.push_back(hm_option(tool.hm_option, enable ? 1 : 0));
+  }
+
+  if (variant->has_screen_content_coding) {
+    // HM only finds the repetitions that make intra block copy worthwhile with this search.
+    options.push_back(hm_option("HashBasedIntraBlockCopySearchEnabled", 1));
   }
 
   options.push_back(hm_option("TransformSkipLog2MaxSize", encoder->transform_skip_log2_max_size));
@@ -741,156 +865,9 @@ static std::vector<std::string> hm_options(const encoder_struct_hm* encoder, con
 
 // --- encoding
 
-namespace {
-
-class HmEncoder : public TAppEncTop
-{
-public:
-  ~HmEncoder()
-  {
-    if (m_encoder_created) {
-      getTEncTop().deletePicBuffer();
-      getTEncTop().destroy();
-    }
-
-    destroy();
-  }
-
-  // Returns false when HM does not accept the options.
-  bool configure(const std::vector<std::string>& options)
-  {
-    std::vector<std::string> arguments;
-    arguments.emplace_back("libheif");
-    arguments.insert(arguments.end(), options.begin(), options.end());
-
-    std::vector<char*> argv;
-    for (std::string& argument : arguments) {
-      argv.push_back(argument.data());
-    }
-
-    create();
-
-    if (!parseCfg(static_cast<Int>(argv.size()), argv.data())) {
-      return false;
-    }
-
-    xInitLibCfg();
-
-    getTEncTop().create();
-    m_encoder_created = true;
-
-    xInitLib(false);
-
-    return true;
-  }
-
-
-  void encode(const heif_image* image, std::deque<std::vector<uint8_t>>& out_nals)
-  {
-    TComPicYuv original;
-    TComPicYuv true_original;
-
-    original.create(m_sourceWidth, m_sourceHeight, m_chromaFormatIDC, m_uiMaxCUWidth, m_uiMaxCUHeight, m_uiMaxTotalCUDepth, true);
-    true_original.create(m_sourceWidth, m_sourceHeight, m_chromaFormatIDC, m_uiMaxCUWidth, m_uiMaxCUHeight, m_uiMaxTotalCUDepth, true);
-
-    static const heif_channel channels[3] = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
-
-    for (UInt c = 0; c < original.getNumberValidComponents(); c++) {
-      const ComponentID component = ComponentID(c);
-
-      size_t stride = 0;
-      const uint8_t* plane = heif_image_get_plane_readonly2(image, channels[c], &stride);
-
-      copy_plane(original.getAddr(component), original.getStride(component),
-                 original.getWidth(component), original.getHeight(component),
-                 plane, stride,
-                 heif_image_get_width(image, channels[c]), heif_image_get_height(image, channels[c]),
-                 heif_image_get_bits_per_pixel_range(image, channels[c]));
-    }
-
-    original.copyToPic(&true_original);
-
-    // HM writes the reconstructed picture into a buffer that we have to provide.
-
-    struct Reconstructions
-    {
-      TComList<TComPicYuv*> list;
-
-      ~Reconstructions()
-      {
-        for (TComPicYuv* picture : list) {
-          picture->destroy();
-          delete picture;
-        }
-      }
-    } reconstructions;
-
-    TComPicYuv* reconstruction = new TComPicYuv;
-    reconstructions.list.pushBack(reconstruction);
-    reconstruction->create(m_sourceWidth, m_sourceHeight, m_chromaFormatIDC, m_uiMaxCUWidth, m_uiMaxCUHeight, m_uiMaxTotalCUDepth, true);
-
-    std::list<AccessUnit> access_units;
-    Int num_encoded = 0;
-
-    getTEncTop().encode(true, &original, &true_original,
-#if JVET_X0048_X0103_FILM_GRAIN
-                        nullptr,
-#endif
-                        IPCOLOURSPACE_UNCHANGED, IPCOLOURSPACE_UNCHANGED,
-                        reconstructions.list, access_units, num_encoded);
-
-    for (const AccessUnit& access_unit : access_units) {
-      for (const NALUnitEBSP* nal : access_unit) {
-        const std::string data = nal->m_nalUnitData.str();
-        out_nals.emplace_back(data.begin(), data.end());
-      }
-    }
-  }
-
-private:
-  bool m_encoder_created = false;
-
-  // Copies a plane of the image into the larger plane of the HM picture and fills the
-  // rest with copies of the border.
-  static void copy_plane(Pel* dst, int dst_stride, int dst_width, int dst_height,
-                         const uint8_t* src, size_t src_stride, int src_width, int src_height,
-                         int bit_depth)
-  {
-    src_width = std::min(src_width, dst_width);
-    src_height = std::min(src_height, dst_height);
-
-    for (int y = 0; y < dst_height; y++) {
-      const uint8_t* src_row = src + std::min(y, src_height - 1) * src_stride;
-      Pel* dst_row = dst + y * dst_stride;
-
-      if (bit_depth > 8) {
-        for (int x = 0; x < src_width; x++) {
-          uint16_t value;
-          memcpy(&value, src_row + 2 * x, 2);
-          dst_row[x] = static_cast<Pel>(value);
-        }
-      }
-      else {
-        for (int x = 0; x < src_width; x++) {
-          dst_row[x] = static_cast<Pel>(src_row[x]);
-        }
-      }
-
-      for (int x = src_width; x < dst_width; x++) {
-        dst_row[x] = dst_row[src_width - 1];
-      }
-    }
-  }
-};
-
-} // namespace
-
-
 // The last lines of what HM has printed. When HM gives up, this is its error message.
-static std::string hm_last_messages()
+static std::string hm_last_messages(std::string messages)
 {
-  std::string messages = heif_hm_messages();
-
   while (!messages.empty() && (messages.back() == '\n' || messages.back() == ' ')) {
     messages.pop_back();
   }
@@ -969,38 +946,38 @@ static heif_error hm_encode_image(void* encoder_raw, const heif_image* image,
     }
   }
 
-  const std::vector<std::string> options = hm_options(encoder, image, input_class, width, height);
+  const std::string unsupported = hm_check_screen_content_coding(encoder, chroma,
+                                                                 heif_image_get_bits_per_pixel_range(image, heif_channel_Y));
+  if (!unsupported.empty()) {
+    return hm_error(encoder, heif_suberror_Invalid_parameter_value, unsupported);
+  }
+
+  const hm_variant* variant = hm_select_variant(encoder);
+  assert(variant);
+
+  const std::vector<std::string> options = hm_options(encoder, variant, image, input_class, width, height);
 
   encoder->output_data.clear();
 
-  std::lock_guard<std::mutex> lock(hm_mutex);
+  hm_variant_result result;
 
-  heif_hm_messages().clear();
+  {
+    std::lock_guard<std::mutex> lock(hm_mutex);
 
-  try {
-    HmEncoder hm;
+    result = variant->encode(options, image, encoder->output_data);
+  }
 
-    if (!hm.configure(options)) {
+  switch (result.status) {
+    case hm_variant_result::Status::ok:
+      break;
+    case hm_variant_result::Status::configuration_refused:
       return hm_error(encoder, heif_suberror_Encoder_initialization,
-                      "HM does not accept the configuration. " + hm_last_messages());
-    }
-
-    hm.encode(image, encoder->output_data);
+                      "HM does not accept the configuration. " + hm_last_messages(result.messages));
+    case hm_variant_result::Status::encoding_failed:
+      return hm_error(encoder, heif_suberror_Encoder_encoding, "HM: " + hm_last_messages(result.messages));
+    case hm_variant_result::Status::out_of_memory:
+      return heif_error{heif_error_Memory_allocation_error, heif_suberror_Unspecified, kError_out_of_memory};
   }
-  catch (const heif_hm_exit&) {
-    encoder->output_data.clear();
-    return hm_error(encoder, heif_suberror_Encoder_encoding, "HM: " + hm_last_messages());
-  }
-  catch (const std::bad_alloc&) {
-    encoder->output_data.clear();
-    return heif_error{heif_error_Memory_allocation_error, heif_suberror_Unspecified, kError_out_of_memory};
-  }
-  catch (const std::exception& e) {
-    encoder->output_data.clear();
-    return hm_error(encoder, heif_suberror_Encoder_encoding, std::string("HM: ") + e.what());
-  }
-
-  heif_hm_messages().clear();
 
   if (encoder->output_data.empty()) {
     return hm_error(encoder, heif_suberror_Encoder_encoding, "HM did not return any data");

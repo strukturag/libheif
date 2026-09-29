@@ -18,35 +18,81 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// This header is force-included into every source file of the HEVC reference software HM
-// when it is built for libheif (third-party/hm.cmd). HM is written as a command line
-// program: its encoder library prints statistics for every picture and calls exit() when it
-// meets a configuration that it does not support. Neither is acceptable inside a library.
-// Without changing the HM sources, this header
+// This header is included first into every translation unit that contains code of the HEVC
+// reference software HM: into the HM source files themselves, which libheif compiles through
+// the generated wrappers (hm_source_wrapper.cc.in), and into encoder_hm_variant.cc.
 //
-// - turns printf(), and fprintf() to stdout and stderr, into functions that collect the text
-//   in a buffer. The libheif plugin uses it for its error messages.
-// - turns exit() into a function that throws heif_hm_exit, which the libheif plugin catches
-//   and reports as an error.
+// HM is written as a command line program, and a process can only contain one version of
+// it. Without changing the HM sources, this header makes it usable as a library, and in
+// several versions ("variants") at once:
 //
-// The headers that declare these functions are included first. They have include guards,
-// so that they are not read again after the names have been redefined.
+// - HM prints statistics for every picture. printf(), and fprintf() to stdout and stderr,
+//   are turned into functions that collect the text in a buffer. The plugin uses the text
+//   for its error messages.
+// - HM calls exit() when it meets a configuration that it does not support. exit() is turned
+//   into a function that throws heif_hm_exit, which is caught in encoder_hm_variant.cc.
+// - All code of HM is put into the namespace HEIF_HM_NAMESPACE, which is different for each
+//   variant. The namespace is opened around the HM source file by the file that includes
+//   this header.
 //
-// The libheif plugin includes this header too, with LIBHEIF_HM_PLUGIN defined: it has to
-// know heif_hm_exit and the message buffer, but keeps the functions of the C library.
+// For the namespace, all headers of the system that HM uses are included here, outside of
+// the namespace. They have include guards, so that they are not read again when HM includes
+// them inside of the namespace. A header that is missing in the list below fails to compile
+// inside of the namespace, it cannot go unnoticed.
 
 #ifndef LIBHEIF_HM_AS_LIBRARY_H
 #define LIBHEIF_HM_AS_LIBRARY_H
 
-#ifdef __cplusplus
+#if !defined(HEIF_HM_NAMESPACE)
+#error "HEIF_HM_NAMESPACE has to be defined as the name of the namespace of this HM variant"
+#endif
 
+// --- the system headers that HM uses
+
+#include <assert.h>
+#include <fcntl.h>
+#include <math.h>
+#include <memory.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#ifdef __APPLE__
+#include <malloc/malloc.h>
+#else
+#include <malloc.h>
+#endif
+
+#include <algorithm>
+#include <cassert>
+#include <cfloat>
+#include <cinttypes>
+#include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstring>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
 #include <iostream>
+#include <istream>
+#include <limits>
+#include <list>
+#include <map>
+#include <numeric>
+#include <ostream>
+#include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
+
+
+// --- no output, no exit
 
 struct heif_hm_exit
 {
@@ -55,6 +101,7 @@ struct heif_hm_exit
 
 // What HM has printed since the buffer was cleared. HM prints a lot, and an error message
 // is the last thing it prints, so only the end of the text is kept.
+// All variants of HM share this buffer.
 inline std::string& heif_hm_messages()
 {
   static thread_local std::string messages;
@@ -109,11 +156,26 @@ inline int heif_hm_fprintf(FILE* stream, const char* format, ...)
   throw heif_hm_exit{code};
 }
 
-#if !defined(LIBHEIF_HM_PLUGIN)
 #define printf heif_hm_printf
 #define fprintf heif_hm_fprintf
 #define exit heif_hm_exit_by_exception
-#endif
 
-#endif
+
+// --- one namespace for each variant of HM
+
+// HM calls some of its functions with an explicit global scope, like ::getComponentScaleX().
+// A name that is looked up in the global namespace is also searched in the namespaces that
+// the global namespace uses, so these calls find the functions in the namespace of HM.
+namespace HEIF_HM_NAMESPACE {
+}
+using namespace HEIF_HM_NAMESPACE;
+
+// The MD5 functions of HM have C linkage, which knows no namespaces.
+#define HEIF_HM_CONCATENATE2(a, b) a ## b
+#define HEIF_HM_CONCATENATE(a, b) HEIF_HM_CONCATENATE2(a, b)
+
+#define MD5Init HEIF_HM_CONCATENATE(HEIF_HM_NAMESPACE, _MD5Init)
+#define MD5Update HEIF_HM_CONCATENATE(HEIF_HM_NAMESPACE, _MD5Update)
+#define MD5Final HEIF_HM_CONCATENATE(HEIF_HM_NAMESPACE, _MD5Final)
+
 #endif

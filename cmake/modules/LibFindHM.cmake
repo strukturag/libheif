@@ -1,70 +1,82 @@
-# Locates a build of the HEVC reference software HM in its source tree.
+# Locates the sources of one version of the HEVC reference software HM.
 #
-# HM has no install target and no package description. third-party/hm.cmd downloads
-# and builds it, and this macro looks into the result. It takes the location as an
-# argument, so that several versions of HM can be found.
+# HM has no install target and no package description, and libheif does not use a build
+# of HM: it compiles the HM sources itself (see libheif/plugins/CMakeLists.txt). So all
+# that is needed is the source tree, as third-party/hm.cmd and third-party/hm-scc.cmd
+# download it.
 #
-#   libfind_hm(<prefix> <root> <high_bitdepth>)
+#   libfind_hm_sources(<prefix> <root> <needs_scc>)
 #
-#   prefix         prefix of the result variables
-#   root           source tree of HM
-#   high_bitdepth  whether HM has to be built with HIGH_BITDEPTH or without
+#   prefix     prefix of the result variables
+#   root       source tree of HM
+#   needs_scc  whether this has to be a version of HM with the screen content coding tools
 #
 # Result:
-#   <prefix>_INCLUDE_DIRS   for the HM headers
-#   <prefix>_LIBRARIES      the HM libraries
-#   <prefix>_APP_SOURCES    the classes of the HM application that hold the
-#                           configuration of the encoder. HM builds them into its
-#                           executable only, so libheif compiles them itself.
-#   <prefix>_BUILD_OK       whether the build has the requested HIGH_BITDEPTH setting
+#   <prefix>_SOURCE_DIR    the directory "source" of HM
+#   <prefix>_VERSION       version of HM, for example "18.0" or "16.21_SCM8.8"
+#   <prefix>_VERSION_OK    whether the version fits to <needs_scc>
+#   <prefix>_INCLUDE_DIRS  for the HM headers
+#   <prefix>_SOURCES       the source files of the encoder. This includes the two classes of
+#                          the HM application that hold the configuration of the encoder.
+#   <prefix>_DEFINITIONS   compile definitions for the code that uses HM
 
-macro(libfind_hm prefix root high_bitdepth)
+macro(libfind_hm_sources prefix root needs_scc)
     find_path(${prefix}_SOURCE_DIR
             NAMES Lib/TLibEncoder/TEncTop.h
             PATHS ${root}/source
             NO_DEFAULT_PATH)
 
-    # HM writes its libraries to lib/umake/<compiler>/<architecture>/<build type>
-    file(GLOB ${prefix}_LIBRARY_DIRS "${root}/lib/umake/*/*/release")
-
-    foreach (hm_library TLibEncoder TLibCommon Utilities)
-        find_library(${prefix}_${hm_library}_LIBRARY
-                NAMES ${hm_library}
-                PATHS ${${prefix}_LIBRARY_DIRS}
-                NO_DEFAULT_PATH)
-    endforeach ()
-
-    # The HIGH_BITDEPTH setting changes the data types in the HM headers. A plugin that is
-    # compiled for the other setting would crash.
-    set(${prefix}_BUILD_OK FALSE)
-    if (EXISTS "${root}/build/CMakeCache.txt")
-        file(STRINGS "${root}/build/CMakeCache.txt" ${prefix}_CACHE_LINE REGEX "^HIGH_BITDEPTH:BOOL=")
-        if ("${${prefix}_CACHE_LINE}" MATCHES "=(ON|TRUE|1)$")
-            set(${prefix}_IS_HIGH_BITDEPTH TRUE)
-        else ()
-            set(${prefix}_IS_HIGH_BITDEPTH FALSE)
-        endif ()
-
-        if ((${high_bitdepth} AND ${prefix}_IS_HIGH_BITDEPTH) OR (NOT ${high_bitdepth} AND NOT ${prefix}_IS_HIGH_BITDEPTH))
-            set(${prefix}_BUILD_OK TRUE)
-        else ()
-            message(WARNING "HM in ${root} was built with HIGH_BITDEPTH=${${prefix}_IS_HIGH_BITDEPTH}, which is not what libheif needs here.")
-        endif ()
-    endif ()
+    set(${prefix}_VERSION)
+    set(${prefix}_VERSION_OK FALSE)
 
     if (${prefix}_SOURCE_DIR)
+        file(STRINGS "${${prefix}_SOURCE_DIR}/Lib/TLibCommon/CommonDef.h" ${prefix}_VERSION_LINE
+                REGEX "^#define[ \t]+NV_VERSION[ \t]+\"")
+        string(REGEX REPLACE "^#define[ \t]+NV_VERSION[ \t]+\"([^\"]*)\".*$" "\\1"
+                ${prefix}_VERSION "${${prefix}_VERSION_LINE}")
+
+        # The versions with the screen content coding tools are named like "16.21_SCM8.8".
+        if ("${${prefix}_VERSION}" MATCHES "SCM")
+            set(${prefix}_HAS_SCC TRUE)
+        else ()
+            set(${prefix}_HAS_SCC FALSE)
+        endif ()
+
+        if (${needs_scc} AND NOT ${prefix}_HAS_SCC)
+            message(WARNING "HM ${${prefix}_VERSION} in ${root} has no screen content coding tools. Use third-party/hm-scc.cmd to download a version that has them.")
+        else ()
+            set(${prefix}_VERSION_OK TRUE)
+        endif ()
+
         set(${prefix}_INCLUDE_DIRS
                 ${${prefix}_SOURCE_DIR}/Lib
+                ${${prefix}_SOURCE_DIR}/Lib/TLibCommon
+                ${${prefix}_SOURCE_DIR}/Lib/libmd5
                 ${${prefix}_SOURCE_DIR}/App/TAppEncoder)
-        set(${prefix}_APP_SOURCES
+
+        # Two members of the configuration class have changed their names between the
+        # versions of HM.
+        file(STRINGS "${${prefix}_SOURCE_DIR}/App/TAppEncoder/TAppEncCfg.h" ${prefix}_OLD_MEMBER_NAMES
+                REGEX "m_iSourceWidth")
+        if (${prefix}_OLD_MEMBER_NAMES)
+            set(${prefix}_DEFINITIONS HEIF_HM_SOURCE_WIDTH=m_iSourceWidth HEIF_HM_SOURCE_HEIGHT=m_iSourceHeight)
+        else ()
+            set(${prefix}_DEFINITIONS HEIF_HM_SOURCE_WIDTH=m_sourceWidth HEIF_HM_SOURCE_HEIGHT=m_sourceHeight)
+        endif ()
+
+        if (${prefix}_HAS_SCC)
+            list(APPEND ${prefix}_DEFINITIONS HEIF_HM_VARIANT_HAS_SCC=1)
+        else ()
+            list(APPEND ${prefix}_DEFINITIONS HEIF_HM_VARIANT_HAS_SCC=0)
+        endif ()
+
+        file(GLOB ${prefix}_SOURCES
+                ${${prefix}_SOURCE_DIR}/Lib/TLibCommon/*.cpp
+                ${${prefix}_SOURCE_DIR}/Lib/TLibEncoder/*.cpp
+                ${${prefix}_SOURCE_DIR}/Lib/Utilities/*.cpp
+                ${${prefix}_SOURCE_DIR}/Lib/libmd5/*.cpp)
+        list(APPEND ${prefix}_SOURCES
                 ${${prefix}_SOURCE_DIR}/App/TAppEncoder/TAppEncCfg.cpp
                 ${${prefix}_SOURCE_DIR}/App/TAppEncoder/TAppEncTop.cpp)
     endif ()
-
-    find_package(Threads)
-    set(${prefix}_LIBRARIES
-            ${${prefix}_TLibEncoder_LIBRARY}
-            ${${prefix}_TLibCommon_LIBRARY}
-            ${${prefix}_Utilities_LIBRARY}
-            Threads::Threads)
 endmacro()

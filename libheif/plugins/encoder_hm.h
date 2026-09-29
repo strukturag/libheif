@@ -27,7 +27,11 @@
 
    HM is slow, and it is not written as a library, but it implements all of HEVC.
    We use it for what the other HEVC encoders cannot do: bit depths of 9, 11 and
-   13 to 15 bits, and the coding tools of the range extensions.
+   13 to 15 bits, the coding tools of the range extensions, and the coding tools of
+   the screen content coding extensions.
+
+   The plugin can contain two versions of HM, since the screen content coding tools
+   only exist in a version of their own. See encoder_hm.cc.
 
    HM encodes one image at a time in the whole process, because it keeps part of
    its state in global variables. The plugin serializes the calls.

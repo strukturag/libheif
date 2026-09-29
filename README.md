@@ -307,14 +307,29 @@ You can also add plugin directories programmatically.
 * The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
 
 * The HM encoder plugin is EXPERIMENTAL. It uses the HEVC reference software HM, which encodes what x265 and kvazaar cannot:
-  images with 9, 11 and 13 to 15 bits per sample, and the coding tools of the HEVC range extensions.
-  HM has no installation procedure. Run `third-party/hm.cmd` in the `third-party` directory to download and build it,
-  then configure libheif with `-DWITH_HM=ON`. The plugin is disabled by default and it is never chosen automatically.
+  images with 9, 11 and 13 to 15 bits per sample, the coding tools of the HEVC range extensions, and the coding tools of
+  the HEVC screen content coding (SCC) extensions.
+  The plugin is disabled by default and it is never chosen automatically.
   Select it with `heif-enc -e hm` or by its name `hm` in the API.
+  * HM has no installation procedure, and libheif compiles the HM sources itself. The plugin can contain two versions of HM:
+
+    | CMake option | Default | Version of HM | Download (run in the `third-party` directory) |
+    |:-------------|:--------|:--------------|:---------|
+    | `ENABLE_HM_VARIANT_LATEST` | ON  | the latest version, HM 18.0 | `hm.cmd` |
+    | `ENABLE_HM_VARIANT_SCC`    | OFF | the latest version with the SCC tools, HM 16.21 + SCM 8.8 | `hm-scc.cmd` |
+
+    Download the versions that you want to use and configure libheif with `-DWITH_HM=ON`, plus
+    `-DENABLE_HM_VARIANT_SCC=ON` for the SCC tools. When the plugin contains both versions, it uses the SCC version only
+    for images that are encoded with an SCC tool. The SCC version can also be used alone
+    (`-DENABLE_HM_VARIANT_LATEST=OFF`), it then encodes all images.
   * HM is much slower than x265 and uses a single thread. It encodes only one image at a time in the whole process
     and it does not encode image sequences.
   * The coding tools of the range extensions are parameters of the plugin (`heif-enc -e hm -P` lists them), for example
     `-p cross-component-prediction=1`. They are disabled by default, because not every decoder implements all of them.
+  * The SCC tools are the parameters `palette-mode`, `intra-block-copy`, `adaptive-colour-transform` and
+    `intra-boundary-filter`. An image that uses one of them is encoded in a screen content coding profile, which allows
+    up to 10 bits per sample and no chroma 4:2:2. The adaptive colour transform needs chroma 4:4:4.
+    libde265 and FFmpeg do not decode these images, the reference decoder of HM does.
 
 ## Usage
 
