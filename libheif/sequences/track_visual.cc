@@ -759,9 +759,14 @@ heif_brand2 Track_Visual::get_compatible_brand() const
           config.is_profile_compatible(HEVCDecoderConfigurationRecord::Profile_MainStillPicture)) {
         return heif_brand2_hevc;
       }
-      else {
+
+      if (config.is_profile_compatible(HEVCDecoderConfigurationRecord::Profile_Main10) ||
+          config.is_profile_compatible(HEVCDecoderConfigurationRecord::Profile_RExt)) {
         return heif_brand2_hevx;
       }
+
+      // There is no brand for the other profiles of HEVC (ISO/IEC 23008-12, B.4.2.2).
+      return 0;
     }
 
     case fourcc("avc1"):
