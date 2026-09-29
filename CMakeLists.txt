@@ -162,6 +162,16 @@ if (WITH_KVAZAAR)
     endif ()
 endif ()
 
+# HM, the HEVC reference software. Its sources are downloaded with third-party/hm.cmd and
+# third-party/hm-scc.cmd. The plugin can contain two versions of HM.
+
+plugin_option(HM "HM HEVC reference encoder (experimental)" OFF OFF)
+option(ENABLE_HM_VARIANT_LATEST "HM encoder: include the latest version of HM" ON)
+option(ENABLE_HM_VARIANT_SCC "HM encoder: include the version of HM with screen content coding tools" OFF)
+if (WITH_HM)
+    find_package(HM)
+endif ()
+
 # uvg266
 
 plugin_option(UVG266 "uvg266 VVC encoder" OFF OFF)
@@ -342,6 +352,12 @@ plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW a
 plugin_compilation_info(WEBCODECS WEBCODECS "WebCodecs HEVC decoder (experimental)")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
 plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
+plugin_compilation_info(HM HM "HM HEVC encoder (experimental)")
+if (HM_FOUND)
+    foreach (hm_variant ${HM_VARIANTS})
+        message("    HM variant ${hm_variant}: HM ${HM_${hm_variant}_VERSION}")
+    endforeach ()
+endif ()
 plugin_compilation_info(AOM_DECODER AOM_DECODER "AOM AV1 decoder")
 plugin_compilation_info(AOM_ENCODER AOM_ENCODER "AOM AV1 encoder")
 plugin_compilation_info(DAV1D DAV1D "Dav1d AV1 decoder")
@@ -386,7 +402,7 @@ endmacro()
 if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND OR WITH_WEBCODECS)
     set(SUPPORTS_HEIC_DECODING TRUE)
 endif()
-if (X265_FOUND OR KVAZAAR_FOUND)
+if (X265_FOUND OR KVAZAAR_FOUND OR HM_FOUND)
     set(SUPPORTS_HEIC_ENCODING TRUE)
 endif()
 if (AOM_DECODER_FOUND OR DAV1D_FOUND)

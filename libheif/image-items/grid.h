@@ -138,6 +138,8 @@ public:
 
   heif_brand2 get_compatible_brand() const override;
 
+  bool is_coded_in_miaf_profile() const override;
+
 protected:
   Result<std::shared_ptr<Decoder>> get_decoder() const override;
 

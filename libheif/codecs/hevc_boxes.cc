@@ -123,11 +123,11 @@ Error HEVCDecoderConfigurationRecord::write(StreamWriter& writer) const
     uint8_t byte = 0;
 
     for (int b = 0; b < 8; b++) {
+      byte = (uint8_t) (byte << 1);
+
       if (general_constraint_indicator_flags[i * 8 + b]) {
         byte |= 1;
       }
-
-      byte = (uint8_t) (byte << 1);
     }
 
     writer.write8(byte);
@@ -188,6 +188,81 @@ bool HEVCDecoderConfigurationRecord::is_profile_compatible(Profile profile) cons
 {
   return (general_profile_idc == profile ||
           get_general_profile_compatibility_flag(profile));
+}
+
+
+bool HEVCDecoderConfigurationRecord::is_miaf_profile() const
+{
+  // The MIAF HEVC Basic, Advanced and Extended profiles (ISO/IEC 23000-22, A.3.2, A.4.2, A.5.2)
+  // list the HEVC profiles of their images.
+  //
+  // They also limit the images to the Main tier and to level 6. This is not checked here:
+  // the encoders do not all signal the level that the image needs (kvazaar signals level 6.2
+  // for every image), so the level in 'hvcC' does not tell whether the image is within
+  // the limit.
+
+  if (general_profile_space != 0) {
+    return false;
+  }
+
+  // Main and Main Still Picture (Basic), Main 10 and Main 10 Still Picture (Advanced).
+  // A bitstream in the Main 10 Still Picture profile is also one in the Main 10 profile.
+
+  if (is_profile_compatible(Profile_Main) ||
+      is_profile_compatible(Profile_MainStillPicture) ||
+      is_profile_compatible(Profile_Main10)) {
+    return true;
+  }
+
+  if (!is_profile_compatible(Profile_RExt)) {
+    // There is no MIAF profile with the high throughput profiles, the screen content coding
+    // profiles or any other profile of HEVC.
+    return false;
+  }
+
+  // The format range extensions profiles are told apart by nine of the constraint flags.
+  // A bitstream conforms to a profile when each of its flags is greater than or equal to the
+  // flag of the profile in Table A.2 of ITU-T H.265. This way, a profile that is not listed
+  // here is accepted when it is a subset of a listed one, like Main 4:4:4 Intra, which is a
+  // subset of Main 4:4:4 10 Intra.
+
+  const int first_flag = 4; // general_max_12bit_constraint_flag
+  const int num_flags = 9;
+
+  static const bool miaf_profiles[][num_flags] = {
+    // max 12 bit, max 10 bit, max 8 bit, max 4:2:2, max 4:2:0, max monochrome,
+    // intra, one picture only, lower bit rate
+
+    // MIAF HEVC Advanced profile
+    {1, 1, 1, 1, 1, 0, 1, 0, 0}, // Main Intra
+    {1, 1, 0, 1, 1, 0, 1, 0, 0}, // Main 10 Intra
+    {1, 1, 0, 1, 0, 0, 1, 0, 0}, // Main 4:2:2 10 Intra
+
+    // MIAF HEVC Extended profile
+    {1, 1, 1, 0, 0, 0, 0, 0, 1}, // Main 4:4:4
+    {1, 1, 0, 0, 0, 0, 0, 0, 1}, // Main 4:4:4 10
+    {1, 1, 0, 0, 0, 0, 1, 0, 0}, // Main 4:4:4 10 Intra
+    {1, 1, 1, 0, 0, 0, 1, 1, 0}, // Main 4:4:4 Still Picture
+    {1, 1, 1, 1, 1, 1, 0, 0, 1}, // Monochrome
+    {1, 1, 0, 1, 1, 1, 0, 0, 1}  // Monochrome 10
+  };
+
+  for (const auto& profile : miaf_profiles) {
+    bool conforms = true;
+
+    for (int i = 0; i < num_flags; i++) {
+      if (profile[i] && !general_constraint_indicator_flags[first_flag + i]) {
+        conforms = false;
+        break;
+      }
+    }
+
+    if (conforms) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 
@@ -625,9 +700,11 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   config->general_profile_idc = reader.get_bits8(5);
   config->general_profile_compatibility_flags = reader.get_bits32(32);
 
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
+  // general_progressive_source_flag up to the last of the constraint flags. Within the range
+  // extensions and the screen content coding extensions, they tell the profiles apart.
+  for (int i = 0; i < HEVCDecoderConfigurationRecord::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+    config->general_constraint_indicator_flags[i] = (reader.get_bits(1) != 0);
+  }
 
   config->general_level_idc = reader.get_bits8(8);
 

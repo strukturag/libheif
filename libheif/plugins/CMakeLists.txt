@@ -93,6 +93,107 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR_FOUND KVAZAAR KVAZAAR)
 
+# --- HM, the HEVC reference software
+#
+# HM is no library: a process can only contain one version of it, it prints to stdout and it
+# exits on errors. We compile the HM sources here instead of linking to a build of HM, because
+# that allows us to put every version of HM ("variant") into a C++ namespace of its own
+# without changing the HM sources: each source file is compiled through a generated file that
+# includes it inside of the namespace. See hm_as_library.h.
+#
+#   hm_variant(<variant> <function>)
+#
+#   variant   name of the variant, as in HM_<variant>_SOURCES
+#   function  the function that returns the variant, see encoder_hm_variant.h
+#
+# The object files are appended to HM_sources.
+
+macro(hm_variant variant function)
+    string(TOLOWER "${variant}" hm_variant_name)
+    set(hm_namespace heif_hm_${hm_variant_name})
+
+    set(hm_wrappers)
+    foreach (HM_WRAPPED_SOURCE ${HM_${variant}_SOURCES})
+        file(RELATIVE_PATH hm_wrapper_name "${HM_${variant}_SOURCE_DIR}" "${HM_WRAPPED_SOURCE}")
+        string(REPLACE "/" "_" hm_wrapper_name "${hm_wrapper_name}")
+        string(REGEX REPLACE "\\.cpp$" ".cc" hm_wrapper_name "${hm_wrapper_name}")
+
+        # configure_file() leaves the file alone when its content does not change.
+        configure_file(hm_source_wrapper.cc.in "${CMAKE_CURRENT_BINARY_DIR}/hm-${hm_variant_name}/${hm_wrapper_name}" @ONLY)
+        list(APPEND hm_wrappers "${CMAKE_CURRENT_BINARY_DIR}/hm-${hm_variant_name}/${hm_wrapper_name}")
+    endforeach ()
+
+    # The code of HM. It is compiled like HM compiles it: as C++11. The warnings are disabled,
+    # there are many of them with compilers that are newer than HM.
+    #
+    # The sanitizers of a libheif build are not applied to HM. We take HM as it is, like a
+    # library that is installed on the system, and it does not pass them: it shifts negative
+    # values, and the version with the screen content coding tools reads the element in front
+    # of the table g_quantScales when the palette mode is used for lossless coding
+    # (TEncSearch::xCalcPixelPred(); the value is not used).
+    #
+    # For the same reason, HM is optimized in debug builds of libheif too. Without
+    # optimization, it takes four times as long.
+    add_library(${hm_namespace} OBJECT ${hm_wrappers} hm_as_library.h)
+    set_target_properties(${hm_namespace} PROPERTIES CXX_STANDARD 11)
+    if (MSVC)
+        target_compile_options(${hm_namespace} PRIVATE /w)
+    else ()
+        target_compile_options(${hm_namespace} PRIVATE -w -Wno-error -fno-sanitize=all $<$<CONFIG:Debug>:-O2>)
+    endif ()
+
+    # Our code that uses HM.
+    add_library(${hm_namespace}_interface OBJECT encoder_hm_variant.cc encoder_hm_variant.h hm_as_library.h)
+    target_compile_definitions(${hm_namespace}_interface PRIVATE
+            HEIF_HM_VARIANT_FUNCTION=${function}
+            ${HM_${variant}_DEFINITIONS})
+    target_include_directories(${hm_namespace}_interface PRIVATE
+            ${libheif_SOURCE_DIR}/libheif/api
+            ${libheif_BINARY_DIR})
+
+    foreach (hm_target ${hm_namespace} ${hm_namespace}_interface)
+        set_target_properties(${hm_target} PROPERTIES
+                POSITION_INDEPENDENT_CODE ON
+                CXX_VISIBILITY_PRESET hidden
+                VISIBILITY_INLINES_HIDDEN ON)
+        # NDEBUG: an assertion of HM must not end the process. It is defined in all build types
+        # and for our code that uses HM too, which sees the inline functions of the HM headers.
+        target_compile_definitions(${hm_target} PRIVATE
+                HEIF_HM_NAMESPACE=${hm_namespace}
+                RExt__HIGH_BIT_DEPTH_SUPPORT=1
+                NDEBUG)
+        target_include_directories(${hm_target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+        # The HM headers are full of warnings, so their directories are declared as system directories.
+        target_include_directories(${hm_target} SYSTEM PRIVATE ${HM_${variant}_INCLUDE_DIRS})
+
+        list(APPEND HM_sources $<TARGET_OBJECTS:${hm_target}>)
+    endforeach ()
+
+    list(APPEND HM_variant_definitions HAVE_HM_VARIANT_${variant}=1)
+endmacro()
+
+if (HM_FOUND AND WITH_HM)
+    set(HM_sources encoder_hm.cc encoder_hm.h encoder_hm_variant.h)
+    set(HM_extra_plugin_sources)
+    set(HM_variant_definitions)
+
+    if (ENABLE_HM_VARIANT_LATEST)
+        hm_variant(LATEST get_hm_variant_latest)
+    endif ()
+    if (ENABLE_HM_VARIANT_SCC)
+        hm_variant(SCC get_hm_variant_scc)
+    endif ()
+endif ()
+plugin_compilation(hm HM HM_FOUND HM HM)
+if (HM_FOUND AND WITH_HM)
+    if (TARGET heif-hm)
+        target_compile_definitions(heif-hm PRIVATE ${HM_variant_definitions})
+    else ()
+        target_compile_definitions(heif PRIVATE ${HM_variant_definitions})
+    endif ()
+endif ()
+
 set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
 set(FFMPEG_DECODER_extra_plugin_sources ../error.cc nalu_utils.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)

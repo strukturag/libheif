@@ -27,8 +27,11 @@
 #include "catch_amalgamated.hpp"
 #include "codecs/hevc_boxes.h"
 #include "codecs/decoder.h"
+#include "bitstream.h"
 #include "error.h"
+#include "libheif/heif.h"
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 // SPS NAL unit (with emulation prevention bytes) taken from the hvcC box of
@@ -59,6 +62,56 @@ TEST_CASE("SPS conformance window yields visible and coded size")
   CHECK(height == 462);
   CHECK(coded.width == 456);
   CHECK(coded.height == 464);
+}
+
+
+TEST_CASE("SPS constraint flags are copied to hvcC")
+{
+  HEVCDecoderConfigurationRecord config{};
+  uint32_t width = 0, height = 0;
+  ImageSize coded{};
+
+  Error err = parse_sps_for_hvcC_configuration(rainbow_sps.data(), rainbow_sps.size(),
+                                               &config, &width, &height, &coded);
+  REQUIRE(!err);
+
+  // The SPS has general_progressive_source_flag and general_frame_only_constraint_flag
+  // set: the constraint flags are 0x90 and five zero bytes.
+
+  CHECK(config.general_profile_idc == HEVCDecoderConfigurationRecord::Profile_MainStillPicture);
+
+  for (int i = 0; i < HEVCDecoderConfigurationRecord::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+    INFO("constraint flag " << i);
+    CHECK(config.general_constraint_indicator_flags[i] == (i == 0 || i == 3));
+  }
+
+  // They are written in the same order, the first flag in the most significant bit.
+
+  config.configuration_version = 1;
+
+  // a flag in each of the bytes, among them the first and the last bit of a byte
+  config.general_constraint_indicator_flags[8] = true;
+  config.general_constraint_indicator_flags[23] = true;
+  config.general_constraint_indicator_flags[47] = true;
+
+  StreamWriter writer;
+  err = config.write(writer);
+  REQUIRE(!err);
+
+  const std::vector<uint8_t> data = writer.get_data();
+  REQUIRE(data.size() >= 12);
+
+  const std::vector<uint8_t> constraint_flags(data.begin() + 6, data.begin() + 12);
+  CHECK(constraint_flags == std::vector<uint8_t>{0x90, 0x80, 0x01, 0x00, 0x00, 0x01});
+
+  // ... and read back into the same flags.
+
+  BitstreamRange range(std::make_shared<StreamReader_memory>(data.data(), data.size(), false), data.size());
+
+  HEVCDecoderConfigurationRecord parsed{};
+  err = parsed.parse(range, heif_get_global_security_limits());
+  REQUIRE(!err);
+  CHECK(parsed.general_constraint_indicator_flags == config.general_constraint_indicator_flags);
 }
 
 

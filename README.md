@@ -39,7 +39,7 @@ libheif has support for:
 Supported codecs:
 | Format       |  Decoders               |  Encoders                    |
 |:-------------|:-----------------------:|:----------------------------:|
-| HEIC         | libde265, ffmpeg        | x265, kvazaar                |
+| HEIC         | libde265, ffmpeg        | x265, kvazaar, HM            |
 | AVIF         | libaom, dav1d, ffmpeg   | libaom, rav1e, svt-av1       |
 | VVC          | vvdec, ffmpeg           | vvenc, uvg266                |
 | AVC          | openh264, ffmpeg        | x264                         |
@@ -148,6 +148,7 @@ Make sure that you compile and install [libde265](https://github.com/strukturag/
 first, so that the configuration script will find this.
 Also install x265 and its development files if you want to use HEIF encoding, but note that x265 is GPL.
 An alternative to x265 is kvazaar (BSD).
+The HEVC reference software HM (BSD) can be used for the bit depths that these two do not support, see the notes on codecs below.
 
 The basic build steps are as follows (--preset argument needs CMake >= 3.21):
 
@@ -182,7 +183,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `OpenH264`, `X264`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`, `WEBCODECS`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `OpenH264`, `X264`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `HM`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `VVDEC`, `VVENC`, `UVG266`, `WEBCODECS`.
 
 Further options are:
 
@@ -304,6 +305,31 @@ You can also add plugin directories programmatically.
   this bit depth. libheif refuses to encode HEVC images with 16 bits per sample.
 
 * The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
+
+* The HM encoder plugin is EXPERIMENTAL. It uses the HEVC reference software HM, which encodes what x265 and kvazaar cannot:
+  images with 9, 11 and 13 to 15 bits per sample, the coding tools of the HEVC range extensions, and the coding tools of
+  the HEVC screen content coding (SCC) extensions.
+  The plugin is disabled by default and it is never chosen automatically.
+  Select it with `heif-enc -e hm` or by its name `hm` in the API.
+  * HM has no installation procedure, and libheif compiles the HM sources itself. The plugin can contain two versions of HM:
+
+    | CMake option | Default | Version of HM | Download (run in the `third-party` directory) |
+    |:-------------|:--------|:--------------|:---------|
+    | `ENABLE_HM_VARIANT_LATEST` | ON  | the latest version, HM 18.0 | `hm.cmd` |
+    | `ENABLE_HM_VARIANT_SCC`    | OFF | the latest version with the SCC tools, HM 16.21 + SCM 8.8 | `hm-scc.cmd` |
+
+    Download the versions that you want to use and configure libheif with `-DWITH_HM=ON`, plus
+    `-DENABLE_HM_VARIANT_SCC=ON` for the SCC tools. When the plugin contains both versions, it uses the SCC version only
+    for images that are encoded with an SCC tool. The SCC version can also be used alone
+    (`-DENABLE_HM_VARIANT_LATEST=OFF`), it then encodes all images.
+  * HM is much slower than x265 and uses a single thread. It encodes only one image at a time in the whole process
+    and it does not encode image sequences.
+  * The coding tools of the range extensions are parameters of the plugin (`heif-enc -e hm -P` lists them), for example
+    `-p cross-component-prediction=1`. They are disabled by default, because not every decoder implements all of them.
+  * The SCC tools are the parameters `palette-mode`, `intra-block-copy`, `adaptive-colour-transform` and
+    `intra-boundary-filter`. An image that uses one of them is encoded in a screen content coding profile, which allows
+    up to 10 bits per sample and no chroma 4:2:2. The adaptive colour transform needs chroma 4:4:4.
+    libde265 and FFmpeg do not decode these images, the reference decoder of HM does.
 
 ## Usage
 
