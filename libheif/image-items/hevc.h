@@ -52,6 +52,8 @@ public:
 
   heif_brand2 get_compatible_brand() const override;
 
+  bool is_coded_in_miaf_profile() const override;
+
   // currently not used
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 

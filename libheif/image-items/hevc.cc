@@ -103,6 +103,17 @@ heif_brand2 ImageItem_HEVC::get_compatible_brand() const
 }
 
 
+bool ImageItem_HEVC::is_coded_in_miaf_profile() const
+{
+  auto hvcC = get_property<Box_hvcC>();
+  if (!hvcC) {
+    return false;
+  }
+
+  return hvcC->get_configuration().is_miaf_profile();
+}
+
+
 Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();

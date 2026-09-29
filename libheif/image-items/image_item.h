@@ -356,7 +356,12 @@ public:
   // TODO: we should have a function that checks all MIAF constraints and sets the compatibility flag.
   void mark_not_miaf_compatible() { m_miaf_compatible = false; }
 
-  bool is_miaf_compatible() const { return m_miaf_compatible; }
+  bool is_miaf_compatible() const { return m_miaf_compatible && is_coded_in_miaf_profile(); }
+
+  // A MIAF image item has to conform to a MIAF codec profile (ISO/IEC 23000-22, 6.3).
+  // Whether the coded data of this image does. An image that is derived from other
+  // images answers for them.
+  virtual bool is_coded_in_miaf_profile() const { return true; }
 
   // return 0 if we don't know the brand
   virtual heif_brand2 get_compatible_brand() const { return 0; }
