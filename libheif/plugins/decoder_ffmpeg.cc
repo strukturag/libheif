@@ -118,6 +118,12 @@ static int ffmpeg_does_support_format(heif_compression_format format)
 {
   switch(format) {
   case heif_compression_HEVC:
+    // FFmpeg's HEVC decoder handles 8, 9, 10 and 12 bits per sample only (FFmpeg 6.1 and 7.1).
+    // For streams with 11 bits or with 13 to 16 bits, avcodec_send_packet() fails. libde265
+    // decodes all bit depths and is the decoder to use for these streams. It has the higher
+    // priority, so that it is chosen whenever it is available.
+    // We cannot return 0 for the bit depths that FFmpeg does not handle: the format
+    // description passed to does_support_format2() holds the compression format only.
     return avcodec_find_decoder(AV_CODEC_ID_HEVC) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
   case heif_compression_AVC:
     return avcodec_find_decoder(AV_CODEC_ID_H264) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;

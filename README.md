@@ -296,6 +296,13 @@ You can also add plugin directories programmatically.
 * The FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
   correctly with all streams. Thus, libheif still prefers the libde265 decoder if it is available.
 
+* The FFMPEG decoder handles HEVC images with 8, 9, 10 and 12 bits per sample only. Images with 11 bits or with 13 to 15 bits
+  have to be decoded with libde265. Use libde265 v1.1.3 or later for these, since earlier versions do not decode image sequences
+  with more than 12 bits correctly.
+
+* HEVC images can have up to 15 bits per sample. HEVC itself allows 16 bits, but the `hvcC` box of the file format cannot signal
+  this bit depth. libheif refuses to encode HEVC images with 16 bits per sample.
+
 * The "webcodecs" HEVC decoder can only be used in emscripten builds since it uses the web-browser's API. For the same reason, it is not available as a plugin.
 
 ## Usage
