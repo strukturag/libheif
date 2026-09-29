@@ -252,8 +252,24 @@ static heif_error heif_file_writer_write(heif_context* ctx,
 #else
   std::ofstream ostr(filename, std::ios_base::binary);
 #endif
-  ostr.write(static_cast<const char*>(data), size);
-  // TODO: handle write errors
+  if (!ostr) {
+    return Error(heif_error_Encoding_error,
+                 heif_suberror_Cannot_write_output_data,
+                 std::string("Cannot open file '") + filename + "' for writing").error_struct(ctx->context.get());
+  }
+
+  ostr.write(static_cast<const char*>(data), static_cast<std::streamsize>(size));
+
+  // Part of the data may still be in the buffer of the stream. It is written when the file is
+  // closed, so a full disk may only show up here.
+  ostr.close();
+
+  if (!ostr) {
+    return Error(heif_error_Encoding_error,
+                 heif_suberror_Cannot_write_output_data,
+                 std::string("Cannot write to file '") + filename + "'").error_struct(ctx->context.get());
+  }
+
   return Error::Ok.error_struct(ctx->context.get());
 }
 
