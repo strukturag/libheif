@@ -2052,9 +2052,12 @@ int main(int argc, char** argv)
     return 5;
   }
 
+  // Releases the encoder on every way out of main(). This is defined after the context, so
+  // the encoder is released before the context is freed.
+  std::unique_ptr<heif_encoder, void (*)(heif_encoder*)> encoder_releaser(encoder, heif_encoder_release);
+
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
-    heif_encoder_release(encoder);
     return 0;
   }
 
@@ -2101,6 +2104,8 @@ int main(int argc, char** argv)
 
   set_params(encoder, raw_params);
   struct heif_encoding_options* options = heif_encoding_options_alloc();
+  std::unique_ptr<heif_encoding_options, void (*)(heif_encoding_options*)> options_releaser(options, heif_encoding_options_free);
+
   options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
 
   if (chroma_downsampling == "average") {
@@ -2153,8 +2158,6 @@ int main(int argc, char** argv)
   }
 
   if (ret != 0) {
-    heif_encoding_options_free(options);
-    heif_encoder_release(encoder);
     return ret;
   }
 
@@ -2162,8 +2165,6 @@ int main(int argc, char** argv)
 
   ret = add_mime_item(context.get());
   if (ret != 0) {
-    heif_encoding_options_free(options);
-    heif_encoder_release(encoder);
     return ret;
   }
 
@@ -2179,9 +2180,6 @@ int main(int argc, char** argv)
     std::cerr << error.message << "\n";
     return 5;
   }
-
-  heif_encoding_options_free(options);
-  heif_encoder_release(encoder);
 
   return 0;
 }
