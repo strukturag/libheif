@@ -39,6 +39,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 namespace {
 
@@ -78,7 +79,16 @@ void add_plane(heif_image* img, heif_channel channel, uint32_t w, uint32_t h)
   }
 }
 
-heif_error encode(heif_image* img, heif_compression_format format)
+// heif_error::message may point into the context that reported the error, so it has to be
+// copied before the context is freed.
+struct EncodeResult
+{
+  heif_error_code code;
+  heif_suberror_code subcode;
+  std::string message;
+};
+
+EncodeResult encode(heif_image* img, heif_compression_format format)
 {
   heif_context* ctx = heif_context_alloc();
   heif_encoder* encoder = nullptr;
@@ -86,15 +96,16 @@ heif_error encode(heif_image* img, heif_compression_format format)
   REQUIRE(err.code == heif_error_Ok);
 
   err = heif_context_encode_image(ctx, img, encoder, nullptr, nullptr);
+  EncodeResult result{err.code, err.subcode, err.message ? err.message : ""};
 
   heif_encoder_release(encoder);
   heif_context_free(ctx);
-  return err;
+  return result;
 }
 
 void expect_refused(heif_image* img, heif_compression_format format)
 {
-  heif_error err = encode(img, format);
+  EncodeResult err = encode(img, format);
   INFO("encode error (" << err.code << "/" << err.subcode << "): " << err.message);
   REQUIRE(err.code != heif_error_Ok);
   CHECK(err.code == heif_error_Usage_error);
@@ -116,7 +127,7 @@ TEST_CASE("encoding refuses images with a non-canonical plane layout")
     for (heif_channel ch : {heif_channel_R, heif_channel_G, heif_channel_B}) {
       add_plane(img, ch, W, H);
     }
-    heif_error err = encode(img, format);
+    EncodeResult err = encode(img, format);
     INFO("encode error (" << err.code << "/" << err.subcode << "): " << err.message);
     CHECK(err.code == heif_error_Ok);
     heif_image_release(img);
@@ -171,9 +182,9 @@ TEST_CASE("encoding refuses images with a non-canonical plane layout")
                                               heif_component_datatype_unsigned_integer, 8, &id);
     REQUIRE(err.code == heif_error_Ok);
 
-    err = encode(img, format);
-    INFO("encode error (" << err.code << "/" << err.subcode << "): " << err.message);
-    CHECK(err.code == heif_error_Ok);
+    EncodeResult result = encode(img, format);
+    INFO("encode error (" << result.code << "/" << result.subcode << "): " << result.message);
+    CHECK(result.code == heif_error_Ok);
     heif_image_release(img);
   }
 }
