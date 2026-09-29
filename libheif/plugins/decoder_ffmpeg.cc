@@ -390,6 +390,8 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
     // matrix_coefficients 0. Its G, B, R planes map onto Y, Cb, Cr, which is
     // exactly how libheif stores images with the identity matrix.
     // HEVC is decoded up to 12 bits, AVC (High 4:4:4 Predictive) up to 14 bits.
+    // The JPEG decoder outputs GBRP for a JPEG that was coded without colour transform.
+    // That one carries no colour signalling, see ffmpeg_is_planar_gbr().
     case AV_PIX_FMT_GBRP:
     case AV_PIX_FMT_GBRP9:
     case AV_PIX_FMT_GBRP10:
@@ -505,6 +507,17 @@ static AVPixelFormat ffmpeg_native_pix_fmt(AVPixelFormat pix_fmt, bool* byte_swa
 
   *byte_swap = true;
   return swapped;
+}
+
+
+// Whether the planes of a format accepted by ffmpeg_get_chroma_format() hold G, B, R instead
+// of Y, Cb, Cr. Packed RGB is not meant here: the JPEG 2000 decoder returns sYCC as RGB24/RGB48.
+static bool ffmpeg_is_planar_gbr(AVPixelFormat pix_fmt)
+{
+  const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(pix_fmt);
+  const uint64_t planar_rgb = AV_PIX_FMT_FLAG_PLANAR | AV_PIX_FMT_FLAG_RGB;
+
+  return desc && (desc->flags & planar_rgb) == planar_rgb;
 }
 
 
@@ -843,6 +856,21 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   // codestream. Attaching them as a bitstream profile would make libheif convert the
   // decoded planes when the file has no 'colr' box. Leave the profile unset for those.
   if (!codec_has_cicp_signalling(decoder->av_codec->id)) {
+
+    // The exception are planes that hold G, B, R, which the JPEG decoder returns for a JPEG
+    // coded without colour transform. Without the identity matrix, libheif would convert
+    // them like YCbCr. The colour primaries and the transfer curve remain unspecified.
+    if (ffmpeg_is_planar_gbr(static_cast<AVPixelFormat>(av_frame->format))) {
+      nclx = heif_nclx_color_profile_alloc();
+      auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, [](heif_color_profile_nclx* nclx){heif_nclx_color_profile_free(nclx);});
+
+      heif_nclx_color_profile_set_color_primaries(nclx, heif_color_primaries_unspecified);
+      heif_nclx_color_profile_set_transfer_characteristics(nclx, heif_transfer_characteristic_unspecified);
+      heif_nclx_color_profile_set_matrix_coefficients(nclx, heif_matrix_coefficients_RGB_GBR);
+      nclx->full_range_flag = true;
+      heif_image_set_nclx_color_profile(*out_img, nclx);
+    }
+
     return heif_error_ok;
   }
 
