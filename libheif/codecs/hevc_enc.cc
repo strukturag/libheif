@@ -24,10 +24,35 @@
 #include "context.h"
 #include "api_structs.h"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 
 #include "plugins/nalu_utils.h"
+
+
+// The HEVCDecoderConfigurationRecord ('hvcC', ISO/IEC 14496-15) stores bitDepthLumaMinus8 and
+// bitDepthChromaMinus8 in 3 bits each. It can signal 8 to 15 bits per sample, but not the
+// 16 bits that HEVC itself allows. Writing a 16-bit image would put a bit depth of 8 into
+// its 'hvcC' box, so we refuse to encode it.
+static const int MAX_BIT_DEPTH_IN_HVCC = 15;
+
+static Error check_bit_depth_fits_hvcC(int bit_depth)
+{
+  if (bit_depth > MAX_BIT_DEPTH_IN_HVCC) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "HEVC images with more than 15 bits per sample cannot be written, "
+                 "because the 'hvcC' box cannot signal their bit depth."};
+  }
+
+  return Error::Ok;
+}
+
+static Error check_bit_depth_fits_hvcC(const HEVCDecoderConfigurationRecord& config)
+{
+  return check_bit_depth_fits_hvcC(std::max(config.bit_depth_luma, config.bit_depth_chroma));
+}
 
 
 // TODO: can we use the new sequences interface for this to avoid duplicate code.
@@ -37,6 +62,10 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
                                                      heif_image_input_class input_class)
 {
   CodedImageData codedImage;
+
+  if (Error bitDepthErr = check_bit_depth_fits_hvcC(image->get_visual_image_bits_per_pixel())) {
+    return bitDepthErr;
+  }
 
   auto hvcC = std::make_shared<Box_hvcC>();
 
@@ -69,6 +98,11 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 
     if ((data[0] >> 1) == HEVC_NAL_UNIT_SPS_NUT) {
       parse_sps_for_hvcC_configuration(data, size, &hvcC->get_configuration(), &encoded_width, &encoded_height);
+
+      // The encoder decides about the coded bit depth, it may differ from the one of the input image.
+      if (Error bitDepthErr = check_bit_depth_fits_hvcC(hvcC->get_configuration())) {
+        return bitDepthErr;
+      }
 
       codedImage.encoded_image_width = encoded_width;
       codedImage.encoded_image_height = encoded_height;
@@ -123,6 +157,10 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
                                           uint32_t framerate_num, uint32_t framerate_denom,
                                           uintptr_t frame_number)
 {
+  if (Error bitDepthErr = check_bit_depth_fits_hvcC(image->get_visual_image_bits_per_pixel())) {
+    return bitDepthErr;
+  }
+
   heif_image c_api_image;
   c_api_image.image = image;
 
@@ -205,6 +243,10 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
       parse_sps_for_hvcC_configuration(data, size,
                                        &m_hvcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
+
+      if (Error bitDepthErr = check_bit_depth_fits_hvcC(m_hvcC->get_configuration())) {
+        return bitDepthErr;
+      }
     }
 
     switch (nal_type) {
