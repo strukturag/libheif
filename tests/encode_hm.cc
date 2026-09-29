@@ -588,10 +588,11 @@ TEST_CASE("HM encodes with the screen content coding tools")
   REQUIRE(with_tool.code == heif_error_Ok);
   CHECK(hevc_profile_idc(with_tool.file) == HEVC_PROFILE_SCREEN_CONTENT_CODING);
 
-  // There is no brand for the screen content coding profiles.
+  // There is no brand for the screen content coding profiles, and no MIAF profile.
   CHECK(has_brand(with_tool.file, "mif1"));
   CHECK_FALSE(has_brand(with_tool.file, "heic"));
   CHECK_FALSE(has_brand(with_tool.file, "heix"));
+  CHECK_FALSE(has_brand(with_tool.file, "miaf"));
 
   CHECK(with_tool.file != without_tool.file);
   if (t.makes_image_smaller) {
@@ -693,12 +694,43 @@ TEST_CASE("HM images in a high throughput profile have no HEVC brand")
   CHECK(hevc_profile_idc(high_throughput.file) == HEVC_PROFILE_HIGH_THROUGHPUT);
   CHECK(has_brand(high_throughput.file, "mif1"));
   CHECK_FALSE(has_brand(high_throughput.file, "heix"));
+  CHECK_FALSE(has_brand(high_throughput.file, "miaf"));
 
   EncodeResult range_extensions = encode_lossless(img);
   INFO("encode error (" << range_extensions.code << "/" << range_extensions.subcode << "): " << range_extensions.message);
   REQUIRE(range_extensions.code == heif_error_Ok);
   CHECK(hevc_profile_idc(range_extensions.file) == HEVC_PROFILE_FORMAT_RANGE_EXTENSIONS);
   CHECK(has_brand(range_extensions.file, "heix"));
+
+  heif_image_release(img);
+}
+
+
+TEST_CASE("HM images are MIAF images up to 10 bits")
+{
+  if (!have_hm_encoder()) {
+    SKIP("libheif was built without the HM encoder plugin");
+  }
+
+  // The HEVC profiles of the MIAF profiles end at 10 bits (ISO/IEC 23000-22, A.3 to A.5).
+
+  const int bit_depth = GENERATE(8, 9, 10, 11, 12, 15);
+  const heif_chroma chroma = GENERATE(heif_chroma_monochrome, heif_chroma_420, heif_chroma_422, heif_chroma_444);
+
+  INFO("bit depth " << bit_depth << ", chroma " << chroma);
+
+  heif_image* img = create_image(72, 56, chroma, bit_depth);
+
+  EncodeResult result = encode_lossless(img);
+  INFO("encode error (" << result.code << "/" << result.subcode << "): " << result.message);
+  REQUIRE(result.code == heif_error_Ok);
+
+  CHECK(has_brand(result.file, "miaf") == (bit_depth <= 10));
+
+  // The brand of the HEVC profile does not depend on the bit depth.
+  const bool is_main_profile = (bit_depth == 8 && chroma == heif_chroma_420);
+  CHECK(has_brand(result.file, "heic") == is_main_profile);
+  CHECK(has_brand(result.file, "heix") == !is_main_profile);
 
   heif_image_release(img);
 }
