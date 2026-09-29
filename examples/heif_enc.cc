@@ -1906,6 +1906,11 @@ int main(int argc, char** argv)
       case OPTION_RAW_ENDIAN:
         raw_input_params.big_endian = (std::string(optarg) == "big");
         break;
+      case '?':
+        // An unknown option, or an option without its argument. getopt_long() has
+        // printed which one it is.
+        std::cerr << "Use '" << argv[0] << " --help' for the list of options.\n";
+        return 5;
     }
   }
 
