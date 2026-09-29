@@ -539,6 +539,19 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
   return iovl_image;
 }
 
+bool ImageItem_Overlay::is_coded_in_miaf_profile() const
+{
+  for (heif_item_id child_id : m_overlay_image_ids) {
+    auto child = get_context()->get_image(child_id, false);
+    if (child && !child->is_coded_in_miaf_profile()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
 heif_brand2 ImageItem_Overlay::get_compatible_brand() const
 {
   if (m_overlay_image_ids.empty()) { return 0; }
