@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.23.3)
+project(libheif LANGUAGES C CXX VERSION 1.23.5)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -589,6 +589,7 @@ option(WITH_EXAMPLES "Build examples" ON)
 option(WITH_EXAMPLE_HEIF_THUMB "Build heif-thumbnailer tool" ON)
 option(WITH_EXAMPLE_HEIF_VIEW "Build heif-view tool" ON)
 option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
+option(BUILD_TESTING "Build the unit tests" ON)
 
 option(BUILD_DEVELOPMENT_TOOLS "Build development tools (heif-gen-bayer, etc.)" OFF)
 
@@ -604,7 +605,11 @@ else ()
     set(CMAKE_CXX_VISIBILITY_PRESET default)
 endif ()
 
-add_subdirectory(heifio)
+# heifio is a helper library for reading and writing image files.
+# It is only needed by the example programs and the unit tests.
+if(WITH_EXAMPLES OR BUILD_TESTING)
+    add_subdirectory(heifio)
+endif()
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
@@ -656,7 +661,6 @@ if(ENABLE_COVERAGE)
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
-option(BUILD_TESTING "" ON)
 set(CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 include(CTest)
 if(BUILD_TESTING)

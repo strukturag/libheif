@@ -286,7 +286,11 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   //     Postprocess decoded image, attach metadata.
 
   if (m_stts) {
-    image->set_sample_duration(m_stts->get_sample_duration(sample_idx_in_chunk));
+    // 'sample_idx_in_chunk' follows m_next_sample_to_be_decoded, which runs ahead of the output
+    // by the decoder latency. Look the duration up by the output position instead, like
+    // Track::get_next_sample_raw_data() does.
+    const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
+    image->set_sample_duration(m_stts->get_sample_duration(outputTiming.sampleIdx));
   }
 
   // --- assign alpha if we have an assigned alpha track
@@ -651,9 +655,10 @@ Result<bool> Track_Visual::process_encoded_data(heif_encoder* h_encoder)
 {
   auto encoder = m_chunks.back()->get_encoder();
 
-  std::optional<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_get_data();
+  std::optional<Encoder::CodedImageData> encodingResult = encoder->encode_sequence_extract_data();
   if (!encodingResult) {
-    return {};
+    // nothing pending in the encoder
+    return {false};
   }
 
   const Encoder::CodedImageData& data = *encodingResult;

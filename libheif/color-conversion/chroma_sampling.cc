@@ -43,9 +43,12 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  // The three colour planes are read through the same 'Pixel' type, so they must be stored
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -65,9 +68,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_420;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -85,8 +87,6 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
                                                            const heif_color_conversion_options_ext& options_ext,
                                                            const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
   int bpp_cb = input->get_bits_per_pixel(heif_channel_Cb);
   int bpp_cr = input->get_bits_per_pixel(heif_channel_Cr);
@@ -98,19 +98,10 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
     bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
   }
 
-  if (!hdr) {
-    if (bpp_y > 8 ||
-        bpp_cb > 8 ||
-        bpp_cr > 8) {
-      return Error::InternalError;
-    }
-  }
-  else {
-    if (bpp_y <= 8 ||
-        bpp_cb <= 8 ||
-        bpp_cr <= 8) {
-      return Error::InternalError;
-    }
+  if (bytes_per_sample_for_bit_depth(bpp_y) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cb) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cr) != static_cast<int>(sizeof(Pixel))) {
+    return Error::InternalError;
   }
 
 
@@ -156,14 +147,12 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   out_cb = (Pixel*) outimg->get_channel_memory(heif_channel_Cb, &out_cb_stride);
   out_cr = (Pixel*) outimg->get_channel_memory(heif_channel_Cr, &out_cr_stride);
 
-  if (hdr) {
-    in_y_stride /= 2;
-    in_cb_stride /= 2;
-    in_cr_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_y_stride /= sizeof(Pixel);
+  in_cb_stride /= sizeof(Pixel);
+  in_cr_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
 
   // We only copy the alpha, do not access it as 16 bit
@@ -228,12 +217,12 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   // TODO: check whether we can use HeifPixelImage::transfer_channel_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    uint32_t copyWidth = (hdr ? width * 2 : width);
+    size_t copyWidth = static_cast<size_t>(width) * sizeof(Pixel);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
     if (has_alpha) {
-      uint32_t alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+      size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
     }
   }
@@ -267,9 +256,12 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  // The three colour planes are read through the same 'Pixel' type, so they must be stored
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -289,9 +281,8 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_422;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -309,8 +300,6 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
                                                            const heif_color_conversion_options_ext& options_ext,
                                                            const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
   int bpp_cb = input->get_bits_per_pixel(heif_channel_Cb);
   int bpp_cr = input->get_bits_per_pixel(heif_channel_Cr);
@@ -322,19 +311,10 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
     bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
   }
 
-  if (!hdr) {
-    if (bpp_y > 8 ||
-        bpp_cb > 8 ||
-        bpp_cr > 8) {
-      return Error::InternalError;
-    }
-  }
-  else {
-    if (bpp_y <= 8 ||
-        bpp_cb <= 8 ||
-        bpp_cr <= 8) {
-      return Error::InternalError;
-    }
+  if (bytes_per_sample_for_bit_depth(bpp_y) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cb) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cr) != static_cast<int>(sizeof(Pixel))) {
+    return Error::InternalError;
   }
 
 
@@ -393,14 +373,12 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
 
-  if (hdr) {
-    in_y_stride /= 2;
-    in_cb_stride /= 2;
-    in_cr_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_y_stride /= sizeof(Pixel);
+  in_cb_stride /= sizeof(Pixel);
+  in_cr_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
   // --- fill right border if the image size is odd
 
@@ -430,12 +408,12 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   // TODO: check whether we can use HeifPixelImage::transfer_channel_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    uint32_t copyWidth = (hdr ? width * 2 : width);
+    size_t copyWidth = static_cast<size_t>(width) * sizeof(Pixel);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
     if (has_alpha) {
-      uint32_t alphaCopyWidth = (bpp_a>8 ? width * 2 : width);
+      size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
     }
   }
@@ -469,9 +447,12 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  // The three colour planes are read through the same 'Pixel' type, so they must be stored
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -487,9 +468,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -507,8 +487,6 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
                                                             const heif_color_conversion_options_ext& options_ext,
                                                             const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
   int bpp_cb = input->get_bits_per_pixel(heif_channel_Cb);
   int bpp_cr = input->get_bits_per_pixel(heif_channel_Cr);
@@ -520,19 +498,10 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
   }
 
-  if (!hdr) {
-    if (bpp_y > 8 ||
-        bpp_cb > 8 ||
-        bpp_cr > 8) {
-      return Error::InternalError;
-    }
-  }
-  else {
-    if (bpp_y <= 8 ||
-        bpp_cb <= 8 ||
-        bpp_cr <= 8) {
-      return Error::InternalError;
-    }
+  if (bytes_per_sample_for_bit_depth(bpp_y) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cb) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cr) != static_cast<int>(sizeof(Pixel))) {
+    return Error::InternalError;
   }
 
 
@@ -588,14 +557,12 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
 
-  if (hdr) {
-    in_y_stride /= 2;
-    in_cb_stride /= 2;
-    in_cr_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_y_stride /= sizeof(Pixel);
+  in_cb_stride /= sizeof(Pixel);
+  in_cr_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
   /*
    *  We assume that chroma pixels are located in the center of 2x2 luma pixels.
@@ -710,12 +677,12 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // TODO: check whether we can use HeifPixelImage::transfer_channel_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    uint32_t copyWidth = (hdr ? width * 2 : width);
+    size_t copyWidth = static_cast<size_t>(width) * sizeof(Pixel);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
     if (has_alpha) {
-      uint32_t alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+      size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
     }
   }
@@ -750,9 +717,12 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  // The three colour planes are read through the same 'Pixel' type, so they must be stored
+  // with sizeof(Pixel) bytes per sample, and the conversion derives its shifts and midpoints
+  // from one bit depth, so they must also share it ('unci' may declare a depth per plane).
+  // The alpha plane is copied through at its own width.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
@@ -768,9 +738,8 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = input_state.alpha_bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
   output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -788,8 +757,6 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
                                                             const heif_color_conversion_options_ext& options_ext,
                                                             const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
   int bpp_cb = input->get_bits_per_pixel(heif_channel_Cb);
   int bpp_cr = input->get_bits_per_pixel(heif_channel_Cr);
@@ -801,19 +768,10 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
   }
 
-  if (!hdr) {
-    if (bpp_y > 8 ||
-        bpp_cb > 8 ||
-        bpp_cr > 8) {
-      return Error::InternalError;
-    }
-  }
-  else {
-    if (bpp_y <= 8 ||
-        bpp_cb <= 8 ||
-        bpp_cr <= 8) {
-      return Error::InternalError;
-    }
+  if (bytes_per_sample_for_bit_depth(bpp_y) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cb) != static_cast<int>(sizeof(Pixel)) ||
+      bytes_per_sample_for_bit_depth(bpp_cr) != static_cast<int>(sizeof(Pixel))) {
+    return Error::InternalError;
   }
 
 
@@ -869,14 +827,12 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
 
-  if (hdr) {
-    in_y_stride /= 2;
-    in_cb_stride /= 2;
-    in_cr_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_y_stride /= sizeof(Pixel);
+  in_cb_stride /= sizeof(Pixel);
+  in_cr_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
   /*
    *  We assume that chroma pixels are located in the center of 2x1 luma pixels.
@@ -937,12 +893,12 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // TODO: check whether we can use HeifPixelImage::transfer_channel_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    uint32_t copyWidth = (hdr ? width * 2 : width);
+    size_t copyWidth = static_cast<size_t>(width) * sizeof(Pixel);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
     if (has_alpha) {
-      uint32_t alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+      size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
     }
   }

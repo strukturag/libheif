@@ -98,6 +98,9 @@ struct encoder_struct_aom
 
   heif_chroma chroma = heif_chroma_420;
 
+  // bit depth the codec was initialized with, to check the later frames of a sequence against
+  int bit_depth = 8;
+
   // --- input
 
   bool alpha_quality_set = false;
@@ -199,6 +202,17 @@ static const char* const kParam_tune_valid_values[] = {
 };
 
 #if defined(AOM_HAVE_TUNE_IQ)
+// libaom's handle_tuning() enables chroma delta-q for AOM_TUNE_IQ, and validate_config()
+// then rejects that combination with lossless coding. Tracked upstream as
+// https://aomedia.g-issues.chromium.org/issues/383595066 (still present in libaom v3.15.0).
+// Once libaom lifts the restriction, this workaround can be dropped for those versions.
+static heif_error heif_error_lossless_with_tune_iq = {
+  heif_error_Usage_error,
+  heif_suberror_Invalid_parameter_value,
+  "AOM 'tune=iq' cannot be combined with lossless encoding because libaom enables "
+  "chroma delta-q for this tune. Use 'tune=ssim' or 'tune=psnr' for lossless images."
+};
+
 // This table has been copied from libavif/src/codec_aom.c
 
 // Quality (q) to quantizer (qp) formula for tune=iq (Image Quality), expressed as a look-up table for more clarity.
@@ -1071,6 +1085,9 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
                         options->version >= 3 &&
                         options->content_kind == heif_sequence_content_kind_video);
 
+  bool is_lossless = (encoder->lossless ||
+                      (input_class == heif_image_input_class_alpha && encoder->lossless_alpha));
+
   aom_tune_metric effective_tune = encoder->tune;
   if (encoder->tune_auto) {
     if (tune_as_video) {
@@ -1097,7 +1114,10 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
       int aom_version = aom_codec_version();
       bool iq_supports_inter = (aom_version >= aom_version_3_14_0);
 
-      if (!is_identity_matrix &&
+      // libaom turns on chroma delta-q for AOM_TUNE_IQ and then refuses to combine
+      // that with lossless coding, so keep AOM_TUNE_SSIM for lossless images.
+      // See https://aomedia.g-issues.chromium.org/issues/383595066
+      if (!is_identity_matrix && !is_lossless &&
           (cfg.g_usage == AOM_USAGE_ALL_INTRA || iq_supports_inter) &&
           aom_version >= aom_version_3_13_0) {
         effective_tune = AOM_TUNE_IQ;
@@ -1105,6 +1125,12 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 #endif
     }
   }
+
+#if defined(AOM_HAVE_TUNE_IQ)
+  if (is_lossless && effective_tune == AOM_TUNE_IQ) {
+    return heif_error_lossless_with_tune_iq;
+  }
+#endif
 
   int cq_level;
 #if defined(AOM_HAVE_TUNE_IQ)
@@ -1152,6 +1178,8 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
     return err;
   }
 
+  encoder->bit_depth = bpp_y;
+
   aom_codec_err_t aom_error;
 
   aom_error = aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used); CHECK_ERROR;
@@ -1187,7 +1215,7 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 
   aom_error = aom_codec_control(&codec, AOME_SET_TUNING, effective_tune); CHECK_ERROR;
 
-  if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
+  if (is_lossless) {
     aom_error = aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1); CHECK_ERROR;
   }
 
@@ -1248,6 +1276,14 @@ static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image*
 
   encoder_struct_aom* encoder = (encoder_struct_aom*) encoder_raw;
   aom_codec_ctx_t& codec = encoder->codec;
+
+  // AOM_CODEC_USE_HIGHBITDEPTH was decided when the codec was initialized from the
+  // first frame of the sequence. libaom refuses a frame that disagrees with it, but
+  // with an error that says nothing about the cause.
+  input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
 
   heif_error err;
 

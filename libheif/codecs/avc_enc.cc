@@ -25,6 +25,7 @@
 #include "api_structs.h"
 
 #include <string>
+#include <utility>
 
 #include "plugins/nalu_utils.h"
 
@@ -175,15 +176,16 @@ Error Encoder_AVC::encode_sequence_flush(heif_encoder* encoder)
 }
 
 
-std::optional<Encoder::CodedImageData> Encoder_AVC::encode_sequence_get_data()
+std::optional<Encoder::CodedImageData> Encoder_AVC::encode_sequence_extract_data()
 {
-  if (m_output_image_complete) {
-    m_output_image_complete = false;
-    return std::move(m_current_output_data);
-  }
-  else {
+  // Non-VCL NALs can arrive ahead of their picture (x264 emits an SEI together with the
+  // SPS/PPS headers). They are held back until the slice data has been collected.
+  if (!m_output_image_complete) {
     return std::nullopt;
   }
+
+  m_output_image_complete = false;
+  return std::exchange(m_current_output_data, std::nullopt);
 }
 
 Error Encoder_AVC::get_data(heif_encoder* encoder)

@@ -54,13 +54,13 @@ public:
 
   Error encode_sequence_flush(heif_encoder* encoder) override;
 
-  std::optional<CodedImageData> encode_sequence_get_data() override;
+  std::optional<CodedImageData> encode_sequence_extract_data() override;
 
 private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
 
-  // Whether the vvcC is complete and was returned in an encode_sequence_get_data() call.
+  // Whether the vvcC is complete and was returned in an encode_sequence_extract_data() call.
   bool m_vvcC_has_VPS = false;
   bool m_vvcC_has_SPS = false;
   bool m_vvcC_has_PPS = false;

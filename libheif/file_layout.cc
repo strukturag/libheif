@@ -213,7 +213,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       }
       BitstreamRange mini_box_range(m_stream_reader, mini_box_start, end_of_mini_box);
       std::shared_ptr<Box> mini_box;
-      err = Box::read(mini_box_range, &mini_box, heif_get_global_security_limits());
+      err = Box::read(mini_box_range, &mini_box, limits);
       if (err) {
         return err;
       }

@@ -42,6 +42,11 @@ extern "C"
 }
 
 
+// Plugins are compiled with LIBHEIF_EXPORTS, so on MSVC a reference to the exported
+// data object heif_error_success does not resolve against libheif (issue #1854).
+// Use a file-local success object instead.
+static const heif_error kSuccess = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 struct ffmpeg_decoder
 {
   // --- input data
@@ -113,6 +118,12 @@ static int ffmpeg_does_support_format(heif_compression_format format)
 {
   switch(format) {
   case heif_compression_HEVC:
+    // FFmpeg's HEVC decoder handles 8, 9, 10 and 12 bits per sample only (FFmpeg 6.1 and 7.1).
+    // For streams with 11 bits or with 13 to 16 bits, avcodec_send_packet() fails. libde265
+    // decodes all bit depths and is the decoder to use for these streams. It has the higher
+    // priority, so that it is chosen whenever it is available.
+    // We cannot return 0 for the bit depths that FFmpeg does not handle: the format
+    // description passed to does_support_format2() holds the compression format only.
     return avcodec_find_decoder(AV_CODEC_ID_HEVC) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
   case heif_compression_AVC:
     return avcodec_find_decoder(AV_CODEC_ID_H264) ? FFMPEG_DECODER_PLUGIN_PRIORITY : 0;
@@ -198,7 +209,7 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
   }
 
 
-  return heif_error_success;
+  return kSuccess;
 }
 
 static heif_error ffmpeg_new_decoder(void** dec)
@@ -333,7 +344,7 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
 
   decoder->input_data.emplace_back(std::move(pkt));
 
-  return heif_error_success;
+  return kSuccess;
 }
 
 static heif_error ffmpeg_push_data(void *decoder_raw, const void *data, size_t size)
@@ -349,6 +360,7 @@ static heif_error ffmpeg_push_data(void *decoder_raw, const void *data, size_t s
 static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8:
+    case AV_PIX_FMT_GRAY9:
     case AV_PIX_FMT_GRAY10:
     case AV_PIX_FMT_GRAY12:
     case AV_PIX_FMT_GRAY14:
@@ -357,6 +369,7 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
 
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUV420P9:
     case AV_PIX_FMT_YUV420P10:
     case AV_PIX_FMT_YUV420P12:
     case AV_PIX_FMT_YUV420P14:
@@ -364,6 +377,8 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_420;
 
     case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUVJ422P:
+    case AV_PIX_FMT_YUV422P9:
     case AV_PIX_FMT_YUV422P10:
     case AV_PIX_FMT_YUV422P12:
     case AV_PIX_FMT_YUV422P14:
@@ -371,10 +386,25 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
       return heif_chroma_422;
 
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUVJ444P:
+    case AV_PIX_FMT_YUV444P9:
     case AV_PIX_FMT_YUV444P10:
     case AV_PIX_FMT_YUV444P12:
     case AV_PIX_FMT_YUV444P14:
     case AV_PIX_FMT_YUV444P16:
+      return heif_chroma_444;
+
+    // FFmpeg's HEVC and AVC decoders output planar GBR for 4:4:4 streams signaling
+    // matrix_coefficients 0. Its G, B, R planes map onto Y, Cb, Cr, which is
+    // exactly how libheif stores images with the identity matrix.
+    // HEVC is decoded up to 12 bits, AVC (High 4:4:4 Predictive) up to 14 bits.
+    // The JPEG decoder outputs GBRP for a JPEG that was coded without colour transform.
+    // That one carries no colour signalling, see ffmpeg_is_planar_gbr().
+    case AV_PIX_FMT_GBRP:
+    case AV_PIX_FMT_GBRP9:
+    case AV_PIX_FMT_GBRP10:
+    case AV_PIX_FMT_GBRP12:
+    case AV_PIX_FMT_GBRP14:
       return heif_chroma_444;
 
     default:
@@ -422,22 +452,34 @@ static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
     case AV_PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUVJ422P:
     case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUVJ444P:
+    case AV_PIX_FMT_GBRP:
       return 8;
+    case AV_PIX_FMT_GRAY9:
+    case AV_PIX_FMT_YUV420P9:
+    case AV_PIX_FMT_YUV422P9:
+    case AV_PIX_FMT_YUV444P9:
+    case AV_PIX_FMT_GBRP9:
+      return 9;
     case AV_PIX_FMT_GRAY10:
     case AV_PIX_FMT_YUV420P10:
     case AV_PIX_FMT_YUV422P10:
     case AV_PIX_FMT_YUV444P10:
+    case AV_PIX_FMT_GBRP10:
       return 10;
     case AV_PIX_FMT_GRAY12:
     case AV_PIX_FMT_YUV420P12:
     case AV_PIX_FMT_YUV422P12:
     case AV_PIX_FMT_YUV444P12:
+    case AV_PIX_FMT_GBRP12:
       return 12;
     case AV_PIX_FMT_GRAY14:
     case AV_PIX_FMT_YUV420P14:
     case AV_PIX_FMT_YUV422P14:
     case AV_PIX_FMT_YUV444P14:
+    case AV_PIX_FMT_GBRP14:
       return 14;
     case AV_PIX_FMT_GRAY16:
     case AV_PIX_FMT_YUV420P16:
@@ -475,6 +517,17 @@ static AVPixelFormat ffmpeg_native_pix_fmt(AVPixelFormat pix_fmt, bool* byte_swa
 
   *byte_swap = true;
   return swapped;
+}
+
+
+// Whether the planes of a format accepted by ffmpeg_get_chroma_format() hold G, B, R instead
+// of Y, Cb, Cr. Packed RGB is not meant here: the JPEG 2000 decoder returns sYCC as RGB24/RGB48.
+static bool ffmpeg_is_planar_gbr(AVPixelFormat pix_fmt)
+{
+  const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(pix_fmt);
+  const uint64_t planar_rgb = AV_PIX_FMT_FLAG_PLANAR | AV_PIX_FMT_FLAG_RGB;
+
+  return desc && (desc->flags & planar_rgb) == planar_rgb;
 }
 
 
@@ -607,7 +660,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
                           av_frame->width, av_frame->height, shift, byte_swap);
     }
 
-    return heif_error_success;
+    return kSuccess;
   }
 
   heif_chroma chroma = ffmpeg_get_chroma_format(pix_fmt);
@@ -680,7 +733,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
                           w, h, shift, byte_swap);
     }
 
-    return heif_error_success;
+    return kSuccess;
   }
   else {
     const char* fmt_name = av_get_pix_fmt_name(static_cast<AVPixelFormat>(av_frame->format));
@@ -707,7 +760,7 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   heif_color_profile_nclx* nclx = NULL;
   int ret = 0;
 
-  heif_error err = heif_error_success;
+  heif_error err = kSuccess;
 
   if (!decoder->input_data.empty()) {
     uint8_t* parse_av_data = NULL;
@@ -813,6 +866,21 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
   // codestream. Attaching them as a bitstream profile would make libheif convert the
   // decoded planes when the file has no 'colr' box. Leave the profile unset for those.
   if (!codec_has_cicp_signalling(decoder->av_codec->id)) {
+
+    // The exception are planes that hold G, B, R, which the JPEG decoder returns for a JPEG
+    // coded without colour transform. Without the identity matrix, libheif would convert
+    // them like YCbCr. The colour primaries and the transfer curve remain unspecified.
+    if (ffmpeg_is_planar_gbr(static_cast<AVPixelFormat>(av_frame->format))) {
+      nclx = heif_nclx_color_profile_alloc();
+      auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, [](heif_color_profile_nclx* nclx){heif_nclx_color_profile_free(nclx);});
+
+      heif_nclx_color_profile_set_color_primaries(nclx, heif_color_primaries_unspecified);
+      heif_nclx_color_profile_set_transfer_characteristics(nclx, heif_transfer_characteristic_unspecified);
+      heif_nclx_color_profile_set_matrix_coefficients(nclx, heif_matrix_coefficients_RGB_GBR);
+      nclx->full_range_flag = true;
+      heif_image_set_nclx_color_profile(*out_img, nclx);
+    }
+
     return heif_error_ok;
   }
 

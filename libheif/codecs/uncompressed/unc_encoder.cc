@@ -176,6 +176,18 @@ Result<std::unique_ptr<const unc_encoder> > unc_encoder_factory::get_unc_encoder
                    heif_suberror_Unspecified,
                    "Image has an interleaved chroma format, but no interleaved pixel plane."};
     }
+
+    // Alpha of an interleaved image lives inside the interleaved plane (RGBA, RRGGBBAA). The
+    // interleaved encoders take their component list from the chroma format, so a separate alpha
+    // plane would make them address a fourth component that the chroma format does not have
+    // (GHSA-qfj5-c4pq-q998). HeifPixelImage::add_channel() refuses to build such an image, but
+    // transfer_channel_from_image_as() can still assemble one.
+    if (prototype_image->has_channel(heif_channel_Alpha)) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "Image has an interleaved chroma format and a separate alpha plane. "
+                   "Alpha has to be part of the interleaved format."};
+    }
   }
   else if (prototype_image->get_used_planar_component_ids().empty()) {
     return Error{heif_error_Invalid_input,

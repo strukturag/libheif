@@ -142,13 +142,22 @@ static void test_ispe_size(heif_compression_format compression,
 }
 
 
-TEST_CASE( "ispe odd size", "[heif_context]" ) {
+TEST_CASE( "HEVC ispe odd size", "[heif_context]" ) {
+  if (!heif_have_encoder_for_format(heif_compression_HEVC)) {
+    SKIP("HEVC encoder not available, skipping test");
+  }
 
   // HEVC encoders typically encode with even dimensions only
   test_ispe_size(heif_compression_HEVC, heif_orientation_normal, 121,99, 122,100);
   test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_180, 121,99, 122,100);
   test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 121,99, 122,100);
   test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 120,100, 120,100);
+}
+
+TEST_CASE( "AVIF ispe odd size", "[heif_context]" ) {
+  if (!heif_have_encoder_for_format(heif_compression_AV1)) {
+    SKIP("AV1 encoder not available, skipping test");
+  }
 
   // AVIF encoders typically encode with odd dimensions
   test_ispe_size(heif_compression_AV1, heif_orientation_normal, 121,99, 121,99);
@@ -193,6 +202,54 @@ TEST_CASE("x265 rejects oversized images", "[heif_encoder]") {
   if (handle) {
     heif_image_handle_release(handle);
   }
+  heif_image_release(img);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+}
+
+
+TEST_CASE("kvazaar encodes monochrome images", "[heif_encoder]") {
+  // Regression test for PR #1915. kvazaar git master keeps the encoder chroma format in
+  // kvz_config fields that only the "input-format" parser updates. Setting input_format
+  // directly left the encoder at 4:2:0 while the 4:0:0 input picture had no chroma planes,
+  // which crashed every monochrome encode, including every alpha auxiliary image.
+
+  const heif_encoder_descriptor* descriptor = nullptr;
+  int n = heif_get_encoder_descriptors(heif_compression_HEVC, "kvazaar", &descriptor, 1);
+  if (n == 0) {
+    SKIP("kvazaar encoder not available, skipping test");
+  }
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc = nullptr;
+  heif_error err = heif_context_get_encoder(ctx, descriptor, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  const int w = 128;
+  const int h = 128;
+  heif_image* img = nullptr;
+  err = heif_image_create(w, h, heif_colorspace_monochrome, heif_chroma_monochrome, &img);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(img, heif_channel_Y, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+  size_t stride;
+  uint8_t* plane = heif_image_get_plane2(img, heif_channel_Y, &stride);
+  REQUIRE(plane != nullptr);
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      plane[y * stride + x] = (uint8_t) (x + y);
+    }
+  }
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+  REQUIRE(heif_image_handle_get_width(handle) == w);
+  REQUIRE(heif_image_handle_get_height(handle) == h);
+
+  heif_image_handle_release(handle);
   heif_image_release(img);
   heif_encoder_release(enc);
   heif_context_free(ctx);

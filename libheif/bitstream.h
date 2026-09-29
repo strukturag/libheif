@@ -159,7 +159,16 @@ public:
 
   StreamReader::grow_status wait_for_file_size(uint64_t target_size) override;
 
-  bool read(void* data, size_t size) override { return !m_func_table->read(data, size, m_userdata); }
+  bool read(void* data, size_t size) override
+  {
+    if (size == 0) {
+      // Do not hand a NULL buffer (an empty std::vector) to the user's read callback; it may pass
+      // it on to memcpy(), which is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read().
+      return true;
+    }
+
+    return !m_func_table->read(data, size, m_userdata);
+  }
 
   bool seek(uint64_t position) override { return !m_func_table->seek(position, m_userdata); }
 

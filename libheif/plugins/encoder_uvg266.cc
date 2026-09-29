@@ -483,6 +483,13 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
   }
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+  if (bit_depth != UVG_BIT_DEPTH) {
+    return {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
+    };
+  }
 
   const uvg_api* api = uvg_api_get(bit_depth);
   if (api == nullptr) {
@@ -653,10 +660,12 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
 static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                                uintptr_t framenr)
 {
-  // VVC signals one bit depth for all planes. Whether this build of uvg266
-  // supports the depth is checked separately via uvg_api_get().
+  // VVC signals one bit depth for all planes, and uvg266 is built for a single
+  // depth: uvg_pixel follows UVG_BIT_DEPTH. This has to be checked here and not
+  // only in uvg266_start_sequence_encoding_intern(), because that one runs for
+  // the first frame of a sequence only.
   heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
-                                                    {8, 10, 12});
+                                                    {UVG_BIT_DEPTH});
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

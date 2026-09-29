@@ -23,6 +23,11 @@
 #include <utility>
 #include "nalu_utils.h"
 
+// Plugins are compiled with LIBHEIF_EXPORTS, so on MSVC a reference to the exported
+// data object heif_error_success does not resolve against libheif (issue #1854).
+// Use a file-local success object instead.
+static const heif_error kSuccess = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 NalUnit::NalUnit()
 {
     nal_data_ptr = NULL;
@@ -91,7 +96,7 @@ const heif_error NalMap::parseHevcNalu(const uint8_t *cdata, size_t size)
         ptr += nal_size;
     }
 
-    return heif_error_success;
+    return kSuccess;
 }
 
 void NalMap::clear() { map.clear(); }

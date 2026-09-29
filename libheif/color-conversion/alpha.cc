@@ -71,8 +71,8 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.has_alpha == false ||
-      target_state.has_alpha == true) {
+      !input_state.has_alpha() ||
+      target_state.has_alpha()) {
     return {};
   }
 
@@ -87,7 +87,7 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
   // --- drop alpha plane
 
   output_state = input_state;
-  output_state.has_alpha = false;
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Trivial);
 
@@ -134,27 +134,33 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
                                                       const heif_color_conversion_options& options,
                                                       const heif_color_conversion_options_ext& options_ext) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  // TODO: this Op only works when all channels are either HDR or all are SDR.
-  //       But there is currently no easy way to check that.
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
+  // The colour planes and the alpha plane are all read through the single 'Pixel' type
+  // below, so every plane must be stored with sizeof(Pixel) bytes per sample. A file may
+  // declare a different depth per plane ('unci'); reading a one-byte plane as two-byte
+  // samples would run past its end (GHSA-r7gr-2xm2-23wf), and a plane wider than two
+  // bytes cannot be read through either instance. Decline anything else.
+  if (!input_state.all_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  // The colour planes are converted to RGB at one common depth and the alpha plane is
+  // composited at that depth, so all of them have to agree (0 = the colour planes differ).
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (color_bpp == 0 || (input_state.has_alpha() && input_state.bits_per_pixel_alpha != color_bpp)) {
     return {};
   }
 
   // only drop alpha plane if it is not needed in output
 
-  if ((input_state.chroma != heif_chroma_monochrome &&
+  // Bayer images (colorspace filter_array, chroma planar == monochrome) are not composited;
+  // there is no way back from RGB to a filter array.
+  if (input_state.colorspace == heif_colorspace_filter_array ||
+      (input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.has_alpha == false ||
-      target_state.has_alpha == true) {
+      !input_state.has_alpha() ||
+      target_state.has_alpha()) {
     return {};
   }
 
@@ -169,11 +175,64 @@ Op_flatten_alpha_plane<Pixel>::state_after_conversion(const ColorState& input_st
   // --- drop alpha plane
 
   output_state = input_state;
-  output_state.has_alpha = false;
+  output_state.bits_per_pixel_alpha = 0;
 
   states.emplace_back(output_state, SpeedCosts_Trivial);
 
   return states;
+}
+
+
+// Composites one plane onto a background: out = (in * a + bkg * (alpha_max - a)) >> bpp_alpha.
+// With 'checkerboard_square_size' == 0 the background is 'bkg1' everywhere; otherwise the
+// squares alternate between 'bkg1' and 'bkg2'. All three planes are stored with sizeof(Pixel)
+// bytes per sample; the strides are in samples.
+template<class Pixel>
+static void composite_plane(const Pixel* p_in, size_t stride_in,
+                            const Pixel* p_alpha, size_t stride_alpha,
+                            Pixel* p_out, size_t stride_out,
+                            uint32_t width, uint32_t height,
+                            int bpp_alpha, Pixel bkg1, Pixel bkg2, uint32_t checkerboard_square_size)
+{
+  // The composite is a weighted sum bounded by (2^bpp-1) * (2^bpp_alpha-1). For 8-bit samples
+  // that fits a plain int; for wider samples it can exceed a signed 32-bit int (65535*65535
+  // overflows), so accumulate in an unsigned 32-bit integer, which is exact as long as both
+  // the colour and alpha samples are <= 16 bits (bound < 2^32). Using uint32_t rather than a
+  // 64-bit type keeps the hot path efficient on non-64-bit architectures. The caller rejects
+  // anything wider.
+  using composite_t = std::conditional_t<(sizeof(Pixel) > 1), uint32_t, int>;
+
+  const Pixel alpha_max = static_cast<Pixel>((1 << bpp_alpha) - 1);
+
+  if (checkerboard_square_size == 0) {
+    for (uint32_t y = 0; y < height; y++)
+      for (uint32_t x = 0; x < width; x++) {
+        int a = p_alpha[y * stride_alpha + x];
+        composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
+                                + static_cast<composite_t>(bkg1) * (alpha_max - a);
+        p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
+      }
+  }
+  else {
+    for (uint32_t y = 0; y < height; y++)
+      for (uint32_t x = 0; x < width; x++) {
+        uint8_t parity = (x / checkerboard_square_size + y / checkerboard_square_size) % 2;
+        Pixel bkg = parity ? bkg1 : bkg2;
+
+        int a = p_alpha[y * stride_alpha + x];
+        composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
+                                + static_cast<composite_t>(bkg) * (alpha_max - a);
+        p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
+      }
+  }
+}
+
+
+// Luma of a background colour given as 16-bit RGB, with BT.601 weights. Used to composite
+// onto a luma-only image.
+static uint16_t background_luma16(uint16_t r, uint16_t g, uint16_t b)
+{
+  return static_cast<uint16_t>((299u * r + 587u * g + 114u * b + 500u) / 1000u);
 }
 
 
@@ -186,160 +245,184 @@ Op_flatten_alpha_plane<Pixel>::convert_colorspace(const std::shared_ptr<const He
                                                   const heif_color_conversion_options_ext& options_ext,
                                                   const heif_security_limits* limits) const
 {
-  std::shared_ptr<const HeifPixelImage> input = input_raw;
+  // The guards up to the bit-depth check are only reachable by a direct caller;
+  // state_after_conversion() does not offer this operation in these cases.
+
+  if (options_ext.alpha_composition_mode == heif_alpha_composition_mode_none) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Op_flatten_alpha_plane: no alpha composition mode"};
+  }
+
+  if (!input_raw->has_channel(heif_channel_Alpha)) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Op_flatten_alpha_plane: image has no alpha plane"};
+  }
+
+  // The colour planes are converted at, and the alpha plane is composited at, one common depth
+  // through the 'Pixel' type of this instance.
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
+  int bpp_alpha = input_raw->get_bits_per_pixel(heif_channel_Alpha);
+
+  if (color_bpp == 0 ||
+      bpp_alpha != color_bpp ||
+      bytes_per_sample_for_bit_depth(color_bpp) != static_cast<int>(sizeof(Pixel))) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion,
+                 "Op_flatten_alpha_plane: colour and alpha planes must share one bit depth"};
+  }
+
+  // See composite_plane(): the composite accumulates in 32 bits, which is exact for samples
+  // of up to 16 bits. Reject anything wider instead of overflowing.
+  if (color_bpp > 16) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "Alpha compositing is not supported for images with more than 16 bits per sample."};
+  }
+
+  // The background colours are given as 16-bit values. A checkerboard with a square size of 0
+  // is a solid background.
+  const int shift = 16 - color_bpp;
+  const uint32_t square_size = (options_ext.alpha_composition_mode == heif_alpha_composition_mode_checkerboard) ?
+                               options_ext.checkerboard_square_size : 0;
+
+  // --- luma-only image: composite the Y plane directly
+
+  bool luma_only = (input_raw->get_colorspace() == heif_colorspace_monochrome ||
+                    (input_raw->get_colorspace() == heif_colorspace_YCbCr &&
+                     input_raw->get_chroma_format() == heif_chroma_monochrome));
+
+  if (luma_only) {
+    // There is no operator that converts RGB back to a luma-only image, and for a grey
+    // background the round trip through RGB would be an identity anyway. Composite the luma
+    // plane against the luma of the background colour instead.
+    uint32_t width = input_raw->get_width(heif_channel_Y);
+    uint32_t height = input_raw->get_height(heif_channel_Y);
+
+    if (input_raw->get_width(heif_channel_Alpha) != width ||
+        input_raw->get_height(heif_channel_Alpha) != height) {
+      return Error::InternalError;
+    }
+
+    auto outimg = std::make_shared<HeifPixelImage>();
+    outimg->create(input_raw->get_width(), input_raw->get_height(),
+                   input_raw->get_colorspace(), input_raw->get_chroma_format());
+
+    if (Error err = outimg->add_channel(heif_channel_Y, width, height, color_bpp, limits)) {
+      return err;
+    }
+
+    Pixel bkg1 = static_cast<Pixel>(background_luma16(options_ext.background_red,
+                                                      options_ext.background_green,
+                                                      options_ext.background_blue) >> shift);
+    Pixel bkg2 = static_cast<Pixel>(background_luma16(options_ext.secondary_background_red,
+                                                      options_ext.secondary_background_green,
+                                                      options_ext.secondary_background_blue) >> shift);
+
+    size_t stride_in, stride_alpha, stride_out;
+    const Pixel* p_in = (const Pixel*) input_raw->get_channel_memory(heif_channel_Y, &stride_in);
+    const Pixel* p_alpha = (const Pixel*) input_raw->get_channel_memory(heif_channel_Alpha, &stride_alpha);
+    Pixel* p_out = (Pixel*) outimg->get_channel_memory(heif_channel_Y, &stride_out);
+
+    composite_plane<Pixel>(p_in, stride_in / sizeof(Pixel),
+                           p_alpha, stride_alpha / sizeof(Pixel),
+                           p_out, stride_out / sizeof(Pixel),
+                           width, height, bpp_alpha, bkg1, bkg2, square_size);
+
+    return outimg;
+  }
+
+  // --- colour image: convert to planar RGB, composite each colour plane, convert back
 
   heif_color_conversion_options_ext options_ext_skip_alpha = options_ext;
   options_ext_skip_alpha.alpha_composition_mode = heif_alpha_composition_mode_none;
 
-  if (options_ext.alpha_composition_mode != heif_alpha_composition_mode_none) {
-    Result<std::shared_ptr<const HeifPixelImage>> convInput = ::convert_colorspace(input,
+  std::shared_ptr<const HeifPixelImage> input;
+  {
+    Result<std::shared_ptr<const HeifPixelImage>> convInput = ::convert_colorspace(input_raw,
                                                                                    heif_colorspace_RGB,
                                                                                    heif_chroma_444,
                                                                                    input_state.nclx,
-                                                                                   input_state.bits_per_pixel,
+                                                                                   color_bpp,
                                                                                    options, &options_ext_skip_alpha,
                                                                                    limits);
     if (!convInput) {
       return convInput.error();
     }
-    else {
-      input = *convInput;
-    }
+
+    input = *convInput;
   }
 
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
 
+  // The conversion above was asked for 'color_bpp' and carries the alpha plane through.
+  if (!input->has_channel(heif_channel_Alpha) ||
+      input->get_bits_per_pixel(heif_channel_Alpha) != bpp_alpha ||
+      input->get_width(heif_channel_Alpha) != width ||
+      input->get_height(heif_channel_Alpha) != height) {
+    return Error::InternalError;
+  }
+
   auto outimg = std::make_shared<HeifPixelImage>();
+  outimg->create(width, height, input->get_colorspace(), input->get_chroma_format());
 
-  outimg->create(width, height,
-                 input->get_colorspace(),
-                 input->get_chroma_format());
+  size_t stride_alpha;
+  const Pixel* p_alpha = (const Pixel*) input->get_channel_memory(heif_channel_Alpha, &stride_alpha);
+  stride_alpha /= sizeof(Pixel);
 
-  for (heif_channel channel : {heif_channel_R,
-                               heif_channel_G,
-                               heif_channel_B}) {
-    outimg->add_channel(channel, width, height, target_state.bits_per_pixel, limits);
+  struct PlaneBackground
+  {
+    heif_channel channel;
+    uint16_t bkg1;
+    uint16_t bkg2;
+  };
 
-    const Pixel* p_alpha;
-    size_t stride_alpha;
-    p_alpha = (const Pixel*)input->get_channel_memory(heif_channel_Alpha, &stride_alpha);
-    int bpp_alpha = input->get_bits_per_pixel(heif_channel_Alpha);
-    Pixel alpha_max = (Pixel)((1 << bpp_alpha) - 1);
+  const PlaneBackground planes[3] = {
+      {heif_channel_R, options_ext.background_red, options_ext.secondary_background_red},
+      {heif_channel_G, options_ext.background_green, options_ext.secondary_background_green},
+      {heif_channel_B, options_ext.background_blue, options_ext.secondary_background_blue}};
 
-    // The composite below (p_in*a + bkg*(alpha_max-a)) is a weighted sum bounded by
-    // (2^bpp-1) * (2^bpp_alpha-1). For 8-bit samples that fits a plain int; for
-    // wider samples it can exceed a signed 32-bit int (65535*65535 overflows), so
-    // accumulate in an unsigned 32-bit integer, which is exact as long as both the
-    // colour and alpha samples are <= 16 bits (bound < 2^32). Using uint32_t rather
-    // than a 64-bit type keeps the hot path efficient on non-64-bit architectures.
-    // Reject anything wider instead of overflowing.
-    if (bpp_alpha > 16 || input->get_bits_per_pixel(channel) > 16) {
-      return Error{heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_bit_depth,
-                   "Alpha compositing is not supported for images with more than 16 bits per sample."};
-    }
-    using composite_t = std::conditional_t<(sizeof(Pixel) > 1), uint32_t, int>;
-
-    const Pixel* p_in;
-    size_t stride_in;
-    p_in = (const Pixel*)input->get_channel_memory(channel, &stride_in);
-
-    Pixel* p_out;
-    size_t stride_out;
-    p_out = (Pixel*)outimg->get_channel_memory(channel, &stride_out);
-
-    if (sizeof(Pixel) == 2) {
-      stride_alpha /= 2;
-      stride_in /= 2;
-      stride_out /= 2;
+  for (const PlaneBackground& plane : planes) {
+    // 'input' was converted to planar RGB above, so its planes carry the depth we composite
+    // at. Do not take the depth from target_state: this operation keeps the source
+    // colorspace, so for a YCbCr target the R/G/B fields there are 0 (plane absent), and
+    // add_channel() would refuse the zero depth.
+    if (input->get_bits_per_pixel(plane.channel) != color_bpp) {
+      return Error::InternalError;
     }
 
-    if (options_ext.alpha_composition_mode == heif_alpha_composition_mode_solid_color ||
-        (options_ext.alpha_composition_mode == heif_alpha_composition_mode_checkerboard && options_ext.checkerboard_square_size == 0)) {
-      uint16_t bkg16;
-
-      switch (channel) {
-        case heif_channel_R:
-          bkg16 = options_ext.background_red;
-          break;
-        case heif_channel_G:
-          bkg16 = options_ext.background_green;
-          break;
-        case heif_channel_B:
-          bkg16 = options_ext.background_blue;
-          break;
-        default:
-          assert(false);
-          bkg16 = 0;
-      }
-
-      Pixel bkg = static_cast<Pixel>(bkg16 >> (16 - input->get_bits_per_pixel(channel)));
-
-      for (uint32_t y = 0; y < height; y++)
-        for (uint32_t x = 0; x < width; x++) {
-          int a = p_alpha[y * stride_alpha + x];
-          composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
-                                  + static_cast<composite_t>(bkg) * (alpha_max - a);
-          p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
-        }
-    }
-    else {
-      uint16_t bkg16_1, bkg16_2;
-
-      switch (channel) {
-        case heif_channel_R:
-          bkg16_1 = options_ext.background_red;
-          bkg16_2 = options_ext.secondary_background_red;
-          break;
-        case heif_channel_G:
-          bkg16_1 = options_ext.background_green;
-          bkg16_2 = options_ext.secondary_background_green;
-          break;
-        case heif_channel_B:
-          bkg16_1 = options_ext.background_blue;
-          bkg16_2 = options_ext.secondary_background_blue;
-          break;
-        default:
-          assert(false);
-          bkg16_1 = bkg16_2 = 0;
-      }
-
-      Pixel bkg1 = static_cast<Pixel>(bkg16_1 >> (16 - input->get_bits_per_pixel(channel)));
-      Pixel bkg2 = static_cast<Pixel>(bkg16_2 >> (16 - input->get_bits_per_pixel(channel)));
-
-      for (uint32_t y = 0; y < height; y++)
-        for (uint32_t x = 0; x < width; x++) {
-          uint8_t parity = (x / options_ext.checkerboard_square_size + y / options_ext.checkerboard_square_size) % 2;
-          Pixel bkg = parity ? bkg1 : bkg2;
-
-          int a = p_alpha[y * stride_alpha + x];
-          composite_t composite = static_cast<composite_t>(p_in[y * stride_in + x]) * a
-                                  + static_cast<composite_t>(bkg) * (alpha_max - a);
-          p_out[y * stride_out + x] = static_cast<Pixel>(composite >> bpp_alpha);
-        }
+    if (Error err = outimg->add_channel(plane.channel, width, height, color_bpp, limits)) {
+      return err;
     }
 
+    size_t stride_in, stride_out;
+    const Pixel* p_in = (const Pixel*) input->get_channel_memory(plane.channel, &stride_in);
+    Pixel* p_out = (Pixel*) outimg->get_channel_memory(plane.channel, &stride_out);
+
+    composite_plane<Pixel>(p_in, stride_in / sizeof(Pixel),
+                           p_alpha, stride_alpha,
+                           p_out, stride_out / sizeof(Pixel),
+                           width, height, bpp_alpha,
+                           static_cast<Pixel>(plane.bkg1 >> shift),
+                           static_cast<Pixel>(plane.bkg2 >> shift),
+                           square_size);
   }
 
-  if (options_ext.alpha_composition_mode != heif_alpha_composition_mode_none) {
-    Result<std::shared_ptr<HeifPixelImage>> convOutput = ::convert_colorspace(outimg,
-                                                                              input_raw->get_colorspace(),
-                                                                              input_raw->get_chroma_format(),
-                                                                              input_state.nclx,
-                                                                              input_state.bits_per_pixel,
-                                                                              options, &options_ext_skip_alpha,
-                                                                              limits);
-    if (!convOutput) {
-      return convOutput.error();
-    }
-    else {
-      return convOutput;
-    }
+  // Back to the colorspace and chroma of the source image.
+  Result<std::shared_ptr<HeifPixelImage>> convOutput = ::convert_colorspace(outimg,
+                                                                            input_raw->get_colorspace(),
+                                                                            input_raw->get_chroma_format(),
+                                                                            input_state.nclx,
+                                                                            color_bpp,
+                                                                            options, &options_ext_skip_alpha,
+                                                                            limits);
+  if (!convOutput) {
+    return convOutput.error();
   }
-  else {
-    return outimg;
-  }
+
+  return convOutput;
 }
 
 template class Op_flatten_alpha_plane<uint8_t>;
@@ -352,9 +435,13 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
                                                   const heif_color_conversion_options& options,
                                                   const heif_color_conversion_options_ext& options_ext) const
 {
-  // Only applicable when alpha BPP differs from color BPP
-  if (!input_state.has_alpha ||
-      input_state.get_alpha_bits_per_pixel() == input_state.bits_per_pixel) {
+  // Only applicable when the colour planes share one depth and the alpha plane differs from
+  // it. With mixed colour depths there is no depth to bring the alpha plane to; such images
+  // are equalized, alpha included, by Op_to_sdr_planes instead.
+  int color_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (!input_state.has_alpha() ||
+      color_bpp == 0 ||
+      input_state.bits_per_pixel_alpha == color_bpp) {
     return {};
   }
 
@@ -366,10 +453,17 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // Rewrites the alpha plane from its own bit depth to the colour bit depth, so both
+  // ends have to be accessible as 8- or 16-bit samples.
+  if (input_state.get_bytes_per_sample(heif_channel_Alpha) > 2 ||
+      bytes_per_sample_for_bit_depth(color_bpp) > 2) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state = input_state;
-  output_state.alpha_bits_per_pixel = input_state.bits_per_pixel;
+  output_state.bits_per_pixel_alpha = color_bpp;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -404,7 +498,13 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   int input_alpha_bpp = input->get_bits_per_pixel(heif_channel_Alpha);
-  int target_bpp = input_state.bits_per_pixel;
+  int target_bpp = input_state.get_uniform_color_bits_per_pixel();
+  if (target_bpp == 0) {
+    // Only reachable by a direct caller; state_after_conversion() declines mixed colour depths.
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion,
+                 "Op_adjust_alpha_bit_depth: colour planes with differing bit depths"};
+  }
 
   uint32_t alpha_width = input->get_width(heif_channel_Alpha);
   uint32_t alpha_height = input->get_height(heif_channel_Alpha);
@@ -413,7 +513,10 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
     return err;
   }
 
-  if (input_alpha_bpp <= 8 && target_bpp > 8) {
+  int input_bytes = bytes_per_sample_for_bit_depth(input_alpha_bpp);
+  int target_bytes = bytes_per_sample_for_bit_depth(target_bpp);
+
+  if (input_bytes == 1 && target_bytes == 2) {
     // Upscale: 8-bit alpha -> HDR using bit replication
     const uint8_t* p_in;
     size_t stride_in;
@@ -430,7 +533,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         p_out[y * stride_out + x] = (uint16_t) replicate_sample_bits(in, input_alpha_bpp, target_bpp);
       }
   }
-  else if (input_alpha_bpp > 8 && target_bpp <= 8) {
+  else if (input_bytes == 2 && target_bytes == 1) {
     // Downscale: HDR alpha -> 8-bit
     const uint16_t* p_in;
     size_t stride_in;
@@ -448,7 +551,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         p_out[y * stride_out + x] = (uint8_t) (p_in[y * stride_in + x] >> shift);
       }
   }
-  else if (input_alpha_bpp > 8 && target_bpp > 8) {
+  else if (input_bytes == 2 && target_bytes == 2) {
     // HDR alpha -> different HDR: rescale within uint16_t
     const uint16_t* p_in;
     size_t stride_in;
@@ -475,7 +578,7 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
         }
     }
   }
-  else {
+  else if (input_bytes == 1 && target_bytes == 1) {
     // SDR alpha -> different SDR (both <= 8)
     const uint8_t* p_in;
     size_t stride_in;
@@ -499,6 +602,11 @@ Op_adjust_alpha_bit_depth::convert_colorspace(const std::shared_ptr<const HeifPi
           p_out[y * stride_out + x] = (uint8_t) (p_in[y * stride_in + x] >> shift);
         }
     }
+  }
+  else {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "Alpha bit depth adjustment only supports 8- and 16-bit sample storage."};
   }
 
   return outimg;

@@ -30,6 +30,8 @@
 #include <limits>
 #include <algorithm>
 #include <map>
+#include <string>
+#include <sstream>
 #include <color-conversion/colorconversion.h>
 
 #include "codecs/uncompressed/unc_types.h"
@@ -344,10 +346,65 @@ void HeifPixelImage::register_component_descriptions(ComponentStorage& plane,
 }
 
 
+static const char* channel_name(heif_channel channel)
+{
+  switch (channel) {
+    case heif_channel_Y: return "Y";
+    case heif_channel_Cb: return "Cb";
+    case heif_channel_Cr: return "Cr";
+    case heif_channel_R: return "R";
+    case heif_channel_G: return "G";
+    case heif_channel_B: return "B";
+    case heif_channel_Alpha: return "alpha";
+    case heif_channel_interleaved: return "interleaved";
+    case heif_channel_filter_array: return "filter_array";
+    case heif_channel_depth: return "depth";
+    case heif_channel_disparity: return "disparity";
+    default: return "unknown";
+  }
+}
+
+
 Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, int bit_depth,
                                 const heif_security_limits* limits,
                                 heif_component_datatype datatype)
 {
+  // An interleaved image carries its alpha inside the interleaved plane (the RGBA and RRGGBBAA
+  // formats). A separate alpha plane next to it would let the chroma format and the set of planes
+  // disagree about whether the image has alpha. The interleaved encoders of the uncompressed codec
+  // took the component list from the chroma format but the alpha decision from the planes and read
+  // past the end of the component list (GHSA-qfj5-c4pq-q998). Callers that want alpha have to use
+  // an interleaved format with alpha instead.
+
+  if (channel == heif_channel_Alpha && num_interleaved_components_per_plane(m_chroma) > 1) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Cannot add a separate alpha plane to an image with an interleaved chroma format. "
+            "Use an interleaved format with alpha (e.g. heif_chroma_interleaved_RGBA) instead."};
+  }
+
+  // A Cb/Cr plane must have exactly the chroma-subsampled size of the logical image
+  // (round_up), the invariant has_standard_plane_sizes() and check_plane_layout()
+  // enforce elsewhere. Building one at a different size makes the plane's actual
+  // allocation disagree with the size that code derives from the logical image
+  // dimensions, and that mismatch is a memory-safety hazard: an oversized plane
+  // fooled the per-row fill in extend_to_size_with_zero() into an unsigned underflow
+  // and a ~4 GB out-of-bounds write (GHSA-j2rv-58fh-w8pw), an undersized one caused
+  // out-of-bounds reads during RGB conversion (issue #1796). Reject the mismatch at
+  // construction so the inconsistent image cannot be built in the first place. Only
+  // Cb/Cr are constrained; alpha, depth, disparity and other auxiliary planes may
+  // legitimately have a size that differs from the colour planes.
+  if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
+    uint32_t expected_width, expected_height;
+    get_subsampled_size(m_width, m_height, channel, m_chroma, &expected_width, &expected_height);
+
+    if (width != expected_width || height != expected_height) {
+      return {heif_error_Usage_error,
+              heif_suberror_Invalid_parameter_value,
+              "A Cb/Cr plane must have the chroma-subsampled size of the image."};
+    }
+  }
+
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
   if (m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
@@ -432,12 +489,7 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
   m_datatype = datatype;
 
   // Cache bytes-per-pixel for the inner-loop get_bytes_per_pixel().
-  int bytes_per_component;
-  if (bit_depth <= 8)        bytes_per_component = 1;
-  else if (bit_depth <= 16)  bytes_per_component = 2;
-  else if (bit_depth <= 32)  bytes_per_component = 4;
-  else if (bit_depth <= 64)  bytes_per_component = 8;
-  else                       bytes_per_component = 16;
+  int bytes_per_component = bytes_per_sample_for_bit_depth(bit_depth);
 
   // m_bytes_per_pixel is a uint8_t. bytes_per_component * num_interleaved_components can
   // exceed 255 even though num_interleaved_components itself is already bounded to <= 255
@@ -629,6 +681,43 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
 
 Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits)
 {
+  // This function only ever grows the image. A target smaller than the current
+  // size is out of contract: the per-row right-edge fill below computes its
+  // memset length as (subsampled_width - old_width), which would underflow to a
+  // huge value on a shrink request and write past the end of the pixel plane.
+  // Reject it up front (GHSA-hqc2-cx5m-g6ff).
+  if (width < m_width || height < m_height) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Cannot extend an image to a size smaller than its current size."};
+  }
+
+  // Nothing to do when the target already matches the current size.
+  if (width == m_width && height == m_height) {
+    return Error::Ok;
+  }
+
+  // Preflight: no plane may shrink. Even when the logical target is not smaller
+  // than the image, get_subsampled_size() can map it to a per-component size that
+  // is smaller than a plane's current size, e.g. a Cb/Cr plane that was added
+  // larger than the target's subsampled chroma extent. The per-row right-edge fill
+  // below would then compute its length as (subsampled_width - old_width), underflow
+  // uint32_t, and write past the end of the plane. Validate every plane before
+  // touching any so a rejected request cannot leave the image partially modified
+  // (GHSA-j2rv-58fh-w8pw, a follow-up to GHSA-hqc2-cx5m-g6ff whose logical-size
+  // guard above does not cover an individually oversized chroma plane).
+  for (const auto& component : m_storage) {
+    uint32_t subsampled_width, subsampled_height;
+    get_subsampled_size(width, height, component.m_channel, m_chroma,
+                        &subsampled_width, &subsampled_height);
+
+    if (subsampled_width < component.m_width || subsampled_height < component.m_height) {
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Invalid_parameter_value,
+                   "Cannot extend an image to a size smaller than an existing plane."};
+    }
+  }
+
   for (auto& component : m_storage) {
     // See extend_padding_to_size(): get_subsampled_size() assumes a non-Cb/Cr
     // component has the full logical image size, so we cannot compute a correct
@@ -873,6 +962,122 @@ bool HeifPixelImage::has_standard_plane_sizes() const
   }
 
   return true;
+}
+
+
+Error HeifPixelImage::check_plane_layout() const
+{
+  std::vector<heif_channel> colour_planes;
+  bool separate_alpha_allowed = true;
+
+  auto layout_error = [this](const std::string& what) {
+    std::stringstream sstr;
+    sstr << what << " (colorspace " << static_cast<int>(m_colorspace)
+         << ", chroma " << static_cast<int>(m_chroma) << ")";
+    return Error{heif_error_Usage_error, heif_suberror_Invalid_parameter_value, sstr.str()};
+  };
+
+  switch (m_colorspace) {
+    case heif_colorspace_RGB:
+      switch (m_chroma) {
+        case heif_chroma_444:
+          colour_planes = {heif_channel_R, heif_channel_G, heif_channel_B};
+          break;
+        case heif_chroma_interleaved_RGB:
+        case heif_chroma_interleaved_RGBA:
+        case heif_chroma_interleaved_RRGGBB_BE:
+        case heif_chroma_interleaved_RRGGBB_LE:
+        case heif_chroma_interleaved_RRGGBBAA_BE:
+        case heif_chroma_interleaved_RRGGBBAA_LE:
+          colour_planes = {heif_channel_interleaved};
+          separate_alpha_allowed = false; // alpha, if any, is inside the interleaved plane
+          break;
+        default:
+          return layout_error("Chroma format is not valid for an RGB image");
+      }
+      break;
+
+    case heif_colorspace_YCbCr:
+      switch (m_chroma) {
+        case heif_chroma_444:
+        case heif_chroma_422:
+        case heif_chroma_420:
+          colour_planes = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+          break;
+        case heif_chroma_monochrome:
+          colour_planes = {heif_channel_Y};
+          break;
+        default:
+          return layout_error("Chroma format is not valid for a YCbCr image");
+      }
+      break;
+
+    case heif_colorspace_monochrome:
+      if (m_chroma != heif_chroma_monochrome) {
+        return layout_error("Chroma format is not valid for a monochrome image");
+      }
+      colour_planes = {heif_channel_Y};
+      break;
+
+    case heif_colorspace_filter_array:
+      if (m_chroma != heif_chroma_planar) {
+        return layout_error("Chroma format is not valid for a filter-array image");
+      }
+      colour_planes = {heif_channel_filter_array};
+      // A filter array with an alpha plane is representable in 'unci', but nothing produces or
+      // consumes it yet: the uncompressed decoder only recognizes the filter-array component on
+      // its own, Op_bayer_bilinear_to_RGB24_32 carries no alpha, and Op_drop_alpha_plane does not
+      // copy a filter-array plane. Once those handle it, this may be allowed.
+      separate_alpha_allowed = false;
+      break;
+
+    default:
+      return layout_error("Colorspace has no defined plane layout");
+  }
+
+  // Every known plane has to belong to the layout, appear once, and have the size of its channel.
+
+  std::set<heif_channel> seen;
+
+  for (const auto& component : m_storage) {
+    heif_channel channel = component.m_channel;
+
+    if (channel == heif_channel_unknown) {
+      continue; // multi-component data without colour meaning, tolerated and ignored
+    }
+
+    bool belongs = (channel == heif_channel_Alpha && separate_alpha_allowed);
+    for (heif_channel c : colour_planes) {
+      if (c == channel) {
+        belongs = true;
+      }
+    }
+
+    if (!belongs) {
+      return layout_error(std::string("Image has a ") + channel_name(channel) + " plane that does not belong to its format");
+    }
+
+    if (!seen.insert(channel).second) {
+      return layout_error(std::string("Image has more than one ") + channel_name(channel) + " plane");
+    }
+
+    uint32_t expected_w = channel_width(m_width, m_chroma, channel);
+    uint32_t expected_h = channel_height(m_height, m_chroma, channel);
+    if (component.m_width != expected_w || component.m_height != expected_h) {
+      std::stringstream sstr;
+      sstr << "The " << channel_name(channel) << " plane has size " << component.m_width << "x" << component.m_height
+           << ", expected " << expected_w << "x" << expected_h;
+      return layout_error(sstr.str());
+    }
+  }
+
+  for (heif_channel channel : colour_planes) {
+    if (seen.count(channel) == 0) {
+      return layout_error(std::string("Image has no ") + channel_name(channel) + " plane");
+    }
+  }
+
+  return Error::Ok;
 }
 
 
@@ -1726,19 +1931,6 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 }
 
 
-uint32_t negate_negative_int32(int32_t x)
-{
-  assert(x <= 0);
-
-  if (x == INT32_MIN) {
-    return static_cast<uint32_t>(INT32_MAX) + 1;
-  }
-  else {
-    return static_cast<uint32_t>(-x);
-  }
-}
-
-
 Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy)
 {
   // This function places the overlay using the full-resolution (dx,dy) offset
@@ -1802,95 +1994,52 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
     uint32_t out_h = get_height(channel);
 
 
-    // --- check whether overlay image overlaps with current image
+    // --- compute the overlapping area
+    //
+    // The overlay covers [dx, dx+in_w) x [dy, dy+in_h) in canvas coordinates and
+    // may start outside the canvas on any side (ISO/IEC 23008-12 6.6.2.2.3 allows
+    // negative offsets; pixels outside the canvas are simply not shown). Intersect
+    // it with the canvas [0, out_w) x [0, out_h). All terms fit into int64_t, so
+    // this cannot overflow for int32 offsets and uint32 sizes. The copy region is
+    // then described by its size and by its top-left corner in both images, which
+    // keeps the loop below free of any "end coordinate vs. count" ambiguity.
     // Note: all components share the logical image size, so if the overlay
     // image lies completely outside for one component it does so for all of
     // them -> we can return instead of just skipping the current component.
 
-    if (dx > 0 && static_cast<uint32_t>(dx) >= out_w) {
-      // the overlay image is completely outside the right border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dx < 0 && in_w <= negate_negative_int32(dx)) {
-      // the overlay image is completely outside the left border -> skip overlaying
-      return Error::Ok;
-    }
+    const int64_t x0 = std::max<int64_t>(dx, 0);
+    const int64_t y0 = std::max<int64_t>(dy, 0);
+    const int64_t x1 = std::min<int64_t>(static_cast<int64_t>(dx) + in_w, out_w);
+    const int64_t y1 = std::min<int64_t>(static_cast<int64_t>(dy) + in_h, out_h);
 
-    if (dy > 0 && static_cast<uint32_t>(dy) >= out_h) {
-      // the overlay image is completely outside the bottom border -> skip overlaying
-      return Error::Ok;
-    }
-    else if (dy < 0 && in_h <= negate_negative_int32(dy)) {
-      // the overlay image is completely outside the top border -> skip overlaying
+    if (x1 <= x0 || y1 <= y0) {
+      // the overlay image is completely outside the canvas -> nothing to draw
       return Error::Ok;
     }
 
+    const uint32_t copy_w = static_cast<uint32_t>(x1 - x0);
+    const uint32_t copy_h = static_cast<uint32_t>(y1 - y0);
 
-    // --- compute overlapping area
+    // top-left corner of the copied region in the canvas (out_*) and in the overlay (in_*)
+    const uint32_t out_x0 = static_cast<uint32_t>(x0);
+    const uint32_t out_y0 = static_cast<uint32_t>(y0);
+    const uint32_t in_x0 = static_cast<uint32_t>(x0 - dx);
+    const uint32_t in_y0 = static_cast<uint32_t>(y0 - dy);
 
-    // top-left points where to start copying in source and destination
-    uint32_t in_x0;
-    uint32_t in_y0;
-    uint32_t out_x0;
-    uint32_t out_y0;
+    // --- composite the overlay in the overlapping area
 
-    // right border
-    if (dx + static_cast<int64_t>(in_w) > out_w) {
-      // overlay image extends partially outside of right border
-      // Notes:
-      // - (out_w-dx) cannot underflow because dx<out_w is ensured above
-      // - (out_w-dx) cannot overflow (for dx<0) because, as just checked, out_w-dx < in_w
-      //              and in_w fits into uint32_t
-      in_w = static_cast<uint32_t>(static_cast<int64_t>(out_w) - dx);
-    }
+    for (uint32_t y = 0; y < copy_h; y++) {
+      const uint8_t* in_row = in_p + in_x0 + static_cast<size_t>(in_y0 + y) * in_stride;
+      uint8_t* out_row = out_p + out_x0 + static_cast<size_t>(out_y0 + y) * out_stride;
 
-    // bottom border
-    if (dy + static_cast<int64_t>(in_h) > out_h) {
-      // overlay image extends partially outside of bottom border
-      in_h = static_cast<uint32_t>(static_cast<int64_t>(out_h) - dy);
-    }
-
-    // left border
-    if (dx < 0) {
-      // overlay image starts partially outside of left border
-
-      in_x0 = negate_negative_int32(dx);
-      out_x0 = 0;
-      in_w = in_w - in_x0; // in_x0 < in_w because in_w > -dx = in_x0
-    }
-    else {
-      in_x0 = 0;
-      out_x0 = static_cast<uint32_t>(dx);
-    }
-
-    // top border
-    if (dy < 0) {
-      // overlay image started partially outside of top border
-
-      in_y0 = negate_negative_int32(dy);
-      out_y0 = 0;
-      in_h = in_h - in_y0; // in_y0 < in_h because in_h > -dy = in_y0
-    }
-    else {
-      in_y0 = 0;
-      out_y0 = static_cast<uint32_t>(dy);
-    }
-
-    // --- computer overlay in overlapping area
-
-    for (uint32_t y = in_y0; y < in_h; y++) {
       if (!has_alpha) {
-        memcpy(out_p + out_x0 + (out_y0 + y - in_y0) * out_stride,
-               in_p + in_x0 + y * in_stride,
-               in_w);
+        memcpy(out_row, in_row, copy_w);
       }
       else {
-        for (uint32_t x = in_x0; x < in_w; x++) {
-          uint8_t* outptr = &out_p[out_x0 + (out_y0 + y - in_y0) * out_stride + x];
-          uint8_t in_val = in_p[in_x0 + y * in_stride + x];
-          uint8_t alpha_val = alpha_p[in_x0 + y * alpha_stride + x];
+        const uint8_t* alpha_row = alpha_p + in_x0 + static_cast<size_t>(in_y0 + y) * alpha_stride;
 
-          *outptr = (uint8_t) ((in_val * alpha_val + *outptr * (255 - alpha_val)) / 255);
+        for (uint32_t x = 0; x < copy_w; x++) {
+          out_row[x] = static_cast<uint8_t>((in_row[x] * alpha_row[x] + out_row[x] * (255 - alpha_row[x])) / 255);
         }
       }
     }

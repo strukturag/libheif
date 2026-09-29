@@ -156,7 +156,7 @@ struct ComponentDescription
 class ImageDescription
 {
 public:
-  virtual ~ImageDescription();
+  virtual ~ImageDescription() = default;
 
   // TODO: Decide who is responsible for writing the colr boxes.
   //       Currently it is distributed over various places.
@@ -270,15 +270,17 @@ public:
   void unset_nominal_diffuse_white() { m_nominal_diffuse_white_luminance.reset(); }
 
   virtual Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
-    delete m_tai_timestamp;
-
-    m_tai_timestamp = heif_tai_timestamp_packet_alloc();
-    heif_tai_timestamp_packet_copy(m_tai_timestamp, tai);
+    // Version-aware copy into a freshly initialized packet, mirroring
+    // heif_tai_timestamp_packet_alloc() + heif_tai_timestamp_packet_copy().
+    heif_tai_timestamp_packet packet{};
+    packet.version = 1;
+    heif_tai_timestamp_packet_copy(&packet, tai);
+    m_tai_timestamp = packet;
     return Error::Ok;
   }
 
   [[nodiscard]] const heif_tai_timestamp_packet* get_tai_timestamp() const {
-    return m_tai_timestamp;
+    return m_tai_timestamp ? &*m_tai_timestamp : nullptr;
   }
 
   // --- GIMI content ID
@@ -470,7 +472,9 @@ private:
   std::optional<heif_ambient_viewing_environment> m_amve;
   std::optional<uint32_t> m_nominal_diffuse_white_luminance;
 
-  heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
+  // Stored by value so that the compiler-generated copy/move operations
+  // duplicate it correctly (GHSA-qwpf-5wf7-r996). std::nullopt == "no timestamp".
+  std::optional<heif_tai_timestamp_packet> m_tai_timestamp;
 
   // Empty string means "no content id assigned".
   std::string m_gimi_sample_content_id;

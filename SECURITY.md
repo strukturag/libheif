@@ -108,6 +108,10 @@ metadata, region and uncompressed-codec (`unci`) code paths.
 * Issues that require the caller to violate the documented API contract, for example passing
   inconsistent plane sizes to the encoder. These are still fixed, because libheif tries to
   validate its inputs, but they are not vulnerabilities in libheif.
+* Issues that are only reachable with a codec library version that has a known, already fixed
+  vulnerability (for example an old OpenJPEG without its CVE-2020-6851 patch). libheif adds
+  pre-decode checks for such cases where they are cheap, but the vulnerability and its CVE
+  belong to the codec library. Build against a maintained codec version before reporting.
 * Issues in the example programs (`heif-enc`, `heif-dec`, `heif-info`, ...) that are not in the
   library itself, for example in the JPEG/PNG/TIFF/Y4M input readers.
 * Issues in APIs that are only available with `ENABLE_EXPERIMENTAL_FEATURES=ON`. These APIs
@@ -148,8 +152,8 @@ The following are targets, not commitments (see [Maintenance capacity](#maintena
 libheif and libde265 are maintained by one independent developer, largely in unpaid evenings
 and weekends. There is no security team.
 
-To make the workload concrete: from January to August 2026, 37 security advisories were
-published for libheif (3 rated critical, 13 high), and six releases were made mainly to ship
+To make the workload concrete: from January to September 2026, 61 security advisories were
+published for libheif (4 rated critical, 20 high), and nine releases were made mainly to ship
 security fixes. Most of the 2026 reports were found with automated or AI-assisted tools,
 often run by organizations that use libheif in their products.
 Reproducing, fixing, testing, fuzzing and releasing each fix takes hours to days.

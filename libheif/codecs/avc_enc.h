@@ -51,7 +51,7 @@ public:
 
   Error encode_sequence_flush(heif_encoder* encoder) override;
 
-  std::optional<CodedImageData> encode_sequence_get_data() override;
+  std::optional<CodedImageData> encode_sequence_extract_data() override;
 
   std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
 
@@ -59,7 +59,7 @@ private:
   bool m_encoder_active = false;
   bool m_end_of_sequence_reached = false;
 
-  // Whether the hvcC is complete and was returned in an encode_sequence_get_data() call.
+  // Whether the avcC is complete and was returned in an encode_sequence_extract_data() call.
   bool m_avcC_has_SPS = false;
   bool m_avcC_has_PPS = false;
   std::shared_ptr<class Box_avcC> m_avcC;

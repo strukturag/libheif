@@ -57,6 +57,35 @@ std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace 
 
 
 
+// Number of bytes HeifPixelImage uses to store one sample of the given bit depth
+// (1, 2, 4, 8 or 16). This is the single source of truth for the sample width: plane
+// allocation uses it, and so does every code path that reinterprets plane memory as
+// uint8_t/uint16_t samples (color conversion in particular), so that they cannot drift.
+//
+// A bit depth of 0 is what get_bits_per_pixel() reports for a plane that does not exist.
+// It maps to 0 bytes, so that a missing plane can never pass for a valid one-byte plane
+// at the call sites that compare the width against sizeof(uint8_t).
+inline int bytes_per_sample_for_bit_depth(int bit_depth)
+{
+  if (bit_depth <= 0) {
+    return 0;
+  }
+  if (bit_depth <= 8) {
+    return 1;
+  }
+  if (bit_depth <= 16) {
+    return 2;
+  }
+  if (bit_depth <= 32) {
+    return 4;
+  }
+  if (bit_depth <= 64) {
+    return 8;
+  }
+  return 16;
+}
+
+
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ImageDescription,
                        public ErrorBuffer
@@ -118,6 +147,21 @@ public:
   // same-channel duplicate whose size doesn't match, not just a missing or
   // undersized single plane.
   bool has_standard_plane_sizes() const;
+
+  // Checks that the stored planes are exactly those of the image's colorspace and chroma
+  // format: the colour planes of that layout (R/G/B, Y/Cb/Cr, Y alone, the interleaved plane,
+  // or the filter array), optionally one separate alpha plane on the planar layouts, each
+  // present exactly once and with the size its channel implies (chroma-subsampled for Cb/Cr,
+  // the image size otherwise). Planes with channel heif_channel_unknown carry multi-component
+  // data without a colour meaning (e.g. the padding components of 'unci'); they are tolerated
+  // and ignored. A custom colorspace has no defined layout and is rejected; a caller that
+  // accepts such images (the uncompressed encoder) has to test for it first.
+  //
+  // This is a check at the entry of the color conversion pipeline and of the encoders, not a
+  // constraint on HeifPixelImage itself: an image may hold any set of planes, including several
+  // of the same channel (multi-spectral images consist of several monochrome planes).
+  // Returns a Usage_error naming the offending plane.
+  Error check_plane_layout() const;
 
   heif_chroma get_chroma_format() const { return m_chroma; }
 

@@ -1293,7 +1293,8 @@ static uint32_t get_item_type_for_brand(const heif_brand2 brand)
 // properly (av1C/hvcC parse refuses to run with unspecified box size).
 static Error parse_codec_config_box(const std::vector<uint8_t>& config_bytes,
                                     uint32_t type_4cc,
-                                    std::shared_ptr<Box>* out_box)
+                                    std::shared_ptr<Box>* out_box,
+                                    const heif_security_limits* limits)
 {
   const size_t header_size = 8;
   if (config_bytes.size() > std::numeric_limits<size_t>::max() - header_size) {
@@ -1322,7 +1323,7 @@ static Error parse_codec_config_box(const std::vector<uint8_t>& config_bytes,
 
   auto istr = std::make_shared<StreamReader_memory>(framed.data(), framed.size(), false);
   BitstreamRange range(istr, framed.size(), nullptr);
-  return Box::read(range, out_box, heif_get_global_security_limits());
+  return Box::read(range, out_box, limits);
 }
 
 
@@ -1412,7 +1413,7 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
                    sstr.str());
     }
     std::shared_ptr<Box> main_item_codec_prop;
-    if (auto err = parse_codec_config_box(get_main_item_codec_config(), config_type, &main_item_codec_prop)) {
+    if (auto err = parse_codec_config_box(get_main_item_codec_config(), config_type, &main_item_codec_prop, file->get_security_limits())) {
       return err;
     }
     ipco_box->append_child_box(main_item_codec_prop); // entry 1
@@ -1466,7 +1467,7 @@ Error Box_mini::create_expanded_boxes(class HeifFile* file)
                    sstr.str());
     }
     std::shared_ptr<Box> alpha_item_codec_prop;
-    if (auto err = parse_codec_config_box(get_alpha_item_codec_config(), config_type, &alpha_item_codec_prop)) {
+    if (auto err = parse_codec_config_box(get_alpha_item_codec_config(), config_type, &alpha_item_codec_prop, file->get_security_limits())) {
       return err;
     }
     ipco_box->append_child_box(alpha_item_codec_prop); // entry 6

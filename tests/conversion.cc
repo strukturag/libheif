@@ -28,6 +28,9 @@
 #include "catch_amalgamated.hpp"
 #include "color-conversion/colorconversion.h"
 #include "color-conversion/hdr_sdr.h"
+#include "color-conversion/monochrome.h"
+#include "color-conversion/rgb2yuv.h"
+#include "color-conversion/yuv2rgb.h"
 #include "image/pixelimage.h"
 #include <cmath>
 
@@ -172,17 +175,17 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
   std::vector<Plane> planes;
   if (state.colorspace == heif_colorspace_monochrome) {
     if (state.chroma != heif_chroma_monochrome) return {};
-    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel});
-    if (state.has_alpha) {
+    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel_Y});
+    if (state.has_alpha()) {
       planes.push_back(
-          {heif_channel_Alpha, width, height, state.bits_per_pixel});
+          {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
     }
   } else if (state.colorspace == heif_colorspace_YCbCr) {
     if (state.chroma != heif_chroma_444 && state.chroma != heif_chroma_422 &&
         state.chroma != heif_chroma_420 && state.chroma != heif_chroma_monochrome) {
       return {};
     }
-    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel});
+    planes.push_back({heif_channel_Y, width, height, state.bits_per_pixel_Y});
     if (state.chroma != heif_chroma_monochrome) {
       int chroma_width = state.chroma == heif_chroma_444 ? width : width / 2;
       int chroma_height =
@@ -190,13 +193,13 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
               ? height
               : height / 2;
       planes.push_back(
-          {heif_channel_Cb, chroma_width, chroma_height, state.bits_per_pixel});
+          {heif_channel_Cb, chroma_width, chroma_height, state.bits_per_pixel_Cb});
       planes.push_back(
-          {heif_channel_Cr, chroma_width, chroma_height, state.bits_per_pixel});
+          {heif_channel_Cr, chroma_width, chroma_height, state.bits_per_pixel_Cr});
     }
-    if (state.has_alpha) {
+    if (state.has_alpha()) {
       planes.push_back(
-          {heif_channel_Alpha, width, height, state.bits_per_pixel});
+          {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
     }
   } else if (state.colorspace == heif_colorspace_RGB) {
     // heif_chroma_planar is a synonym for heif_chroma_444 in the RGB
@@ -212,16 +215,17 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
       return {};
     }
     if (state.chroma == heif_chroma_444 || state.chroma == heif_chroma_planar) {
-      planes.push_back({heif_channel_R, width, height, state.bits_per_pixel});
-      planes.push_back({heif_channel_G, width, height, state.bits_per_pixel});
-      planes.push_back({heif_channel_B, width, height, state.bits_per_pixel});
-      if (state.has_alpha) {
+      planes.push_back({heif_channel_R, width, height, state.bits_per_pixel_R});
+      planes.push_back({heif_channel_G, width, height, state.bits_per_pixel_G});
+      planes.push_back({heif_channel_B, width, height, state.bits_per_pixel_B});
+      if (state.has_alpha()) {
         planes.push_back(
-            {heif_channel_Alpha, width, height, state.bits_per_pixel});
+            {heif_channel_Alpha, width, height, state.bits_per_pixel_alpha});
       }
     } else {
+      // Interleaved formats are represented by their per-component depth in R/G/B.
       planes.push_back(
-          {heif_channel_interleaved, width, height, state.bits_per_pixel});
+          {heif_channel_interleaved, width, height, state.bits_per_pixel_R});
     }
   } else {
     return {};  // Unsupported colorspace.
@@ -321,16 +325,15 @@ void TestConversion(const std::string& test_name, ColorState input_state,
   REQUIRE(out_image != nullptr);
   CHECK(out_image->get_colorspace() == target_state.colorspace);
   CHECK(out_image->get_chroma_format() == target_state.chroma);
-  CHECK(out_image->has_alpha() == target_state.has_alpha);
+  CHECK(out_image->has_alpha() == target_state.has_alpha());
   for (const Plane& plane : GetPlanes(target_state, width, height)) {
     INFO("Channel: " << plane.channel);
     size_t stride;
     CHECK(out_image->get_channel_memory(plane.channel, &stride) != nullptr);
-    CHECK(out_image->get_bits_per_pixel(plane.channel) ==
-          target_state.bits_per_pixel);
+    CHECK(out_image->get_bits_per_pixel(plane.channel) == plane.bit_depth);
     // If an alpha plane was created from nothing, check that it's filled
     // with the max alpha value.
-    if (plane.channel == heif_channel_Alpha && !input_state.has_alpha) {
+    if (plane.channel == heif_channel_Alpha && !input_state.has_alpha()) {
       double alpha_psnr = GetPsnr(*out_image, *out_image, heif_channel_Alpha,
                                   /*expect_alpha_max=*/true);
       REQUIRE(alpha_psnr == 100.f);
@@ -347,10 +350,10 @@ void TestConversion(const std::string& test_name, ColorState input_state,
     std::shared_ptr<HeifPixelImage> recovered_image = *recovered_image_result;
     // If the alpha plane was lost in the target state, it should come back
     // as the max value for the given bpp, i.e. (1<<bpp)-1
-    bool expect_alpha_max = !target_state.has_alpha;
+    bool expect_alpha_max = !target_state.has_alpha();
     bool expect_lossless =
         input_state.colorspace == target_state.colorspace &&
-        input_state.bits_per_pixel == target_state.bits_per_pixel &&
+        input_state.get_uniform_color_bits_per_pixel() == target_state.get_uniform_color_bits_per_pixel() &&
         (input_state.chroma == target_state.chroma ||
          (input_state.chroma != heif_chroma_420 &&
           input_state.chroma != heif_chroma_422 &&
@@ -792,7 +795,7 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("10-bit color, 8-bit alpha -> interleaved RGBA 8-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 10);
-    input_state.alpha_bits_per_pixel = 8;
+    input_state.bits_per_pixel_alpha = 8;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
@@ -805,7 +808,7 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("8-bit color, 10-bit alpha -> interleaved RGBA 8-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 8);
-    input_state.alpha_bits_per_pixel = 10;
+    input_state.bits_per_pixel_alpha = 10;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
@@ -818,11 +821,11 @@ TEST_CASE("Mismatched alpha bit depth - pipeline construction") {
 
   SECTION("10-bit color, 8-bit alpha -> planar RGB 10-bit") {
     ColorState input_state(heif_colorspace_YCbCr, heif_chroma_420, true, 10);
-    input_state.alpha_bits_per_pixel = 8;
+    input_state.bits_per_pixel_alpha = 8;
     nclx_default_if_undefined(input_state);
 
     ColorState target_state(heif_colorspace_RGB, heif_chroma_444, true, 10);
-    target_state.alpha_bits_per_pixel = 10;
+    target_state.bits_per_pixel_alpha = 10;
 
     ColorConversionPipeline pipeline;
     bool supported = pipeline.construct_pipeline(input_state, target_state, options, *options_ext);
@@ -908,6 +911,109 @@ TEST_CASE("Mismatched alpha bit depth - conversion correctness") {
     CHECK(p[1] == 64);   // G (unchanged)
     CHECK(p[2] == 192);  // B (unchanged)
     CHECK(p[3] == 200);  // A (10-bit 800 >> 2 = 200)
+  }
+
+#ifdef HAVE_LIBSHARPYUV
+  // Regression test for OSS-Fuzz 6503781601443840 (file_fuzzer, ASan
+  // heap-buffer-overflow READ in Op_Any_RGB_to_YCbCr_420_Sharp).
+  //
+  // Op_YCbCr_to_RGB copies the alpha plane through at its own bit depth while
+  // converting the color channels, so a decoded HEIC with 10-bit color and an 8-bit
+  // alpha auxiliary image produces exactly this planar RGB state. The sharp-yuv
+  // operator then read the alpha plane with the sample width and step taken from the
+  // color channels: it walked a 1-byte-per-sample plane with a step of 2 and read two
+  // bytes per sample, running off the end of the plane. Every other RGB operator
+  // declines a mismatched alpha depth, which lets Op_adjust_alpha_bit_depth normalize
+  // the plane first; the sharp operator was missing that guard.
+  //
+  // The image must be big enough that the doubled indexing leaves the allocation
+  // rather than landing in the stride padding: 64x64 (the size of the original PoC)
+  // over-reads, a small image like the 4x2 above would not.
+  SECTION("10-bit RGB color with 8-bit alpha -> YCbCr 420 with sharp yuv") {
+    const uint32_t width = 64;
+    const uint32_t height = 64;
+
+    heif_color_conversion_options sharp_options{};
+    sharp_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+    sharp_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+    sharp_options.only_use_preferred_chroma_algorithm = true;
+
+    auto img = std::make_shared<HeifPixelImage>();
+    img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
+
+    img->fill_new_channel(heif_channel_R, 512, width, height, 10, nullptr);
+    img->fill_new_channel(heif_channel_G, 256, width, height, 10, nullptr);
+    img->fill_new_channel(heif_channel_B, 768, width, height, 10, nullptr);
+    img->fill_new_channel(heif_channel_Alpha, 200, width, height, 8, nullptr);
+
+    REQUIRE(img->get_bits_per_pixel(heif_channel_R) == 10);
+    REQUIRE(img->get_bits_per_pixel(heif_channel_Alpha) == 8);
+
+    nclx_profile target_nclx = nclx_profile::defaults();
+    target_nclx.set_matrix_coefficients(heif_matrix_coefficients_ITU_R_BT_601_6);
+
+    auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_420,
+                                     target_nclx, 10, sharp_options, nullptr,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_colorspace() == heif_colorspace_YCbCr);
+    CHECK(out->get_chroma_format() == heif_chroma_420);
+    REQUIRE(out->has_channel(heif_channel_Alpha));
+    CHECK(out->get_bits_per_pixel(heif_channel_Alpha) == 10);
+
+    // The 8-bit alpha is widened to 10 bits by bit replication before the sharp
+    // conversion runs: 200 -> (200 << 2) | (200 >> 6) = 803.
+    size_t stride;
+    const uint8_t* p_a = out->get_channel_memory(heif_channel_Alpha, &stride);
+    REQUIRE(p_a != nullptr);
+    const uint16_t* a16 = reinterpret_cast<const uint16_t*>(p_a);
+    CHECK(a16[0] == 803);
+    CHECK(a16[(height - 1) * (stride / 2) + (width - 1)] == 803);
+  }
+#endif
+}
+
+
+// An 'unci' component may be 32, 64 or 128 bits wide. HeifPixelImage stores such planes with
+// 4, 8 or 16 bytes per sample, but every conversion operator reads samples through uint8_t
+// or uint16_t pointers. An operator must therefore decline such input in
+// state_after_conversion() based on the sample width (not on an 8-bit SDR/HDR split, which
+// would treat a 64-bit plane like a 16-bit one), so that no pipeline is ever built for it.
+TEST_CASE("Conversion operators decline planes wider than 16 bits", "[heif_image]")
+{
+  heif_color_conversion_options options{};
+  std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+      options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+  ColorState rgb8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+  ColorState rrggbb16(heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 16);
+  ColorState ycbcr8(heif_colorspace_YCbCr, heif_chroma_444, false, 8);
+  nclx_default_if_undefined(ycbcr8);
+
+  for (int bits : {32, 64, 128}) {
+    INFO("bits=" << bits);
+
+    ColorState ycbcr(heif_colorspace_YCbCr, heif_chroma_444, false, bits);
+    nclx_default_if_undefined(ycbcr);
+    ColorState rgb(heif_colorspace_RGB, heif_chroma_444, false, bits);
+    ColorState mono(heif_colorspace_monochrome, heif_chroma_monochrome, false, bits);
+
+    CHECK(ycbcr.get_bytes_per_sample(heif_channel_Y) > 2);
+    CHECK_FALSE(ycbcr.color_channels_have_bytes_per_sample(2));
+
+    // The individual operators must not offer themselves ...
+    CHECK(Op_YCbCr_to_RGB<uint16_t>().state_after_conversion(ycbcr, rgb, options, *options_ext).empty());
+    CHECK(Op_RGB_to_YCbCr<uint16_t>().state_after_conversion(rgb, ycbcr, options, *options_ext).empty());
+    CHECK(Op_mono_to_YCbCr420().state_after_conversion(mono, ycbcr, options, *options_ext).empty());
+    CHECK(Op_to_sdr_planes().state_after_conversion(rgb, rgb8, options, *options_ext).empty());
+
+    // ... and consequently no pipeline can be built from such an input.
+    ColorConversionPipeline pipeline;
+    CHECK_FALSE(pipeline.construct_pipeline(ycbcr, rgb8, options, *options_ext));
+    CHECK_FALSE(pipeline.construct_pipeline(rgb, rrggbb16, options, *options_ext));
+    CHECK_FALSE(pipeline.construct_pipeline(mono, ycbcr8, options, *options_ext));
   }
 }
 
@@ -1043,4 +1149,479 @@ TEST_CASE("RGB24 to YCbCr conversion with planes larger than 2 GB", "[.large-mem
   REQUIRE(big_y[static_cast<size_t>(h - 1) * big_stride] == small_y[small_stride]);
   REQUIRE(big_y[static_cast<size_t>(h - 1) * big_stride + (w - 1)] == small_y[small_stride]);
   REQUIRE(small_y[0] != small_y[small_stride]);
+}
+
+
+// Regression test for a null-pointer write introduced together with the per-plane
+// ColorState (bits_per_pixel_R/G/B/Y/Cb/Cr/alpha).
+//
+// Op_flatten_alpha_plane composites the alpha plane onto the colour planes when the output
+// cannot carry alpha. It converts its input to planar RGB, composites, and converts the
+// result back to the input's colorspace. The composited R/G/B planes were allocated with
+// target_state.get_bits_per_pixel(channel). The operation keeps the source colorspace, so
+// for a YCbCr (or monochrome) source the R/G/B fields of target_state are 0 (plane absent):
+// add_channel() refused the zero depth, the returned error was dropped, and the composite
+// loop wrote through a null plane pointer. Every compositing decode whose target is YCbCr
+// crashed (heif-dec writing JPEG from any alpha HEIC or AVIF), while an RGB target was
+// unaffected because the planner converts to RGB before it flattens. The planes are now
+// allocated with the depth of the RGB-converted input and the add_channel() error is
+// propagated.
+
+static std::shared_ptr<HeifPixelImage> make_ycbcr_alpha_image(heif_chroma chroma,
+                                                              uint32_t width, uint32_t height,
+                                                              int bpp, uint16_t luma, uint16_t alpha,
+                                                              const nclx_profile& nclx)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_YCbCr, chroma);
+
+  uint32_t chroma_width = (chroma == heif_chroma_444) ? width : (width + 1) / 2;
+  uint32_t chroma_height = (chroma == heif_chroma_420) ? (height + 1) / 2 : height;
+  uint16_t neutral = static_cast<uint16_t>(1 << (bpp - 1));
+
+  img->fill_new_channel(heif_channel_Y, luma, width, height, bpp, nullptr);
+  img->fill_new_channel(heif_channel_Cb, neutral, chroma_width, chroma_height, bpp, nullptr);
+  img->fill_new_channel(heif_channel_Cr, neutral, chroma_width, chroma_height, bpp, nullptr);
+  img->fill_new_channel(heif_channel_Alpha, alpha, width, height, bpp, nullptr);
+  img->set_color_profile_nclx(nclx);
+  return img;
+}
+
+static std::shared_ptr<HeifPixelImage> make_mono_alpha_image(uint32_t width, uint32_t height,
+                                                             int bpp, uint16_t luma, uint16_t alpha,
+                                                             const nclx_profile& nclx)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
+  img->fill_new_channel(heif_channel_Y, luma, width, height, bpp, nullptr);
+  img->fill_new_channel(heif_channel_Alpha, alpha, width, height, bpp, nullptr);
+  img->set_color_profile_nclx(nclx);
+  return img;
+}
+
+// The operator computes (p * a + bkg * (alpha_max - a)) >> bpp_alpha. With neutral chroma
+// and a full-range BT.601 matrix, the RGB gray level equals the luma, so the composited
+// luma is predictable up to the rounding of the two matrix conversions.
+static int expected_composited_luma(int luma, int alpha, int background, int bpp)
+{
+  int alpha_max = (1 << bpp) - 1;
+  return (luma * alpha + background * (alpha_max - alpha)) >> bpp;
+}
+
+TEST_CASE("Alpha compositing into a YCbCr or monochrome target", "[heif_image]")
+{
+  const uint32_t width = 16;
+  const uint32_t height = 8;
+
+  heif_color_conversion_options options{};
+
+  heif_color_conversion_options_ext options_ext{};
+  options_ext.version = 1;
+  options_ext.alpha_composition_mode = heif_alpha_composition_mode_solid_color;
+  options_ext.background_red = 0xFFFF;
+  options_ext.background_green = 0xFFFF;
+  options_ext.background_blue = 0xFFFF;
+
+  nclx_profile nclx = nclx_profile::defaults();
+  nclx.set_matrix_coefficients(heif_matrix_coefficients_ITU_R_BT_601_6);
+  nclx.set_full_range_flag(true);
+
+  SECTION("8-bit YCbCr 4:2:0 -> YCbCr 4:2:0 with a solid background (heif-dec JPEG output)") {
+    auto img = make_ycbcr_alpha_image(heif_chroma_420, width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_420,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_colorspace() == heif_colorspace_YCbCr);
+    CHECK(out->get_chroma_format() == heif_chroma_420);
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 8);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(std::abs(p_y[0] - expected) <= 2);
+    CHECK(std::abs(p_y[(height - 1) * stride + (width - 1)] - expected) <= 2);
+  }
+
+  SECTION("10-bit YCbCr 4:2:0 -> YCbCr 4:2:0 with a solid background (16-bit operator)") {
+    auto img = make_ycbcr_alpha_image(heif_chroma_420, width, height, 10, 400, 512, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_420,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_chroma_format() == heif_chroma_420);
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 10);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+    const uint16_t* y16 = reinterpret_cast<const uint16_t*>(p_y);
+
+    int expected = expected_composited_luma(400, 512, 1023, 10);
+    CHECK(std::abs(y16[0] - expected) <= 3);
+    CHECK(std::abs(y16[(height - 1) * (stride / 2) + (width - 1)] - expected) <= 3);
+  }
+
+  SECTION("8-bit YCbCr 4:4:4 -> YCbCr 4:4:4 with a checkerboard") {
+    heif_color_conversion_options_ext checker = options_ext;
+    checker.alpha_composition_mode = heif_alpha_composition_mode_checkerboard;
+    checker.secondary_background_red = 0;
+    checker.secondary_background_green = 0;
+    checker.secondary_background_blue = 0;
+    checker.checkerboard_square_size = 8;
+
+    auto img = make_ycbcr_alpha_image(heif_chroma_444, width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444,
+                                     nclx, 0, options, &checker,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_chroma_format() == heif_chroma_444);
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    // parity = (x/8 + y/8) % 2 selects the secondary (black) square at (0,0) and the
+    // primary (white) square at (8,0).
+    int expected_black = expected_composited_luma(100, 128, 0, 8);
+    int expected_white = expected_composited_luma(100, 128, 255, 8);
+    CHECK(std::abs(p_y[0] - expected_black) <= 2);
+    CHECK(std::abs(p_y[8] - expected_white) <= 2);
+  }
+
+  SECTION("8-bit YCbCr 4:2:0 -> interleaved RGB (RGB target, was not affected)") {
+    auto img = make_ycbcr_alpha_image(heif_chroma_420, width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_chroma_format() == heif_chroma_interleaved_RGB);
+
+    size_t stride;
+    const uint8_t* p = out->get_channel_memory(heif_channel_interleaved, &stride);
+    REQUIRE(p != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(std::abs(p[0] - expected) <= 2);
+    CHECK(std::abs(p[1] - expected) <= 2);
+    CHECK(std::abs(p[2] - expected) <= 2);
+  }
+
+  // A luma-only image is composited directly on its Y plane against the BT.601 luma of the
+  // background colour (there is no RGB to monochrome operator for the round trip the colour
+  // path takes). Nothing but integer arithmetic is involved, so the results are exact.
+
+  SECTION("8-bit monochrome -> monochrome with a solid background") {
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_colorspace() == heif_colorspace_monochrome);
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 8);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(p_y[0] == expected);
+    CHECK(p_y[(height - 1) * stride + (width - 1)] == expected);
+  }
+
+  SECTION("10-bit monochrome -> monochrome (16-bit operator)") {
+    auto img = make_mono_alpha_image(width, height, 10, 400, 512, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(!out->has_channel(heif_channel_Alpha));
+    REQUIRE(out->has_channel(heif_channel_Y));
+    CHECK(out->get_bits_per_pixel(heif_channel_Y) == 10);
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+    const uint16_t* y16 = reinterpret_cast<const uint16_t*>(p_y);
+
+    int expected = expected_composited_luma(400, 512, 1023, 10);
+    CHECK(y16[0] == expected);
+    CHECK(y16[(height - 1) * (stride / 2) + (width - 1)] == expected);
+  }
+
+  SECTION("8-bit monochrome -> interleaved RGB") {
+    // The planner flattens the monochrome image first (cheapest) and converts afterwards.
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                                     nclx, 0, options, &options_ext,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    CHECK(out->get_chroma_format() == heif_chroma_interleaved_RGB);
+
+    size_t stride;
+    const uint8_t* p = out->get_channel_memory(heif_channel_interleaved, &stride);
+    REQUIRE(p != nullptr);
+
+    int expected = expected_composited_luma(100, 128, 255, 8);
+    CHECK(p[0] == expected);
+    CHECK(p[1] == expected);
+    CHECK(p[2] == expected);
+  }
+
+  SECTION("8-bit monochrome with a checkerboard") {
+    heif_color_conversion_options_ext checker = options_ext;
+    checker.alpha_composition_mode = heif_alpha_composition_mode_checkerboard;
+    checker.secondary_background_red = 0;
+    checker.secondary_background_green = 0;
+    checker.secondary_background_blue = 0;
+    checker.checkerboard_square_size = 8;
+
+    auto img = make_mono_alpha_image(width, height, 8, 100, 128, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &checker,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+
+    // parity = (x/8 + y/8) % 2 selects the secondary (black) square at (0,0) and the
+    // primary (white) square at (8,0).
+    CHECK(p_y[0] == expected_composited_luma(100, 128, 0, 8));
+    CHECK(p_y[8] == expected_composited_luma(100, 128, 255, 8));
+  }
+
+  SECTION("8-bit monochrome with a coloured background uses its BT.601 luma") {
+    heif_color_conversion_options_ext red = options_ext;
+    red.background_red = 0xFFFF;
+    red.background_green = 0;
+    red.background_blue = 0;
+
+    // Fully transparent, so the output is the background's luma: 0.299 * 65535 = 19595
+    // as a 16-bit value, 76 at 8 bits.
+    auto img = make_mono_alpha_image(width, height, 8, 100, 0, nclx);
+
+    auto result = convert_colorspace(img, heif_colorspace_monochrome, heif_chroma_monochrome,
+                                     nclx, 0, options, &red,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+    auto out = *result;
+
+    size_t stride;
+    const uint8_t* p_y = out->get_channel_memory(heif_channel_Y, &stride);
+    REQUIRE(p_y != nullptr);
+    CHECK(p_y[0] == expected_composited_luma(100, 0, 76, 8));
+  }
+}
+
+
+// ColorState only reports one colour depth when all colour planes agree. The former accessor
+// returned the depth of the first colour plane, which made planning decisions depend on the
+// order of the planes in an image with mixed depths ('unci' declares a depth per component).
+
+static const int kMixedRgbDepths[3][3] = {{8, 8, 16}, {16, 8, 8}, {8, 16, 8}};
+
+TEST_CASE("ColorState uniform bit depth accessors", "[heif_image]")
+{
+  SECTION("uniform planes report their depth") {
+    ColorState rgb(heif_colorspace_RGB, heif_chroma_444, true, 10);
+    CHECK(rgb.get_uniform_color_bits_per_pixel() == 10);
+    CHECK(rgb.get_uniform_bits_per_pixel() == 10);
+    CHECK(rgb.get_max_color_bits_per_pixel() == 10);
+    CHECK(rgb.color_channels_have_same_bpp());
+    CHECK(rgb.all_channels_have_same_bpp());
+
+    ColorState ycc(heif_colorspace_YCbCr, heif_chroma_420, false, 12);
+    CHECK(ycc.get_uniform_color_bits_per_pixel() == 12);
+    CHECK(ycc.get_uniform_bits_per_pixel() == 12);
+
+    ColorState mono(heif_colorspace_monochrome, heif_chroma_monochrome, false, 8);
+    CHECK(mono.get_uniform_color_bits_per_pixel() == 8);
+  }
+
+  SECTION("mixed colour planes report 0 in every plane order") {
+    for (const int* d : kMixedRgbDepths) {
+      INFO("R/G/B = " << d[0] << "/" << d[1] << "/" << d[2]);
+      ColorState s;
+      s.colorspace = heif_colorspace_RGB;
+      s.chroma = heif_chroma_444;
+      s.bits_per_pixel_R = d[0];
+      s.bits_per_pixel_G = d[1];
+      s.bits_per_pixel_B = d[2];
+      CHECK(s.get_uniform_color_bits_per_pixel() == 0);
+      CHECK(s.get_uniform_bits_per_pixel() == 0);
+      CHECK(s.get_max_color_bits_per_pixel() == 16);
+      CHECK_FALSE(s.color_channels_have_same_bpp());
+      CHECK_FALSE(s.all_channels_have_same_bpp());
+    }
+
+    ColorState ycc(heif_colorspace_YCbCr, heif_chroma_444, false, 12);
+    ycc.bits_per_pixel_Cr = 8;
+    CHECK(ycc.get_uniform_color_bits_per_pixel() == 0);
+    CHECK(ycc.get_max_color_bits_per_pixel() == 12);
+  }
+
+  SECTION("a differing alpha plane only affects the all-planes variant") {
+    ColorState s(heif_colorspace_RGB, heif_chroma_444, true, 8);
+    s.bits_per_pixel_alpha = 16;
+    CHECK(s.get_uniform_color_bits_per_pixel() == 8);
+    CHECK(s.get_uniform_bits_per_pixel() == 0);
+    CHECK(s.get_max_color_bits_per_pixel() == 8);
+    CHECK(s.get_max_bits_per_pixel() == 16);
+    CHECK(s.color_channels_have_same_bpp());
+    CHECK_FALSE(s.all_channels_have_same_bpp());
+  }
+
+  SECTION("no colour plane") {
+    ColorState s;
+    CHECK(s.get_uniform_color_bits_per_pixel() == 0);
+    CHECK(s.get_uniform_bits_per_pixel() == 0);
+    CHECK(s.get_max_color_bits_per_pixel() == 0);
+  }
+}
+
+
+// Op_to_sdr_planes lowers every plane to 8 bits on its own, so it can equalize an image whose
+// colour planes have different depths. It used to be offered only when the first colour plane
+// was wider than 8 bits, so 8/8/16 failed with "unsupported color conversion" while the same
+// planes in the order 16/8/8 converted fine.
+
+// 100 at 8 bits; at wider depths the same value with a few extra low bits, so that the shift
+// down to 8 bits has something to drop.
+static uint16_t sample_at_depth(int bits)
+{
+  return static_cast<uint16_t>((100u << (bits - 8)) | (bits > 8 ? 0x5u : 0u));
+}
+
+static std::shared_ptr<HeifPixelImage> make_rgb_planar(uint32_t width, uint32_t height,
+                                                       int r_bits, int g_bits, int b_bits)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
+  img->fill_new_channel(heif_channel_R, sample_at_depth(r_bits), width, height, r_bits, nullptr);
+  img->fill_new_channel(heif_channel_G, sample_at_depth(g_bits), width, height, g_bits, nullptr);
+  img->fill_new_channel(heif_channel_B, sample_at_depth(b_bits), width, height, b_bits, nullptr);
+  return img;
+}
+
+TEST_CASE("Op_to_sdr_planes equalizes mixed colour depths", "[heif_image]")
+{
+  heif_color_conversion_options options{};
+  const uint32_t width = 8;
+  const uint32_t height = 4;
+
+  SECTION("mixed planes -> 8-bit interleaved RGB, in every plane order") {
+    for (const int* d : kMixedRgbDepths) {
+      INFO("R/G/B = " << d[0] << "/" << d[1] << "/" << d[2]);
+      auto img = make_rgb_planar(width, height, d[0], d[1], d[2]);
+
+      auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                                       nclx_profile::defaults(), 0, options, nullptr,
+                                       heif_get_disabled_security_limits());
+      REQUIRE(result);
+
+      size_t stride;
+      const uint8_t* p = (*result)->get_channel_memory(heif_channel_interleaved, &stride);
+      REQUIRE(p != nullptr);
+      CHECK(p[0] == 100);
+      CHECK(p[1] == 100);
+      CHECK(p[2] == 100);
+      CHECK(p[(height - 1) * stride + (width - 1) * 3 + 2] == 100);
+    }
+  }
+
+  SECTION("mixed planes -> 8-bit planar RGB (requested depth 8)") {
+    auto img = make_rgb_planar(width, height, 8, 8, 16);
+
+    auto result = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444,
+                                     nclx_profile::defaults(), 8, options, nullptr,
+                                     heif_get_disabled_security_limits());
+    REQUIRE(result);
+
+    for (heif_channel ch : {heif_channel_R, heif_channel_G, heif_channel_B}) {
+      CHECK((*result)->get_bits_per_pixel(ch) == 8);
+      size_t stride;
+      const uint8_t* p = (*result)->get_channel_memory(ch, &stride);
+      REQUIRE(p != nullptr);
+      CHECK(p[0] == 100);
+    }
+  }
+
+  SECTION("offered for mixed input, declined for uniform 8-bit input") {
+    std::unique_ptr<heif_color_conversion_options_ext, void(*)(heif_color_conversion_options_ext*)>
+        options_ext(heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+    Op_to_sdr_planes op;
+    ColorState target(heif_colorspace_RGB, heif_chroma_444, false, 8);
+
+    ColorState mixed;
+    mixed.colorspace = heif_colorspace_RGB;
+    mixed.chroma = heif_chroma_444;
+    mixed.bits_per_pixel_R = 8;
+    mixed.bits_per_pixel_G = 8;
+    mixed.bits_per_pixel_B = 16;
+
+    auto states = op.state_after_conversion(mixed, target, options, *options_ext);
+    REQUIRE(states.size() == 1);
+    CHECK(states[0].color_state.get_uniform_color_bits_per_pixel() == 8);
+
+    ColorState uniform8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+    CHECK(op.state_after_conversion(uniform8, target, options, *options_ext).empty());
+  }
+}
+
+
+// bytes_per_sample_for_bit_depth() is the single source of truth for the storage width of a
+// plane. A depth of 0 is what get_bits_per_pixel() reports for a plane that does not exist;
+// it must not map to the width of a valid one-byte plane.
+TEST_CASE("bytes_per_sample_for_bit_depth", "[heif_image]")
+{
+  CHECK(bytes_per_sample_for_bit_depth(0) == 0);
+  CHECK(bytes_per_sample_for_bit_depth(-1) == 0);
+
+  for (int bits = 1; bits <= 128; bits++) {
+    int expected = (bits <= 8) ? 1 : (bits <= 16) ? 2 : (bits <= 32) ? 4 : (bits <= 64) ? 8 : 16;
+    INFO("bits = " << bits);
+    CHECK(bytes_per_sample_for_bit_depth(bits) == expected);
+  }
+
+  // The ColorState wrappers agree, including for a missing plane.
+  ColorState s(heif_colorspace_RGB, heif_chroma_444, false, 12);
+  CHECK(s.get_bytes_per_sample(heif_channel_R) == 2);
+  CHECK(s.get_bytes_per_sample(heif_channel_Alpha) == 0);
+  CHECK(s.get_max_bytes_per_sample() == 2);
 }

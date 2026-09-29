@@ -7,7 +7,7 @@
     "name": "Dirk Farin",
     "email": "dirk.farin@gmail.com",
     "phone": "",
-    "description": "Author and sole maintainer of libheif (HEIF/AVIF file format library) and libde265 (H.265/HEVC decoder). These libraries are used by practically all open-source software that reads or writes HEIC and AVIF images, including ImageMagick, GIMP, libvips/sharp, Pillow, darktable, digiKam, GDAL and the GNOME and KDE desktops, and through these by a large number of web services and image pipelines. The work is currently almost entirely unfunded: in 2026 alone, 37 security advisories had to be investigated, fixed and released in unpaid evenings and weekends.",
+    "description": "Author and sole maintainer of libheif (HEIF/AVIF file format library) and libde265 (H.265/HEVC decoder). These libraries are used by practically all open-source software that reads or writes HEIC and AVIF images, including ImageMagick, GIMP, libvips/sharp, Pillow, darktable, digiKam, GDAL and the GNOME and KDE desktops, and through these by a large number of web services and image pipelines. The work is currently almost entirely unfunded: in 2026 alone, 61 security advisories had to be investigated, fixed and released in unpaid evenings and weekends.",
     "webpageUrl": {
       "url": "https://github.com/farindk"
     }

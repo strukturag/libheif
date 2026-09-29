@@ -53,7 +53,7 @@ public:
 
   Error encode_sequence_flush(heif_encoder* encoder) override;
 
-  std::optional<CodedImageData> encode_sequence_get_data() override;
+  std::optional<CodedImageData> encode_sequence_extract_data() override;
 
 
   std::shared_ptr<Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;

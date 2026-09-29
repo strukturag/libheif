@@ -32,9 +32,21 @@ struct ColorState
 {
   heif_colorspace colorspace = heif_colorspace_undefined;
   heif_chroma chroma = heif_chroma_undefined;
-  bool has_alpha = false;
-  int bits_per_pixel = 8;
-  int alpha_bits_per_pixel = 0; // 0 = not set, treated as bits_per_pixel
+
+  // Bit depth of each plane. A value of 0 means that the plane does not exist in this state.
+  // The depths may differ from each other (e.g. 'unci' declares a depth per component).
+  //
+  // The interleaved RGB chroma formats store all components in a single plane. They are
+  // represented by their per-component depth in R/G/B (and alpha, if the format has one),
+  // so that operators see the same fields as for planar RGB.
+  int bits_per_pixel_R = 0;
+  int bits_per_pixel_G = 0;
+  int bits_per_pixel_B = 0;
+  int bits_per_pixel_Y = 0;
+  int bits_per_pixel_Cb = 0;
+  int bits_per_pixel_Cr = 0;
+  int bits_per_pixel_alpha = 0;
+  int bits_per_pixel_filter_array = 0;
 
   // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values
   // if the colorspace is heif_colorspace_YCbCr. Otherwise, the values should preferably be 'unspecified'.
@@ -42,16 +54,72 @@ struct ColorState
 
   ColorState() = default;
 
-  ColorState(heif_colorspace colorspace, heif_chroma chroma, bool has_alpha, int bits_per_pixel)
-      : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel) {}
+  // Convenience constructor: all colour planes of the given colorspace/chroma get 'bpp' and,
+  // if 'with_alpha' is set, an alpha plane of the same depth is added.
+  ColorState(heif_colorspace cs, heif_chroma chr, bool with_alpha, int bpp);
 
-  // Returns effective alpha BPP (treats 0 as bits_per_pixel for backward compatibility)
-  int get_alpha_bits_per_pixel() const { return alpha_bits_per_pixel ? alpha_bits_per_pixel : bits_per_pixel; }
+  bool has_alpha() const { return bits_per_pixel_alpha != 0; }
+
+  // Bit depth of a single plane, 0 if the plane does not exist.
+  // 'heif_channel_interleaved' maps to the R/G/B depth.
+  int get_bits_per_pixel(heif_channel channel) const;
+  void set_bits_per_pixel(heif_channel channel, int bpp);
+
+  // Sets all colour planes that exist for the current colorspace/chroma to 'bpp' and clears
+  // all other colour planes. The alpha plane is not touched.
+  // Call this after 'colorspace' and 'chroma' have been set.
+  void set_color_bits_per_pixel(int bpp);
+
+  // The bit depth shared by all existing colour planes (R/G/B, Y/Cb/Cr, or the filter array).
+  // Returns 0 if the colour planes have different depths or if there is no colour plane.
+  // There is deliberately no accessor for "the" depth of an image whose planes differ: a
+  // caller that needs one depth for all planes has to handle the 0 (usually by declining
+  // the conversion) and cannot silently pick up the depth of just one plane.
+  int get_uniform_color_bits_per_pixel() const;
+
+  // Like get_uniform_color_bits_per_pixel(), but an alpha plane, if present, must have that
+  // same depth too.
+  int get_uniform_bits_per_pixel() const;
+
+  // Maximum bit depth over all existing colour planes (alpha excluded), 0 if there is none.
+  int get_max_color_bits_per_pixel() const;
+
+  // Maximum bit depth over all existing planes, including alpha.
+  int get_max_bits_per_pixel() const;
+
+  // True if all existing colour planes (R/G/B or Y/Cb/Cr) have the same bit depth.
+  bool color_channels_have_same_bpp() const { return get_uniform_color_bits_per_pixel() != 0; }
+
+  // True if all existing planes, including alpha, have the same bit depth.
+  bool all_channels_have_same_bpp() const { return get_uniform_bits_per_pixel() != 0; }
+
+  // Number of bytes HeifPixelImage stores per sample of the given plane (1, 2, 4, 8 or 16),
+  // 0 if the plane does not exist. Operators access samples through uint8_t or uint16_t
+  // pointers, so they declare the sample width they can handle, not just a bit depth range.
+  int get_bytes_per_sample(heif_channel channel) const;
+
+  // Largest sample width over all existing planes, including alpha.
+  int get_max_bytes_per_sample() const;
+
+  // True if all existing colour planes (R/G/B or Y/Cb/Cr) are stored with 'bytes' per sample.
+  bool color_channels_have_bytes_per_sample(int bytes) const;
+
+  // True if all existing planes, including alpha, are stored with 'bytes' per sample.
+  bool all_channels_have_bytes_per_sample(int bytes) const;
 
   bool operator==(const ColorState&) const;
 };
 
 std::ostream& operator<<(std::ostream& ostr, const ColorState& state);
+
+
+// Note on sample widths: HeifPixelImage stores a plane with 1, 2, 4, 8 or 16 bytes per
+// sample depending on its bit depth (bytes_per_sample_for_bit_depth() in pixelimage.h);
+// 'unci' components may be up to 128 bits wide. Every conversion operator, however, reads
+// samples through uint8_t* or uint16_t*. An operator therefore declares in
+// state_after_conversion() which sample width it accepts (ColorState::
+// color_channels_have_bytes_per_sample() and friends) instead of relying on an 8-bit
+// SDR/HDR split, which would misread any plane wider than 16 bits.
 
 // These are some integer constants for typical color conversion Op speed costs.
 // The integer value is the speed cost. Any other integer can be assigned to the speed cost.

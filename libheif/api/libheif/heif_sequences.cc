@@ -285,28 +285,36 @@ static heif_error heif_track_get_next_raw_sequence_sample2(heif_track* track_ptr
                                                            heif_raw_sequence_sample** out_sample,
                                                            const heif_decoding_options* options)
 {
-  if (out_sample == nullptr) {
-    return heif_error_null_pointer_argument;
-  }
+  // The body allocates a buffer of the file-controlled 'stsz' sample size. An
+  // out-of-memory condition must come back as heif_error_out_of_memory instead of
+  // letting std::bad_alloc unwind across the extern "C" boundary and abort the host
+  // process (GHSA-4rv4-953r-p24q, same class as GHSA-7p2q-crf9-xm46). The guard sits
+  // here so that both the public wrapper below and a future public *2 variant are
+  // covered.
+  return exception_guard([&]() -> heif_error {
+    if (out_sample == nullptr) {
+      return heif_error_null_pointer_argument;
+    }
 
-  auto track = track_ptr->track;
+    auto track = track_ptr->track;
 
-  // `options` may be null (the no-options public wrapper below passes nullptr).
-  // get_next_sample_raw_data() treats null as "apply the edit list" and only reads
-  // options->ignore_sequence_editlist when options is non-null.
-  //
-  // We intentionally do not pre-check end_of_sequence_reached() here: that helper
-  // compares against the edit-list-applied output count, whereas
-  // get_next_sample_raw_data() applies ignore_sequence_editlist itself and signals
-  // heif_error_End_of_sequence at the correct (option-dependent) boundary.
-  auto decodingResult = track->get_next_sample_raw_data(options);
-  if (!decodingResult) {
-    return decodingResult.error_struct(track_ptr->context.get());
-  }
+    // `options` may be null (the no-options public wrapper below passes nullptr).
+    // get_next_sample_raw_data() treats null as "apply the edit list" and only reads
+    // options->ignore_sequence_editlist when options is non-null.
+    //
+    // We intentionally do not pre-check end_of_sequence_reached() here: that helper
+    // compares against the edit-list-applied output count, whereas
+    // get_next_sample_raw_data() applies ignore_sequence_editlist itself and signals
+    // heif_error_End_of_sequence at the correct (option-dependent) boundary.
+    auto decodingResult = track->get_next_sample_raw_data(options);
+    if (!decodingResult) {
+      return decodingResult.error_struct(track_ptr->context.get());
+    }
 
-  *out_sample = *decodingResult;
+    *out_sample = *decodingResult;
 
-  return heif_error_success;
+    return heif_error_success;
+  });
 }
 
 

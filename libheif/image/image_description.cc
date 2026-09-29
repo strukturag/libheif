@@ -113,12 +113,6 @@ std::vector<uint32_t> map_cmpd_to_component_ids(const std::vector<uint32_t>& cmp
 }
 
 
-ImageDescription::~ImageDescription()
-{
-  heif_tai_timestamp_packet_release(m_tai_timestamp);
-}
-
-
 void ImageDescription::copy_metadata_from(const ImageDescription& other)
 {
   m_premultiplied_alpha = other.m_premultiplied_alpha;
@@ -133,12 +127,7 @@ void ImageDescription::copy_metadata_from(const ImageDescription& other)
   m_amve = other.m_amve;
   m_nominal_diffuse_white_luminance = other.m_nominal_diffuse_white_luminance;
 
-  heif_tai_timestamp_packet_release(m_tai_timestamp);
-  m_tai_timestamp = nullptr;
-  if (other.m_tai_timestamp) {
-    m_tai_timestamp = heif_tai_timestamp_packet_alloc();
-    heif_tai_timestamp_packet_copy(m_tai_timestamp, other.m_tai_timestamp);
-  }
+  m_tai_timestamp = other.m_tai_timestamp;
 
   m_gimi_sample_content_id = other.m_gimi_sample_content_id;
 

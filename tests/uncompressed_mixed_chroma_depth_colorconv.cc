@@ -34,14 +34,21 @@
 // sample past the end of each chroma plane: a heap out-of-bounds read whose
 // bytes reach the decoded RGB output (information disclosure).
 //
-// The fix rejects a color conversion whose color channels (Y/Cb/Cr or R/G/B) do
-// not all share one bit depth, at the entry of convert_colorspace(). This test
-// builds such a file, confirms it still decodes natively to the mismatched-depth
-// planar image (so the decoder path itself is unaffected), and then requires the
-// conversion to a high-bit-depth interleaved RGB target to be refused cleanly
-// with an error rather than over-reading the chroma planes. Under the unfixed
-// code the RGB decode reproduces the reporter's ASAN trace (heap-buffer-overflow
-// READ in Op_YCbCr420_to_RRGGBBaa::convert_colorspace).
+// The fix is made in the pipeline planner: ColorState carries one bit depth per
+// plane, and every YCbCr operator declares in state_after_conversion() that it
+// needs the colour planes to share one depth (color_channels_have_same_bpp()), so
+// no pipeline is ever built through an operator that would read a chroma plane
+// with the luma sample width. Op_to_sdr_planes lowers every plane on its own and
+// can therefore still equalize such an image to 8 bits.
+//
+// This test builds such a file, confirms it still decodes natively to the
+// mismatched-depth planar image (so the decoder path itself is unaffected), then
+// requires the conversion to the reporter's 16-bit interleaved RGB target to be
+// refused cleanly (no operator can widen the 8-bit chroma planes to 16 bits), and
+// checks that the two 8-bit routes (interleaved RGB, and convert_hdr_to_8bit)
+// succeed with the expected samples. Under the unfixed code the 16-bit RGB decode
+// reproduces the reporter's ASAN trace (heap-buffer-overflow READ in
+// Op_YCbCr420_to_RRGGBBaa::convert_colorspace).
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
@@ -214,7 +221,7 @@ std::vector<uint8_t> build_heif_unci_ycbcr_mismatched_luma_depth() {
 
 } // namespace
 
-TEST_CASE("unci YCbCr with mismatched luma/chroma bit depths refuses RGB conversion without heap overread") {
+TEST_CASE("unci YCbCr with mismatched luma/chroma bit depths converts without heap overread") {
   std::vector<uint8_t> file = build_heif_unci_ycbcr_mismatched_luma_depth();
 
   heif_context* ctx = heif_context_alloc();
@@ -233,23 +240,72 @@ TEST_CASE("unci YCbCr with mismatched luma/chroma bit depths refuses RGB convers
   REQUIRE(heif_image_handle_get_width(handle) == static_cast<int>(WIDTH));
   REQUIRE(heif_image_handle_get_height(handle) == static_cast<int>(HEIGHT));
 
-  // Converting to a high-bit-depth interleaved RGB target selects
-  // Op_YCbCr420_to_RRGGBBaa, which is where the over-read occurred. With the fix
-  // the mismatched color-channel bit depths make the conversion unsupported, so
-  // the decode must fail cleanly (with the specific bit-depth suberror) rather
-  // than reading past the chroma planes. Under the unfixed code this decode
-  // reproduces the reporter's ASAN heap-buffer-overflow READ.
+  // Converting to a high-bit-depth interleaved RGB target used to select
+  // Op_YCbCr420_to_RRGGBBaa, which is where the over-read occurred. That operator
+  // now declines colour planes of differing depth, and no other operator can widen
+  // the 8-bit chroma planes to the 16 bits the target needs, so the decode must fail
+  // cleanly rather than read past the chroma planes. Under the unfixed code this
+  // decode reproduces the reporter's ASAN heap-buffer-overflow READ.
   {
     heif_image* img = nullptr;
     err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, nullptr);
     INFO("decode error (" << err.code << "/" << err.subcode << "): " << err.message);
     REQUIRE(err.code == heif_error_Unsupported_feature);
-    REQUIRE(err.subcode == heif_suberror_Unsupported_bit_depth);
+    REQUIRE(err.subcode == heif_suberror_Unsupported_color_conversion);
     REQUIRE(img == nullptr);
 
     if (img != nullptr) {
       heif_image_release(img);
     }
+  }
+
+  // An 8-bit target is reachable: Op_to_sdr_planes lowers the 16-bit luma plane
+  // and copies the 8-bit chroma planes, after which the planes agree.
+  {
+    heif_image* img = nullptr;
+    err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
+    INFO("decode error (" << err.code << "/" << err.subcode << "): " << err.message);
+    REQUIRE(err.code == heif_error_Ok);
+    REQUIRE(img != nullptr);
+    CHECK(heif_image_get_bits_per_pixel_range(img, heif_channel_interleaved) == 8);
+    CHECK(heif_image_get_width(img, heif_channel_interleaved) == static_cast<int>(WIDTH));
+    CHECK(heif_image_get_height(img, heif_channel_interleaved) == static_cast<int>(HEIGHT));
+    heif_image_release(img);
+  }
+
+  // The same in the native layout with convert_hdr_to_8bit: the planes keep their
+  // values (luma 0x1000 >> 8 = 0x10 at the origin, chroma unchanged). The file's colr
+  // box is kept as the output profile; otherwise the default sRGB target would add a
+  // YCbCr -> RGB -> YCbCr round trip that clips the extreme test chroma.
+  {
+    heif_decoding_options* options = heif_decoding_options_alloc();
+    REQUIRE(options != nullptr);
+    options->convert_hdr_to_8bit = true;
+    options->output_image_nclx_profile_passthrough = 1;
+
+    heif_image* img = nullptr;
+    err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, options);
+    INFO("decode error (" << err.code << "/" << err.subcode << "): " << err.message);
+    REQUIRE(err.code == heif_error_Ok);
+    REQUIRE(img != nullptr);
+
+    for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+      CHECK(heif_image_get_bits_per_pixel_range(img, channel) == 8);
+    }
+
+    size_t stride = 0;
+    const uint8_t* p = heif_image_get_plane_readonly2(img, heif_channel_Y, &stride);
+    REQUIRE(p != nullptr);
+    CHECK(p[0] == 0x10);
+    p = heif_image_get_plane_readonly2(img, heif_channel_Cb, &stride);
+    REQUIRE(p != nullptr);
+    CHECK(p[0] == 0x40);
+    p = heif_image_get_plane_readonly2(img, heif_channel_Cr, &stride);
+    REQUIRE(p != nullptr);
+    CHECK(p[0] == 0x80);
+
+    heif_image_release(img);
+    heif_decoding_options_free(options);
   }
 
   heif_image_handle_release(handle);

@@ -28,6 +28,7 @@
 #include "api_structs.h"
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <utility>
 
 
@@ -1227,8 +1228,17 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
     return readResult.error();
   }
 
-  heif_raw_sequence_sample* sample = new heif_raw_sequence_sample();
-  sample->data = **readResult;
+  // Keep the sample in a unique_ptr until the single success exit below. Several
+  // error returns follow (sample auxiliary info driven by file bytes), and the
+  // Result<T*> error variant cannot carry the pointer back to the caller, so a raw
+  // 'new' here leaked the sample together with its full payload copy on every one
+  // of them (GHSA-4rv4-953r-p24q).
+  auto sample = std::make_unique<heif_raw_sequence_sample>();
+
+  // Move the payload out of the function-local extent instead of copying it. The
+  // extent is destroyed when this function returns anyway, and moving halves the
+  // peak memory needed per sample.
+  sample->data = std::move(**readResult);
 
   // read sample duration
 
@@ -1273,7 +1283,7 @@ Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data(const heif_dec
 
   m_next_sample_to_be_output++;
 
-  return sample;
+  return sample.release();
 }
 
 

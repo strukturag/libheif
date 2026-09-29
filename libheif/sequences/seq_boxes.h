@@ -996,8 +996,6 @@ protected:
 
   Error write(StreamWriter& writer) const override;
 
-  Error check_for_double_references() const;
-
 private:
   std::vector<Reference> m_references;
 };

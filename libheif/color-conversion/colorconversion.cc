@@ -147,21 +147,243 @@ static void __attribute__ ((unused)) print_spec(std::ostream& ostr, const std::s
 #endif
 
 
+ColorState::ColorState(heif_colorspace cs, heif_chroma chr, bool with_alpha, int bpp)
+    : colorspace(cs), chroma(chr)
+{
+  set_color_bits_per_pixel(bpp);
+  bits_per_pixel_alpha = with_alpha ? bpp : 0;
+}
+
+
+int ColorState::get_bits_per_pixel(heif_channel channel) const
+{
+  switch (channel) {
+    case heif_channel_R:
+      return bits_per_pixel_R;
+    case heif_channel_G:
+      return bits_per_pixel_G;
+    case heif_channel_B:
+      return bits_per_pixel_B;
+    case heif_channel_Y:
+      return bits_per_pixel_Y;
+    case heif_channel_Cb:
+      return bits_per_pixel_Cb;
+    case heif_channel_Cr:
+      return bits_per_pixel_Cr;
+    case heif_channel_Alpha:
+      return bits_per_pixel_alpha;
+    case heif_channel_filter_array:
+      return bits_per_pixel_filter_array;
+    case heif_channel_interleaved:
+      return bits_per_pixel_R;
+    default:
+      return 0;
+  }
+}
+
+
+void ColorState::set_bits_per_pixel(heif_channel channel, int bpp)
+{
+  switch (channel) {
+    case heif_channel_R:
+      bits_per_pixel_R = bpp;
+      break;
+    case heif_channel_G:
+      bits_per_pixel_G = bpp;
+      break;
+    case heif_channel_B:
+      bits_per_pixel_B = bpp;
+      break;
+    case heif_channel_Y:
+      bits_per_pixel_Y = bpp;
+      break;
+    case heif_channel_Cb:
+      bits_per_pixel_Cb = bpp;
+      break;
+    case heif_channel_Cr:
+      bits_per_pixel_Cr = bpp;
+      break;
+    case heif_channel_Alpha:
+      bits_per_pixel_alpha = bpp;
+      break;
+    case heif_channel_filter_array:
+      bits_per_pixel_filter_array = bpp;
+      break;
+    case heif_channel_interleaved:
+      bits_per_pixel_R = bits_per_pixel_G = bits_per_pixel_B = bpp;
+      break;
+    default:
+      break;
+  }
+}
+
+
+void ColorState::set_color_bits_per_pixel(int bpp)
+{
+  bits_per_pixel_R = bits_per_pixel_G = bits_per_pixel_B = 0;
+  bits_per_pixel_Y = bits_per_pixel_Cb = bits_per_pixel_Cr = 0;
+  bits_per_pixel_filter_array = 0;
+
+  if (colorspace == heif_colorspace_filter_array) {
+    bits_per_pixel_filter_array = bpp;
+    return;
+  }
+
+  switch (chroma) {
+    case heif_chroma_planar: // == heif_chroma_monochrome
+      if (colorspace == heif_colorspace_RGB) {
+        bits_per_pixel_R = bits_per_pixel_G = bits_per_pixel_B = bpp;
+      }
+      else {
+        bits_per_pixel_Y = bpp;
+      }
+      break;
+
+    case heif_chroma_420:
+    case heif_chroma_422:
+      bits_per_pixel_Y = bits_per_pixel_Cb = bits_per_pixel_Cr = bpp;
+      break;
+
+    case heif_chroma_444:
+      if (colorspace == heif_colorspace_RGB) {
+        bits_per_pixel_R = bits_per_pixel_G = bits_per_pixel_B = bpp;
+      }
+      else {
+        bits_per_pixel_Y = bits_per_pixel_Cb = bits_per_pixel_Cr = bpp;
+      }
+      break;
+
+    case heif_chroma_interleaved_RGB:
+    case heif_chroma_interleaved_RGBA:
+    case heif_chroma_interleaved_RRGGBB_BE:
+    case heif_chroma_interleaved_RRGGBB_LE:
+    case heif_chroma_interleaved_RRGGBBAA_BE:
+    case heif_chroma_interleaved_RRGGBBAA_LE:
+      bits_per_pixel_R = bits_per_pixel_G = bits_per_pixel_B = bpp;
+      break;
+
+    default:
+      break;
+  }
+}
+
+
+int ColorState::get_uniform_color_bits_per_pixel() const
+{
+  int uniform = 0;
+
+  for (int bpp : {bits_per_pixel_R, bits_per_pixel_G, bits_per_pixel_B,
+                  bits_per_pixel_Y, bits_per_pixel_Cb, bits_per_pixel_Cr,
+                  bits_per_pixel_filter_array}) {
+    if (bpp == 0) {
+      continue; // plane does not exist
+    }
+
+    if (uniform == 0) {
+      uniform = bpp;
+    }
+    else if (bpp != uniform) {
+      return 0;
+    }
+  }
+
+  return uniform;
+}
+
+
+int ColorState::get_uniform_bits_per_pixel() const
+{
+  int uniform = get_uniform_color_bits_per_pixel();
+
+  if (uniform != 0 && bits_per_pixel_alpha != 0 && bits_per_pixel_alpha != uniform) {
+    return 0;
+  }
+
+  return uniform;
+}
+
+
+int ColorState::get_max_color_bits_per_pixel() const
+{
+  return std::max({bits_per_pixel_R, bits_per_pixel_G, bits_per_pixel_B,
+                   bits_per_pixel_Y, bits_per_pixel_Cb, bits_per_pixel_Cr,
+                   bits_per_pixel_filter_array});
+}
+
+
+int ColorState::get_max_bits_per_pixel() const
+{
+  return std::max({bits_per_pixel_R, bits_per_pixel_G, bits_per_pixel_B,
+                   bits_per_pixel_Y, bits_per_pixel_Cb, bits_per_pixel_Cr,
+                   bits_per_pixel_alpha, bits_per_pixel_filter_array});
+}
+
+
+// Applies 'pred' to the depth of every existing plane (planes with depth 0 do not exist and
+// are skipped) and returns whether it holds for all of them.
+template<typename Pred>
+static bool all_existing_planes_satisfy(const ColorState& s, bool include_alpha, Pred pred)
+{
+  for (int bpp : {s.bits_per_pixel_R, s.bits_per_pixel_G, s.bits_per_pixel_B,
+                  s.bits_per_pixel_Y, s.bits_per_pixel_Cb, s.bits_per_pixel_Cr,
+                  s.bits_per_pixel_filter_array}) {
+    if (bpp != 0 && !pred(bpp)) {
+      return false;
+    }
+  }
+
+  if (include_alpha && s.bits_per_pixel_alpha != 0 && !pred(s.bits_per_pixel_alpha)) {
+    return false;
+  }
+
+  return true;
+}
+
+
+int ColorState::get_bytes_per_sample(heif_channel channel) const
+{
+  return bytes_per_sample_for_bit_depth(get_bits_per_pixel(channel)); // 0 if the plane does not exist
+}
+
+
+int ColorState::get_max_bytes_per_sample() const
+{
+  // The bit depth to sample width mapping is monotonic, so the widest plane is the deepest.
+  return bytes_per_sample_for_bit_depth(get_max_bits_per_pixel());
+}
+
+
+bool ColorState::color_channels_have_bytes_per_sample(int bytes) const
+{
+  return all_existing_planes_satisfy(*this, false, [bytes](int bpp) {
+    return bytes_per_sample_for_bit_depth(bpp) == bytes;
+  });
+}
+
+
+bool ColorState::all_channels_have_bytes_per_sample(int bytes) const
+{
+  return all_existing_planes_satisfy(*this, true, [bytes](int bpp) {
+    return bytes_per_sample_for_bit_depth(bpp) == bytes;
+  });
+}
+
+
 bool ColorState::operator==(const ColorState& b) const
 {
   bool mainParamsMatch = (colorspace == b.colorspace &&
                           chroma == b.chroma &&
-                          has_alpha == b.has_alpha &&
-                          bits_per_pixel == b.bits_per_pixel);
+                          bits_per_pixel_R == b.bits_per_pixel_R &&
+                          bits_per_pixel_G == b.bits_per_pixel_G &&
+                          bits_per_pixel_B == b.bits_per_pixel_B &&
+                          bits_per_pixel_Y == b.bits_per_pixel_Y &&
+                          bits_per_pixel_Cb == b.bits_per_pixel_Cb &&
+                          bits_per_pixel_Cr == b.bits_per_pixel_Cr &&
+                          bits_per_pixel_alpha == b.bits_per_pixel_alpha &&
+                          bits_per_pixel_filter_array == b.bits_per_pixel_filter_array);
 
   if (!mainParamsMatch) {
     return false;
-  }
-
-  if (has_alpha && b.has_alpha) {
-    if (get_alpha_bits_per_pixel() != b.get_alpha_bits_per_pixel()) {
-      return false;
-    }
   }
 
   if (colorspace == heif_colorspace_YCbCr) {
@@ -202,12 +424,27 @@ struct Node
 
 std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
 {
-  ostr << "colorspace=" << state.colorspace << " chroma=" << state.chroma
-           << " bpp(R)=" << state.bits_per_pixel
-              << " alpha=" << (state.has_alpha ? "yes" : "no");
+  ostr << "colorspace=" << state.colorspace << " chroma=" << state.chroma;
 
-  if (state.has_alpha && state.get_alpha_bits_per_pixel() != state.bits_per_pixel) {
-    ostr << " alpha_bpp=" << state.get_alpha_bits_per_pixel();
+  auto print_plane = [&ostr](const char* name, int bpp) {
+    if (bpp != 0) {
+      ostr << " bpp(" << name << ")=" << bpp;
+    }
+  };
+
+  print_plane("Y", state.bits_per_pixel_Y);
+  print_plane("Cb", state.bits_per_pixel_Cb);
+  print_plane("Cr", state.bits_per_pixel_Cr);
+  print_plane("R", state.bits_per_pixel_R);
+  print_plane("G", state.bits_per_pixel_G);
+  print_plane("B", state.bits_per_pixel_B);
+  print_plane("filter_array", state.bits_per_pixel_filter_array);
+
+  if (state.has_alpha()) {
+    ostr << " alpha_bpp=" << state.bits_per_pixel_alpha;
+  }
+  else {
+    ostr << " alpha=no";
   }
 
   if (state.colorspace == heif_colorspace_YCbCr) {
@@ -528,10 +765,21 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 
   // --- prepare conversion
 
+  // The operators read the planes that the colorspace and chroma format imply, with the sizes
+  // they imply. Refuse anything else up front instead of letting an operator run into a missing,
+  // duplicate or undersized plane: a plane set that does not match the format, or a colorspace
+  // without a defined layout (custom multi-component data has nothing to convert). Planes with
+  // channel heif_channel_unknown (the padding components of 'unci') are tolerated; they belong
+  // to no colour model and are not carried into the output.
+  if (Error err = input->check_plane_layout()) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_image_type,
+                 "Color conversion: " + err.message};
+  }
+
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
-  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_interleaved_with_alpha(input->get_chroma_format());
   if (input->has_nclx_color_profile()) {
     input_state.nclx = input->get_color_profile_nclx();
   }
@@ -540,10 +788,27 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
 
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
-  input_state.bits_per_pixel = input->get_bits_per_pixel(*(channels.begin()));
 
-  if (input_state.has_alpha && input->has_channel(heif_channel_Alpha)) {
-    input_state.alpha_bits_per_pixel = input->get_bits_per_pixel(heif_channel_Alpha);
+  // Record the bit depth of every plane the image has. They may differ from each other
+  // (e.g. 'unci' declares a depth per component), which is why ColorState keeps one value
+  // per plane instead of a single image-wide depth.
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr,
+                               heif_channel_R, heif_channel_G, heif_channel_B,
+                               heif_channel_Alpha, heif_channel_filter_array}) {
+    if (input->has_channel(channel)) {
+      input_state.set_bits_per_pixel(channel, input->get_bits_per_pixel(channel));
+    }
+  }
+
+  // Interleaved RGB formats keep all components in one plane. Represent them by their
+  // per-component depth so that operators see the same R/G/B (and alpha) fields as for
+  // planar RGB.
+  if (input->has_channel(heif_channel_interleaved)) {
+    int bpp = input->get_bits_per_pixel(heif_channel_interleaved);
+    input_state.set_bits_per_pixel(heif_channel_interleaved, bpp);
+    if (is_interleaved_with_alpha(input->get_chroma_format())) {
+      input_state.bits_per_pixel_alpha = bpp;
+    }
   }
 
   ColorState output_state = input_state;
@@ -569,29 +834,38 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
   // interleaved output format.
   // For planar formats, we include an alpha plane when included in the input.
 
+  bool output_has_alpha;
+
   if (num_interleaved_components_per_plane(target_chroma) > 1) {
-    output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
+    output_has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {
     if (options_ext->alpha_composition_mode != heif_alpha_composition_mode_none) {
-      output_state.has_alpha = false;
+      output_has_alpha = false;
     }
     else {
-      output_state.has_alpha = input_state.has_alpha;
+      output_has_alpha = input_state.has_alpha();
     }
   }
 
-  if (output_bpp) {
-    output_state.bits_per_pixel = output_bpp;
-  }
+  // --- output colour bit depth (0 = keep the input depth)
 
+  int output_color_bpp = output_bpp;
 
   // interleaved RGB formats always have to be 8-bit
 
   if (target_chroma == heif_chroma_interleaved_RGB ||
       target_chroma == heif_chroma_interleaved_RGBA) {
-    output_state.bits_per_pixel = 8;
+    output_color_bpp = 8;
   }
+
+  // The depth that the input's colour planes share, or 0 if they differ ('unci' declares a
+  // depth per component). Where a single input depth is needed below and the planes do not
+  // agree, the widest plane is used: that is the lossless choice, and a conversion that cannot
+  // widen the narrower planes to it is declined by the operators, instead of one plane's depth
+  // being picked silently.
+  int uniform_input_bpp = input_state.get_uniform_color_bits_per_pixel();
+  int input_color_bpp = (uniform_input_bpp != 0) ? uniform_input_bpp : input_state.get_max_color_bits_per_pixel();
 
   // interleaved RRGGBB formats have to be >8-bit.
   // If we don't know a target bit-depth, use 10 bit.
@@ -600,49 +874,87 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
        target_chroma == heif_chroma_interleaved_RRGGBB_BE ||
        target_chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
        target_chroma == heif_chroma_interleaved_RRGGBBAA_BE) &&
-      output_state.bits_per_pixel <= 8) {
-    output_state.bits_per_pixel = 10;
+      (output_color_bpp != 0 ? output_color_bpp : input_color_bpp) <= 8) {
+    output_color_bpp = 10;
   }
 
-  // Output alpha should always match the output color BPP
-  output_state.alpha_bits_per_pixel = output_state.bits_per_pixel;
+  bool same_plane_layout = (target_colorspace == input_state.colorspace &&
+                            target_chroma == input_state.chroma);
+
+  int output_alpha_bpp;
+
+  if (output_color_bpp == 0 && same_plane_layout) {
+    // No depth change requested and the plane layout stays the same: keep the colour planes
+    // exactly as they are, even when their depths differ from each other. The alpha plane is
+    // brought to the colour depth when there is one (the operators expect them to agree);
+    // when the colour planes differ, it is kept as it is, too.
+    output_alpha_bpp = (uniform_input_bpp != 0) ? uniform_input_bpp : input_state.bits_per_pixel_alpha;
+  }
+  else {
+    if (output_color_bpp == 0) {
+      output_color_bpp = input_color_bpp;
+    }
+
+    output_state.set_color_bits_per_pixel(output_color_bpp);
+
+    // Output alpha should always match the output color BPP
+    output_alpha_bpp = output_color_bpp;
+  }
+
+  output_state.bits_per_pixel_alpha = output_has_alpha ? output_alpha_bpp : 0;
 
   ColorConversionPipeline pipeline;
   bool success = pipeline.construct_pipeline(input_state, output_state, options, *options_ext);
+
+  if (success && pipeline.is_nop()) {
+    return input;
+  }
+
+  {
+    // The check below also runs when no pipeline could be built, so that the caller gets
+    // the specific reason (a plane wider than 16 bits) instead of the generic "unsupported
+    // color conversion" error.
+    //
+    // Every color-conversion operator is written for 8-bit or 16-bit integer samples.
+    // They access the planes through uint8_t* / uint16_t* and derive shift amounts and
+    // midpoint values from the bit depth (e.g. '128 << (bpp - 8)' in Op_mono_to_YCbCr420).
+    // An 'unci' component may however declare a bit depth of up to 256 bits, of which we
+    // accept up to 128 (64-bit integers, 32/64-bit floats, complex numbers). Those are
+    // stored by HeifPixelImage so that they can be read through the component API. A
+    // 64-bit monochrome component reached Op_mono_to_YCbCr420 and shifted an 'int' by
+    // 56 (OSS-Fuzz 5154611212910592). A nop conversion is handled above and still hands
+    // the image through untouched, so wide components stay accessible to the caller.
+    //
+    // This is a backstop, not the primary defence. The constraint belongs in each
+    // operator's state_after_conversion(), and every operator declares there which
+    // sample width it can read (ColorState::color_channels_have_bytes_per_sample() and
+    // friends, derived from the same bit depth to storage width mapping that
+    // HeifPixelImage uses), so construct_pipeline() above already fails for a wider
+    // input and a real conversion never reaches this loop. Keep it until an operator
+    // actually supports more than 16 bits per component, then remove it.
+    //
+    // Planes of differing depth within one image (GHSA-w7mc-p8jc-p853 read 8-bit chroma
+    // planes with the 16-bit luma sample width) are handled the same way: each operator
+    // declares in state_after_conversion() whether it needs the colour planes to share
+    // one depth (ColorState::color_channels_have_same_bpp()), so no pipeline is built
+    // through an operator that cannot handle the image, while Op_to_sdr_planes, which
+    // lowers every plane on its own, can still equalize such an image to 8 bits.
+
+    for (heif_channel channel : channels) {
+      if (input->get_bits_per_pixel(channel) > 16) {
+        return Error{heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_bit_depth,
+                     "Color conversion of images with more than 16 bits per component is not supported."};
+      }
+    }
+  }
+
   if (!success) {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_color_conversion};
   }
 
-  if (pipeline.is_nop()) {
-    return input;
-  }
-  else {
-    // The YCbCr color-conversion operators assume that luma and chroma share a
-    // single bit depth: several of them read the chroma planes with a sample width
-    // derived from the luma bit depth. A file may however declare per-component bit
-    // depths (e.g. 'unci'), so we reject a real (non-nop) conversion of any YCbCr
-    // image whose Y/Cb/Cr channels do not agree, rather than over-reading a narrower
-    // chroma plane (GHSA-w7mc-p8jc-p853). An identity decode (is_nop() above)
-    // returns the image untouched and is unaffected. RGB is intentionally not
-    // restricted here: the RGB operators support differing per-channel bit depths
-    // (e.g. 5/6/5). Alpha is handled separately by the individual operators.
-
-    if (input->get_colorspace() == heif_colorspace_YCbCr &&
-        input->has_channel(heif_channel_Y) &&
-        input->has_channel(heif_channel_Cb) &&
-        input->has_channel(heif_channel_Cr)) {
-      int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
-      if (input->get_bits_per_pixel(heif_channel_Cb) != bpp_y ||
-          input->get_bits_per_pixel(heif_channel_Cr) != bpp_y) {
-        return Error{heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_bit_depth,
-                     "Color conversion of YCbCr images with differing luma and chroma bit depths is not supported."};
-      }
-    }
-
-    return pipeline.convert_image(input, limits);
-  }
+  return pipeline.convert_image(input, limits);
 }
 
 

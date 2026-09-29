@@ -28,11 +28,24 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
                                          const heif_color_conversion_options& options,
                                          const heif_color_conversion_options_ext& options_ext) const
 {
-  if ((input_state.chroma != heif_chroma_monochrome &&
-       input_state.chroma != heif_chroma_420 &&
-       input_state.chroma != heif_chroma_422 &&
-       input_state.chroma != heif_chroma_444) ||
-      input_state.bits_per_pixel != 8) { // TODO: support for <8 bpp
+  if (input_state.chroma != heif_chroma_monochrome &&
+      input_state.chroma != heif_chroma_420 &&
+      input_state.chroma != heif_chroma_422 &&
+      input_state.chroma != heif_chroma_444) {
+    return {};
+  }
+
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but the loop below only handles
+  // the Y/Cb/Cr/R/G/B/alpha planes and would return an image without any plane. Decline it,
+  // so that the Bayer operator demosaics first and the depth change applies to its RGB result.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
+    return {};
+  }
+
+  // Every plane, alpha included, is widened from 8 bits, so all of them must be 8 bits
+  // (get_uniform_bits_per_pixel() is 0 when the planes differ).
+  if (input_state.get_uniform_bits_per_pixel() != 8) { // TODO: support for <8 bpp
     return {};
   }
 
@@ -41,8 +54,8 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // only holds for target bit depths m in (8, 16]; a larger m would both make
   // the right shift exponent negative (undefined behavior) and exceed the range
   // of the uint16_t output plane. Only offer the conversion within that range.
-  if (target_state.bits_per_pixel <= 8 ||
-      target_state.bits_per_pixel > 16) {
+  int target_bpp = target_state.get_uniform_color_bits_per_pixel(); // 0 if the target planes differ
+  if (target_bpp <= 8 || target_bpp > 16) {
     return {};
   }
 
@@ -53,8 +66,10 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   // --- increase bit depth
 
   output_state = input_state;
-  output_state.bits_per_pixel = target_state.bits_per_pixel;
-  output_state.alpha_bits_per_pixel = target_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(target_bpp);
+  if (output_state.has_alpha()) {
+    output_state.bits_per_pixel_alpha = target_bpp;
+  }
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -87,12 +102,12 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
     if (input->has_channel(channel)) {
       uint32_t width = input->get_width(channel);
       uint32_t height = input->get_height(channel);
-      if (auto err = outimg->add_channel(channel, width, height, target_state.bits_per_pixel, limits)) {
+      if (auto err = outimg->add_channel(channel, width, height, target_state.get_uniform_color_bits_per_pixel(), limits)) {
         return err;
       }
 
       int input_bits = input->get_bits_per_pixel(channel);
-      int output_bits = target_state.bits_per_pixel;
+      int output_bits = target_state.get_uniform_color_bits_per_pixel();
 
       // Guard against unsupported bit-depth combinations. state_after_conversion()
       // only offers this operation for 8-bit input and 8 < output <= 16, but a
@@ -136,15 +151,35 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
                                          const heif_color_conversion_options& options,
                                          const heif_color_conversion_options_ext& options_ext) const
 {
-  if ((input_state.chroma != heif_chroma_monochrome &&
-       input_state.chroma != heif_chroma_420 &&
-       input_state.chroma != heif_chroma_422 &&
-       input_state.chroma != heif_chroma_444) ||
-      input_state.bits_per_pixel == 8) {
+  if (input_state.chroma != heif_chroma_monochrome &&
+      input_state.chroma != heif_chroma_420 &&
+      input_state.chroma != heif_chroma_422 &&
+      input_state.chroma != heif_chroma_444) {
     return {};
   }
 
-  if (target_state.bits_per_pixel != 8) {
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but the loop below only handles
+  // the Y/Cb/Cr/R/G/B/alpha planes and would return an image without any plane. Decline it,
+  // so that the Bayer operator demosaics first and the depth change applies to its RGB result.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
+    return {};
+  }
+
+  // Nothing to do when every colour plane is already 8 bits. The planes may differ from each
+  // other ('unci' declares a depth per component); the loop below handles each plane on its
+  // own, so a mixed image such as 8/8/16 is equalized to 8/8/8 here. For such an image
+  // get_uniform_color_bits_per_pixel() is 0, which does not match the 8, so it is offered.
+  if (input_state.get_uniform_color_bits_per_pixel() == 8) {
+    return {};
+  }
+
+  if (target_state.get_uniform_color_bits_per_pixel() != 8) {
+    return {};
+  }
+
+  // Every channel, alpha included, is read as uint8_t or uint16_t samples.
+  if (input_state.get_max_bytes_per_sample() > 2) {
     return {};
   }
 
@@ -155,8 +190,10 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
   // --- output bit depth = 8
 
   output_state = input_state;
-  output_state.bits_per_pixel = 8;
-  output_state.alpha_bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  if (output_state.has_alpha()) {
+    output_state.bits_per_pixel_alpha = 8;
+  }
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -189,8 +226,9 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                heif_channel_Alpha}) {
     if (input->has_channel(channel)) {
       int input_bits = input->get_bits_per_pixel(channel);
+      int input_bytes = bytes_per_sample_for_bit_depth(input_bits);
 
-      if (input_bits > 8) {
+      if (input_bytes == 2) {
         uint32_t width = input->get_width(channel);
         uint32_t height = input->get_height(channel);
         if (auto err = outimg->add_channel(channel, width, height, 8, limits)) {
@@ -255,8 +293,12 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) ((in * mulFactor) >> 8);
           }
-      } else {
+      } else if (input_bits == 8) {
         outimg->copy_new_channel_from(input, channel, channel, limits);
+      } else {
+        return Error{heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_bit_depth,
+                     "Op_to_sdr_planes: only 8- and 16-bit sample storage is supported"};
       }
     }
   }

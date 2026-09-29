@@ -54,10 +54,14 @@
  *   - JPEG 2000 signals a precision per component and genuinely supports it,
  *     which is why the OpenJPEG and OpenJPH plugins do not use this check.
  *
- * 'supported_bit_depths' is the set the codec allows. It is a codec level
- * constraint and does not replace a plugin's own check against the encoder
- * library actually linked in (x265_api_get(), uvg_api_get() and friends), which
- * is what decides whether this particular build can do 10 or 12 bits.
+ * 'supported_bit_depths' is the set this plugin can actually encode. Where that
+ * is narrower than what the codec allows because of the encoder library, the
+ * plugin has to pass the narrower set: only x265 answers the question at run
+ * time, where x265_api_get() returns NULL for a depth the linked build does not
+ * provide. uvg_api_get() and kvz_api_get() look like they do the same, but both
+ * are 'return &..._8bit_api;' upstream and never fail, so the uvg266 and kvazaar
+ * builds are pinned at compile time by UVG_BIT_DEPTH / KVZ_BIT_DEPTH and those
+ * are what the two plugins pass here.
  *
  * TODO: this per-plugin check is a stopgap. What is really needed is a proper
  * plugin API through which an encoder describes the input formats it accepts

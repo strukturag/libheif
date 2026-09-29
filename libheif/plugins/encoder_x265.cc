@@ -1102,6 +1102,16 @@ static heif_error x265_start_sequence_encoding(void* encoder_raw, const heif_ima
 static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image* image,
                                              uintptr_t frame_nr)
 {
+  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
+
+  if (!encoder->api) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "called plugin encode_sequence_frame() without start_sequence_encoding()"
+    };
+  }
+
   // HEVC can signal different luma and chroma bit depths, but x265 has a
   // single internal bit depth and cannot produce such a stream. Whether this
   // build of libx265 has 10 or 12 bit support is checked separately via
@@ -1112,14 +1122,12 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
     return input_error;
   }
 
-  encoder_struct_x265* encoder = (encoder_struct_x265*) encoder_raw;
-
-  if (!encoder->api) {
-    return {
-      heif_error_Usage_error,
-      heif_suberror_Unspecified,
-      "called plugin encode_sequence_frame() without start_sequence_encoding()"
-    };
+  // pic->bitDepth below is the depth the encoder was opened with, while the plane
+  // pointers are this frame's. A deeper first frame would make libx265 read the
+  // planes of a shallower later frame at two bytes per sample.
+  input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
   }
 
   const x265_api* api = encoder->api;

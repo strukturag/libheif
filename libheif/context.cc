@@ -640,14 +640,14 @@ Error HeifContext::interpret_heif_file_images()
     std::vector<std::shared_ptr<Box>> properties;
     Error err = m_heif_file->get_properties(id, properties);
     if (err) {
-      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem = std::make_shared<ImageItem_Error>(this, imageItem->get_infe_type(), id, err);
     }
 
     imageItem->set_properties(properties);
 
     err = imageItem->initialize_decoder();
     if (err) {
-      imageItem = std::make_shared<ImageItem_Error>(imageItem->get_infe_type(), id, err);
+      imageItem = std::make_shared<ImageItem_Error>(this, imageItem->get_infe_type(), id, err);
       imageItem->set_properties(properties);
     } else {
       // The decoder's input data extent must be set before any codec-config
@@ -1986,8 +1986,10 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
   else {
     // uncompressed data, plain copy
 
-    data_array.resize(size);
-    memcpy(data_array.data(), data, size);
+    if (size > 0) { // memcpy() with a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
+      data_array.resize(size);
+      memcpy(data_array.data(), data, size);
+    }
   }
 
   // copy the data into the file, store the pointer to it in an iloc box entry

@@ -61,6 +61,9 @@ struct encoder_struct_rav1e
   RaContext* rav1eContextRaw = nullptr;
   uint8_t yShift = 0;
 
+  // bit depth the context was created with, to check the later frames of a sequence against
+  int bit_depth = 8;
+
   // --- output
 
   struct Packet
@@ -659,6 +662,8 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
     return heif_error_codec_library_error;
   }
 
+  encoder->bit_depth = bitDepth;
+
   return {};
 }
 
@@ -685,6 +690,14 @@ heif_error rav1e_encode_sequence_frame(void* encoder_raw, const heif_image* imag
 
   auto* encoder = (encoder_struct_rav1e*) encoder_raw;
   auto& rav1eContext = encoder->rav1eContextRaw;
+
+  // rav1e_frame_new() below builds a frame for the pixel format the context was
+  // created with, from the first frame of the sequence, while byteWidth is this
+  // frame's.
+  input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
 
   int bitDepth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 

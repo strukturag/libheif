@@ -2331,43 +2331,16 @@ Error Box_tref::parse(BitstreamRange& range, const heif_security_limits* limits)
     m_references.push_back(ref);
   }
 
-
-  // --- check for duplicate references
-
-  if (auto error = check_for_double_references()) {
-    return error;
-  }
+  // Note: a track ID may appear several times within one reference type box.
+  // ISO/IEC 14496-12 does not forbid it and no consumer depends on uniqueness,
+  // so a redundant entry is tolerated instead of rejecting the whole file.
 
   return range.get_error();
 }
 
 
-Error Box_tref::check_for_double_references() const
-{
-  for (const auto& ref : m_references) {
-    std::set<uint32_t> to_ids;
-    for (const auto to_id : ref.to_track_id) {
-      if (to_ids.find(to_id) == to_ids.end()) {
-        to_ids.insert(to_id);
-      }
-      else {
-        return {heif_error_Invalid_input,
-                heif_suberror_Unspecified,
-                "'tref' has double references"};
-      }
-    }
-  }
-
-  return Error::Ok;
-}
-
-
 Error Box_tref::write(StreamWriter& writer) const
 {
-  if (auto error = check_for_double_references()) {
-    return error;
-  }
-
   size_t box_start = reserve_box_header_space(writer);
 
   for (const auto& ref : m_references) {

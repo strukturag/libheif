@@ -365,6 +365,19 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
             "JPEG 2000 image exceeds maximum allowed image size"};
   }
 
+  // The visible image is only the window (x1-x0, y1-y0), but OpenJPEG performs
+  // its tile and coefficient arithmetic over the full JPEG 2000 reference grid
+  // (Xsiz=x1, Ysiz=y1). A tiny window placed at very large absolute coordinates
+  // therefore reaches internal decode paths with pathological geometry, which
+  // has caused out-of-bounds writes inside OpenJPEG (see GHSA-q492-cfcm-895h,
+  // CVE-2020-6851). Bound the reference-grid area, not just the window span.
+  // (x1,y1 are uint32, so the product fits in uint64 without overflow.)
+  uint64_t grid_pixels = uint64_t(image->x1) * uint64_t(image->y1);
+  if (limits->max_image_size_pixels > 0 && grid_pixels > limits->max_image_size_pixels) {
+    return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+            "JPEG 2000 reference grid exceeds maximum allowed image size"};
+  }
+
   uint64_t estimated_memory = openjpeg_estimate_decode_memory_bytes(image.get());
   if (limits->max_memory_block_size > 0 && estimated_memory > limits->max_memory_block_size) {
     return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,

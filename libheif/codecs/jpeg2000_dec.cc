@@ -32,6 +32,34 @@ Result<std::vector<uint8_t>> Decoder_JPEG2000::read_bitstream_configuration_data
 }
 
 
+Result<std::optional<ImageSize>> Decoder_JPEG2000::get_max_coded_image_size(const std::vector<uint8_t>& compressed_data) const
+{
+  // The JPEG 2000 coded size is the reference grid (Xsiz, Ysiz) declared in the
+  // SIZ marker of the codestream, which lives in the item data. A decoder performs
+  // its tile and coefficient arithmetic over the full reference grid, not just the
+  // visible window (Xsiz-XOsiz, Ysiz-YOsiz), so the reference grid is the size the
+  // decoder effectively allocates over and can be far larger than the container
+  // 'ispe'. Parse it here so the shared decode path can reject over-limit inputs
+  // before ANY J2K plugin (openjpeg, ffmpeg, ...) runs -- the openjpeg plugin has
+  // its own equivalent gate (GHSA-q492-cfcm-895h), this makes the check
+  // backend-independent.
+  JPEG2000MainHeader header;
+  Error err = header.parseHeader(compressed_data);
+  if (err) {
+    // Not a parseable codestream header; let the decoder plugin deal with it.
+    return std::optional<ImageSize>{};
+  }
+
+  uint32_t w = header.getXSize();
+  uint32_t h = header.getYSize();
+  if (w == 0 || h == 0) {
+    return std::optional<ImageSize>{};
+  }
+
+  return std::optional<ImageSize>{ImageSize{w, h}};
+}
+
+
 int Decoder_JPEG2000::get_luma_bits_per_pixel() const
 {
   Result<std::vector<uint8_t>> imageDataResult = get_compressed_data(true);

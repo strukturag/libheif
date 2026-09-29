@@ -34,23 +34,25 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const heif_color_conversion_options& options,
                                                const heif_color_conversion_options_ext& options_ext) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
-  if ((input_state.bits_per_pixel > 8) != hdr) {
-    return {};
-  }
-
-  // TODO: add support for <8 bpp
-  if (input_state.bits_per_pixel < 8) {
-    return {};
-  }
-
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444) {
     return {};
   }
 
-  if (input_state.has_alpha && input_state.get_alpha_bits_per_pixel() != input_state.bits_per_pixel) {
+  // All three colour planes are read through the same 'Pixel' type and converted with one
+  // set of range constants, so they must share one bit depth and be stored with
+  // sizeof(Pixel) bytes per sample.
+  if (!input_state.color_channels_have_same_bpp() ||
+      !input_state.color_channels_have_bytes_per_sample(static_cast<int>(sizeof(Pixel)))) {
+    return {};
+  }
+
+  // TODO: add support for <8 bpp
+  if (input_state.bits_per_pixel_R < 8) {
+    return {};
+  }
+
+  if (input_state.has_alpha() && input_state.bits_per_pixel_alpha != input_state.bits_per_pixel_R) {
     return {};
   }
 
@@ -76,8 +78,8 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 
     output_state.colorspace = heif_colorspace_YCbCr;
     output_state.chroma = target_state.chroma;
-    output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
     output_state.nclx = target_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -87,8 +89,8 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 
     output_state.colorspace = heif_colorspace_YCbCr;
     output_state.chroma = heif_chroma_444;
-    output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+    output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
     output_state.nclx = target_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -106,8 +108,6 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
                                            const heif_color_conversion_options_ext& options_ext,
                                            const heif_security_limits* limits) const
 {
-  bool hdr = !std::is_same<Pixel, uint8_t>::value;
-
   uint32_t width = input->get_width();
   uint32_t height = input->get_height();
 
@@ -116,7 +116,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int subV = chroma_v_subsampling(chroma);
 
   int bpp = input->get_bits_per_pixel(heif_channel_R);
-  if (bpp < 8 || (bpp > 8) != hdr) {
+  if (bpp < 8 || bytes_per_sample_for_bit_depth(bpp) != static_cast<int>(sizeof(Pixel))) {
     return Error::InternalError;
   }
 
@@ -178,14 +178,12 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     out_a = nullptr;
   }
 
-  if (hdr) {
-    in_r_stride /= 2;
-    in_g_stride /= 2;
-    in_b_stride /= 2;
-    out_y_stride /= 2;
-    out_cb_stride /= 2;
-    out_cr_stride /= 2;
-  }
+  in_r_stride /= sizeof(Pixel);
+  in_g_stride /= sizeof(Pixel);
+  in_b_stride /= sizeof(Pixel);
+  out_y_stride /= sizeof(Pixel);
+  out_cb_stride /= sizeof(Pixel);
+  out_cr_stride /= sizeof(Pixel);
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
   int32_t fullRange = (1 << bpp) - 1;
@@ -302,7 +300,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
   if (has_alpha) {
     int bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
-    int alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+    size_t alphaCopyWidth = static_cast<size_t>(width) * static_cast<size_t>(bytes_per_sample_for_bit_depth(bpp_a));
 
     for (y = 0; y < height; y++) {
       memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
@@ -336,7 +334,12 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
         input_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
         input_state.chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
         input_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) ||
-      input_state.bits_per_pixel <= 8) {
+      input_state.bits_per_pixel_R <= 8) {
+    return {};
+  }
+
+  // The interleaved samples are assembled from two bytes each.
+  if (!input_state.color_channels_have_bytes_per_sample(2)) {
     return {};
   }
 
@@ -361,8 +364,8 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_420;
-  output_state.has_alpha = input_state.has_alpha;  // we generate an alpha plane if the source contains data
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
+  output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we generate an alpha plane if the source contains data
   output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -534,6 +537,12 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // The interleaved input is indexed as bytes and the output is hard-coded to 8 bits,
+  // so this operator handles 8-bit input only.
+  if (input_state.bits_per_pixel_R != 8) {
+    return {};
+  }
+
   if (target_state.chroma != heif_chroma_420 &&
       target_state.chroma != heif_chroma_422 &&
       target_state.chroma != heif_chroma_444) {
@@ -551,8 +560,8 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = target_state.chroma;
-  output_state.has_alpha = target_state.has_alpha;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = target_state.has_alpha() ? 8 : 0;
   output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -603,7 +612,7 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   int chroma_height = (height + chromaSubV - 1) / chromaSubV;
 
   const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
-  const bool want_alpha = target_state.has_alpha;
+  const bool want_alpha = target_state.has_alpha();
 
   if (auto err = outimg->add_channel(heif_channel_Y, width, height, 8, limits) ||
                  outimg->add_channel(heif_channel_Cb, chroma_width, chroma_height, 8, limits) ||
@@ -831,6 +840,12 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
+  // The interleaved input is indexed as bytes and the output is hard-coded to 8 bits,
+  // so this operator handles 8-bit input only.
+  if (input_state.bits_per_pixel_R != 8) {
+    return {};
+  }
+
   if (target_state.nclx.get_matrix_coefficients() != 0) {
     return {};
   }
@@ -845,8 +860,8 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_444;
-  output_state.has_alpha = target_state.has_alpha;
-  output_state.bits_per_pixel = 8;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = target_state.has_alpha() ? 8 : 0;
   output_state.nclx = target_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
@@ -871,7 +886,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
 
   const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
-  const bool want_alpha = target_state.has_alpha;
+  const bool want_alpha = target_state.has_alpha();
 
   if (auto err = outimg->add_channel(heif_channel_Y, width, height, 8, limits) ||
                  outimg->add_channel(heif_channel_Cb, width, height, 8, limits) ||

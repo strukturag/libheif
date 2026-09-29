@@ -298,6 +298,10 @@ heif_error heif_image_scale_image(const heif_image* input,
 
 // Extends the image size to match the given size by extending the right and bottom borders.
 // The border areas are filled with zero.
+// The target 'width' and 'height' must each be at least the image's current size; this
+// function only grows the image and cannot shrink it. If a smaller size is requested,
+// 'heif_error_Usage_error' / 'heif_suberror_Invalid_parameter_value' is returned and the
+// image is left unchanged.
 LIBHEIF_API
 heif_error heif_image_extend_to_size_fill_with_zero(heif_image* image,
                                                     uint32_t width, uint32_t height);
@@ -366,6 +370,11 @@ heif_error heif_image_create(int width, int height,
  *
  * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
  * instead of the preferred 8 bits. However, this use is deprecated.
+ *
+ * <p>An image with an interleaved chroma format carries its alpha inside the interleaved
+ * plane. Adding a separate {@code heif_channel_Alpha} plane to such an image is rejected
+ * with an error. Use one of the interleaved formats with alpha
+ * (e.g. {@code heif_chroma_interleaved_RGBA}) instead.
  *
  * @param image the parent image to add the channel plane to
  * @param channel the channel of the plane to add

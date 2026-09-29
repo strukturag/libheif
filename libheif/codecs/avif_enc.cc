@@ -25,6 +25,7 @@
 #include "api_structs.h"
 
 #include <string>
+#include <utility>
 
 enum heif_av1_obu_type : uint8_t
 {
@@ -183,6 +184,11 @@ Error Encoder_AVIF::get_data(heif_encoder* encoder)
   codedImage.codingConstraints.intra_pred_used = true;
   codedImage.codingConstraints.all_ref_pics_intra = m_all_refs_intra;
 
+  if (codedImage.bitstream.empty() && codedImage.properties.empty()) {
+    // The encoder is still buffering frames and returned nothing. Leave no output pending.
+    return {};
+  }
+
   m_current_output_data = std::move(codedImage);
 
   return {};
@@ -199,9 +205,9 @@ Error Encoder_AVIF::encode_sequence_flush(heif_encoder* encoder)
 }
 
 
-std::optional<Encoder::CodedImageData> Encoder_AVIF::encode_sequence_get_data()
+std::optional<Encoder::CodedImageData> Encoder_AVIF::encode_sequence_extract_data()
 {
-  return std::move(m_current_output_data);
+  return std::exchange(m_current_output_data, std::nullopt);
 }
 
 

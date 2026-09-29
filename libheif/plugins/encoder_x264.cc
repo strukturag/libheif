@@ -222,6 +222,8 @@ parameter encoder_struct_x264::get_param(const std::string& name) const
 }
 
 
+static const char* kError_unsupported_bit_depth = "Bit depth not supported by x264";
+
 static const char* kParam_preset = "preset";
 static const char* kParam_tune = "tune";
 static const char* kParam_TU_intra_depth = "tu-intra-depth";
@@ -733,14 +735,34 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
 
   x264_param_default_preset(&param, encoder->preset.c_str(), encoder->tune.c_str());
 
-  if (bit_depth == 8) {
-    x264_param_apply_profile(&param, "main");
+  // x264 encodes 8 and 10 bits, and nothing else. Which of the two a build offers
+  // is decided by param.i_bitdepth, which exists since x264 build 153; older
+  // builds are fixed to whatever they were compiled for and have no 10 bit mode
+  // we could ask for. x264_encoder_open() below fails if the depth is not there.
+  if (bit_depth != 8 && bit_depth != 10) {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
+    };
   }
-  else if (bit_depth == 10) x264_param_apply_profile(&param, "main10-intra");
-  else if (bit_depth == 12) x264_param_apply_profile(&param, "main12-intra");
-  else {
-    return heif_error_unsupported_parameter;
+
+#if X264_BUILD >= 153
+  param.i_bitdepth = bit_depth;
+#else
+  if (bit_depth != 8) {
+    return heif_error{
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsupported_bit_depth
+    };
   }
+#endif
+
+  // Applied before param.i_csp is set below, so it constrains the coding tools
+  // and the bit depth only. x264 still picks the profile that the final chroma
+  // format needs.
+  x264_param_apply_profile(&param, bit_depth > 8 ? "high10" : "main");
 
 
   param.i_fps_num = framerate_num;
@@ -786,6 +808,13 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
   }
   else if (chroma == heif_chroma_444) {
     param.i_csp = X264_CSP_I444;
+  }
+
+  // Tells x264 that the input planes hold 16 bit samples. HeifPixelImage stores
+  // anything above 8 bits at two bytes per sample, so this has to follow the bit
+  // depth of the image, not the depth we encode at.
+  if (bit_depth > 8) {
+    param.i_csp |= X264_CSP_HIGH_DEPTH;
   }
 
   if (chroma != heif_chroma_monochrome) {
@@ -960,9 +989,10 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
                                              uintptr_t frame_nr)
 {
   // H.264 can signal different luma and chroma bit depths, but x264 has a
-  // single bit depth and cannot produce such a stream.
+  // single bit depth and cannot produce such a stream. x264 has 8 and 10 bit
+  // modes and no others.
   heif_error input_error = check_encoder_input_image(image, /*supports_monochrome=*/true,
-                                                    {8, 10, 12});
+                                                    {8, 10});
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }
@@ -976,6 +1006,13 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
       heif_suberror_Unspecified,
       "called plugin encode_sequence_frame() without start_sequence_encoding()"
     };
+  }
+
+  // pic.img.i_csp below carries the X264_CSP_HIGH_DEPTH flag of the first frame
+  // of the sequence, while the plane pointers are this frame's.
+  input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
   }
 
   heif_error err;

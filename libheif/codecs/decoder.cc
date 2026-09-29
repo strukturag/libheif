@@ -314,6 +314,35 @@ Decoder::~Decoder()
 }
 
 
+std::vector<std::pair<const uint8_t*, size_t>>
+split_nal_units_4byte_length_prefixed(const uint8_t* data, size_t size)
+{
+  std::vector<std::pair<const uint8_t*, size_t>> units;
+
+  size_t ptr = 0;
+  while (ptr + 4 <= size) {
+    uint32_t nal_size = (uint32_t(data[ptr]) << 24) | (uint32_t(data[ptr + 1]) << 16) |
+                        (uint32_t(data[ptr + 2]) << 8) | uint32_t(data[ptr + 3]);
+    ptr += 4;
+
+    // A length that runs past the end of the buffer means the stream is
+    // malformed; stop rather than read out of bounds.
+    if (nal_size > size - ptr) {
+      break;
+    }
+
+    if (nal_size > 0) {
+      units.emplace_back(data + ptr, (size_t) nal_size);
+    }
+
+    ptr += nal_size;
+  }
+
+  return units;
+}
+
+
+
 void Decoder::release_decoder()
 {
   if (m_decoder) {
@@ -428,14 +457,34 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
     return pluginErr;
   }
 
-  // Reject memory-bomb inputs whose codec configuration record (SPS) declares
-  // a coded picture size beyond libheif's security limits, before handing any
-  // bytes to the decoder plugin. Codecs whose configuration record does not
-  // carry dimensions (e.g. AV1's av1C) return nullopt and skip the check.
-  //
-  // TODO: check this also in the decoder plugin since SPS packets may be
-  //       found within the actual image bitstream.
-  auto codedSize = get_coded_image_size_from_config();
+  // Fetch the compressed data once. The same buffer is used both to enforce the
+  // security limits below and to feed the decoder, so we neither re-read the
+  // iloc extents nor rebuild the combined config+bitstream buffer twice.
+  auto dataResult = get_compressed_data(upload_configuration_NALs);
+  if (!dataResult) {
+    return dataResult.error();
+  }
+
+  // Check that we are pushing at least some data into the decoder.
+  // Some decoders (e.g. aom) do not complain when the input data is empty and we might
+  // get stuck in an endless decoding loop, waiting for the decompressed image.
+  if (dataResult->size() == 0) {
+    return Error{
+      heif_error_Invalid_input,
+      heif_suberror_Unspecified,
+      "Input with empty data extent."
+    };
+  }
+
+  // Reject memory-bomb inputs whose coded picture size exceeds libheif's
+  // security limits, before handing any bytes to the decoder plugin. The coded
+  // (pre-crop) size the decoder will allocate lives in the bitstream: the SPS for
+  // AVC/HEVC/VVC, the Sequence Header OBU for AV1/AVIF, or the SOF marker for
+  // JPEG. It can be far larger than the 'ispe' dimensions, and for the NAL codecs
+  // an SPS may sit in the item data rather than only in the config record, so we
+  // scan the whole buffer that is about to be pushed. Codecs that expose no coded
+  // size return nullopt and skip the check.
+  auto codedSize = get_max_coded_image_size(*dataResult);
   if (codedSize.is_error()) {
     return codedSize.error();
   }
@@ -484,23 +533,6 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
         }
       }
     }
-  }
-
-  auto dataResult = get_compressed_data(upload_configuration_NALs);
-  if (!dataResult) {
-    return dataResult.error();
-  }
-
-  // Check that we are pushing at least some data into the decoder.
-  // Some decoders (e.g. aom) do not complain when the input data is empty and we might
-  // get stuck in an endless decoding loop, waiting for the decompressed image.
-
-  if (dataResult->size() == 0) {
-    return Error{
-      heif_error_Invalid_input,
-      heif_suberror_Unspecified,
-      "Input with empty data extent."
-    };
   }
 
   //std::cout << "Decoder::decode_sequence_frame_from_compressed_data push " << dataResult->size() << "\n";

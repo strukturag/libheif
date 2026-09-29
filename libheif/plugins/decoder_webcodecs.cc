@@ -21,6 +21,7 @@
 #include "decoder_webcodecs.h"
 #include "libheif/heif_plugin.h"
 #include "codecs/hevc_boxes.h"
+#include "codecs/decoder.h"
 #include "bitstream.h"
 #include "nalu_utils.h"
 
@@ -30,6 +31,7 @@
 #include <emscripten/emscripten.h>
 #include <cstdio>
 #include <emscripten/bind.h>
+#include <limits>
 #include <memory>
 #include <queue>
 #include <string>
@@ -88,19 +90,24 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
     }
 
     function handleEmptyFormat(decoded) {
-      const canvas = new OffscreenCanvas(decoded.codedWidth, decoded.codedHeight);
+      // Use the visible rectangle, not the coded rectangle. The coded rectangle
+      // may include non-visible padding (HEVC conformance window) that is not
+      // part of the image.
+      const width = decoded.visibleRect.width;
+      const height = decoded.visibleRect.height;
+      const canvas = new OffscreenCanvas(width, height);
       const context = canvas.getContext('2d');
-      context.drawImage(decoded, 0, 0);
-      const imageData = context.getImageData(0, 0, decoded.codedWidth, decoded.codedHeight);
+      context.drawImage(decoded, 0, 0, width, height);
+      const imageData = context.getImageData(0, 0, width, height);
       const data = imageData.data;
       const format = 'RGBA';
-      const planes = [{offset: 0, stride: decoded.codedWidth * 4}];
+      const planes = [{offset: 0, stride: width * 4}];
       callback(Emval.toHandle({
         'buffer': data,
         'format': format,
         'planes': planes,
-        'codedWidth': decoded.codedWidth, 
-        'codedHeight': decoded.codedHeight,
+        'width': width,
+        'height': height,
       }));
 
       decoded.close();
@@ -127,12 +134,23 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         const nativeFormats = ['NV12', 'I420', 'I422', 'I444'];
         const format = nativeFormats.includes(decoded.format) ? decoded.format : 'RGBA';
         const fullRange = decoded.colorSpace ? decoded.colorSpace.fullRange : false;
+
+        // Always operate on the visible rectangle. allocationSize() and
+        // copyTo() default to it anyway, but pass it explicitly so that the
+        // buffer size, the plane layout and the dimensions reported to C++
+        // are guaranteed to describe the same rectangle. The coded rectangle
+        // (codedWidth x codedHeight) can be larger because of the HEVC
+        // conformance window, which is set by the file being decoded. It must
+        // never be used as the geometry of the copied buffer.
+        const rect = decoded.visibleRect;
+        const width = rect.width;
+        const height = rect.height;
         const formatOptions = nativeFormats.includes(format) ?
-          {} :
-          {'format': format, 'colorSpace': 'srgb'};
+          {'rect': rect} :
+          {'rect': rect, 'format': format, 'colorSpace': 'srgb'};
         const bufferSize = nativeFormats.includes(format) ?
-          decoded.allocationSize() :
-          decoded.codedWidth * decoded.codedHeight * 4;
+          decoded.allocationSize(formatOptions) :
+          width * height * 4;
 
         const buffer = new Uint8Array(bufferSize);
 
@@ -143,8 +161,8 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
             'buffer': buffer,
             'format': format,
             'planes': planes,
-            'codedWidth': decoded.codedWidth, 
-            'codedHeight': decoded.codedHeight,
+            'width': width,
+            'height': height,
             'fullRange': fullRange,
           }));
 
@@ -179,181 +197,6 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
     }
   });
 });
-
-
-static std::vector<uint8_t> remove_start_code_emulation2(const uint8_t* sps, size_t size)
-{
-  std::vector<uint8_t> out_data;
-
-  for (size_t i = 0; i < size; i++) {
-    if (i + 2 < size &&
-        sps[i] == 0 &&
-        sps[i + 1] == 0 &&
-        sps[i + 2] == 3) {
-      out_data.push_back(0);
-      out_data.push_back(0);
-      i += 2;
-    }
-    else {
-      out_data.push_back(sps[i]);
-    }
-  }
-
-  return out_data;
-}
-
-
-Error parse_sps_for_hvcC_configuration2(const uint8_t* sps, size_t size,
-                                       HEVCDecoderConfigurationRecord* config,
-                                       uint32_t* width, uint32_t* height)
-{
-  // remove start-code emulation bytes from SPS header stream
-
-  std::vector<uint8_t> sps_no_emul = remove_start_code_emulation2(sps, size);
-
-  sps = sps_no_emul.data();
-  size = sps_no_emul.size();
-
-
-  BitReader reader(sps, size);
-
-  // skip NAL header
-  reader.skip_bits(2 * 8);
-
-  // skip VPS ID
-  reader.skip_bits(4);
-
-  uint8_t nMaxSubLayersMinus1 = reader.get_bits8(3);
-
-  config->temporal_id_nested = reader.get_bits8(1);
-
-  // --- profile_tier_level ---
-
-  config->general_profile_space = reader.get_bits8(2);
-  config->general_tier_flag = reader.get_bits8(1);
-  config->general_profile_idc = reader.get_bits8(5);
-  config->general_profile_compatibility_flags = reader.get_bits32(32);
-
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-  reader.skip_bits(16); // skip reserved bits
-
-  config->general_level_idc = reader.get_bits8(8);
-
-  std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
-  std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
-
-  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
-    layer_profile_present[i] = reader.get_bits(1);
-    layer_level_present[i] = reader.get_bits(1);
-  }
-
-  if (nMaxSubLayersMinus1 > 0) {
-    for (int i = nMaxSubLayersMinus1; i < 8; i++) {
-      reader.skip_bits(2);
-    }
-  }
-
-  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
-    if (layer_profile_present[i]) {
-      reader.skip_bits(2 + 1 + 5);
-      reader.skip_bits(32);
-      reader.skip_bits(16);
-    }
-
-    if (layer_level_present[i]) {
-      reader.skip_bits(8);
-    }
-  }
-
-
-  // --- SPS continued ---
-
-  Error invalidUVLC{
-    heif_error_Invalid_input,
-    heif_suberror_Invalid_parameter_value,
-    "Invalid variable length code in HEVC SPS header"
-  };
-
-  uint32_t dummy, value;
-  if (!reader.get_uvlc(&dummy) || // skip seq_parameter_seq_id
-      !reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  config->chroma_format = (uint8_t) value;
-
-  if (config->chroma_format == 3) {
-    reader.skip_bits(1);
-  }
-
-  if (!reader.get_uvlc(width) ||
-      !reader.get_uvlc(height)) {
-    return invalidUVLC;
-  }
-
-  bool conformance_window = reader.get_bits(1);
-  if (conformance_window) {
-    uint32_t left, right, top, bottom;
-    if (!reader.get_uvlc(&left) ||
-        !reader.get_uvlc(&right) ||
-        !reader.get_uvlc(&top) ||
-        !reader.get_uvlc(&bottom)) {
-      return invalidUVLC;
-    }
-
-    //printf("conformance borders: %u %u %u %u\n",left,right,top,bottom);
-
-    uint32_t subH = 1, subV = 1;
-    if (config->chroma_format == 1) {
-      subV = 2;
-      subH = 2;
-    }
-    if (config->chroma_format == 2) { subH = 2; }
-
-    const uint64_t crop_w = (uint64_t)subH * ((uint64_t)left + (uint64_t)right);
-    const uint64_t crop_h = (uint64_t)subV * ((uint64_t)top + (uint64_t)bottom);
-    if (crop_w > *width || crop_h > *height) {
-      return Error{heif_error_Invalid_input,
-                   heif_suberror_Invalid_parameter_value,
-                   "SPS conformance window exceeds image dimensions"};
-    }
-    *width  -= (uint32_t)crop_w;
-    *height -= (uint32_t)crop_h;
-  }
-
-  if (!reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  if (value > 8) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 "SPS bit_depth_luma_minus8 out of range"};
-  }
-  config->bit_depth_luma = (uint8_t) (value + 8);
-
-  if (!reader.get_uvlc(&value)) {
-    return invalidUVLC;
-  }
-  if (value > 8) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Invalid_parameter_value,
-                 "SPS bit_depth_chroma_minus8 out of range"};
-  }
-  config->bit_depth_chroma = (uint8_t) (value + 8);
-
-
-
-  // --- init static configuration fields ---
-
-  config->configuration_version = 1;
-  config->min_spatial_segmentation_idc = 0; // TODO: get this value from the VUI, 0 should be safe
-  config->parallelism_type = 0; // TODO, 0 should be safe
-  config->avg_frame_rate = 0; // makes no sense for HEIF
-  config->constant_frame_rate = 0; // makes no sense for HEIF
-  config->num_temporal_layers = 1; // makes no sense for HEIF
-
-  return Error::Ok;
-}
 
 
 static const char* webcodecs_plugin_name()
@@ -474,6 +317,59 @@ static void normalize_chroma_range(uint8_t* dst, int stride, int width, int heig
   }
 }
 
+// Returns the size of the chroma planes for the given chroma format. Odd luma
+// sizes are rounded up, matching the convention used throughout libheif.
+static void get_chroma_plane_size(heif_chroma chroma, int width, int height,
+                                  int* chroma_w, int* chroma_h)
+{
+  *chroma_w = width;
+  *chroma_h = height;
+  if (chroma == heif_chroma_420 || chroma == heif_chroma_monochrome) {
+    *chroma_w = (width + 1) / 2;
+    *chroma_h = (height + 1) / 2;
+  }
+  else if (chroma == heif_chroma_422) {
+    *chroma_w = (width + 1) / 2;
+  }
+}
+
+
+// Checks that a plane consisting of 'rows' rows of 'row_bytes' bytes each,
+// starting at 'offset' and with 'stride' bytes between consecutive rows, lies
+// entirely within a buffer of 'buffer_size' bytes.
+//
+// The plane layout is reported by the browser and the image geometry
+// ultimately comes from the file being decoded, so none of these values may be
+// trusted. Every copy loop that reads from the browser's buffer must be
+// preceded by this check.
+static bool plane_fits_in_buffer(size_t buffer_size,
+                                 int offset, int stride,
+                                 int rows, int row_bytes)
+{
+  if (offset < 0 || stride < 0 || rows <= 0 || row_bytes <= 0) {
+    return false;
+  }
+
+  if (stride < row_bytes) {
+    return false;
+  }
+
+  const uint64_t end = static_cast<uint64_t>(offset) +
+                       static_cast<uint64_t>(rows - 1) * static_cast<uint64_t>(stride) +
+                       static_cast<uint64_t>(row_bytes);
+  return end <= buffer_size;
+}
+
+
+static const heif_error kPlaneOutOfBoundsError = {
+    heif_error_Decoder_plugin_error,
+    heif_suberror_Unspecified,
+    "Decoding failed: plane layout reported by the browser exceeds the decoded buffer"};
+
+
+// The caller must have verified with plane_fits_in_buffer() that each source
+// plane covers 'height' rows of 'width' bytes (luma) and the corresponding
+// chroma plane size (see get_chroma_plane_size()).
 static struct heif_error convert_planar_yuv_to_heif_image(
     const uint8_t* y_src, int y_src_stride,
     const uint8_t* u_src, int u_src_stride,
@@ -481,18 +377,13 @@ static struct heif_error convert_planar_yuv_to_heif_image(
     int width, int height,
     struct heif_image** out_img,
     heif_chroma chroma,
-    bool is_full_range) {
+    bool is_full_range,
+    const heif_security_limits* limits) {
   heif_error err;
   bool is_mono = chroma == heif_chroma_monochrome;
 
-  int chroma_w = width;
-  int chroma_h = height;
-  if (chroma == heif_chroma_420 || is_mono) {
-    chroma_w = width / 2;
-    chroma_h = height / 2;
-  } else if (chroma == heif_chroma_422) {
-    chroma_w = width / 2;
-  }
+  int chroma_w, chroma_h;
+  get_chroma_plane_size(chroma, width, height, &chroma_w, &chroma_h);
 
   err = heif_image_create(
       width, height,
@@ -504,8 +395,8 @@ static struct heif_error convert_planar_yuv_to_heif_image(
     return err;
   }
 
-  err = heif_image_add_plane(
-      *out_img, heif_channel_Y, width, height, 8);
+  err = heif_image_add_plane_safe(
+      *out_img, heif_channel_Y, width, height, 8, limits);
   if (err.code) {
     heif_image_release(*out_img);
     return err;
@@ -525,17 +416,17 @@ static struct heif_error convert_planar_yuv_to_heif_image(
   }
 
   if (!is_mono) {
-    err = heif_image_add_plane(
+    err = heif_image_add_plane_safe(
         *out_img, heif_channel_Cb,
-        chroma_w, chroma_h, 8);
+        chroma_w, chroma_h, 8, limits);
     if (err.code) {
       heif_image_release(*out_img);
       return err;
     }
 
-    err = heif_image_add_plane(
+    err = heif_image_add_plane_safe(
         *out_img, heif_channel_Cr,
-        chroma_w, chroma_h, 8);
+        chroma_w, chroma_h, 8, limits);
     if (err.code) {
       heif_image_release(*out_img);
       return err;
@@ -571,27 +462,36 @@ static struct heif_error convert_planar_yuv_to_heif_image(
 }
 
 static struct heif_error convert_nv12_to_heif_image(
-    const std::unique_ptr<uint8_t[]>& buffer,
+    const std::unique_ptr<uint8_t[]>& buffer, size_t buffer_size,
     int width, int height,
     int y_offset, int y_src_stride,
     int uv_offset, int uv_src_stride,
     struct heif_image** out_img,
-    heif_chroma chroma,
-    bool is_full_range) {
-  bool is_mono = chroma == heif_chroma_monochrome;
+    bool is_mono,
+    bool is_full_range,
+    const heif_security_limits* limits) {
+  if (!plane_fits_in_buffer(buffer_size, y_offset, y_src_stride, height, width)) {
+    return kPlaneOutOfBoundsError;
+  }
 
   if (is_mono) {
     return convert_planar_yuv_to_heif_image(
         buffer.get() + y_offset, y_src_stride,
         nullptr, 0, nullptr, 0,
         width, height, out_img,
-        heif_chroma_monochrome, is_full_range);
+        heif_chroma_monochrome, is_full_range, limits);
   }
 
-  int chroma_w = width / 2;
-  int chroma_h = height / 2;
-  std::vector<uint8_t> u_buf(chroma_w * chroma_h);
-  std::vector<uint8_t> v_buf(chroma_w * chroma_h);
+  int chroma_w, chroma_h;
+  get_chroma_plane_size(heif_chroma_420, width, height, &chroma_w, &chroma_h);
+
+  // The interleaved UV plane has chroma_w Cb/Cr sample pairs per row.
+  if (!plane_fits_in_buffer(buffer_size, uv_offset, uv_src_stride, chroma_h, chroma_w * 2)) {
+    return kPlaneOutOfBoundsError;
+  }
+
+  std::vector<uint8_t> u_buf(static_cast<size_t>(chroma_w) * chroma_h);
+  std::vector<uint8_t> v_buf(static_cast<size_t>(chroma_w) * chroma_h);
 
   for (int i = 0; i < chroma_h; ++i) {
     const uint8_t* uv_row =
@@ -607,7 +507,7 @@ static struct heif_error convert_nv12_to_heif_image(
       u_buf.data(), chroma_w,
       v_buf.data(), chroma_w,
       width, height, out_img,
-      heif_chroma_420, is_full_range);
+      heif_chroma_420, is_full_range, limits);
 }
 
 /** 
@@ -683,8 +583,9 @@ static void get_nal_units(struct webcodecs_decoder* decoder,
 }
 
 
-static struct heif_error webcodecs_decode_image(void* decoder_raw,
-                                                  struct heif_image** out_img)
+static struct heif_error webcodecs_decode_image_with_limits(void* decoder_raw,
+                                                              struct heif_image** out_img,
+                                                              const heif_security_limits* limits)
 {
   struct webcodecs_decoder* decoder = (struct webcodecs_decoder*) decoder_raw;
   *out_img = nullptr;
@@ -703,12 +604,33 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
   }
 
   HEVCDecoderConfigurationRecord config;
-  uint32_t w, h;
-  Error err = parse_sps_for_hvcC_configuration2(sps_nal_unit.data.data(), sps_nal_unit.data.size(), &config, &w, &h);
+  uint32_t w, h;      // visible size after applying the conformance window
+  ImageSize coded{};  // size of the coded picture
+  Error err = parse_sps_for_hvcC_configuration(sps_nal_unit.data.data(), sps_nal_unit.data.size(),
+                                               &config, &w, &h, &coded);
   if (err != Error::Ok) {
     return {heif_error_Decoder_plugin_error,
             heif_suberror_Unspecified,
             "Failed to parse SPS"};
+  }
+
+  // Reject coded picture sizes beyond the security limits before handing the
+  // bitstream to the browser. libheif checks the SPS stored in the hvcC box,
+  // but this plugin honours the last SPS in the NAL stream, which may differ.
+  if (coded.width == 0 || coded.height == 0 || w == 0 || h == 0) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Invalid_image_size,
+            "SPS declares a zero-sized image"};
+  }
+
+  if (limits && limits->max_image_size_pixels > 0) {
+    const auto max_dim = static_cast<uint32_t>(std::numeric_limits<int>::max());
+    if (coded.width > max_dim || coded.height > max_dim ||
+        coded.width > limits->max_image_size_pixels / coded.height) {
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              "SPS coded picture size exceeds the maximum image size"};
+    }
   }
 
   config.m_nal_array.push_back(HEVCDecoderConfigurationRecord::NalArray{0, HEVC_NAL_UNIT_VPS_NUT, {vps_nal_unit.data}});
@@ -769,8 +691,27 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
   emscripten::val memory_view(emscripten::typed_memory_view(len, buffer.get()));
   memory_view.call<void>("set", js_array);
 
-  const int width = result["codedWidth"].as<int>();
-  const int height = result["codedHeight"].as<int>();
+  // These are the dimensions of the visible rectangle that the JavaScript side
+  // copied into 'buffer'. They are only used together with the plane layout
+  // after plane_fits_in_buffer() has confirmed that the layout stays within
+  // 'len' bytes.
+  if (result["width"].isUndefined() || result["height"].isUndefined()) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Unspecified,
+            "Decoding failed: result.width or result.height is undefined"};
+  }
+
+  // The upper bound keeps the per-row byte counts computed below (up to four
+  // bytes per pixel) and the rounded-up chroma sizes representable as int.
+  const int max_dim = std::numeric_limits<int>::max() / 4;
+  const int width = result["width"].as<int>();
+  const int height = result["height"].as<int>();
+  if (width <= 0 || height <= 0 || width > max_dim || height > max_dim) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Invalid_image_size,
+            "Decoding failed: invalid image size reported by the browser"};
+  }
+
   std::string format = result["format"].as<std::string>();
 
   emscripten::val planes = result["planes"];
@@ -820,7 +761,9 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
       uv_src_stride = uv_plane["stride"].as<int>();
     }
 
-    return convert_nv12_to_heif_image(buffer, width, height, y_offset, y_src_stride, uv_offset, uv_src_stride, out_img, (heif_chroma)config.chroma_format, is_full_range);
+    return convert_nv12_to_heif_image(buffer, len, width, height,
+                                      y_offset, y_src_stride, uv_offset, uv_src_stride,
+                                      out_img, is_mono, is_full_range, limits);
   } else if (format == "I420" || format == "I422" || format == "I444") {
     if (planes["length"].as<size_t>() < 3) {
       return {heif_error_Decoder_plugin_error,
@@ -844,15 +787,28 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
       chroma = heif_chroma_444;
     }
 
+    const int y_offset = y_plane["offset"].as<int>();
+    const int y_src_stride = y_plane["stride"].as<int>();
+    const int u_offset = u_plane["offset"].as<int>();
+    const int u_src_stride = u_plane["stride"].as<int>();
+    const int v_offset = v_plane["offset"].as<int>();
+    const int v_src_stride = v_plane["stride"].as<int>();
+
+    int chroma_w, chroma_h;
+    get_chroma_plane_size(chroma, width, height, &chroma_w, &chroma_h);
+
+    if (!plane_fits_in_buffer(len, y_offset, y_src_stride, height, width) ||
+        !plane_fits_in_buffer(len, u_offset, u_src_stride, chroma_h, chroma_w) ||
+        !plane_fits_in_buffer(len, v_offset, v_src_stride, chroma_h, chroma_w)) {
+      return kPlaneOutOfBoundsError;
+    }
+
     return convert_planar_yuv_to_heif_image(
-        buffer.get() + y_plane["offset"].as<int>(),
-        y_plane["stride"].as<int>(),
-        buffer.get() + u_plane["offset"].as<int>(),
-        u_plane["stride"].as<int>(),
-        buffer.get() + v_plane["offset"].as<int>(),
-        v_plane["stride"].as<int>(),
+        buffer.get() + y_offset, y_src_stride,
+        buffer.get() + u_offset, u_src_stride,
+        buffer.get() + v_offset, v_src_stride,
         width, height,
-        out_img, chroma, is_full_range);
+        out_img, chroma, is_full_range, limits);
   } else if (format == "RGBA") {
     if (planes["length"].as<size_t>() < 1) {
       return {heif_error_Decoder_plugin_error,
@@ -870,6 +826,10 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
     const int rgba_offset = rgba_plane["offset"].as<int>();
     const int rgba_src_stride = rgba_plane["stride"].as<int>();
 
+    if (!plane_fits_in_buffer(len, rgba_offset, rgba_src_stride, height, width * 4)) {
+      return kPlaneOutOfBoundsError;
+    }
+
     heif_error err;
     err = heif_image_create(width,
                             height,
@@ -880,7 +840,7 @@ static struct heif_error webcodecs_decode_image(void* decoder_raw,
       return err;
     }
 
-    err = heif_image_add_plane(*out_img, heif_channel_interleaved, width, height, 8);
+    err = heif_image_add_plane_safe(*out_img, heif_channel_interleaved, width, height, 8, limits);
     if (err.code) {
       heif_image_release(*out_img);
       return err;
@@ -937,7 +897,7 @@ static struct heif_error webcodecs_decode_next_image(void* decoder_raw,
                                                      struct heif_image** out_img,
                                                      const heif_security_limits* limits)
 {
-  return webcodecs_decode_image(decoder_raw, out_img);
+  return webcodecs_decode_image_with_limits(decoder_raw, out_img, limits);
 }
 
 
@@ -949,7 +909,15 @@ static struct heif_error webcodecs_decode_next_image2(void* decoder_raw,
   if (out_user_data) {
     *out_user_data = 0;
   }
-  return webcodecs_decode_image(decoder_raw, out_img);
+  return webcodecs_decode_image_with_limits(decoder_raw, out_img, limits);
+}
+
+
+static struct heif_error webcodecs_decode_image(void* decoder_raw,
+                                                struct heif_image** out_img)
+{
+  auto* limits = heif_get_global_security_limits();
+  return webcodecs_decode_image_with_limits(decoder_raw, out_img, limits);
 }
 
 

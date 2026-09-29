@@ -24,9 +24,35 @@
 #include "context.h"
 #include "api_structs.h"
 
+#include <algorithm>
 #include <string>
+#include <utility>
 
 #include "plugins/nalu_utils.h"
+
+
+// The HEVCDecoderConfigurationRecord ('hvcC', ISO/IEC 14496-15) stores bitDepthLumaMinus8 and
+// bitDepthChromaMinus8 in 3 bits each. It can signal 8 to 15 bits per sample, but not the
+// 16 bits that HEVC itself allows. Writing a 16-bit image would put a bit depth of 8 into
+// its 'hvcC' box, so we refuse to encode it.
+static const int MAX_BIT_DEPTH_IN_HVCC = 15;
+
+static Error check_bit_depth_fits_hvcC(int bit_depth)
+{
+  if (bit_depth > MAX_BIT_DEPTH_IN_HVCC) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_bit_depth,
+                 "HEVC images with more than 15 bits per sample cannot be written, "
+                 "because the 'hvcC' box cannot signal their bit depth."};
+  }
+
+  return Error::Ok;
+}
+
+static Error check_bit_depth_fits_hvcC(const HEVCDecoderConfigurationRecord& config)
+{
+  return check_bit_depth_fits_hvcC(std::max(config.bit_depth_luma, config.bit_depth_chroma));
+}
 
 
 // TODO: can we use the new sequences interface for this to avoid duplicate code.
@@ -36,6 +62,10 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
                                                      heif_image_input_class input_class)
 {
   CodedImageData codedImage;
+
+  if (Error bitDepthErr = check_bit_depth_fits_hvcC(image->get_visual_image_bits_per_pixel())) {
+    return bitDepthErr;
+  }
 
   auto hvcC = std::make_shared<Box_hvcC>();
 
@@ -68,6 +98,11 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 
     if ((data[0] >> 1) == HEVC_NAL_UNIT_SPS_NUT) {
       parse_sps_for_hvcC_configuration(data, size, &hvcC->get_configuration(), &encoded_width, &encoded_height);
+
+      // The encoder decides about the coded bit depth, it may differ from the one of the input image.
+      if (Error bitDepthErr = check_bit_depth_fits_hvcC(hvcC->get_configuration())) {
+        return bitDepthErr;
+      }
 
       codedImage.encoded_image_width = encoded_width;
       codedImage.encoded_image_height = encoded_height;
@@ -122,6 +157,10 @@ Error Encoder_HEVC::encode_sequence_frame(const std::shared_ptr<HeifPixelImage>&
                                           uint32_t framerate_num, uint32_t framerate_denom,
                                           uintptr_t frame_number)
 {
+  if (Error bitDepthErr = check_bit_depth_fits_hvcC(image->get_visual_image_bits_per_pixel())) {
+    return bitDepthErr;
+  }
+
   heif_image c_api_image;
   c_api_image.image = image;
 
@@ -170,16 +209,14 @@ Error Encoder_HEVC::encode_sequence_flush(heif_encoder* encoder)
 }
 
 
-std::optional<Encoder::CodedImageData> Encoder_HEVC::encode_sequence_get_data()
+std::optional<Encoder::CodedImageData> Encoder_HEVC::encode_sequence_extract_data()
 {
-  return std::move(m_current_output_data);
+  return std::exchange(m_current_output_data, std::nullopt);
 }
 
 Error Encoder_HEVC::get_data(heif_encoder* encoder)
 {
   //CodedImageData codedImage;
-
-  bool got_some_data = false;
 
   for (;;) {
     uint8_t* data;
@@ -196,8 +233,6 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
       break;
     }
 
-    got_some_data = true;
-
     const uint8_t nal_type = (data[0] >> 1);
     const bool is_sync = (nal_type == 19 || nal_type == 20 || nal_type == 21);
     const bool is_image_data = (nal_type >= 0 && nal_type <= HEVC_NAL_UNIT_MAX_VCL);
@@ -208,6 +243,10 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
       parse_sps_for_hvcC_configuration(data, size,
                                        &m_hvcC->get_configuration(),
                                        &m_encoded_image_width, &m_encoded_image_height);
+
+      if (Error bitDepthErr = check_bit_depth_fits_hvcC(m_hvcC->get_configuration())) {
+        return bitDepthErr;
+      }
     }
 
     switch (nal_type) {
@@ -243,7 +282,11 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
     }
   }
 
-  if (!got_some_data) {
+  // No coded image to report when the encoder returned no NALs, or only parameter sets.
+  // x265, for example, emits VPS/SPS/PPS from encoder_headers() as soon as the sequence
+  // encoder is opened, so the first get_data() after start_sequence_encoding() sees only
+  // headers. Those went into m_hvcC above and m_current_output_data stays disengaged.
+  if (!m_current_output_data) {
     return {};
   }
 
@@ -257,8 +300,7 @@ Error Encoder_HEVC::get_data(heif_encoder* encoder)
   //     TODO: it's maybe better to return this at the end so that we are sure to have all headers
   //           and also complete codingConstraints.
 
-  if (!m_current_output_data->bitstream.empty() &&
-      m_hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_sent) {
+  if (m_hvcC_has_VPS && m_hvcC_has_SPS && m_hvcC_has_PPS && !m_hvcC_sent) {
   //if (/*m_end_of_sequence_reached &&*/ m_hvcC && !m_hvcC_sent) {
     m_current_output_data->properties.push_back(m_hvcC);
     m_hvcC = nullptr;

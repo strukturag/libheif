@@ -168,4 +168,12 @@ Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::
 
 bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
 
+// Scan a combined AV1 bitstream (av1C configOBUs + item/sample data) for every
+// OBU_SEQUENCE_HEADER and return the largest coded frame size (in luma samples)
+// declared by any of them. Returns false when no parseable sequence header was
+// found, in which case the size outputs are left untouched. Used to enforce the
+// security limits before the bitstream reaches any AV1 decoder plugin.
+bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
+                                       uint32_t* out_max_width, uint32_t* out_max_height);
+
 #endif
