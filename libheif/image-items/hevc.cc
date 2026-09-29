@@ -94,9 +94,12 @@ heif_brand2 ImageItem_HEVC::get_compatible_brand() const
     return heif_brand2_heix;
   }
 
-  // TODO: what brand should we use for this case?
+  // There is no brand for the other profiles of HEVC, like the high throughput profiles or
+  // the screen content coding profiles: 'heix' is limited to the Main 10 profile and the
+  // format range extensions profiles (ISO/IEC 23008-12, B.4.1.1). The file does not claim
+  // a brand for this image, it is a plain 'mif1' file.
 
-  return heif_brand2_heix;
+  return 0;
 }
 
 
