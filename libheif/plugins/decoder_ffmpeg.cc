@@ -386,13 +386,15 @@ static heif_chroma ffmpeg_get_chroma_format(AVPixelFormat pix_fmt) {
     case AV_PIX_FMT_YUV444P16:
       return heif_chroma_444;
 
-    // FFmpeg's HEVC decoder outputs planar GBR for 4:4:4 streams signaling
+    // FFmpeg's HEVC and AVC decoders output planar GBR for 4:4:4 streams signaling
     // matrix_coefficients 0. Its G, B, R planes map onto Y, Cb, Cr, which is
     // exactly how libheif stores images with the identity matrix.
+    // HEVC is decoded up to 12 bits, AVC (High 4:4:4 Predictive) up to 14 bits.
     case AV_PIX_FMT_GBRP:
     case AV_PIX_FMT_GBRP9:
     case AV_PIX_FMT_GBRP10:
     case AV_PIX_FMT_GBRP12:
+    case AV_PIX_FMT_GBRP14:
       return heif_chroma_444;
 
     default:
@@ -465,6 +467,7 @@ static int get_ffmpeg_format_bpp(AVPixelFormat pix_fmt)
     case AV_PIX_FMT_YUV420P14:
     case AV_PIX_FMT_YUV422P14:
     case AV_PIX_FMT_YUV444P14:
+    case AV_PIX_FMT_GBRP14:
       return 14;
     case AV_PIX_FMT_GRAY16:
     case AV_PIX_FMT_YUV420P16:
