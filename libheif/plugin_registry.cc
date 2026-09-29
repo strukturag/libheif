@@ -41,6 +41,10 @@
 #include "plugins/encoder_kvazaar.h"
 #endif
 
+#if HAVE_HM
+#include "plugins/encoder_hm.h"
+#endif
+
 #if HAVE_UVG266
 #include "plugins/encoder_uvg266.h"
 #endif
@@ -161,6 +165,10 @@ void register_default_plugins()
 
 #if HAVE_KVAZAAR
   register_encoder(get_encoder_plugin_kvazaar());
+#endif
+
+#if HAVE_HM
+  register_encoder(get_encoder_plugin_hm());
 #endif
 
 #if HAVE_UVG266

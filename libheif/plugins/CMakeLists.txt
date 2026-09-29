@@ -93,6 +93,46 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR_FOUND KVAZAAR KVAZAAR)
 
+# HM builds the classes that hold the configuration of its encoder into its executable only.
+# We compile them here, the way hm.cmd compiles the HM libraries: as C++11, without warnings,
+# with hidden symbols and with hm_as_library.h included into every file.
+macro(hm_configuration_classes targetName varName highBitDepth)
+    add_library(${targetName} OBJECT ${${varName}_APP_SOURCES})
+    set_target_properties(${targetName} PROPERTIES
+            CXX_STANDARD 11
+            POSITION_INDEPENDENT_CODE ON
+            CXX_VISIBILITY_PRESET hidden
+            VISIBILITY_INLINES_HIDDEN ON)
+    target_include_directories(${targetName} SYSTEM PRIVATE ${${varName}_INCLUDE_DIRS})
+    if (${highBitDepth})
+        target_compile_definitions(${targetName} PRIVATE RExt__HIGH_BIT_DEPTH_SUPPORT=1)
+    endif ()
+    if (MSVC)
+        target_compile_options(${targetName} PRIVATE /w "/FI${CMAKE_CURRENT_SOURCE_DIR}/hm_as_library.h")
+    else ()
+        target_compile_options(${targetName} PRIVATE -w -Wno-error -include "${CMAKE_CURRENT_SOURCE_DIR}/hm_as_library.h")
+    endif ()
+endmacro()
+
+# The HM headers are full of warnings, so their directories are declared as system directories.
+macro(hm_system_include_directories pluginName varName)
+    if (TARGET heif-${pluginName})
+        target_include_directories(heif-${pluginName} SYSTEM PRIVATE ${${varName}_INCLUDE_DIRS})
+    else ()
+        target_include_directories(heif SYSTEM PRIVATE ${${varName}_INCLUDE_DIRS})
+    endif ()
+endmacro()
+
+if (HM_FOUND AND WITH_HM)
+    hm_configuration_classes(heif_hm_configuration HM TRUE)
+    set(HM_sources encoder_hm.cc encoder_hm.h hm_as_library.h $<TARGET_OBJECTS:heif_hm_configuration>)
+    set(HM_extra_plugin_sources)
+endif ()
+plugin_compilation(hm HM HM_FOUND HM HM)
+if (HM_FOUND AND WITH_HM)
+    hm_system_include_directories(hm HM)
+endif ()
+
 set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
 set(FFMPEG_DECODER_extra_plugin_sources ../error.cc nalu_utils.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)
