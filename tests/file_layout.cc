@@ -142,8 +142,17 @@ TEST_CASE("moov box with size 0 (extends to end of file)") {
 
   REQUIRE(err.error_code == heif_error_Ok);
   REQUIRE(file.get_moov_box() != nullptr);
+}
 
-  // The resolved 'moov' box must yield a readable sequence track.
+
+TEST_CASE("moov box with size 0 yields a readable sequence track") {
+  // The frames of the file are stored in an 'uncv' track. libheif only knows this sample
+  // entry when it is built with the uncompressed codec (WITH_UNCOMPRESSED_CODEC), and
+  // refuses the track otherwise.
+  if (!heif_have_decoder_for_format(heif_compression_uncompressed)) {
+    SKIP("the uncompressed codec is not compiled in");
+  }
+
   heif_context* context = get_context_for_test_file("moov_size_zero.heif");
   REQUIRE(heif_context_has_sequence(context) == 1);
   REQUIRE(heif_context_number_of_sequence_tracks(context) == 1);
