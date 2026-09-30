@@ -53,8 +53,12 @@ struct ffmpeg_decoder
 
   struct Packet
   {
+    // The payload is followed by AV_INPUT_BUFFER_PADDING_SIZE zero bytes, as FFmpeg
+    // requires for its input buffers. An empty vector is the 'flush' packet.
     std::vector<uint8_t> data;
     uintptr_t user_data;
+
+    int payload_size() const { return (int) (data.size() - AV_INPUT_BUFFER_PADDING_SIZE); }
   };
 
   std::deque<Packet> input_data;
@@ -65,10 +69,15 @@ struct ffmpeg_decoder
   const AVCodec* av_codec = NULL;
   AVCodecContext* av_codec_context = NULL;
 
+  // Only set when the decoder does not export the colour signalling itself,
+  // see ffmpeg_decoder_needs_parser_for_colour_signalling().
+  AVCodecParserContext* av_codec_parser_context = NULL;
+
   std::string error_message;
 
   ~ffmpeg_decoder()
   {
+    if (av_codec_parser_context) av_parser_close(av_codec_parser_context);
     if (av_codec_context) avcodec_free_context(&av_codec_context);
   }
 };
@@ -82,6 +91,20 @@ static bool supportsNal(AVCodecID id) {
 static bool codec_has_cicp_signalling(AVCodecID id)
 {
   return supportsNal(id) || id == AV_CODEC_ID_AV1;
+}
+
+// FFmpeg's VVC decoder copies the colour signalling of the VUI into the codec context
+// only since FFmpeg 8.0 (libavcodec 62). In FFmpeg 7.x, this is done by the VVC parser
+// and without it, all VVC images would be reported with an unspecified colour profile.
+// All other decoders export the colour signalling themselves and do not need the parser.
+static bool ffmpeg_decoder_needs_parser_for_colour_signalling(AVCodecID id)
+{
+#if LIBAVCODEC_VERSION_MAJOR < 62
+  return id == AV_CODEC_ID_VVC;
+#else
+  (void) id;
+  return false;
+#endif
 }
 
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
@@ -189,6 +212,12 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
 
   if (!decoder->av_codec) {
     return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_find_decoder() returned error" };
+  }
+
+  if (ffmpeg_decoder_needs_parser_for_colour_signalling(decoder->av_codec->id)) {
+    // This is NULL when FFmpeg was built without the parser. We can still decode then,
+    // only the colour signalling of the bitstream is not reported.
+    decoder->av_codec_parser_context = av_parser_init(decoder->av_codec->id);
   }
 
   decoder->av_codec_context = avcodec_alloc_context3(decoder->av_codec);
@@ -338,6 +367,7 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
     pkt.data.insert(pkt.data.end(), cdata, cdata + size);
   }
 
+  pkt.data.resize(pkt.data.size() + AV_INPUT_BUFFER_PADDING_SIZE, 0);
   pkt.user_data = user_data;
 
   decoder->input_data.emplace_back(std::move(pkt));
@@ -781,11 +811,22 @@ static heif_error ffmpeg_decode_next_image2(void* decoder_raw,
       }
 
       // Every pushed chunk is a complete access unit, so it goes to the decoder
-      // as one packet. Running av_parser_parse2() over it first only parsed all
-      // NAL units a second time before the decoder parsed them again.
+      // as one packet.
       av_pkt->data = first_pkt.data.data();
-      av_pkt->size = (int) first_pkt.data.size();
+      av_pkt->size = first_pkt.payload_size();
       av_pkt->pts = first_pkt.user_data;
+
+      if (decoder->av_codec_parser_context) {
+        // We run the parser only to let it copy the colour signalling into the codec context.
+        // It does not split the input and we send the whole access unit to the decoder.
+        uint8_t* parsed_data = NULL;
+        int parsed_size = 0;
+
+        decoder->av_codec_parser_context->flags = PARSER_FLAG_COMPLETE_FRAMES;
+        av_parser_parse2(decoder->av_codec_parser_context, decoder->av_codec_context, &parsed_data, &parsed_size,
+                         av_pkt->data, av_pkt->size,
+                         AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+      }
 
       ret = avcodec_send_packet(decoder->av_codec_context, av_pkt);
       decoder->input_data.pop_front();
