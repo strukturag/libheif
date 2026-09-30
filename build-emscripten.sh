@@ -167,7 +167,7 @@ echo "Running Emscripten..."
 BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM -sDYNAMIC_EXECUTION=$USE_UNSAFE_EVAL"
 
 if [ "$ENABLE_WEBCODECS" = "1" ]; then
-    BUILD_FLAGS="$BUILD_FLAGS -sJSPI"
+    BUILD_FLAGS="$BUILD_FLAGS -sJSPI -sJSPI_EXPORTS=_heif_decode_image,__webcodecs_decode_next_image2,_webcodecs_decode_image_with_limits"
 fi
 
 if [ "$USE_TYPESCRIPT" = "1" ]; then
