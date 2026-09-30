@@ -31,6 +31,7 @@
 #include <getopt.h>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <regex>
