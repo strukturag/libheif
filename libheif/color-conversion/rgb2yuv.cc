@@ -478,8 +478,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
       float g = static_cast<float>((in[2 + le] << 8) | in[3 - le]);
       float b = static_cast<float>((in[4 + le] << 8) | in[5 - le]);
 
-      int dx = (x + 1 < width) ? bytesPerPixel : 0;
-      int dy = (y + 1 < height) ? (int)in_p_stride : 0;
+      // Byte offsets to the right and lower pixels of the 2x2 block averaged
+      // into one chroma sample. Reuse the edge pixel when a neighbor is absent.
+      size_t dx = (x + 1 < width) ? static_cast<size_t>(bytesPerPixel) : 0;
+      size_t dy = (y + 1 < height) ? in_p_stride : 0;
 
       r += static_cast<float>((in[0 + le + dx] << 8) | in[1 - le + dx]);
       g += static_cast<float>((in[2 + le + dx] << 8) | in[3 - le + dx]);
