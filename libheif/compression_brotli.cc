@@ -35,7 +35,8 @@ const size_t BUF_SIZE = (1 << 18);
 
 
 Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compressed_input,
-                                               const heif_security_limits* limits)
+                                               const heif_security_limits* limits,
+                                               uint64_t max_output_size)
 {
     BrotliDecoderResult result = BROTLI_DECODER_RESULT_ERROR;
     std::vector<uint8_t> buffer(BUF_SIZE, 0);
@@ -53,27 +54,43 @@ Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compr
     // output, bypassing max_memory_block_size / max_total_memory (GHSA-24wx-9w62-c96w).
     MemoryHandle output_memory_handle;
 
+    // Append the data decoded into `buffer` to `output`.
+    auto append_decoded_data = [&]() -> Error {
+        size_t n_new_bytes = static_cast<size_t>(std::distance(buffer.data(), next_output));
+
+        // Stop as soon as there is more data than the caller expects. This keeps a
+        // decompression bomb from inflating up to the security limits when the size
+        // of the decompressed data is known in advance (GHSA-fcmw-5764-7rq8).
+        if (n_new_bytes > max_output_size - output.size()) {
+            return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
+                         "Decompressed brotli data is larger than expected.");
+        }
+
+        if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "brotli decompression output")) {
+            return memErr;
+        }
+
+        output.insert(output.end(), buffer.data(), buffer.data() + n_new_bytes);
+        return Error::Ok;
+    };
+
     while (true)
     {
         result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_output, 0);
 
         if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT)
         {
-            size_t n_new_bytes = static_cast<size_t>(std::distance(buffer.data(), next_output));
-            if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "brotli decompression output")) {
-                return memErr;
+            if (Error err = append_decoded_data()) {
+                return err;
             }
-            output.insert(output.end(), buffer.data(), buffer.data() + n_new_bytes);
             available_out = buffer.size();
             next_output = buffer.data();
         }
         else if (result == BROTLI_DECODER_RESULT_SUCCESS)
         {
-            size_t n_new_bytes = static_cast<size_t>(std::distance(buffer.data(), next_output));
-            if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "brotli decompression output")) {
-                return memErr;
+            if (Error err = append_decoded_data()) {
+                return err;
             }
-            output.insert(output.end(), buffer.data(), buffer.data() + n_new_bytes);
             break;
         }
         else if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT)

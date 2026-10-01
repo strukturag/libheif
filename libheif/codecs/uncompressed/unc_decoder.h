@@ -30,6 +30,7 @@
 #include "unc_boxes.h"
 
 class HeifPixelImage;
+class MemoryHandle;
 struct DataExtent;
 struct heif_security_limits;
 
@@ -48,10 +49,13 @@ public:
 
   virtual void ensure_channel_list(std::shared_ptr<HeifPixelImage>& img) {}
 
+  // The size of 'tile_data' is charged to 'tile_data_memory_handle', which has to
+  // live as long as 'tile_data'.
   Error fetch_tile_data(const DataExtent& dataExtent,
                         const UncompressedImageCodec::unci_properties& properties,
                         uint32_t tile_x, uint32_t tile_y,
-                        std::vector<uint8_t>& tile_data);
+                        std::vector<uint8_t>& tile_data,
+                        MemoryHandle& tile_data_memory_handle);
 
   virtual Error decode_tile(const std::vector<uint8_t>& tile_data,
                             std::shared_ptr<HeifPixelImage>& img,
@@ -83,7 +87,8 @@ protected:
 
   Result<std::vector<uint8_t>> do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
                                                   const std::vector<uint8_t>& compressed_data,
-                                                  const heif_security_limits* limits) const;
+                                                  const heif_security_limits* limits,
+                                                  uint64_t max_output_size = UINT64_MAX) const;
 
   const uint32_t m_width;
   const uint32_t m_height;

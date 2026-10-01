@@ -77,14 +77,18 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
  * This is assumed to be in RFC 1950 format, which is the normal zlib format.
  *
  * @param compressed_input the compressed data to be decompressed
- * @param output pointer to the resulting vector of decompressed data
- * @return success (Ok) or an error on failure (usually corrupt data)
+ * @param limits security limits that bound the size of the decompressed data (may be nullptr)
+ * @param max_output_size the largest size the decompressed data may have. Decompression
+ *        stops with an error as soon as more data is produced. Use this when the expected
+ *        size is known in advance.
+ * @return the decompressed data or an error on failure (usually corrupt data)
  * 
  * @sa decompress_deflate
  * @sa compress_zlib
  */
 Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
-                                             const heif_security_limits* limits);
+                                             const heif_security_limits* limits,
+                                             uint64_t max_output_size = UINT64_MAX);
 
 /**
  * Decompress "deflate" compressed data.
@@ -92,14 +96,18 @@ Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compres
  * This is assumed to be in RFC 1951 format, which is the deflate format.
  *
  * @param compressed_input the compressed data to be decompressed
- * @param output pointer to the resulting vector of decompressed data
- * @return success (Ok) or an error on failure (usually corrupt data)
+ * @param limits security limits that bound the size of the decompressed data (may be nullptr)
+ * @param max_output_size the largest size the decompressed data may have. Decompression
+ *        stops with an error as soon as more data is produced. Use this when the expected
+ *        size is known in advance.
+ * @return the decompressed data or an error on failure (usually corrupt data)
  * 
  * @sa decompress_zlib
  * @sa compress_deflate
  */
 Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
-                                                const heif_security_limits* limits);
+                                                const heif_security_limits* limits,
+                                                uint64_t max_output_size = UINT64_MAX);
 
 #endif
 
@@ -110,11 +118,15 @@ Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& comp
  * Brotli is described at https://brotli.org/
  *
  * @param compressed_input the compressed data to be decompressed
- * @param output pointer to the resulting vector of decompressed data
- * @return success (Ok) or an error on failure (usually corrupt data)
+ * @param limits security limits that bound the size of the decompressed data (may be nullptr)
+ * @param max_output_size the largest size the decompressed data may have. Decompression
+ *        stops with an error as soon as more data is produced. Use this when the expected
+ *        size is known in advance.
+ * @return the decompressed data or an error on failure (usually corrupt data)
  */
 Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t>& compressed_input,
-                                               const heif_security_limits* limits);
+                                               const heif_security_limits* limits,
+                                               uint64_t max_output_size = UINT64_MAX);
 
 std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size);
 #endif

@@ -82,7 +82,8 @@ std::vector<uint8_t> compress(const uint8_t* input, size_t size, int windowSize)
 
 
 Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize,
-                                        const heif_security_limits* limits)
+                                        const heif_security_limits* limits,
+                                        uint64_t max_output_size)
 {
   if (compressed_input.empty()) {
     return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
@@ -162,6 +163,16 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
     // account for and append decoded data to output
 
     size_t n_new_bytes = dst.size() - strm.avail_out;
+
+    // Stop as soon as there is more data than the caller expects. This keeps a
+    // decompression bomb from inflating up to the security limits when the size
+    // of the decompressed data is known in advance (GHSA-fcmw-5764-7rq8).
+    if (n_new_bytes > max_output_size - output.size()) {
+      inflateEnd(&strm);
+      return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
+                   "Decompressed zlib/deflate data is larger than expected.");
+    }
+
     if (Error memErr = output_memory_handle.alloc(n_new_bytes, limits, "zlib/deflate decompression output")) {
       inflateEnd(&strm);
       return memErr;
@@ -188,14 +199,16 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size)
 
 
 Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
-                                             const heif_security_limits* limits)
+                                             const heif_security_limits* limits,
+                                             uint64_t max_output_size)
 {
-  return do_inflate(compressed_input, 15, limits);
+  return do_inflate(compressed_input, 15, limits, max_output_size);
 }
 
 Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
-                                                const heif_security_limits* limits)
+                                                const heif_security_limits* limits,
+                                                uint64_t max_output_size)
 {
-  return do_inflate(compressed_input, -15, limits);
+  return do_inflate(compressed_input, -15, limits, max_output_size);
 }
 #endif

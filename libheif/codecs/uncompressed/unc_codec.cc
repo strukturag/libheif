@@ -462,7 +462,8 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
   decoder->ensure_channel_list(img);
 
   std::vector<uint8_t> tile_data;
-  Error err = decoder->fetch_tile_data(dataExtent, properties, tile_x0, tile_y0, tile_data);
+  MemoryHandle tile_data_memory_handle;
+  Error err = decoder->fetch_tile_data(dataExtent, properties, tile_x0, tile_y0, tile_data, tile_data_memory_handle);
   if (err) {
     return err;
   }
