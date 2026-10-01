@@ -31,6 +31,7 @@
 
 #include <deque>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -85,6 +86,20 @@ struct ffmpeg_decoder
 // H. 264, H. 265, H. 266 require NAL. Others have no NAL.
 static bool supportsNal(AVCodecID id) {
   return id == AV_CODEC_ID_H264 || id == AV_CODEC_ID_H265 || id == AV_CODEC_ID_H266;
+}
+
+// Emulation prevention keeps 00 00 00, 00 00 01 and 00 00 02 out of every valid
+// NAL unit. The NAL units are handed to FFmpeg with start codes, so such a byte
+// sequence would make FFmpeg split the data differently than libheif did when it
+// checked the parameter sets.
+static bool contains_start_code_prefix(const uint8_t* data, size_t size)
+{
+  for (size_t i = 2; i < size; i++) {
+    if (data[i] <= 2 && data[i - 1] == 0 && data[i - 2] == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Codecs whose bitstream carries CICP colour signalling (VUI / sequence header).
@@ -230,6 +245,14 @@ static heif_error ffmpeg_new_decoder2(void** dec, const heif_decoder_plugin_opti
   // wider than the size signaled in the file.
   decoder->av_codec_context->flags |= AV_CODEC_FLAG_UNALIGNED;
 
+  // Let FFmpeg refuse pictures larger than libheif's limit for this image
+  // (ispe plus a coding-unit margin), as the libde265 plugin does.
+  const heif_security_limits* limits = options->limits ? options->limits : heif_get_global_security_limits();
+  if (limits->max_image_size_pixels > 0 &&
+      limits->max_image_size_pixels <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+    decoder->av_codec_context->max_pixels = static_cast<int64_t>(limits->max_image_size_pixels);
+  }
+
   /* open it */
   if (avcodec_open2(decoder->av_codec_context, decoder->av_codec, NULL) < 0) {
     return { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "avcodec_open2 returned error" };
@@ -353,6 +376,14 @@ static heif_error ffmpeg_push_data2(void *decoder_raw, const void *data, size_t 
           heif_error_Decoder_plugin_error,
           heif_suberror_End_of_data,
           "insufficient data"
+        };
+      }
+
+      if (contains_start_code_prefix(cdata + ptr, nal_size)) {
+        return {
+          heif_error_Decoder_plugin_error,
+          heif_suberror_Unspecified,
+          "NAL unit contains a start code prefix"
         };
       }
 

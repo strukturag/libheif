@@ -690,6 +690,12 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   reader.skip_bits(4);
 
   uint8_t nMaxSubLayersMinus1 = reader.get_bits8(3);
+  if (nMaxSubLayersMinus1 > 6) {
+    // sps_max_sub_layers_minus1 is in the range 0..6 (H.265 section 7.4.3.2.1).
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS sps_max_sub_layers_minus1 out of range"};
+  }
 
   config->temporal_id_nested = reader.get_bits8(1);
 
@@ -724,8 +730,12 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   for (int i = 0; i < nMaxSubLayersMinus1; i++) {
     if (layer_profile_present[i]) {
+      // Same 88 bits as the general profile above: space, tier, idc,
+      // compatibility flags, then 48 bits of source and constraint flags.
       reader.skip_bits(2 + 1 + 5);
       reader.skip_bits(32);
+      reader.skip_bits(16);
+      reader.skip_bits(16);
       reader.skip_bits(16);
     }
 
@@ -743,9 +753,17 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
     "Invalid variable length code in HEVC SPS header"
   };
 
-  uint32_t dummy, value;
-  if (!reader.get_uvlc(&dummy) || // skip seq_parameter_seq_id
-      !reader.get_uvlc(&value)) {
+  uint32_t value;
+  if (!reader.get_uvlc(&value)) {
+    return invalidUVLC;
+  }
+  if (value > 15) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS seq_parameter_set_id out of range"};
+  }
+
+  if (!reader.get_uvlc(&value)) {
     return invalidUVLC;
   }
   if (value > 3) {
@@ -764,6 +782,11 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   if (!reader.get_uvlc(width) ||
       !reader.get_uvlc(height)) {
     return invalidUVLC;
+  }
+  if (*width == 0 || *height == 0 || *width > 65535 || *height > 65535) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "SPS picture size out of range"};
   }
 
   if (coded_size) {
@@ -792,7 +815,7 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
     const uint64_t crop_w = (uint64_t)subH * ((uint64_t)left + (uint64_t)right);
     const uint64_t crop_h = (uint64_t)subV * ((uint64_t)top + (uint64_t)bottom);
-    if (crop_w > *width || crop_h > *height) {
+    if (crop_w >= *width || crop_h >= *height) {
       return Error{heif_error_Invalid_input,
                    heif_suberror_Invalid_parameter_value,
                    "SPS conformance window exceeds image dimensions"};
@@ -821,6 +844,13 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   }
   config->bit_depth_chroma = (uint8_t) (value + 8);
 
+  if (reader.get_bits_remaining() < 0) {
+    // The reader returns zeros past the end, so a truncated SPS would
+    // otherwise parse with made-up values.
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_End_of_data,
+                 "SPS header is truncated"};
+  }
 
 
   // --- init static configuration fields ---

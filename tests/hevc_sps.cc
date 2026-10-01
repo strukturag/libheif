@@ -26,6 +26,7 @@
 
 #include "catch_amalgamated.hpp"
 #include "codecs/hevc_boxes.h"
+#include "codecs/hevc_dec.h"
 #include "codecs/decoder.h"
 #include "bitstream.h"
 #include "error.h"
@@ -42,6 +43,99 @@ static const std::vector<uint8_t> rainbow_sps{
     0x03, 0x00, 0x00, 0x03, 0x00, 0x3f, 0xa0, 0x0e, 0x48, 0x07, 0x47, 0x75,
     0x96, 0xea, 0x49, 0x29, 0xae, 0x6e, 0x02, 0x1a, 0x0c, 0x08, 0x00, 0x00,
     0x03, 0x00, 0xc8, 0x00, 0x00, 0x03, 0x00, 0x08, 0x40};
+
+static void write_uvlc(BitWriter& writer, uint32_t value)
+{
+  uint32_t code = value + 1;
+  int bits = 0;
+  for (uint32_t n = code; n != 0; n >>= 1) {
+    bits++;
+  }
+  writer.write_bits(0, bits - 1);
+  writer.write_bits(code, bits);
+}
+
+
+static std::vector<uint8_t> sps_with_sub_layer_profile()
+{
+  BitWriter writer;
+  writer.write_bits8(0x42, 8); // SPS NAL header
+  writer.write_bits8(0x01, 8);
+  writer.write_bits(0, 4);     // sps_video_parameter_set_id
+  writer.write_bits(1, 3);     // sps_max_sub_layers_minus1
+  writer.write_flag(true);     // sps_temporal_id_nesting_flag
+
+  writer.write_bits(1, 8);     // general profile space, tier, and idc
+  writer.write_bits32(0, 32);  // general compatibility flags
+  writer.write_bits16(0, 16);
+  writer.write_bits16(0, 16);
+  writer.write_bits16(0, 16);  // 48 general source and constraint flags
+  writer.write_bits8(120, 8);  // general_level_idc
+
+  writer.write_flag(true);     // sub_layer_profile_present_flag[0]
+  writer.write_flag(true);     // sub_layer_level_present_flag[0]
+  for (int i = 1; i < 8; i++) {
+    writer.write_bits(0, 2);   // reserved_zero_2bits
+  }
+  writer.write_bits(1, 8);     // sub-layer profile space, tier, and idc
+  writer.write_bits32(0, 32);  // sub-layer compatibility flags
+  writer.write_bits16(0, 16);
+  writer.write_bits16(0, 16);
+  writer.write_bits16(0, 16);  // 48 sub-layer source and constraint flags
+  writer.write_bits8(120, 8);  // sub_layer_level_idc[0]
+
+  write_uvlc(writer, 0);       // sps_seq_parameter_set_id
+  write_uvlc(writer, 1);       // chroma_format_idc (4:2:0)
+  write_uvlc(writer, 64);      // pic_width_in_luma_samples
+  write_uvlc(writer, 48);      // pic_height_in_luma_samples
+  writer.write_flag(false);    // conformance_window_flag
+  write_uvlc(writer, 0);       // bit_depth_luma_minus8
+  write_uvlc(writer, 0);       // bit_depth_chroma_minus8
+  return writer.get_data();
+}
+
+
+TEST_CASE("SPS sub-layer profile consumes all 88 bits")
+{
+  std::vector<uint8_t> sps = sps_with_sub_layer_profile();
+  HEVCDecoderConfigurationRecord config{};
+  uint32_t width = 0, height = 0;
+  ImageSize coded{};
+
+  Error err = parse_sps_for_hvcC_configuration(sps.data(), sps.size(),
+                                               &config, &width, &height, &coded);
+  REQUIRE(!err);
+  CHECK(width == 64);
+  CHECK(height == 48);
+  CHECK(coded.width == 64);
+  CHECK(coded.height == 48);
+}
+
+
+TEST_CASE("HEVC coded-size scan rejects a malformed SPS after a valid one")
+{
+  std::vector<uint8_t> invalid_sps = rainbow_sps;
+  REQUIRE((invalid_sps[18] & 0xF0) == 0xA0);
+  invalid_sps[18] = 0x94 | (invalid_sps[18] & 0x03); // chroma_format_idc = 4
+
+  std::vector<uint8_t> data;
+  auto append_nal = [&data](const std::vector<uint8_t>& nal) {
+    uint32_t size = static_cast<uint32_t>(nal.size());
+    data.push_back(static_cast<uint8_t>(size >> 24));
+    data.push_back(static_cast<uint8_t>(size >> 16));
+    data.push_back(static_cast<uint8_t>(size >> 8));
+    data.push_back(static_cast<uint8_t>(size));
+    data.insert(data.end(), nal.begin(), nal.end());
+  };
+  append_nal(rainbow_sps);
+  append_nal(invalid_sps);
+
+  auto box = std::make_shared<Box_hvcC>();
+  Decoder_HEVC decoder(box);
+  auto result = decoder.get_max_coded_image_size(data);
+  REQUIRE(result.is_error());
+  CHECK(result.error().error_code == heif_error_Invalid_input);
+}
 
 
 TEST_CASE("SPS conformance window yields visible and coded size")

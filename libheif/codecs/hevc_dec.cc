@@ -82,9 +82,9 @@ Result<std::optional<ImageSize>> Decoder_HEVC::get_max_coded_image_size(const st
     Error e = parse_sps_for_hvcC_configuration(nal_data, nal_size, &scratch,
                                                &cropped_w, &cropped_h, &coded);
     if (e) {
-      // A malformed SPS we cannot parse is skipped rather than failing the whole
-      // decode; the decoder plugin applies its own limits when it reaches it.
-      continue;
+      // An SPS we cannot parse has an unknown coded size, so it must not reach the
+      // decoder plugin: not every plugin enforces the size limits before allocating.
+      return e;
     }
 
     found = true;
@@ -93,6 +93,8 @@ Result<std::optional<ImageSize>> Decoder_HEVC::get_max_coded_image_size(const st
   }
 
   if (!found) {
+    // Later samples of a sequence reuse the parameter sets of earlier ones, and
+    // those were already checked when they were pushed.
     return std::optional<ImageSize>{};
   }
 
