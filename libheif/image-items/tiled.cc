@@ -341,23 +341,35 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-Error TiledHeader::set_parameters(const heif_tiled_image_parameters& params)
+Error TiledHeader::set_parameters(const heif_tiled_image_parameters& params,
+                                  const heif_security_limits* limits)
 {
   m_parameters = params;
 
-  Result<uint64_t> num_tiles_result = number_of_tiles(params, heif_get_global_security_limits());
+  // Enforce the *caller's* limits here, not the global defaults: a caller
+  // that tightened max_number_of_tiles must get enforcement on this path
+  // (previously the global defaults were used, ignoring the caller's
+  // configuration entirely).
+  const heif_security_limits* use_limits = limits ? limits : heif_get_global_security_limits();
+
+  Result<uint64_t> num_tiles_result = number_of_tiles(params, use_limits);
   if (auto err = num_tiles_result.error()) {
     return err;
   }
 
-  // TODO(security): this offset table is bounded only by max_number_of_tiles
-  // (default 4096*4096 => ~256 MB for the TileOffset vector), and the allocation
-  // is neither counted against max_total_memory via MemoryHandle nor deferred to
-  // decode time. It also uses the global security limits instead of the context
-  // limits. Route this allocation through MemoryHandle and use the context limits
-  // so a small 'tili' file cannot pre-allocate hundreds of MB at file-open time.
-  // (Reported in GHSA-x8xm-cm2c-cfc8, variant V3. 'tili' is experimental.)
-  m_offsets.resize(*num_tiles_result);
+  const uint64_t nTiles = *num_tiles_result;
+
+  // Account the up-front offset-table allocation against max_total_memory /
+  // max_memory_block_size so that a small 'tili' file cannot pre-allocate
+  // hundreds of MB at decode-init time (GHSA-x8xm-cm2c-cfc8, variant V3).
+  // The calloc-style overload also guards the count*element_size computation
+  // against size_t overflow.
+  m_offsets_memory.free();
+  if (Error err = m_offsets_memory.alloc(nTiles, sizeof(TileOffset), use_limits, "tili tile offset table")) {
+    return err;
+  }
+
+  m_offsets.resize(static_cast<size_t>(nTiles));
 
   for (auto& tile: m_offsets) {
     tile.offset = TILD_OFFSET_NOT_LOADED;
@@ -634,7 +646,7 @@ Error ImageItem_Tiled::initialize_decoder()
             "'tili' image with zero width or height."};
   }
 
-  if (Error err = m_tild_header.set_parameters(parameters)) {
+  if (Error err = m_tild_header.set_parameters(parameters, get_context()->get_security_limits())) {
     return err;
   }
 
@@ -795,7 +807,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   // Create header + offset table
 
   TiledHeader tild_header;
-  tild_header.set_parameters(*parameters);
+  tild_header.set_parameters(*parameters, ctx->get_security_limits());
   tild_header.set_compression_format(encoder->plugin->compression_format);
 
   Result<std::vector<uint8_t>> header_data_result = tild_header.write_offset_table();
@@ -826,7 +838,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   m_heif_file->add_property(grid_id, pixi, true);
 #endif
 
-  tild_image->set_tild_header(tild_header);
+  tild_image->set_tild_header(std::move(tild_header));
   tild_image->set_next_tild_position(header_data_result->size());
 
   // Set Brands
