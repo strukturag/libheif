@@ -360,14 +360,15 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake D
         "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 if(WITH_ZIMG)
-    find_package(ZIMG)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(ZIMG IMPORTED_TARGET ZIMG)
     if(ZIMG_FOUND)
         target_compile_definitions(heif PUBLIC WITH_ZIMG=1)
         target_sources(heif PRIVATE
             color-conversion/tonemapping_zimg.cc
             color-conversion/tonemapping_zimg.h
         )
-        target_link_libraries(heif PRIVATE ZIMG)
+        target_link_libraries(heif PRIVATE PkgConfig::ZIMG)
     endif()
 endif()
 
