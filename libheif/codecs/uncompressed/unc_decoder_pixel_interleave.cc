@@ -27,38 +27,58 @@
 
 Result<std::vector<uint64_t>> unc_decoder_pixel_interleave::get_tile_data_sizes() const
 {
-  uint32_t bits_per_row = 0;
-  for (uint32_t x = 0; x < m_tile_width; x++) {
-    uint32_t bits_per_pixel = 0;
+  // All pixels of a row have the same component layout, so the number of bits a pixel
+  // adds to the row is the same for every pixel column. Compute it once instead of
+  // iterating over every column, which was O(tile_width) and slow for a very wide image
+  // (GHSA-vr5j-9r89-725x).
+  //
+  // When a component starts on a byte boundary (component_alignment > 0), the row bit
+  // position is rounded up to a byte boundary before that component. The row position
+  // before a pixel is then a byte multiple, so from the second pixel on every pixel adds
+  // the same 'pad' padding bits in addition to 'bits_per_pixel'. The first pixel starts
+  // at offset 0, which is already byte-aligned, so it has no padding. Hence:
+  //
+  //   bits_per_row = bits_per_pixel * tile_width + pad * (tile_width - 1)
+  //
+  // Without a byte-aligned component, 'pad' is 0 and this is bits_per_pixel * tile_width.
 
-    for (const ChannelListEntry& entry : channelList) {
-      uint32_t bits_per_component = entry.bits_per_component_sample;
-      if (entry.component_alignment > 0) {
-        // start at byte boundary
-        bits_per_row = (bits_per_row + 7) & ~7U;
+  uint64_t bits_per_pixel = 0;
+  bool has_byte_aligned_component = false;
 
-        uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-        skip_to_alignment(bytes_per_component, entry.component_alignment);
-        bits_per_component = bytes_per_component * 8;
-      }
+  for (const ChannelListEntry& entry : channelList) {
+    uint32_t bits_per_component = entry.bits_per_component_sample;
+    if (entry.component_alignment > 0) {
+      has_byte_aligned_component = true;
 
-      bits_per_pixel += bits_per_component;
+      uint32_t bytes_per_component = (bits_per_component + 7) / 8;
+      skip_to_alignment(bytes_per_component, entry.component_alignment);
+      bits_per_component = bytes_per_component * 8;
     }
 
-    if (m_uncC->get_pixel_size() != 0) {
-      uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-      skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
-      bits_per_pixel = bytes_per_pixel * 8;
-    }
-
-    if (bits_per_pixel > UINT32_MAX - bits_per_row) {
-      return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
-                   "uncompressed tile row size exceeds 32-bit range"};
-    }
-    bits_per_row += bits_per_pixel;
+    bits_per_pixel += bits_per_component;
   }
 
-  uint32_t bytes_per_row = (bits_per_row + 7) / 8;
+  if (m_uncC->get_pixel_size() != 0) {
+    uint64_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+    skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
+    bits_per_pixel = bytes_per_pixel * 8;
+  }
+
+  uint64_t pad = has_byte_aligned_component ? (8 - bits_per_pixel % 8) % 8 : 0;
+
+  uint64_t bits_per_row = 0;
+  if (m_tile_width > 0) {
+    bits_per_row = bits_per_pixel * m_tile_width + pad * (m_tile_width - 1);
+  }
+
+  // The per-column loop that this replaces accumulated the row size in a uint32_t and
+  // rejected anything that did not fit, so keep that limit.
+  if (bits_per_row > UINT32_MAX) {
+    return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+                 "uncompressed tile row size exceeds 32-bit range"};
+  }
+
+  uint32_t bytes_per_row = (static_cast<uint32_t>(bits_per_row) + 7) / 8;
   skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
   uint64_t total_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
