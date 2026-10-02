@@ -27,26 +27,32 @@
 // Regression test for GHSA-hh47-fhqr-cj2r (incomplete fix of
 // GHSA-73p7-m7gg-w2jv / CVE-2026-62292).
 //
-// A crafted 'unci' image with generic (zlib, full_item) compression advertises a
-// 4096x4096 grid of 1x1 tiles. Large alignment values make the computed size of
-// the last tile 2^40 bytes, so for the final tile index (2^24 - 1) the range
-// arithmetic in unc_decoder::get_compressed_image_data_uncompressed() overflows:
+// A crafted 'unci' image advertises a 4096x4096 grid of 1x1 tiles. Large alignment
+// values make the computed size of a tile 2^40 bytes, so for the final tile index
+// (2^24 - 1) the range of the tile data wraps around:
 //
 //     range_start_offset = 2^40 * (2^24 - 1) = 2^64 - 2^40
 //     range_size         = 2^40
 //     range_start_offset + range_size = 2^64 -> 0   (uint64_t wrap)
 //
-// The old addition-form check `range_start_offset + range_size > data->size()`
-// was bypassed (0 > 1 is false) and the code reached memcpy() with an
+// With generic (zlib, full_item) compression, unc_decoder cut this range out of the
+// decompressed item. Its addition-form check `range_start_offset + range_size >
+// data->size()` was bypassed (0 > 1 is false) and the code reached memcpy() with an
 // out-of-range source pointer and a 1 TiB length: an out-of-bounds read / SIGSEGV
 // reachable through the public heif_image_handle_decode_image_tile().
 //
-// The fix uses the overflow-safe subtraction form. This test builds the fixture
-// in memory, opens it (structurally valid, must succeed), reads the advertised
-// tiling and requests the last tile: decoding must now return a structured
-// heif_error_Invalid_input instead of crashing.
+// The tests build the fixture in memory, open it (structurally valid, must succeed)
+// and request the last tile: decoding must return a structured error instead of
+// crashing.
 //
-// The file uses real zlib generic compression, so the test only runs when the
+// - Without generic compression, the tile range is read from the item data.
+//
+// - With full_item compression, the tiles cannot be decoded independently and the
+//   image is exposed as a single tile (GHSA-6fqc-p7r8-2g36), so the last uncC tile
+//   is not accessible anymore. The single tile is the whole image and has to be
+//   rejected as well.
+//
+// One file uses real zlib generic compression, so the tests only run when the
 // library was built with zlib (guarded in tests/CMakeLists.txt).
 
 #include "catch_amalgamated.hpp"
@@ -68,9 +74,9 @@ constexpr uint32_t COMPONENTS = 256;
 const std::vector<uint8_t> kZlibOneByte = {
     0x78, 0x9c, 0x73, 0x04, 0x00, 0x00, 0x42, 0x00, 0x42};
 
-// Build a minimal HEIF file with a single 'unci' item using generic zlib
-// (full_item) compression and a 4096x4096 tile grid.
-std::vector<uint8_t> build_heif_unci_overflow_tiling() {
+// Build a minimal HEIF file with a single 'unci' item and a 4096x4096 tile grid,
+// optionally using generic zlib (full_item) compression.
+std::vector<uint8_t> build_heif_unci_overflow_tiling(bool generic_compression) {
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "mif1");
   put_u32_be(ftyp_payload, 0);
@@ -149,17 +155,21 @@ std::vector<uint8_t> build_heif_unci_overflow_tiling() {
   append(ipco_payload, ispe);
   append(ipco_payload, cmpd);
   append(ipco_payload, uncC);
-  append(ipco_payload, cmpC);
+  if (generic_compression) {
+    append(ipco_payload, cmpC);
+  }
   auto ipco = make_box("ipco", ipco_payload);
 
   std::vector<uint8_t> ipma_payload;
   put_u32_be(ipma_payload, 1); // entry_count
   put_u16_be(ipma_payload, 1); // item_ID 1
-  ipma_payload.push_back(4);   // association_count
+  ipma_payload.push_back(generic_compression ? 4 : 3); // association_count
   ipma_payload.push_back(0x80 | 1); // essential, ispe
   ipma_payload.push_back(0x80 | 2); // essential, cmpd
   ipma_payload.push_back(0x80 | 3); // essential, uncC
-  ipma_payload.push_back(0x80 | 4); // essential, cmpC
+  if (generic_compression) {
+    ipma_payload.push_back(0x80 | 4); // essential, cmpC
+  }
   auto ipma = make_box("ipma", ipma_payload, /*full=*/true);
 
   std::vector<uint8_t> iprp_payload;
@@ -167,7 +177,8 @@ std::vector<uint8_t> build_heif_unci_overflow_tiling() {
   append(iprp_payload, ipma);
   auto iprp = make_box("iprp", iprp_payload);
 
-  // idat: the zlib payload (decompresses to 1 byte).
+  // idat: the zlib payload (decompresses to 1 byte). Without generic compression,
+  // these are 9 bytes of image data.
   auto idat = make_box("idat", kZlibOneByte);
 
   // iloc (version 1): item 1 stored in idat (construction_method=1).
@@ -197,16 +208,13 @@ std::vector<uint8_t> build_heif_unci_overflow_tiling() {
   return file;
 }
 
-} // namespace
-
-TEST_CASE("unci tile range overflow returns error instead of crashing") {
-  std::vector<uint8_t> file = build_heif_unci_overflow_tiling();
-
+// Open the file and get the handle of its primary image.
+void open_primary_image(const std::vector<uint8_t>& file, heif_context** out_ctx, heif_image_handle** out_handle) {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
 
   // The file is structurally valid, so opening it must succeed. The bug is only
-  // reachable by then decoding a high-index advertised tile.
+  // reachable by then decoding a tile.
   heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
   REQUIRE(err.code == heif_error_Ok);
 
@@ -215,25 +223,88 @@ TEST_CASE("unci tile range overflow returns error instead of crashing") {
   REQUIRE(err.code == heif_error_Ok);
   REQUIRE(handle != nullptr);
 
+  *out_ctx = ctx;
+  *out_handle = handle;
+}
+
+} // namespace
+
+TEST_CASE("unci tile range overflow returns error instead of crashing") {
+  std::vector<uint8_t> file = build_heif_unci_overflow_tiling(/*generic_compression=*/false);
+
+  heif_context* ctx = nullptr;
+  heif_image_handle* handle = nullptr;
+  open_primary_image(file, &ctx, &handle);
+
   heif_image_tiling tiling;
   heif_image_handle_get_image_tiling(handle, 1, &tiling);
   REQUIRE(tiling.num_columns == TILE_COLS);
   REQUIRE(tiling.num_rows == TILE_ROWS);
 
-  // Request the last advertised tile. Before the fix this reached memcpy() with a
-  // wrapped source pointer and a 1 TiB length (out-of-bounds read / SIGSEGV). It
-  // must now return a structured invalid-input error.
+  // Request the last advertised tile. Its data range wraps around the 64 bit range.
+  // This must return a structured invalid-input error.
   heif_image* img = nullptr;
-  err = heif_image_handle_decode_image_tile(handle, &img,
-                                            heif_colorspace_undefined, heif_chroma_undefined,
-                                            nullptr,
-                                            tiling.num_columns - 1, tiling.num_rows - 1);
+  heif_error err = heif_image_handle_decode_image_tile(handle, &img,
+                                                       heif_colorspace_undefined, heif_chroma_undefined,
+                                                       nullptr,
+                                                       tiling.num_columns - 1, tiling.num_rows - 1);
   REQUIRE(err.code == heif_error_Invalid_input);
   REQUIRE(img == nullptr);
 
-  if (img) {
-    heif_image_release(img);
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
+
+TEST_CASE("unci tile range overflow with full_item compression returns error instead of crashing") {
+  std::vector<uint8_t> file = build_heif_unci_overflow_tiling(/*generic_compression=*/true);
+
+  heif_context* ctx = nullptr;
+  heif_image_handle* handle = nullptr;
+  open_primary_image(file, &ctx, &handle);
+
+  // The uncC tiles cannot be decoded independently, so the image is a single tile.
+  heif_image_tiling tiling;
+  heif_image_handle_get_image_tiling(handle, 1, &tiling);
+  REQUIRE(tiling.num_columns == 1);
+  REQUIRE(tiling.num_rows == 1);
+  REQUIRE(tiling.tile_width == WIDTH);
+  REQUIRE(tiling.tile_height == HEIGHT);
+
+  heif_decoding_options* options = heif_decoding_options_alloc();
+
+  for (bool ignore_transformations : {false, true}) {
+    INFO("ignore_transformations: " << ignore_transformations);
+    options->ignore_transformations = ignore_transformations;
+
+    // Before the image was exposed as a single tile, requesting the last uncC tile
+    // reached memcpy() with a wrapped source pointer and a 1 TiB length
+    // (out-of-bounds read / SIGSEGV). The tile does not exist anymore.
+    heif_image* img = nullptr;
+    heif_error err = heif_image_handle_decode_image_tile(handle, &img,
+                                                         heif_colorspace_undefined, heif_chroma_undefined,
+                                                         options,
+                                                         TILE_COLS - 1, TILE_ROWS - 1);
+    REQUIRE(err.code == heif_error_Usage_error);
+    REQUIRE(img == nullptr);
+
+    // The single tile is the whole image, which has to be rejected because of its
+    // alignment values.
+    err = heif_image_handle_decode_image_tile(handle, &img,
+                                              heif_colorspace_undefined, heif_chroma_undefined,
+                                              options,
+                                              0, 0);
+    REQUIRE(err.code == heif_error_Invalid_input);
+    REQUIRE(img == nullptr);
   }
+
+  heif_decoding_options_free(options);
+
+  heif_image* img = nullptr;
+  heif_error err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+  REQUIRE(err.code == heif_error_Invalid_input);
+  REQUIRE(img == nullptr);
+
   heif_image_handle_release(handle);
   heif_context_free(ctx);
 }

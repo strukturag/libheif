@@ -59,6 +59,27 @@ public:
                                               std::shared_ptr<HeifPixelImage>& img,
                                               uint32_t tile_x0, uint32_t tile_y0);
 
+  // How the data of a single tile of the uncC tiling can be obtained.
+  enum class TileAccess : uint8_t {
+    // No generic compression. The tile data is read directly from the item data.
+    direct,
+
+    // Each tile is a run of consecutive compressed units: a single unit for
+    // 'image_tile' units, several units for 'image_row' and 'image_pixel' units.
+    compressed_units,
+
+    // The compressed units span several tiles (full item, full image of a component),
+    // or they cannot be assigned to the tiles. The item has to be decompressed as a whole,
+    // hence the tiles cannot be decoded independently.
+    whole_item
+  };
+
+  // 'out_units_per_tile' is only set for TileAccess::compressed_units.
+  static TileAccess get_tile_access(const std::shared_ptr<const Box_uncC>& uncC,
+                                    const std::shared_ptr<const Box_cmpC>& cmpC,
+                                    const std::shared_ptr<const Box_icef>& icef,
+                                    uint32_t* out_units_per_tile = nullptr);
+
   struct unci_properties {
     std::shared_ptr<const Box_ispe> ispe;
     std::shared_ptr<const Box_cmpd> cmpd;

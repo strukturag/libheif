@@ -396,6 +396,62 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
 }
 
 
+UncompressedImageCodec::TileAccess
+UncompressedImageCodec::get_tile_access(const std::shared_ptr<const Box_uncC>& uncC,
+                                        const std::shared_ptr<const Box_cmpC>& cmpC,
+                                        const std::shared_ptr<const Box_icef>& icef,
+                                        uint32_t* out_units_per_tile)
+{
+  if (!cmpC) {
+    return TileAccess::direct;
+  }
+
+  // Without an icef box, the complete item is a single compressed unit.
+  if (!icef || !uncC) {
+    return TileAccess::whole_item;
+  }
+
+  switch (cmpC->get_compressed_unit_type()) {
+    case heif_cmpC_compressed_unit_type_image_tile:
+      if (out_units_per_tile) {
+        *out_units_per_tile = 1;
+      }
+      return TileAccess::compressed_units;
+
+    case heif_cmpC_compressed_unit_type_image_row:
+    case heif_cmpC_compressed_unit_type_image_pixel: {
+      // Rows and pixels are parts of a tile and the units are listed in the order of
+      // the uncompressed data. As all tiles have the same layout, each tile consists of
+      // the same number of consecutive units. We do not have to know what exactly the
+      // file writer considers a row.
+
+      // With tile-component interleave, the data of a tile is not contiguous.
+      if (uncC->get_interleave_type() == interleave_mode_tile_component) {
+        return TileAccess::whole_item;
+      }
+
+      uint64_t num_tiles = static_cast<uint64_t>(uncC->get_number_of_tile_columns()) * uncC->get_number_of_tile_rows();
+      uint64_t num_units = icef->get_units().size();
+
+      if (num_tiles == 0 || num_units == 0 || num_units % num_tiles != 0) {
+        return TileAccess::whole_item;
+      }
+
+      if (out_units_per_tile) {
+        *out_units_per_tile = static_cast<uint32_t>(num_units / num_tiles);
+      }
+      return TileAccess::compressed_units;
+    }
+
+    case heif_cmpC_compressed_unit_type_full_item:
+    case heif_cmpC_compressed_unit_type_image:
+      break;
+  }
+
+  return TileAccess::whole_item;
+}
+
+
 Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* context,
                                                              heif_item_id ID,
                                                              std::shared_ptr<HeifPixelImage>& img,

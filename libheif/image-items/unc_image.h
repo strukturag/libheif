@@ -102,6 +102,11 @@ protected:
   std::shared_ptr<Encoder> get_encoder() const override;
 
 private:
+  // The tiling that is exposed through the API. This is the uncC tiling, unless its
+  // tiles cannot be decoded independently because of the generic compression. In that
+  // case, the image is exposed as a single tile and false is returned.
+  bool get_exposed_tiling(uint32_t& num_columns, uint32_t& num_rows) const;
+
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
   std::shared_ptr<class Encoder_uncompressed> m_encoder;
 

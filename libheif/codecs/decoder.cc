@@ -64,7 +64,8 @@ void DataExtent::set_file_range(std::shared_ptr<HeifFile> file, uint64_t offset,
 
 Result<std::vector<uint8_t>*> DataExtent::read_data() const
 {
-  if (!m_raw.empty()) {
+  // A raw extent has no file to read from. All its data is in m_raw, even when that is empty.
+  if (!m_raw.empty() || m_source == Source::Raw) {
     return &m_raw;
   }
   else if (m_source == Source::Image) {
@@ -112,7 +113,7 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
 {
   std::vector<uint8_t> data;
 
-  if (!m_raw.empty()) {
+  if (!m_raw.empty() || m_source == Source::Raw) {
     // No caller currently reaches this cached path with an out-of-range request, so
     // hitting it indicates an internal logic error rather than malformed input. Guard
     // it defensively anyway. The subtraction form avoids a uint64_t wrap in

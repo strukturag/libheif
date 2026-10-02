@@ -152,6 +152,25 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
   Error err;
 
   if (decode_tile_only) {
+    uint32_t num_columns, num_rows;
+    const bool tiles_are_decodable = get_exposed_tiling(num_columns, num_rows);
+
+    // The tile position is not validated on all paths that lead here.
+    if (tile_x0 >= num_columns || tile_y0 >= num_rows) {
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Invalid_parameter_value,
+                   "Tile position is outside of the image tiling."};
+    }
+
+    // When the uncC tiles cannot be decoded independently, the image is exposed as a
+    // single tile. That tile is the whole image, which the full image path decodes
+    // with a single decompression of the item (GHSA-6fqc-p7r8-2g36).
+    if (!tiles_are_decodable) {
+      decode_tile_only = false;
+    }
+  }
+
+  if (decode_tile_only) {
     err = UncompressedImageCodec::decode_uncompressed_image_tile(get_context(),
                                                                  get_id(),
                                                                  img,
@@ -388,6 +407,32 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 }
 
 
+bool ImageItem_uncompressed::get_exposed_tiling(uint32_t& num_columns, uint32_t& num_rows) const
+{
+  num_columns = 1;
+  num_rows = 1;
+
+  auto uncC = get_property<Box_uncC>();
+  if (!uncC) {
+    return true;
+  }
+
+  // Generic compression with units that span several tiles (e.g. the full item) does not
+  // give access to the individual tiles: the item has to be decompressed completely to
+  // get the data of any tile. Such an image is exposed as a single tile, like the images
+  // of the other codecs that may use tiles internally. Otherwise, decoding the image
+  // tile by tile would decompress the whole item once for each tile (GHSA-6fqc-p7r8-2g36).
+  if (UncompressedImageCodec::get_tile_access(uncC, get_property<Box_cmpC>(), get_property<Box_icef>()) ==
+      UncompressedImageCodec::TileAccess::whole_item) {
+    return false;
+  }
+
+  num_columns = uncC->get_number_of_tile_columns();
+  num_rows = uncC->get_number_of_tile_rows();
+  return true;
+}
+
+
 void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
 {
   auto ispe = get_property<Box_ispe>();
@@ -397,8 +442,11 @@ void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
     w = h = 0;
   }
   else {
-    w = ispe->get_width() / uncC->get_number_of_tile_columns();
-    h = ispe->get_height() / uncC->get_number_of_tile_rows();
+    uint32_t num_columns, num_rows;
+    get_exposed_tiling(num_columns, num_rows);
+
+    w = ispe->get_width() / num_columns;
+    h = ispe->get_height() / num_rows;
   }
 }
 
@@ -411,8 +459,7 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
   auto uncC = get_property<Box_uncC>();
   assert(ispe && uncC);
 
-  tiling.num_columns = uncC->get_number_of_tile_columns();
-  tiling.num_rows = uncC->get_number_of_tile_rows();
+  get_exposed_tiling(tiling.num_columns, tiling.num_rows);
 
   tiling.tile_width = ispe->get_width() / tiling.num_columns;
   tiling.tile_height = ispe->get_height() / tiling.num_rows;
