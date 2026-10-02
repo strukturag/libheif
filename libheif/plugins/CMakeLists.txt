@@ -89,6 +89,10 @@ set(OpenJPEG_ENCODER_sources encoder_openjpeg.cc encoder_openjpeg.h)
 set(OpenJPEG_ENCODER_extra_plugin_sources)
 plugin_compilation(j2kenc OPENJPEG OPENJPEG_FOUND OpenJPEG_ENCODER OPENJPEG_ENCODER)
 
+set(JASPER_DECODER_sources decoder_jasper.cc decoder_jasper.h)
+set(JASPER_DECODER_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
+plugin_compilation(jasper JASPER JASPER_FOUND JASPER_DECODER JASPER_DECODER)
+
 set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR_FOUND KVAZAAR KVAZAAR)
