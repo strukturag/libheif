@@ -49,7 +49,8 @@ struct ColorState
   int bits_per_pixel_filter_array = 0;
 
   // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values
-  // if the colorspace is heif_colorspace_YCbCr. Otherwise, the values should preferably be 'unspecified'.
+  // if the colorspace is heif_colorspace_YCbCr. 'unspecified' should not be used. Copy it from input
+  // state, if not relevant.
   nclx_profile nclx;
 
   ColorState() = default;
@@ -135,11 +136,12 @@ enum SpeedCosts
 
 struct ColorStateWithCost
 {
-  ColorStateWithCost(ColorState c, int s) : color_state(c), speed_costs(s) {}
+  ColorStateWithCost(ColorState c, int s, bool lossy = false) : color_state(std::move(c)), speed_costs(s), lossy(lossy) {}
 
   ColorState color_state;
 
   int speed_costs;
+  bool lossy;
 };
 
 
@@ -199,6 +201,7 @@ private:
 
   heif_color_conversion_options m_options;
   heif_color_conversion_options_ext m_options_ext;
+  bool m_tonemapping_remove_icc;
 };
 
 

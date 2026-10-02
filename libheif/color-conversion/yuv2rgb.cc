@@ -52,6 +52,10 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   if (matrix == 11 || matrix == 14 || matrix == 17) {
     return {};
   }
+  // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
+  if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
+    return {};
+  }
   // TODO: matrix == 17 (YCgCo-Ro) is not implemented. Without the rejection above, it would
   //   fall through to the Kr/Kb-based conversion and silently decode with BT.601 coefficients.
   // TODO: matrix == 10 (BT.2020 CL) currently falls through and is decoded as if it were
@@ -88,6 +92,8 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_444;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;  // we simply keep the old alpha plane
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -318,8 +324,19 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx.get_matrix_coefficients();
-  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
+  heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
+  // This is a linear transform, cannot handle nonlinear transforms
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
+    return {};
+  // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
+  if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
     return {};
   }
   if (!input_state.nclx.get_full_range_flag()) {
@@ -336,6 +353,8 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGB;
   output_state.set_color_bits_per_pixel(8);
   output_state.bits_per_pixel_alpha = 0;
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -456,9 +475,20 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx.get_matrix_coefficients();
-  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
-    return {};
+  heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
+  // This is a linear transform, cannot handle nonlinear transforms
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
+      return {};
+  // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
+  if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
+      return {};
   }
   if (!input_state.nclx.get_full_range_flag()) {
     return {};
@@ -474,6 +504,8 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGBA;
   output_state.set_color_bits_per_pixel(8);
   output_state.bits_per_pixel_alpha = 8;
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -597,8 +629,19 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  int matrix = input_state.nclx.get_matrix_coefficients();
-  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
+  heif_matrix_coefficients matrix = input_state.nclx.get_matrix_coefficients();
+  // Rec. 2020 constant luminance cannot be used together with Rec. 2100 PQ / HLG. 
+  // This media might actually be a Rec. 2100 media using non-constant luminance together with Rec. 2100 PQ / HLG.
+  // Many tools don't support Rec. 2020 constant luminance, and they look identical and potentially confusing because of that.
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance &&
+    (input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ ||
+      input_state.nclx.get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_HLG))
+    matrix = heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
+  // This is a linear transform, cannot handle nonlinear transforms
+  if (matrix == heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance || matrix == heif_matrix_coefficients_chromaticity_derived_constant_luminance || matrix == heif_matrix_coefficients_ICtCp)
+    return {};
+  // If the parameters are known then it can be transformed (reject unknown matrix coefficients)
+  if (!get_YCbCr_to_RGB_coefficients(matrix, input_state.nclx.get_colour_primaries()).defined) {
     return {};
   }
 
@@ -613,6 +656,8 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
                          heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE);
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -622,6 +667,8 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
                          heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
