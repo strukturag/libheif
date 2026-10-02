@@ -63,6 +63,9 @@ typedef struct heif_image_tiling
 
 // If 'process_image_transformations' is true, this returns modified sizes.
 // If it is false, the top_offset and left_offset will always be (0;0).
+// The tiling describes the tiles that can be decoded independently. An image is reported
+// as a single tile when its internal tiles cannot be decoded on their own, or when its
+// alpha channel is stored with a different tiling.
 LIBHEIF_API
 heif_error heif_image_handle_get_image_tiling(const heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
 

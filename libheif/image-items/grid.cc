@@ -615,7 +615,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
     return error;
   }
 
-  return tile_item->decode_compressed_image(options, false, 0, 0, std::move(decode_state));
+  // Decode the tile like the full grid decoding does. This includes the transformations
+  // of the tile image and its alpha image. With decode_compressed_image(), a tile that
+  // has an alpha image of its own would be decoded without alpha channel.
+  return tile_item->decode_image(options, false, 0, 0, std::move(decode_state));
 }
 
 

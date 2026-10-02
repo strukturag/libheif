@@ -93,7 +93,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
     return error;
   }
 
-  return imgitem->decode_image(options, decode_tile_only, tile_x0, tile_y0, decode_state);
+  // An 'iden' image is exposed as a single tile, which is the whole image. Hence, always
+  // decode the whole image it is derived from, even when that image has tiles.
+  return imgitem->decode_image(options, false, 0, 0, decode_state);
 }
 
 

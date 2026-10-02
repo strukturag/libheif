@@ -176,6 +176,7 @@ if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_idat_tiled)
     add_libheif_test(uncompressed_encode)
     add_libheif_test(uncompressed_interleaved_alpha_plane)
+    add_libheif_test(tiling_combined_images)
 
     if (ENABLE_EXPERIMENTAL_FEATURES)
         add_libheif_test(uncompressed_encode_multicomponent)

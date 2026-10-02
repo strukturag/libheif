@@ -40,7 +40,7 @@ heif_error heif_image_handle_get_image_tiling(const heif_image_handle* handle, i
     return heif_error_null_pointer_argument;
   }
 
-  *tiling = handle->image->get_heif_image_tiling();
+  *tiling = handle->image->get_image_tiling_with_alpha();
 
   // Every tile has to be decodable on its own, so apply the same size limit that the
   // decoding path applies to the 'ispe' size. For plain (non-tiled) items, the single

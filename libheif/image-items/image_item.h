@@ -372,10 +372,14 @@ public:
 
   virtual void set_decoder_input_data() { }
 
+  // With 'decode_tile_only', the tile position refers to get_image_tiling_with_alpha().
+  // 'decode_as_single_tile' is used for the alpha image of an image that is exposed as
+  // a single tile: the whole image is decoded, but processed like a tile (not cropped).
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                                bool decode_tile_only, uint32_t tile_x0,
                                                                uint32_t tile_y0,
-                                                               DecodeTraversalState decode_state) const;
+                                                               DecodeTraversalState decode_state,
+                                                               bool decode_as_single_tile = false) const;
 
   // Validate, before any decoding starts, that this item can be safely decoded:
   // the graph of items reached by the decode recursion (derived-image 'dimg'
@@ -456,7 +460,15 @@ public:
 
   const std::vector<Error>& get_decoding_warnings() const { return m_decoding_warnings; }
 
+  // The tiling of this image item alone.
   virtual heif_image_tiling get_heif_image_tiling() const;
+
+  // The tiling in which the image can be decoded. When a tile is decoded, the same tile
+  // of the alpha image is decoded and attached to it. This requires that both images
+  // have the same tiling. Otherwise, the image is exposed as a single tile.
+  heif_image_tiling get_image_tiling_with_alpha() const;
+
+  bool has_alpha_with_different_tiling() const;
 
   Error process_image_transformations_on_tiling(heif_image_tiling&) const;
 
@@ -567,7 +579,8 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_image(const heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0,
                                                        uint32_t tile_y0,
-                                                       DecodeTraversalState decode_state) const override
+                                                       DecodeTraversalState decode_state,
+                                                       bool decode_as_single_tile) const override
   {
     return m_item_error;
   }
