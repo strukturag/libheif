@@ -478,6 +478,98 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 }
 
 
+
+/*
+ *  Upsample one 4:2:0 chroma plane to the full image resolution.
+ *  Strides are given in units of Pixel.
+ *
+ *  We assume that chroma pixels are located in the center of 2x2 luma pixels.
+ *  The image border 'b' is handled separately.
+ *  The right and bottom border are not processed when the size is odd.
+ *  Then, each 2x2 square between 4 chroma samples is computed in one iteration.
+ *
+ *  Upsampling weights are 3/4, 1/4. For example:
+ *    A = 3/4*3/4 * C1 + 3/4*1/4 * C2 + 1/4*3/4 * C3 + 1/4*1/4 * C4
+ *
+ *    +---+---+---+---+
+ *    | b | b | b | b |
+ *    +---C1--+---C2--+
+ *    | b | A |   | b |
+ *    +---+---+---+---+
+ *    | b |   |   | b |
+ *    +---C3--+---C4--+
+ *    | b | b | b | b |
+ *    +---+---+---+---+
+ */
+template<class Pixel>
+static void upsample_chroma_plane_bilinear(const Pixel* in, size_t in_stride,
+                                           Pixel* out, size_t out_stride,
+                                           uint32_t width, uint32_t height)
+{
+  // interpolate between two chroma samples with weights 3/4 and 1/4
+  auto mix_3_1 = [](Pixel a, Pixel b) { return (Pixel) ((3 * a + 1 * b + 2) / 4); };
+
+  // --- fill borders
+
+  // Fill one image row from one chroma row, including both corner pixels.
+  auto upsample_row = [&](const Pixel* in_row, Pixel* out_row) {
+    out_row[0] = in_row[0];
+
+    for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
+      Pixel a = in_row[cx];
+      Pixel b = in_row[cx + 1];
+      out_row[2 * cx + 1] = mix_3_1(a, b);
+      out_row[2 * cx + 2] = mix_3_1(b, a);
+    }
+
+    if (width % 2 == 0) {
+      out_row[width - 1] = in_row[width / 2 - 1];
+    }
+  };
+
+  // Fill one image column from one chroma column. The corner pixels are already set by upsample_row().
+  auto upsample_column = [&](const Pixel* in_column, Pixel* out_column) {
+    for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
+      Pixel a = in_column[cy * in_stride];
+      Pixel b = in_column[(cy + 1) * in_stride];
+      out_column[(2 * cy + 1) * out_stride] = mix_3_1(a, b);
+      out_column[(2 * cy + 2) * out_stride] = mix_3_1(b, a);
+    }
+  };
+
+  upsample_row(in, out); // top border
+  upsample_column(in, out); // left border
+
+  if (width % 2 == 0) {
+    upsample_column(in + width / 2 - 1, out + width - 1); // right border
+  }
+
+  if (height % 2 == 0) {
+    upsample_row(in + (height / 2 - 1) * in_stride, out + (height - 1) * out_stride); // bottom border
+  }
+
+
+  // --- bilinear filtering of inner part
+
+  for (uint32_t y = 1; y < height - 1; y += 2) {
+    for (uint32_t x = 1; x < width - 1; x += 2) {
+      uint32_t cx = x / 2;
+      uint32_t cy = y / 2;
+
+      Pixel c00 = in[cy * in_stride + cx];
+      Pixel c01 = in[cy * in_stride + cx + 1];
+      Pixel c10 = in[(cy + 1) * in_stride + cx];
+      Pixel c11 = in[(cy + 1) * in_stride + cx + 1];
+
+      out[(y + 0) * out_stride + x + 0] = (Pixel) ((c00 * 3 * 3 + c01 * 1 * 3 + c10 * 3 * 1 + c11 * 1 * 1 + 8) / 16);
+      out[(y + 0) * out_stride + x + 1] = (Pixel) ((c00 * 1 * 3 + c01 * 3 * 3 + c10 * 1 * 1 + c11 * 3 * 1 + 8) / 16);
+      out[(y + 1) * out_stride + x + 0] = (Pixel) ((c00 * 3 * 1 + c01 * 1 * 1 + c10 * 3 * 3 + c11 * 1 * 3 + 8) / 16);
+      out[(y + 1) * out_stride + x + 1] = (Pixel) ((c00 * 1 * 1 + c01 * 3 * 1 + c10 * 1 * 3 + c11 * 3 * 3 + 8) / 16);
+    }
+  }
+}
+
+
 template<class Pixel>
 Result<std::shared_ptr<HeifPixelImage>>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
@@ -564,119 +656,12 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   out_cb_stride /= sizeof(Pixel);
   out_cr_stride /= sizeof(Pixel);
 
-  /*
-   *  We assume that chroma pixels are located in the center of 2x2 luma pixels.
-   *  The image border 'b' is handled separately.
-   *  The right and bottom border are not processed when the size is odd.
-   *  Then, each 2x2 square between 4 chroma samples is computed in one iteration.
-   *
-   *  Upsampling weights are 3/4, 1/4. For example:
-   *    A = 3/4*3/4 * C1 + 3/4*1/4 * C2 + 1/4*3/4 * C3 + 1/4*1/4 * C4
-   *
-   *    +---+---+---+---+
-   *    | b | b | b | b |
-   *    +---C1--+---C2--+
-   *    | b | A |   | b |
-   *    +---+---+---+---+
-   *    | b |   |   | b |
-   *    +---C3--+---C4--+
-   *    | b | b | b | b |
-   *    +---+---+---+---+
-   */
-
-  // --- fill borders
-
-  // top left corner
-  out_cb[0] = in_cb[0];
-  out_cr[0] = in_cr[0];
-
-  // top border
-  for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
-    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[cx] + 1 * in_cb[cx + 1] + 2) / 4);
-    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[cx] + 3 * in_cb[cx + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[cx] + 1 * in_cr[cx + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[cx] + 3 * in_cr[cx + 1] + 2) / 4);
-  }
-
-  // top right corner
-  if (width % 2 == 0) {
-    out_cb[width - 1] = in_cb[width / 2 - 1];
-    out_cr[width - 1] = in_cr[width / 2 - 1];
-  }
-
-  // left border
-  for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
-    out_cb[(2 * cy + 1) * out_cb_stride + 0] = (Pixel) ((3 * in_cb[cy * in_cb_stride] + 1 * in_cb[(cy + 1) * in_cb_stride] + 2) / 4);
-    out_cb[(2 * cy + 2) * out_cb_stride + 0] = (Pixel) ((1 * in_cb[cy * in_cb_stride] + 3 * in_cb[(cy + 1) * in_cb_stride] + 2) / 4);
-    out_cr[(2 * cy + 1) * out_cr_stride + 0] = (Pixel) ((3 * in_cr[cy * in_cr_stride] + 1 * in_cr[(cy + 1) * in_cr_stride] + 2) / 4);
-    out_cr[(2 * cy + 2) * out_cr_stride + 0] = (Pixel) ((1 * in_cr[cy * in_cr_stride] + 3 * in_cr[(cy + 1) * in_cr_stride] + 2) / 4);
-  }
-
-  // bottom left corner
-  if (height % 2 == 0) {
-    out_cb[(height - 1) * out_cb_stride] = in_cb[(height / 2 - 1) * in_cb_stride];
-    out_cr[(height - 1) * out_cr_stride] = in_cr[(height / 2 - 1) * in_cr_stride];
-  }
-
-  // right border
-  if (width % 2 == 0) {
-    for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
-      out_cb[(2 * cy + 1) * out_cb_stride + width - 1] = (Pixel) ((3 * in_cb[cy * in_cb_stride + width / 2 - 1] + 1 * in_cb[(cy + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
-      out_cb[(2 * cy + 2) * out_cb_stride + width - 1] = (Pixel) ((1 * in_cb[cy * in_cb_stride + width / 2 - 1] + 3 * in_cb[(cy + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
-      out_cr[(2 * cy + 1) * out_cr_stride + width - 1] = (Pixel) ((3 * in_cr[cy * in_cr_stride + width / 2 - 1] + 1 * in_cr[(cy + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
-      out_cr[(2 * cy + 2) * out_cr_stride + width - 1] = (Pixel) ((1 * in_cr[cy * in_cr_stride + width / 2 - 1] + 3 * in_cr[(cy + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
-    }
-  }
-
-  // bottom border
-  if (height % 2 == 0) {
-    for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
-      out_cb[(height - 1) * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[(height / 2 - 1) * in_cb_stride + cx] + 1 * in_cb[(height / 2 - 1) * in_cb_stride + cx + 1] + 2) / 4);
-      out_cb[(height - 1) * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[(height / 2 - 1) * in_cb_stride + cx] + 3 * in_cb[(height / 2 - 1) * in_cb_stride + cx + 1] + 2) / 4);
-      out_cr[(height - 1) * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[(height / 2 - 1) * in_cr_stride + cx] + 1 * in_cr[(height / 2 - 1) * in_cr_stride + cx + 1] + 2) / 4);
-      out_cr[(height - 1) * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[(height / 2 - 1) * in_cr_stride + cx] + 3 * in_cr[(height / 2 - 1) * in_cr_stride + cx + 1] + 2) / 4);
-    }
-  }
-
-  // bottom right corner
-  if (width % 2 == 0 && height % 2 == 0) {
-    out_cb[(height - 1) * out_cb_stride + width - 1] = in_cb[(height / 2 - 1) * in_cb_stride + width / 2 - 1];
-    out_cr[(height - 1) * out_cr_stride + width - 1] = in_cr[(height / 2 - 1) * in_cr_stride + width / 2 - 1];
-  }
-
-
-  // --- bilinear filtering of inner part
-
-  uint32_t x, y;
-  for (y = 1; y < height - 1; y += 2) {
-    for (x = 1; x < width - 1; x += 2) {
-      uint32_t cx = x / 2;
-      uint32_t cy = y / 2;
-
-      Pixel cb00 = in_cb[cy * in_cb_stride + cx];
-      Pixel cr00 = in_cr[cy * in_cr_stride + cx];
-      Pixel cb01 = in_cb[cy * in_cb_stride + cx + 1];
-      Pixel cr01 = in_cr[cy * in_cr_stride + cx + 1];
-      Pixel cb10 = in_cb[(cy + 1) * in_cb_stride + cx];
-      Pixel cr10 = in_cr[(cy + 1) * in_cr_stride + cx];
-      Pixel cb11 = in_cb[(cy + 1) * in_cb_stride + cx + 1];
-      Pixel cr11 = in_cr[(cy + 1) * in_cr_stride + cx + 1];
-
-      out_cb[(y + 0) * out_cb_stride + x + 0] = (Pixel) ((cb00 * 3 * 3 + cb01 * 1 * 3 + cb10 * 3 * 1 + cb11 * 1 * 1 + 8) / 16);
-      out_cb[(y + 0) * out_cb_stride + x + 1] = (Pixel) ((cb00 * 1 * 3 + cb01 * 3 * 3 + cb10 * 1 * 1 + cb11 * 3 * 1 + 8) / 16);
-      out_cb[(y + 1) * out_cb_stride + x + 0] = (Pixel) ((cb00 * 3 * 1 + cb01 * 1 * 1 + cb10 * 3 * 3 + cb11 * 1 * 3 + 8) / 16);
-      out_cb[(y + 1) * out_cb_stride + x + 1] = (Pixel) ((cb00 * 1 * 1 + cb01 * 3 * 1 + cb10 * 1 * 3 + cb11 * 3 * 3 + 8) / 16);
-
-      out_cr[(y + 0) * out_cr_stride + x + 0] = (Pixel) ((cr00 * 3 * 3 + cr01 * 1 * 3 + cr10 * 3 * 1 + cr11 * 1 * 1 + 8) / 16);
-      out_cr[(y + 0) * out_cr_stride + x + 1] = (Pixel) ((cr00 * 1 * 3 + cr01 * 3 * 3 + cr10 * 1 * 1 + cr11 * 3 * 1 + 8) / 16);
-      out_cr[(y + 1) * out_cr_stride + x + 0] = (Pixel) ((cr00 * 3 * 1 + cr01 * 1 * 1 + cr10 * 3 * 3 + cr11 * 1 * 3 + 8) / 16);
-      out_cr[(y + 1) * out_cr_stride + x + 1] = (Pixel) ((cr00 * 1 * 1 + cr01 * 3 * 1 + cr10 * 1 * 3 + cr11 * 3 * 3 + 8) / 16);
-    }
-  }
+  upsample_chroma_plane_bilinear(in_cb, in_cb_stride, out_cb, out_cb_stride, width, height);
+  upsample_chroma_plane_bilinear(in_cr, in_cr_stride, out_cr, out_cr_stride, width, height);
 
   // TODO: check whether we can use HeifPixelImage::transfer_channel_from_image_as() instead of copying Y and Alpha
 
-  for (y = 0; y < height; y++) {
+  for (uint32_t y = 0; y < height; y++) {
     size_t copyWidth = static_cast<size_t>(width) * sizeof(Pixel);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
