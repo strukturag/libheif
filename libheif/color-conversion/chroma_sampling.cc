@@ -592,10 +592,10 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // top border
   for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
-    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[cx / 2] + 1 * in_cb[cx / 2 + 1] + 2) / 4);
-    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[cx / 2] + 3 * in_cb[cx / 2 + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[cx / 2] + 1 * in_cr[cx / 2 + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[cx / 2] + 3 * in_cr[cx / 2 + 1] + 2) / 4);
+    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[cx] + 1 * in_cb[cx + 1] + 2) / 4);
+    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[cx] + 3 * in_cb[cx + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[cx] + 1 * in_cr[cx + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[cx] + 3 * in_cr[cx + 1] + 2) / 4);
   }
 
   // top right corner
@@ -606,10 +606,10 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // left border
   for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
-    out_cb[(2 * cy + 1) * out_cb_stride + 0] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
-    out_cb[(2 * cy + 2) * out_cb_stride + 0] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
-    out_cr[(2 * cy + 1) * out_cr_stride + 0] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride] + 2) / 4);
-    out_cr[(2 * cy + 2) * out_cr_stride + 0] = (Pixel) ((1 * in_cr[cy / 2 * in_cr_stride] + 3 * in_cr[(cy / 2 + 1) * in_cr_stride] + 2) / 4);
+    out_cb[(2 * cy + 1) * out_cb_stride + 0] = (Pixel) ((3 * in_cb[cy * in_cb_stride] + 1 * in_cb[(cy + 1) * in_cb_stride] + 2) / 4);
+    out_cb[(2 * cy + 2) * out_cb_stride + 0] = (Pixel) ((1 * in_cb[cy * in_cb_stride] + 3 * in_cb[(cy + 1) * in_cb_stride] + 2) / 4);
+    out_cr[(2 * cy + 1) * out_cr_stride + 0] = (Pixel) ((3 * in_cr[cy * in_cr_stride] + 1 * in_cr[(cy + 1) * in_cr_stride] + 2) / 4);
+    out_cr[(2 * cy + 2) * out_cr_stride + 0] = (Pixel) ((1 * in_cr[cy * in_cr_stride] + 3 * in_cr[(cy + 1) * in_cr_stride] + 2) / 4);
   }
 
   // bottom left corner
@@ -621,20 +621,20 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // right border
   if (width % 2 == 0) {
     for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
-      out_cb[(2 * cy + 1) * out_cb_stride + width - 1] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
-      out_cb[(2 * cy + 2) * out_cb_stride + width - 1] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
-      out_cr[(2 * cy + 1) * out_cr_stride + width - 1] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride + width / 2 - 1] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
-      out_cr[(2 * cy + 2) * out_cr_stride + width - 1] = (Pixel) ((1 * in_cr[cy / 2 * in_cr_stride + width / 2 - 1] + 3 * in_cr[(cy / 2 + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
+      out_cb[(2 * cy + 1) * out_cb_stride + width - 1] = (Pixel) ((3 * in_cb[cy * in_cb_stride + width / 2 - 1] + 1 * in_cb[(cy + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
+      out_cb[(2 * cy + 2) * out_cb_stride + width - 1] = (Pixel) ((1 * in_cb[cy * in_cb_stride + width / 2 - 1] + 3 * in_cb[(cy + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
+      out_cr[(2 * cy + 1) * out_cr_stride + width - 1] = (Pixel) ((3 * in_cr[cy * in_cr_stride + width / 2 - 1] + 1 * in_cr[(cy + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
+      out_cr[(2 * cy + 2) * out_cr_stride + width - 1] = (Pixel) ((1 * in_cr[cy * in_cr_stride + width / 2 - 1] + 3 * in_cr[(cy + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
     }
   }
 
   // bottom border
   if (height % 2 == 0) {
     for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
-      out_cb[(height - 1) * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
-      out_cb[(height - 1) * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
-      out_cr[(height - 1) * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2] + 1 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2 + 1] + 2) / 4);
-      out_cr[(height - 1) * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2] + 3 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2 + 1] + 2) / 4);
+      out_cb[(height - 1) * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[(height / 2 - 1) * in_cb_stride + cx] + 1 * in_cb[(height / 2 - 1) * in_cb_stride + cx + 1] + 2) / 4);
+      out_cb[(height - 1) * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[(height / 2 - 1) * in_cb_stride + cx] + 3 * in_cb[(height / 2 - 1) * in_cb_stride + cx + 1] + 2) / 4);
+      out_cr[(height - 1) * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[(height / 2 - 1) * in_cr_stride + cx] + 1 * in_cr[(height / 2 - 1) * in_cr_stride + cx + 1] + 2) / 4);
+      out_cr[(height - 1) * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[(height / 2 - 1) * in_cr_stride + cx] + 3 * in_cr[(height / 2 - 1) * in_cr_stride + cx + 1] + 2) / 4);
     }
   }
 
