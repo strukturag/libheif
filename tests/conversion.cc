@@ -33,6 +33,7 @@
 #include "color-conversion/yuv2rgb.h"
 #include "image/pixelimage.h"
 #include <cmath>
+#include <algorithm>
 
 // Enable for more verbose test output.
 constexpr bool kEnableDebugOutput = false;
@@ -651,9 +652,9 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
 }
 
 
-static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint8_t>& pixels)
+static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint16_t>& pixels, int bit_depth = 8)
 {
-  auto error = img->add_channel(channel, w, h, 8, nullptr);
+  auto error = img->add_channel(channel, w, h, bit_depth, nullptr);
   REQUIRE(!error);
 
   size_t stride;
@@ -661,26 +662,33 @@ static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channe
 
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
-      p[y * stride + x] = pixels[y * w + x];
+      if (bit_depth <= 8) {
+        p[y * stride + x] = static_cast<uint8_t>(pixels[y * w + x]);
+      }
+      else {
+        reinterpret_cast<uint16_t*>(p + y * stride)[x] = pixels[y * w + x];
+      }
     }
   }
 }
 
 
-static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, const std::vector<uint8_t>& pixels)
+static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, const std::vector<uint16_t>& pixels)
 {
   INFO("channel: " << channel);
   uint32_t w = img->get_width(channel);
   uint32_t h = img->get_height(channel);
+  int bit_depth = img->get_bits_per_pixel(channel);
 
   size_t stride;
-  uint8_t* p = img->get_channel_memory(channel, &stride);
+  const uint8_t* p = img->get_channel_memory(channel, &stride);
 
   for (uint32_t y = 0; y < h; y++) {
     INFO("row: " << y);
     for (uint32_t x = 0; x < w; x++) {
       INFO("column: " << x);
-      REQUIRE((int)p[y * stride + x] == (int)pixels[y * w + x]);
+      int value = (bit_depth <= 8) ? p[y * stride + x] : reinterpret_cast<const uint16_t*>(p + y * stride)[x];
+      REQUIRE(value == (int) pixels[y * w + x]);
     }
   }
 }
@@ -732,6 +740,182 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
                    100, 85, 55, 35, 25, 20
                });
 }
+
+
+// The right and bottom borders of an odd-sized image are not filled by the dedicated border loops.
+// The last column and row have to be covered by the inner loop and the top/left border loops instead.
+TEST_CASE("Bilinear upsampling of odd-sized image", "[heif_image]")
+{
+  heif_color_conversion_options options = {
+      .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
+      .only_use_preferred_chroma_algorithm = true};
+
+  std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
+  img->create(5, 5, heif_colorspace_YCbCr, heif_chroma_420);
+
+  auto error = img->fill_new_channel(heif_channel_Y, 128, 5, 5, 8, nullptr);
+  REQUIRE(!error);
+
+  // Same chroma planes as in the 6x6 test above. The 5x5 output is the top-left crop of the 6x6 output.
+  fill_plane(img, heif_channel_Cb, 3, 3,
+             {10, 40, 80,
+              100, 240, 160,
+              180, 200, 220});
+  fill_plane(img, heif_channel_Cr, 3, 3,
+             {255, 200, 160,
+              50, 0, 80,
+              100, 40, 20});
+
+  auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444,
+                                             nclx_profile::defaults(), 8, options, nullptr, heif_get_disabled_security_limits());
+  REQUIRE(conversionResult);
+  std::shared_ptr<HeifPixelImage> out = *conversionResult;
+
+  assert_plane(out, heif_channel_Cb,
+               {
+                   10, 18, 33, 50, 70,
+                   33, 47, 76, 93, 98,
+                   78, 106, 162, 178, 153,
+                   120, 148, 203, 216, 189,
+                   160, 173, 198, 209, 206
+               });
+
+  assert_plane(out, heif_channel_Cr,
+               {
+                   255, 241, 214, 190, 170,
+                   204, 190, 163, 148, 143,
+                   101, 88, 63, 63, 88,
+                   63, 49, 23, 24, 51,
+                   88, 73, 44, 31, 34
+               });
+}
+
+
+TEST_CASE("Bilinear upsampling 12 bit", "[heif_image]")
+{
+  heif_color_conversion_options options = {
+      .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
+      .only_use_preferred_chroma_algorithm = true};
+
+  std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
+  img->create(4, 4, heif_colorspace_YCbCr, heif_chroma_420);
+
+  auto error = img->fill_new_channel(heif_channel_Y, 2048, 4, 4, 12, nullptr);
+  REQUIRE(!error);
+
+  fill_plane(img, heif_channel_Cb, 2, 2,
+             {0, 4095,
+              4095, 0}, 12);
+  fill_plane(img, heif_channel_Cr, 2, 2,
+             {4095, 1000,
+              2000, 3000}, 12);
+
+  auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444,
+                                             nclx_profile::defaults(), 12, options, nullptr, heif_get_disabled_security_limits());
+  REQUIRE(conversionResult);
+  std::shared_ptr<HeifPixelImage> out = *conversionResult;
+
+  REQUIRE(out->get_bits_per_pixel(heif_channel_Cb) == 12);
+
+  assert_plane(out, heif_channel_Cb,
+               {
+                   0, 1024, 3071, 4095,
+                   1024, 1536, 2559, 3071,
+                   3071, 2559, 1536, 1024,
+                   4095, 3071, 1024, 0
+               });
+
+  assert_plane(out, heif_channel_Cr,
+               {
+                   4095, 3321, 1774, 1000,
+                   3571, 3053, 2018, 1500,
+                   2524, 2518, 2506, 2500,
+                   2000, 2250, 2750, 3000
+               });
+}
+
+
+// Reference implementation of 4:2:0 bilinear chroma upsampling.
+// Chroma samples are located in the center of each 2x2 luma block. Each output pixel is interpolated
+// from its nearest chroma sample (weight 3/4) and the next nearest one (weight 1/4) in each direction.
+// At the image border, the missing neighbor is replaced by the nearest sample, i.e. the chroma plane is clamped.
+static uint16_t reference_bilinear_chroma_sample(const std::vector<uint16_t>& chroma, uint32_t chroma_w, uint32_t chroma_h,
+                                                 uint32_t x, uint32_t y)
+{
+  auto taps = [](uint32_t pos, uint32_t chroma_size, uint32_t& near, uint32_t& far) {
+    near = pos / 2;
+    int f = (pos % 2 == 0) ? (int) near - 1 : (int) near + 1;
+    far = (uint32_t) std::clamp(f, 0, (int) chroma_size - 1);
+  };
+
+  uint32_t nx, fx, ny, fy;
+  taps(x, chroma_w, nx, fx);
+  taps(y, chroma_h, ny, fy);
+
+  auto c = [&](uint32_t cx, uint32_t cy) { return (int) chroma[cy * chroma_w + cx]; };
+
+  int sum = 9 * c(nx, ny) + 3 * c(fx, ny) + 3 * c(nx, fy) + c(fx, fy);
+  return (uint16_t) ((sum + 8) / 16);
+}
+
+
+TEST_CASE("Bilinear upsampling matches reference for all small image sizes", "[heif_image]")
+{
+  heif_color_conversion_options options = {
+      .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
+      .only_use_preferred_chroma_algorithm = true};
+
+  uint32_t seed = 12345;
+  auto next_random = [&seed](int bit_depth) {
+    seed = seed * 1103515245u + 12345u;
+    return (uint16_t) ((seed >> 8) & ((1u << bit_depth) - 1));
+  };
+
+  for (int bit_depth: {8, 12}) {
+    for (uint32_t height = 1; height <= 9; height++) {
+      for (uint32_t width = 1; width <= 9; width++) {
+        INFO("bit depth: " << bit_depth << ", size: " << width << "x" << height);
+
+        const uint32_t chroma_w = (width + 1) / 2;
+        const uint32_t chroma_h = (height + 1) / 2;
+
+        std::vector<uint16_t> cb(chroma_w * chroma_h), cr(chroma_w * chroma_h);
+        for (auto& v: cb) v = next_random(bit_depth);
+        for (auto& v: cr) v = next_random(bit_depth);
+
+        std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
+        img->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
+
+        auto error = img->fill_new_channel(heif_channel_Y, 1 << (bit_depth - 1), width, height, bit_depth, nullptr);
+        REQUIRE(!error);
+
+        fill_plane(img, heif_channel_Cb, chroma_w, chroma_h, cb, bit_depth);
+        fill_plane(img, heif_channel_Cr, chroma_w, chroma_h, cr, bit_depth);
+
+        auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444,
+                                                   nclx_profile::defaults(), bit_depth, options, nullptr,
+                                                   heif_get_disabled_security_limits());
+        REQUIRE(conversionResult);
+        std::shared_ptr<HeifPixelImage> out = *conversionResult;
+
+        REQUIRE(out->get_width(heif_channel_Cb) == width);
+        REQUIRE(out->get_height(heif_channel_Cb) == height);
+
+        std::vector<uint16_t> expected_cb(width * height), expected_cr(width * height);
+        for (uint32_t y = 0; y < height; y++) {
+          for (uint32_t x = 0; x < width; x++) {
+            expected_cb[y * width + x] = reference_bilinear_chroma_sample(cb, chroma_w, chroma_h, x, y);
+            expected_cr[y * width + x] = reference_bilinear_chroma_sample(cr, chroma_w, chroma_h, x, y);
+          }
+        }
+
+        assert_plane(out, heif_channel_Cb, expected_cb);
+        assert_plane(out, heif_channel_Cr, expected_cr);
+      }
+    }
+  }
+}
+
 
 TEST_CASE("RGB 5-6-5 to RGB")
 {
