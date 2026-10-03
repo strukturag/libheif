@@ -693,17 +693,19 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
       .only_use_preferred_chroma_algorithm = true};
 
   std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
-  img->create(4, 4, heif_colorspace_YCbCr, heif_chroma_420);
+  img->create(6, 6, heif_colorspace_YCbCr, heif_chroma_420);
 
-  auto error = img->fill_new_channel(heif_channel_Y, 128, 4,4, 8, nullptr);
+  auto error = img->fill_new_channel(heif_channel_Y, 128, 6, 6, 8, nullptr);
   REQUIRE(!error);
 
-  fill_plane(img, heif_channel_Cb, 2,2,
-             {10, 40,
-              100, 240});
-  fill_plane(img, heif_channel_Cr, 2, 2,
-             {255, 200,
-              50, 0});
+  fill_plane(img, heif_channel_Cb, 3, 3,
+             {10, 40, 80,
+              100, 240, 160,
+              180, 200, 220});
+  fill_plane(img, heif_channel_Cr, 3, 3,
+             {255, 200, 160,
+              50, 0, 80,
+              100, 40, 20});
 
   auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444,
                                              nclx_profile::defaults(), 8, options, nullptr, heif_get_disabled_security_limits());
@@ -712,19 +714,22 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
 
   assert_plane(out, heif_channel_Cb,
                {
-                   10, 18, 33, 40,
-                   33, 47, 76, 90,
-                   78, 106, 162, 190,
-                   100, 135, 205, 240
+                   10, 18, 33, 50, 70, 80,
+                   33, 47, 76, 93, 98, 100,
+                   78, 106, 162, 178, 153, 140,
+                   120, 148, 203, 216, 189, 175,
+                   160, 173, 198, 209, 206, 205,
+                   180, 185, 195, 205, 215, 220
                });
-
 
   assert_plane(out, heif_channel_Cr,
                {
-                   255, 241, 214, 200,
-                   204, 190, 163, 150,
-                   101, 88, 63, 50,
-                   50, 38, 13, 0
+                   255, 241, 214, 190, 170, 160,
+                   204, 190, 163, 148, 143, 140,
+                   101, 88, 63, 63, 88, 100,
+                   63, 49, 23, 24, 51, 65,
+                   88, 73, 44, 31, 34, 35,
+                   100, 85, 55, 35, 25, 20
                });
 }
 
