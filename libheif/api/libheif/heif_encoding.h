@@ -365,6 +365,7 @@ heif_error heif_context_add_overlay_image(heif_context* ctx,
                                           const uint16_t background_rgba[4],
                                           heif_image_handle** out_iovl_image_handle);
 
+// Select the primary image. If the image is hidden, it is made visible first.
 LIBHEIF_API
 heif_error heif_context_set_primary_image(heif_context*,
                                           heif_image_handle* image_handle);
