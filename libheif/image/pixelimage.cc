@@ -1311,6 +1311,23 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
                                                   heif_channel src_channel,
                                                   heif_channel dst_channel)
 {
+  // An interleaved plane holds several components, and which components those are is a
+  // property of the image's chroma format, not of the plane. Moving such a plane to another
+  // image would therefore have to re-derive the component list from the destination's chroma
+  // format, and the two images' formats need not even describe the same number of components.
+  // The code below instead re-derives the component type from the channel alone
+  // (map_channel_to_component_type() with heif_chroma_undefined), which has no answer for
+  // heif_channel_interleaved: it asserts, and without assertions it labels every component of
+  // the plane with the same placeholder type. The destination is then an image whose chroma
+  // format and whose plane disagree about the sample layout, which is the shape of defect that
+  // GHSA-qfj5-c4pq-q998 was. Transferring an interleaved plane is never meaningful, so refuse it.
+  if (src_channel == heif_channel_interleaved || dst_channel == heif_channel_interleaved) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Interleaved planes cannot be transferred between images, because their component "
+            "list is defined by the image's chroma format."};
+  }
+
   // A destination image must never end up with two planes for the same channel:
   // find_storage_for_channel() and every method built on it (get_bits_per_pixel(),
   // get_channel_memory(), get_width()/get_height()) only ever look at the first
