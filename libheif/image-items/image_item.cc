@@ -1039,41 +1039,47 @@ Error check_miaf_derivation_constraints(const ImageItem* item,
     return Error::Ok;  // already verified in this context
   }
 
-  // Rank budget passed to this item's own 'dimg' inputs.
-  int child_max_rank;
-  bool child_parent_is_iden;
+  // Rank budget passed to this item's own 'dimg' inputs. A coded image is the
+  // leaf of the derivation chain and has no 'dimg' inputs to walk, but it may
+  // still carry an auxiliary image, which is checked below.
+  bool has_derivation_inputs = true;
+  int child_max_rank = MIAF_RANK_CODED;
+  bool child_parent_is_iden = false;
   if (is_iden) {
     child_max_rank = max_rank;          // transparent: inputs keep this position
     child_parent_is_iden = true;
   }
   else if (rank == MIAF_RANK_OVERLAY) {
     child_max_rank = MIAF_RANK_GRID;    // overlay inputs: grid or below
-    child_parent_is_iden = false;
   }
   else if (rank == MIAF_RANK_GRID) {
     child_max_rank = MIAF_RANK_CODED;   // grid inputs: coded (or iden -> coded)
-    child_parent_is_iden = false;
   }
   else {
-    return Error::Ok;                   // coded image: leaf of the derivation chain
+    has_derivation_inputs = false;      // coded image: leaf of the derivation chain
   }
 
-  auto file = item->get_file();
-  auto iref = file ? file->get_iref_box() : nullptr;
-  if (iref) {
-    for (heif_item_id child_id : iref->get_references(id, fourcc("dimg"))) {
-      auto child = item->get_context()->get_image(child_id, true);
-      if (child) {
-        if (Error err = check_miaf_derivation_constraints(child.get(), child_max_rank,
-                                                          child_parent_is_iden, verified)) {
-          return err;
+  if (has_derivation_inputs) {
+    auto file = item->get_file();
+    auto iref = file ? file->get_iref_box() : nullptr;
+    if (iref) {
+      for (heif_item_id child_id : iref->get_references(id, fourcc("dimg"))) {
+        auto child = item->get_context()->get_image(child_id, true);
+        if (child) {
+          if (Error err = check_miaf_derivation_constraints(child.get(), child_max_rank,
+                                                            child_parent_is_iden, verified)) {
+            return err;
+          }
         }
       }
     }
   }
 
   // An auxiliary (e.g. alpha) image is a separate image whose own derivation
-  // chain must independently satisfy MIAF, so check it as a fresh chain.
+  // chain must independently satisfy MIAF, so check it as a fresh chain. This
+  // applies to every item of the walk, including coded images (a plain coded
+  // primary image with an alpha auxiliary is the common case), since the
+  // auxiliary is decoded as part of this item's decode.
   if (auto alpha = item->get_alpha_channel()) {
     if (Error err = check_miaf_derivation_constraints(alpha.get(), MIAF_RANK_OVERLAY,
                                                       /*parent_is_iden=*/false, verified)) {

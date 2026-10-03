@@ -466,3 +466,67 @@ TEST_CASE("MIAF: without the 'miaf' brand a nested grid is not structurally reje
   REQUIRE(completed);
   REQUIRE(err.code == heif_error_Ok);
 }
+
+
+// An auxiliary (alpha) image is a separate image whose own derivation chain
+// must satisfy MIAF independently of the master image. Here the alpha is a
+// nested grid (invalid under 7.3.11), attached with 'auxl' to a plain coded
+// primary image. The primary's own chain is trivially valid, so the validator
+// has to continue from the coded leaf into the auxiliary chain to notice.
+// (Previously the coded-image branch returned before the auxiliary check, so
+// this was only caught when the primary was itself a grid or overlay; GitHub
+// issue #1929.)
+static std::vector<Item> coded_primary_with_nested_grid_alpha_items() {
+  const std::vector<uint8_t> pixels(64 * 64, 0x7F);
+  std::vector<Item> items;
+  //           id  type    w   h   alpha dimg auxl data
+  items.push_back({1, "mski", 64, 64, false, {},  {},  pixels});                     // coded primary
+  items.push_back({2, "grid", 64, 64, true,  {3}, {1}, image_grid(1, 1, 64, 64)});  // its alpha: grid over ...
+  items.push_back({3, "grid", 64, 64, false, {4}, {},  image_grid(1, 1, 64, 64)});  // ... a grid (invalid)
+  items.push_back({4, "mski", 64, 64, false, {},  {},  pixels});                     // coded base of the alpha
+  return items;
+}
+
+TEST_CASE("MIAF: an invalid auxiliary chain on a coded primary is rejected with the 'miaf' brand") {
+  auto data = build_file(coded_primary_with_nested_grid_alpha_items(), /*primary=*/1,
+                         /*with_miaf_brand=*/true);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Invalid_input);
+}
+
+// Without the brand, the auxiliary chain is (like the primary's own chain) not
+// subject to the MIAF constraints and the nested-grid alpha decodes.
+TEST_CASE("MIAF: without the 'miaf' brand an invalid auxiliary chain on a coded primary is accepted") {
+  auto data = build_file(coded_primary_with_nested_grid_alpha_items(), /*primary=*/1,
+                         /*with_miaf_brand=*/false);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+// The same invalid auxiliary chain attached to a grid primary was already
+// rejected before; this pins the behavior as the counterpart of the coded case.
+TEST_CASE("MIAF: an invalid auxiliary chain on a grid primary is rejected with the 'miaf' brand") {
+  const std::vector<uint8_t> pixels(64 * 64, 0x7F);
+  std::vector<Item> items;
+  //           id  type    w   h   alpha dimg auxl data
+  items.push_back({1, "grid", 64, 64, false, {5}, {},  image_grid(1, 1, 64, 64)});  // grid primary (valid)
+  items.push_back({2, "grid", 64, 64, true,  {3}, {1}, image_grid(1, 1, 64, 64)});  // its alpha: grid over ...
+  items.push_back({3, "grid", 64, 64, false, {4}, {},  image_grid(1, 1, 64, 64)});  // ... a grid (invalid)
+  items.push_back({4, "mski", 64, 64, false, {},  {},  pixels});                     // coded base of the alpha
+  items.push_back({5, "mski", 64, 64, false, {},  {},  pixels});                     // coded tile of the primary
+  auto data = build_file(items, /*primary=*/1, /*with_miaf_brand=*/true);
+
+  heif_error err{};
+  bool completed = decode_item_with_timeout(data, /*item=*/1, std::chrono::seconds(20), err);
+
+  REQUIRE(completed);
+  REQUIRE(err.code == heif_error_Invalid_input);
+}
