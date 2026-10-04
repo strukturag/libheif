@@ -346,6 +346,11 @@ void heif_encoding_options_free(heif_encoding_options*);
 // 'options' should be NULL for now.
 // The first image added to the context is also automatically set the primary image, but
 // you can change the primary image later with heif_context_set_primary_image().
+//
+// The returned handle refers to an image that is being written. Use it to attach thumbnails,
+// metadata or properties to the image, or to make it the primary image. It cannot be used
+// to decode the image, and the functions that report the coded format of an image (bit
+// depths, preferred colorspace, alpha channel) return an error or "unknown" for it.
 LIBHEIF_API
 heif_error heif_context_encode_image(heif_context*,
                                      const heif_image* image,

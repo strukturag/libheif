@@ -44,7 +44,7 @@ ImageItem_AVC::ImageItem_AVC(HeifContext* ctx)
 
 Result<std::shared_ptr<Decoder>> ImageItem_AVC::get_decoder() const
 {
-  return {m_decoder};
+  return decoder_or_error(m_decoder);
 }
 
 

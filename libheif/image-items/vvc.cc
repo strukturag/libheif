@@ -65,7 +65,7 @@ Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data() 
 
 Result<std::shared_ptr<Decoder>> ImageItem_VVC::get_decoder() const
 {
-  return {m_decoder};
+  return decoder_or_error(m_decoder);
 }
 
 

@@ -474,6 +474,12 @@ public:
 
   Error transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const;
 
+  // The decoder of an image item is created when the item is read from a file
+  // (initialize_decoder()). An item that was added by encoding an image has none.
+  // This turns a missing decoder into an error, so that the functions that need the
+  // decoder fail instead of dereferencing a null pointer.
+  static Result<std::shared_ptr<class Decoder>> decoder_or_error(std::shared_ptr<class Decoder> decoder);
+
   virtual Result<std::shared_ptr<class Decoder>> get_decoder() const
   {
     return Error{

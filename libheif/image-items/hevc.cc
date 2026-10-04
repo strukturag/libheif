@@ -116,13 +116,18 @@ bool ImageItem_HEVC::is_coded_in_miaf_profile() const
 
 Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data() const
 {
-  return m_decoder->read_bitstream_configuration_data();
+  auto decoderResult = get_decoder();
+  if (!decoderResult) {
+    return decoderResult.error();
+  }
+
+  return (*decoderResult)->read_bitstream_configuration_data();
 }
 
 
 Result<std::shared_ptr<Decoder>> ImageItem_HEVC::get_decoder() const
 {
-  return {m_decoder};
+  return decoder_or_error(m_decoder);
 }
 
 

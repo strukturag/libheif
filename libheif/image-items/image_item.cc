@@ -510,6 +510,19 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 }
 
 
+Result<std::shared_ptr<Decoder>> ImageItem::decoder_or_error(std::shared_ptr<Decoder> decoder)
+{
+  if (!decoder) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "The image was not read from a file. An image that was added to the context by "
+                 "encoding cannot be decoded and its coded format cannot be queried."};
+  }
+
+  return decoder;
+}
+
+
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   auto decoderResult = get_decoder();

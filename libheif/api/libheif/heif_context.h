@@ -119,12 +119,15 @@ typedef enum heif_compression_format
 
 
 // ========================= heif_context =========================
-// A heif_context represents a HEIF file that has been read.
-// In the future, you will also be able to add pictures to a heif_context
-// and write it into a file again.
+// A heif_context represents a HEIF file. It is used either for reading a file
+// (heif_context_read_from_...() and decoding its images), or for writing a new file
+// (encoding images into the context and heif_context_write()), but not for both.
+// A context that has been read from a file cannot be written, and an image that has been
+// added to a context by encoding cannot be decoded from that context: write the file and
+// read it into a new context for that.
 
 
-// Allocate a new context for reading HEIF files.
+// Allocate a new context for reading or for writing a HEIF file.
 // Has to be freed again with heif_context_free().
 LIBHEIF_API
 heif_context* heif_context_alloc(void);

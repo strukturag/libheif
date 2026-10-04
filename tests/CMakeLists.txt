@@ -112,6 +112,7 @@ add_libheif_test(error_item_decode)
 add_libheif_test(alpha_cycle_deadlock)
 add_libheif_test(alpha_composite_decode)
 add_libheif_test(encode_plane_layout)
+add_libheif_test(encode_handle_queries)
 add_libheif_test(write_to_file)
 add_libheif_test(parallel_grid_deadlock)
 # The deadlock regression tests decode on a worker thread guarded by a timeout.

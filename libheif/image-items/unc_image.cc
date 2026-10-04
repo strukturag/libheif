@@ -479,7 +479,7 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
 
 Result<std::shared_ptr<Decoder>> ImageItem_uncompressed::get_decoder() const
 {
-  return {m_decoder};
+  return decoder_or_error(m_decoder);
 }
 
 std::shared_ptr<Encoder> ImageItem_uncompressed::get_encoder() const
@@ -536,6 +536,11 @@ void ImageItem_uncompressed::set_decoder_input_data()
 
 bool ImageItem_uncompressed::has_coded_alpha_channel() const
 {
+  // An item that was added by encoding has no decoder (see decoder_or_error()).
+  if (!m_decoder) {
+    return false;
+  }
+
   return m_decoder->has_alpha_component();
 }
 
