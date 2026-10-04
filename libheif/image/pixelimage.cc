@@ -1350,50 +1350,64 @@ Error HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPi
 }
 
 
-Error HeifPixelImage::fill_new_channel(heif_channel dst_channel, uint16_t value, int width, int height, int bpp,
+Error HeifPixelImage::fill_new_channel(heif_channel dst_channel, uint64_t value, int width, int height, int bpp,
                                      const heif_security_limits* limits)
 {
   if (Error err = add_channel(dst_channel, width, height, bpp, limits)) {
     return err;
   }
 
-  fill_channel(dst_channel, value);
-
-  return Error::Ok;
+  return fill_channel(dst_channel, value);
 }
 
 
-void HeifPixelImage::fill_channel(heif_channel dst_channel, uint16_t value)
+template <typename T>
+void HeifPixelImage::ComponentStorage::fill(T value)
 {
-  int num_interleaved = num_interleaved_components_per_plane(m_chroma);
+  size_t samples_per_row = static_cast<size_t>(m_width) * m_num_interleaved_components;
 
-  int bpp = get_bits_per_pixel(dst_channel);
-  uint32_t width = get_width(dst_channel);
-  uint32_t height = get_height(dst_channel);
+  for (uint32_t y = 0; y < m_height; y++) {
+    T* row = reinterpret_cast<T*>(static_cast<uint8_t*>(mem) + y * stride);
+    std::fill_n(row, samples_per_row, value);
+  }
+}
 
-  if (bpp <= 8) {
-    uint8_t* dst;
-    size_t dst_stride = 0;
-    dst = get_channel_memory(dst_channel, &dst_stride);
-    size_t width_bytes = static_cast<size_t>(width) * num_interleaved;
 
-    for (uint32_t y = 0; y < height; y++) {
-      memset(dst + y * dst_stride, value, width_bytes);
+Error HeifPixelImage::fill_channel(heif_channel dst_channel, uint64_t value)
+{
+  ComponentStorage* component = find_storage_for_channel(dst_channel);
+  if (!component) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Nonexisting_image_channel_referenced,
+                 "Cannot fill a plane that the image does not have"};
+  }
+
+  // The value is written with the width of the plane's storage word. A plane with a bit
+  // depth in between, like 24 or 48 bits, is stored in the next larger word (32 or 64 bits).
+
+  switch (bytes_per_sample_for_bit_depth(component->m_bit_depth)) {
+    case 1:
+      component->fill<uint8_t>(static_cast<uint8_t>(value));
+      break;
+    case 2:
+      component->fill<uint16_t>(static_cast<uint16_t>(value));
+      break;
+    case 4:
+      component->fill<uint32_t>(static_cast<uint32_t>(value));
+      break;
+    case 8:
+      component->fill<uint64_t>(value);
+      break;
+    default: {
+      std::stringstream sstr;
+      sstr << "Cannot fill planes with " << component->m_bit_depth << " bits per sample";
+      return Error{heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   sstr.str()};
     }
   }
-  else {
-    uint16_t* dst;
-    size_t dst_stride = 0;
-    dst = get_channel_memory<uint16_t>(dst_channel, &dst_stride);
-    dst_stride /= sizeof(uint16_t);
 
-    size_t row_size = static_cast<size_t>(width) * num_interleaved;
-    for (uint32_t y = 0; y < height; y++) {
-      for (size_t x = 0; x < row_size; x++) {
-        dst[y * dst_stride + x] = value;
-      }
-    }
-  }
+  return Error::Ok;
 }
 
 

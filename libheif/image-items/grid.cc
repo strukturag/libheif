@@ -21,6 +21,7 @@
 #include "grid.h"
 #include "context.h"
 #include "file.h"
+#include <cstdint>
 #include <cstring>
 #include <deque>
 #include <future>
@@ -561,13 +562,38 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
       }
 
       // Fill alpha plane with opaque in case not all tiles have alpha planes
+      //
+      // The alpha plane is cloned from the tile, and an 'unci' tile can have an alpha component
+      // of up to 128 bits and with signed, float or complex samples. The opaque value used to
+      // be computed as (1UL << alpha_bpp) - 1 for a 16-bit fill, guarded only by an assertion
+      // that the depth is at most 16, which aborted the process when it was compiled in
+      // (GHSA-3gwx-cjv4-jr74).
 
       if (grid_image->has_channel(heif_channel_Alpha)) {
         uint16_t alpha_bpp = grid_image->get_bits_per_pixel(heif_channel_Alpha);
-        assert(alpha_bpp <= 16);
 
-        auto alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
-        grid_image->fill_channel(heif_channel_Alpha, alpha_default_value);
+        if (alpha_bpp <= 64 &&
+            grid_image->get_datatype(heif_channel_Alpha) == heif_component_datatype_unsigned_integer) {
+          uint64_t alpha_default_value = (alpha_bpp == 64) ? UINT64_MAX : ((uint64_t{1} << alpha_bpp) - 1);
+
+          if (Error fill_err = grid_image->fill_channel(heif_channel_Alpha, alpha_default_value)) {
+            return fill_err;
+          }
+        }
+        else {
+          // There is no opaque value that we could fill in for this kind of plane. It stays
+          // zero, which is what the new image is initialized with.
+#if ENABLE_PARALLEL_TILE_DECODING
+          std::lock_guard<std::mutex> warningsLock(warningsMutex);
+#endif
+          warnings->emplace_back(
+            heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            "The alpha plane of the grid image has a sample type without a defined opaque value "
+            "(signed, float or complex samples, or more than 64 bits). "
+            "It is zero where a tile has no alpha plane."
+          );
+        }
       }
 
       grid_image->copy_metadata_from(*tile_img);
