@@ -991,8 +991,8 @@ int main(int argc, char** argv)
   heif_image* image;
   err = heif_decode_image(handle, &image, heif_colorspace_undefined, heif_chroma_undefined, NULL);
   if (err.code != 0) {
-    heif_image_handle_release(handle);
     std::cerr << "Could not decode primage image: " << err.message << "\n";
+    heif_image_handle_release(handle);
     return 1;
   }
 

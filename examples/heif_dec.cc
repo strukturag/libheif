@@ -337,8 +337,8 @@ int decode_single_image(heif_image_handle* handle,
                                 encoder->chroma(false, depth_bit_depth),
                                 nullptr);
         if (err.code) {
-          heif_image_handle_release(depth_handle);
           std::cerr << "Could not decode depth image: " << err.message << "\n";
+          heif_image_handle_release(depth_handle);
           return 1;
         }
 
@@ -392,17 +392,17 @@ int decode_single_image(heif_image_handle* handle,
                                   encoder->chroma(false, aux_bit_depth),
                                   nullptr);
           if (err.code) {
-            heif_image_handle_release(aux_handle);
             std::cerr << "Could not decode auxiliary image: " << err.message << "\n";
+            heif_image_handle_release(aux_handle);
             return 1;
           }
 
           const char* auxTypeC = nullptr;
           err = heif_image_handle_get_auxiliary_type(aux_handle, &auxTypeC);
           if (err.code) {
+            std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
             heif_image_release(aux_image);
             heif_image_handle_release(aux_handle);
-            std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
             return 1;
           }
 

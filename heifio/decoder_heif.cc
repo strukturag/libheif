@@ -32,19 +32,6 @@
 
 static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
-// libheif's heif_error.message is owned by the heif_context (or heif_image_handle)
-// and becomes invalid once the owning object is released. Copy the message into a
-// thread-local string so it stays valid for the caller after we have released the
-// context, and so concurrent callers on different threads do not race on the buffer.
-// The caller is expected to log the error promptly (heif-enc calls exit() immediately).
-static heif_error stable_error(const heif_error& err)
-{
-  static thread_local std::string msg;
-  msg = err.message ? err.message : "";
-  return {err.code, err.subcode, msg.c_str()};
-}
-
-
 heif_error loadHEIF(const char* filename, InputImage* input_image)
 {
   heif_context* ctx = heif_context_alloc();

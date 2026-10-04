@@ -297,6 +297,13 @@ typedef struct heif_error
   heif_suberror_code subcode;
 
   // textual error message (is always defined, you do not have to check for NULL)
+  //
+  // The string is owned by libheif. For many errors, it is stored in the object on which the
+  // function that returned the error was called (the heif_context, heif_image_handle,
+  // heif_image, heif_track, ...). It is only valid until the next function is called on that
+  // object, and at most until that object or the heif_context it belongs to is released.
+  // If you need the message for longer, copy it. In particular, read or copy it before you
+  // free the heif_context or release the image whose function returned the error.
   const char* message;
 } heif_error;
 

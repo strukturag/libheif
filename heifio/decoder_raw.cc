@@ -191,8 +191,10 @@ heif_error loadRAW(const char* filename, const RawImageParameters& params, Input
                                  params.datatype, params.bit_depth,
                                  &component_idx);
   if (err.code != heif_error_Ok) {
+    // the message is stored in the image that we release
+    heif_error stable = stable_error(err);
     heif_image_release(image);
-    return err;
+    return stable;
   }
 
   // Get writable pointer and copy data row by row

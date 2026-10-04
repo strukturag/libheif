@@ -192,9 +192,11 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     image_ptr = std::shared_ptr<heif_image>(image,
       [](heif_image* img) { heif_image_release(img); });
 
+    // The message of an error of heif_image_add_plane() is stored in the image, which is
+    // released when we return.
     err = heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height, 8);
     if (err.code)
-      return err;
+      return stable_error(err);
     size_t stride;
     uint8_t* ptr = heif_image_get_plane2(image, heif_channel_interleaved, &stride);
     // decode into heif image
@@ -241,19 +243,21 @@ heif_error loadWEBP(const char* filename, InputImage* input_image)
     uint8_t* ptr[4] = {};
     const int uv_width = (width + 1) / 2;
     const int uv_height = (height + 1) / 2;
+    // The message of an error of heif_image_add_plane() is stored in the image, which is
+    // released when we return.
     err = heif_image_add_plane(image, heif_channel_Y, (int)width, (int)height, 8);
     if (err.code)
-      return err;
+      return stable_error(err);
     err = heif_image_add_plane(image, heif_channel_Cb, uv_width, uv_height, 8);
     if (err.code)
-      return err;
+      return stable_error(err);
     err = heif_image_add_plane(image, heif_channel_Cr, uv_width, uv_height, 8);
     if (err.code)
-      return err;
+      return stable_error(err);
     if (config.input.has_alpha) {
       err = heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, 8);
       if (err.code)
-        return err;
+        return stable_error(err);
     }
     ptr[0] = heif_image_get_plane2(image, heif_channel_Y, &stride[0]);
     ptr[1] = heif_image_get_plane2(image, heif_channel_Cb, &stride[1]);
