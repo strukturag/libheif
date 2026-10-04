@@ -53,6 +53,25 @@ Error Track_Visual::load(const std::shared_ptr<Box_trak>& trak)
     return parentLoadError;
   }
 
+  // Every chunk of a visual track must have a decoder attached. Track::load()
+  // attaches one only when the chunk's sample description is a VisualSampleEntry.
+  // A 'pict'/'vide'/'auxv' track whose 'stsd' also carries a non-visual entry (for
+  // example an 'mp4a' audio entry) and maps a chunk to it via 'stsc' produces a
+  // decoder-less chunk. The decode loop (decode_next_image_sample) guarded that
+  // pointer only with assert(), so on an NDEBUG build it was a NULL-pointer
+  // dereference through a virtual call (GHSA-8p2c-9wv4-rx4p). Reject the file here,
+  // before any decoding. This is scoped to the visual track and does not affect
+  // metadata tracks, which legitimately have non-visual sample entries.
+  for (const auto& chunk : m_chunks) {
+    if (!chunk->get_decoder()) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Image sequence track has a chunk that references a non-visual sample description."
+      };
+    }
+  }
+
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
 
   // Find sequence resolution
@@ -205,7 +224,17 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
 
     auto decoder = chunk->get_decoder();
-    assert(decoder);
+    if (!decoder) {
+      // Should not happen: Track_Visual::load() rejects any visual track that has a
+      // decoder-less chunk. Guard anyway so that a future regression surfaces as a
+      // clean error instead of a NULL-pointer dereference through the virtual call
+      // below (GHSA-8p2c-9wv4-rx4p).
+      return Error{
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "Sequence chunk has no decoder."
+      };
+    }
 
     // avoid calling get_decoded_frame() before starting the decoder.
     if (m_next_sample_to_be_decoded != 0) {
