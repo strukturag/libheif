@@ -39,6 +39,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <string>
 
 namespace {
@@ -189,3 +190,78 @@ TEST_CASE("encoding refuses images with a non-canonical plane layout")
   }
 }
 
+
+
+// A plane with a bit depth of 9 to 15 bits stores its samples in 16-bit words, so an
+// application can fill it with values that exceed the bit depth it declared. The conversion
+// operators and the encoder libraries assume that the samples are in range (libsharpyuv uses
+// them as table indices, x264 aborts on an internal assertion), so the image is refused when
+// it is passed to the encoder, whatever the encoder is and whether or not it is converted first.
+TEST_CASE("encoding refuses images with sample values above their bit depth")
+{
+  heif_compression_format format = pick_encoder_format();
+  if (format == heif_compression_undefined) {
+    SKIP("no HEVC, AV1 or uncompressed encoder available");
+  }
+
+  struct Layout
+  {
+    const char* name;
+    heif_colorspace colorspace;
+    heif_chroma chroma;
+    std::initializer_list<heif_channel> channels;
+  };
+
+  const Layout layouts[] = {
+      {"YCbCr 4:2:0", heif_colorspace_YCbCr, heif_chroma_420, {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}},
+      {"RGB", heif_colorspace_RGB, heif_chroma_444, {heif_channel_R, heif_channel_G, heif_channel_B}},
+      {"monochrome", heif_colorspace_monochrome, heif_chroma_monochrome, {heif_channel_Y}},
+  };
+
+  for (const Layout& layout : layouts) {
+    for (int bit_depth : {10, 12}) {
+      for (bool in_range : {true, false}) {
+        INFO(layout.name << ", " << bit_depth << " bit, in_range=" << in_range);
+
+        const uint16_t max_value = static_cast<uint16_t>((1 << bit_depth) - 1);
+        const uint16_t value = in_range ? max_value : static_cast<uint16_t>(max_value + 1);
+
+        heif_image* img = create_image(layout.colorspace, layout.chroma);
+        for (heif_channel channel : layout.channels) {
+          bool subsampled = (layout.chroma == heif_chroma_420 && channel != heif_channel_Y);
+          uint32_t w = subsampled ? W / 2 : W;
+          uint32_t h = subsampled ? H / 2 : H;
+
+          heif_error err = heif_image_add_plane(img, channel, w, h, bit_depth);
+          REQUIRE(err.code == heif_error_Ok);
+
+          size_t stride = 0;
+          uint8_t* p = heif_image_get_plane2(img, channel, &stride);
+          REQUIRE(p != nullptr);
+          for (uint32_t y = 0; y < h; y++) {
+            uint16_t* row = reinterpret_cast<uint16_t*>(p + y * stride);
+            for (uint32_t x = 0; x < w; x++) {
+              row[x] = value;
+            }
+          }
+        }
+
+        EncodeResult result = encode(img, format);
+        INFO("encode error (" << result.code << "/" << result.subcode << "): " << result.message);
+
+        const bool refused_for_range = (result.message.find("exceed its bit depth") != std::string::npos);
+        if (in_range) {
+          // Whether the encoder supports this bit depth is up to the encoder, but the image
+          // must not be refused because of its sample values.
+          CHECK(!refused_for_range);
+        }
+        else {
+          CHECK(result.code == heif_error_Usage_error);
+          CHECK(refused_for_range);
+        }
+
+        heif_image_release(img);
+      }
+    }
+  }
+}

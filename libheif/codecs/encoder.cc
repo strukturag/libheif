@@ -142,6 +142,14 @@ Result<std::shared_ptr<HeifPixelImage>> Encoder::convert_colorspace_for_encoding
     return err;
   }
 
+  // The image comes from the application, so nothing guarantees that its samples are within
+  // the bit depth it declared. The conversion operators and the encoder libraries behind the
+  // plugins assume that they are (libsharpyuv indexes its gamma tables with the samples, x264
+  // aborts on an internal assertion), so this is checked once here for all of them.
+  if (Error err = image->check_sample_value_ranges()) {
+    return err;
+  }
+
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 

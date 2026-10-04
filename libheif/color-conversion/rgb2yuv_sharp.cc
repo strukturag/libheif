@@ -251,10 +251,10 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   // libsharpyuv uses the sample values as indices into its gamma tables, which are sized
   // for the bit depth we pass, and it does not check the range itself. A sample above
   // that range makes it read far outside the table, and the value found there is used
-  // as the index for a second lookup. The planes cannot guarantee the range: they are
-  // filled by the application when encoding, or by a decoder that may hand through
-  // whatever the bitstream contained. Refuse such an image here, right in front of the
-  // call that depends on it.
+  // as the index for a second lookup. Images from the application are checked when they
+  // are passed to the encoder, but this operator also runs on decoded images, and a decoder
+  // may hand through whatever the bitstream contained. Refuse such an image here, right
+  // in front of the call that depends on it.
   if (Error err = input->check_sample_value_ranges()) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,

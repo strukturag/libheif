@@ -373,7 +373,8 @@ heif_error heif_image_create(int width, int height,
  *
  * <p>Planes with a bit depth of 9 to 16 bits store each sample in a 16-bit word. The sample
  * values that are written into the plane have to be within the range of {@code bit_depth} bits,
- * i.e. the unused upper bits must be zero.
+ * i.e. the unused upper bits must be zero. The encoding functions return an error for an image
+ * that contains larger values.
  *
  * <p>An image with an interleaved chroma format carries its alpha inside the interleaved
  * plane. Adding a separate {@code heif_channel_Alpha} plane to such an image is rejected

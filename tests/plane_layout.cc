@@ -264,8 +264,9 @@ TEST_CASE("convert_colorspace refuses images with a non-canonical plane layout")
 
 // A plane stores its samples in whole bytes, so a plane with a bit depth of, say, 10 bits can
 // hold larger values in its 16-bit words. HeifPixelImage::check_sample_value_ranges() is the
-// gate for that: the sharp-yuv operator uses it before it hands the samples to libsharpyuv,
-// which uses them as table indices.
+// gate for that: the encoder entry uses it for images coming from the application, and the
+// sharp-yuv operator uses it before it hands the samples to libsharpyuv, which uses them as
+// table indices.
 TEST_CASE("check_sample_value_ranges")
 {
   auto set_sample16 = [](const std::shared_ptr<HeifPixelImage>& img, heif_channel ch, size_t idx_in_last_row, uint16_t value) {

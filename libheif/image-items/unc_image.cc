@@ -366,6 +366,12 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     // TODO: drop alpha
   }
 
+  // Tiles are passed to the 'unci' encoder directly, without going through
+  // Encoder::convert_colorspace_for_encoding(), so the sample range is checked here.
+  if (Error err = image->check_sample_value_ranges()) {
+    return err;
+  }
+
   Result<std::vector<uint8_t>> codedBitstreamResult = m_unc_encoder->encode_tile(image);
   if (!codedBitstreamResult) {
     return codedBitstreamResult.error();

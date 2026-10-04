@@ -77,6 +77,9 @@ const InterleavedFormat interleaved_formats[] = {
 };
 
 
+// Fills every byte of the plane with 'value'. For the planes with 16-bit samples this gives
+// the sample value 0x0101 * value, which has to stay within the bit depth of the plane (the
+// encoder refuses an image with larger samples).
 void fill_plane(heif_image* image, heif_channel channel, uint8_t value)
 {
   size_t stride = 0;
@@ -128,7 +131,7 @@ TEST_CASE("heif_image_add_plane rejects a separate alpha plane on an interleaved
 
     err = heif_image_add_plane(image, heif_channel_interleaved, WIDTH, HEIGHT, fmt.bit_depth);
     REQUIRE(err.code == heif_error_Ok);
-    fill_plane(image, heif_channel_interleaved, 0x80);
+    fill_plane(image, heif_channel_interleaved, 0x02);
 
     err = heif_image_add_plane(image, heif_channel_Alpha, WIDTH, HEIGHT, fmt.bit_depth);
     CHECK(err.code == heif_error_Usage_error);
