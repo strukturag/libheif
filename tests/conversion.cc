@@ -652,6 +652,86 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
 }
 
 
+#ifdef HAVE_LIBSHARPYUV
+// libsharpyuv uses the RGB sample values as indices into its gamma tables, which are sized
+// for the bit depth it is told, and it does not check the range. A 10-bit or 12-bit plane is
+// stored in 16-bit words, so nothing keeps an application (or a decoder that hands through
+// padding bits) from storing a larger value. The operator has to refuse such an image
+// instead of passing it on: the table lookup went far out of bounds otherwise.
+TEST_CASE("Sharp yuv refuses sample values above the bit depth", "[heif_image]")
+{
+  const uint32_t width = 64;
+  const uint32_t height = 64;
+
+  heif_color_conversion_options sharp_options{};
+  sharp_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+  sharp_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  sharp_options.only_use_preferred_chroma_algorithm = true;
+
+  nclx_profile target_nclx = nclx_profile::defaults();
+  target_nclx.set_matrix_coefficients(heif_matrix_coefficients_ITU_R_BT_601_6);
+
+  const uint16_t probe = 1;
+  const bool big_endian = (*reinterpret_cast<const uint8_t*>(&probe) == 0);
+  const heif_chroma native_rrggbb = big_endian ? heif_chroma_interleaved_RRGGBB_BE
+                                               : heif_chroma_interleaved_RRGGBB_LE;
+
+  for (bool interleaved : {false, true}) {
+    for (int bpp : {10, 12, 16}) {
+      const uint16_t max_value = static_cast<uint16_t>((1 << bpp) - 1);
+
+      // The largest valid value, the first invalid one, and the value of the original report.
+      for (uint16_t value : {max_value, static_cast<uint16_t>(max_value + 1), uint16_t{0x5a5a}}) {
+        // one sample out of range is enough, wherever it is
+        for (bool whole_plane : {true, false}) {
+          INFO("interleaved=" << interleaved << " bpp=" << bpp << " value=" << value
+                              << " whole_plane=" << whole_plane);
+
+          auto img = std::make_shared<HeifPixelImage>();
+          heif_channel last_channel;
+
+          if (interleaved) {
+            img->create(width, height, heif_colorspace_RGB, native_rrggbb);
+            REQUIRE(!img->fill_new_channel(heif_channel_interleaved, whole_plane ? value : 0,
+                                           width, height, bpp, nullptr));
+            last_channel = heif_channel_interleaved;
+          }
+          else {
+            img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
+            for (heif_channel c : {heif_channel_R, heif_channel_G, heif_channel_B}) {
+              REQUIRE(!img->fill_new_channel(c, whole_plane ? value : 0, width, height, bpp, nullptr));
+            }
+            last_channel = heif_channel_B;
+          }
+
+          if (!whole_plane) {
+            // only the very last sample of the last plane
+            size_t stride;
+            uint8_t* p = img->get_channel_memory(last_channel, &stride);
+            size_t samples_per_row = static_cast<size_t>(width) * (interleaved ? 3 : 1);
+            reinterpret_cast<uint16_t*>(p + (height - 1) * stride)[samples_per_row - 1] = value;
+          }
+
+          auto result = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_420,
+                                           target_nclx, 8, sharp_options, nullptr,
+                                           heif_get_disabled_security_limits());
+
+          if (value <= max_value) {
+            REQUIRE(result);
+            CHECK((*result)->get_chroma_format() == heif_chroma_420);
+          }
+          else {
+            REQUIRE(!result);
+            CHECK(result.error().error_code == heif_error_Invalid_input);
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+
+
 static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint16_t>& pixels, int bit_depth = 8)
 {
   auto error = img->add_channel(channel, w, h, bit_depth, nullptr);

@@ -23,6 +23,7 @@
 #include "common_utils.h"
 #include "security_limits.h"
 
+#include <bit>
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -1074,6 +1075,95 @@ Error HeifPixelImage::check_plane_layout() const
   for (heif_channel channel : colour_planes) {
     if (seen.count(channel) == 0) {
       return layout_error(std::string("Image has no ") + channel_name(channel) + " plane");
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+// Returns whether any sample of the plane has one of the bits in 'invalid_bits' set.
+template <typename T>
+static bool plane_has_sample_with_bits(const void* mem, size_t stride, size_t samples_per_row,
+                                       uint32_t height, T invalid_bits)
+{
+  for (uint32_t y = 0; y < height; y++) {
+    const T* row = reinterpret_cast<const T*>(static_cast<const uint8_t*>(mem) + y * stride);
+    for (size_t x = 0; x < samples_per_row; x++) {
+      if (row[x] & invalid_bits) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+
+Error HeifPixelImage::check_sample_value_ranges() const
+{
+  // The interleaved RRGGBB formats store their samples with a fixed byte order.
+  const bool big_endian_samples = (m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+                                   m_chroma == heif_chroma_interleaved_RRGGBBAA_BE);
+  const bool little_endian_samples = (m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
+                                      m_chroma == heif_chroma_interleaved_RRGGBBAA_LE);
+  const bool swapped_byte_order = (std::endian::native == std::endian::little) ? big_endian_samples
+                                                                               : little_endian_samples;
+
+  for (const auto& component : m_storage) {
+    if (component.m_datatype != heif_component_datatype_unsigned_integer) {
+      continue;
+    }
+
+    const int bit_depth = component.m_bit_depth;
+    const int bytes_per_sample = bytes_per_sample_for_bit_depth(bit_depth);
+    if (bit_depth == 8 * bytes_per_sample) {
+      continue; // every value of the storage word is a valid sample
+    }
+
+    const size_t samples_per_row = static_cast<size_t>(component.m_width) * component.m_num_interleaved_components;
+
+    // The largest valid value is 2^bit_depth - 1, so a sample is out of range exactly when
+    // one of the bits above the bit depth is set.
+    bool out_of_range = false;
+
+    switch (bytes_per_sample) {
+      case 1: {
+        auto invalid_bits = static_cast<uint8_t>(0xFFu << bit_depth);
+        out_of_range = plane_has_sample_with_bits(component.mem, component.stride, samples_per_row,
+                                                  component.m_height, invalid_bits);
+        break;
+      }
+      case 2: {
+        auto invalid_bits = static_cast<uint16_t>(0xFFFFu << bit_depth);
+        if (swapped_byte_order && component.m_channel == heif_channel_interleaved) {
+          invalid_bits = static_cast<uint16_t>((invalid_bits >> 8) | (invalid_bits << 8));
+        }
+        out_of_range = plane_has_sample_with_bits(component.mem, component.stride, samples_per_row,
+                                                  component.m_height, invalid_bits);
+        break;
+      }
+      case 4: {
+        uint32_t invalid_bits = 0xFFFFFFFFu << bit_depth;
+        out_of_range = plane_has_sample_with_bits(component.mem, component.stride, samples_per_row,
+                                                  component.m_height, invalid_bits);
+        break;
+      }
+      case 8: {
+        uint64_t invalid_bits = ~uint64_t{0} << bit_depth;
+        out_of_range = plane_has_sample_with_bits(component.mem, component.stride, samples_per_row,
+                                                  component.m_height, invalid_bits);
+        break;
+      }
+      default:
+        break;
+    }
+
+    if (out_of_range) {
+      std::stringstream sstr;
+      sstr << "The " << channel_name(component.m_channel) << " plane contains sample values that exceed its bit depth of "
+           << bit_depth << " bits";
+      return Error{heif_error_Usage_error, heif_suberror_Invalid_parameter_value, sstr.str()};
     }
   }
 

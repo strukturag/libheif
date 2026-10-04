@@ -248,6 +248,19 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   int input_bytes_per_pixel = (has_alpha ? 4 : 3) * input_bytes_per_sample;
   int rgb_step = planar_input ? input_bytes_per_sample : input_bytes_per_pixel;
 
+  // libsharpyuv uses the sample values as indices into its gamma tables, which are sized
+  // for the bit depth we pass, and it does not check the range itself. A sample above
+  // that range makes it read far outside the table, and the value found there is used
+  // as the index for a second lookup. The planes cannot guarantee the range: they are
+  // filled by the application when encoding, or by a decoder that may hand through
+  // whatever the bitstream contained. Refuse such an image here, right in front of the
+  // call that depends on it.
+  if (Error err = input->check_sample_value_ranges()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 err.message};
+  }
+
   int sharpyuv_ok =
       SharpYuvConvert(in_r, in_g, in_b, rgb_step, (int)in_stride,
                       input_bits, out_y, (int)out_y_stride, out_cb, (int)out_cb_stride,

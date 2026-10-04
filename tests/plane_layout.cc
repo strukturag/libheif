@@ -37,6 +37,7 @@
 #include "image/pixelimage.h"
 #include "color-conversion/colorconversion.h"
 
+#include <cstring>
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -257,5 +258,132 @@ TEST_CASE("convert_colorspace refuses images with a non-canonical plane layout")
     REQUIRE(result);
     CHECK((*result)->has_channel(heif_channel_interleaved));
     CHECK(!(*result)->has_channel(heif_channel_unknown));
+  }
+}
+
+
+// A plane stores its samples in whole bytes, so a plane with a bit depth of, say, 10 bits can
+// hold larger values in its 16-bit words. HeifPixelImage::check_sample_value_ranges() is the
+// gate for that: the sharp-yuv operator uses it before it hands the samples to libsharpyuv,
+// which uses them as table indices.
+TEST_CASE("check_sample_value_ranges")
+{
+  auto set_sample16 = [](const std::shared_ptr<HeifPixelImage>& img, heif_channel ch, size_t idx_in_last_row, uint16_t value) {
+    size_t stride;
+    uint8_t* p = img->get_channel_memory(ch, &stride);
+    REQUIRE(p != nullptr);
+    reinterpret_cast<uint16_t*>(p + (img->get_height(ch) - 1) * stride)[idx_in_last_row] = value;
+  };
+
+  SECTION("planar planes with 9 to 15 bits") {
+    for (int bpp : {9, 10, 12, 15}) {
+      INFO("bpp=" << bpp);
+      const uint16_t max_value = static_cast<uint16_t>((1 << bpp) - 1);
+
+      auto img = make_image(heif_colorspace_YCbCr, heif_chroma_420,
+                            {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}, bpp);
+      for (heif_channel ch : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+        img->fill_channel(ch, max_value);
+      }
+      CHECK(!img->check_sample_value_ranges());
+
+      // a single sample, the last one of the last plane
+      set_sample16(img, heif_channel_Cr, img->get_width(heif_channel_Cr) - 1, static_cast<uint16_t>(max_value + 1));
+      Error err = img->check_sample_value_ranges();
+      REQUIRE(err);
+      CHECK(err.error_code == heif_error_Usage_error);
+      CHECK(mentions(err, "Cr"));
+    }
+  }
+
+  SECTION("8 and 16 bit planes cannot be out of range") {
+    auto img8 = make_image(heif_colorspace_RGB, heif_chroma_444, {heif_channel_R, heif_channel_G, heif_channel_B}, 8);
+    auto img16 = make_image(heif_colorspace_RGB, heif_chroma_444, {heif_channel_R, heif_channel_G, heif_channel_B}, 16);
+    for (heif_channel ch : {heif_channel_R, heif_channel_G, heif_channel_B}) {
+      img8->fill_channel(ch, 0xFF);
+      img16->fill_channel(ch, 0xFFFF);
+    }
+    CHECK(!img8->check_sample_value_ranges());
+    CHECK(!img16->check_sample_value_ranges());
+  }
+
+  SECTION("planes with less than 8 bits") {
+    auto img = make_image(heif_colorspace_monochrome, heif_chroma_monochrome, {heif_channel_Y}, 4);
+    img->fill_channel(heif_channel_Y, 15);
+    CHECK(!img->check_sample_value_ranges());
+    img->fill_channel(heif_channel_Y, 16);
+    CHECK(img->check_sample_value_ranges());
+  }
+
+  SECTION("the alpha plane is checked, too") {
+    auto img = make_image(heif_colorspace_RGB, heif_chroma_444,
+                          {heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha}, 10);
+    for (heif_channel ch : {heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha}) {
+      img->fill_channel(ch, 1023);
+    }
+    CHECK(!img->check_sample_value_ranges());
+    set_sample16(img, heif_channel_Alpha, 0, 1024);
+    Error err = img->check_sample_value_ranges();
+    REQUIRE(err);
+    CHECK(mentions(err, "alpha"));
+  }
+
+  SECTION("interleaved planes: all components, in the byte order of the format") {
+    for (heif_chroma chroma : {heif_chroma_interleaved_RRGGBB_LE, heif_chroma_interleaved_RRGGBB_BE,
+                               heif_chroma_interleaved_RRGGBBAA_LE, heif_chroma_interleaved_RRGGBBAA_BE}) {
+      const bool big_endian = (chroma == heif_chroma_interleaved_RRGGBB_BE ||
+                               chroma == heif_chroma_interleaved_RRGGBBAA_BE);
+      const int num_components = (chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
+                                  chroma == heif_chroma_interleaved_RRGGBBAA_BE) ? 4 : 3;
+      INFO("chroma=" << chroma);
+
+      // writes one sample in the byte order of the format
+      auto set_sample = [&](const std::shared_ptr<HeifPixelImage>& img, size_t idx, uint16_t value) {
+        size_t stride;
+        uint8_t* p = img->get_channel_memory(heif_channel_interleaved, &stride) + (H - 1) * stride + 2 * idx;
+        p[big_endian ? 0 : 1] = static_cast<uint8_t>(value >> 8);
+        p[big_endian ? 1 : 0] = static_cast<uint8_t>(value & 0xFF);
+      };
+
+      auto img = make_image(heif_colorspace_RGB, chroma, {heif_channel_interleaved}, 10);
+      img->fill_channel(heif_channel_interleaved, 0);
+
+      // 0x03FF is the largest 10-bit value. Read with the wrong byte order it would be 0xFF03.
+      for (size_t idx = 0; idx < static_cast<size_t>(W) * num_components; idx++) {
+        set_sample(img, idx, 0x03FF);
+      }
+      CHECK(!img->check_sample_value_ranges());
+
+      // 0x0400 is out of range. Read with the wrong byte order it would be the valid value 4.
+      set_sample(img, static_cast<size_t>(W) * num_components - 1, 0x0400);
+      CHECK(img->check_sample_value_ranges());
+    }
+  }
+
+  SECTION("only unsigned integer planes are checked") {
+    // A signed 12-bit sample of -1 has all bits of its 16-bit word set.
+    auto img = std::make_shared<HeifPixelImage>();
+    img->create(W, H, heif_colorspace_custom, heif_chroma_planar);
+    auto id = img->add_component(W, H, heif_cmpd_component_type_monochrome,
+                                 heif_component_datatype_signed_integer, 12, nullptr);
+    REQUIRE(id);
+    size_t stride;
+    uint8_t* p = img->get_component(*id, &stride);
+    REQUIRE(p != nullptr);
+    for (uint32_t y = 0; y < H; y++) {
+      memset(p + y * stride, 0xFF, 2 * W);
+    }
+    CHECK(!img->check_sample_value_ranges());
+
+    // the same bits in an unsigned plane are out of range
+    auto id2 = img->add_component(W, H, heif_cmpd_component_type_monochrome,
+                                  heif_component_datatype_unsigned_integer, 12, nullptr);
+    REQUIRE(id2);
+    p = img->get_component(*id2, &stride);
+    REQUIRE(p != nullptr);
+    for (uint32_t y = 0; y < H; y++) {
+      memset(p + y * stride, 0xFF, 2 * W);
+    }
+    CHECK(img->check_sample_value_ranges());
   }
 }

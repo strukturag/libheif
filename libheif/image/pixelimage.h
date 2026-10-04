@@ -163,6 +163,17 @@ public:
   // Returns a Usage_error naming the offending plane.
   Error check_plane_layout() const;
 
+  // Checks that no sample exceeds the value range of its plane's bit depth. A plane stores
+  // its samples in whole bytes (e.g. 10-bit samples in 16-bit words), so the memory can hold
+  // larger values than the bit depth allows, and the bit depth is only a promise of whoever
+  // filled the plane. Code that derives table sizes or bit counts from the bit depth (third
+  // party encoders, libsharpyuv) relies on that promise. Only planes with unsigned integer
+  // samples are checked.
+  // Like check_plane_layout(), this is a check for the places where pixel data enters from the
+  // outside, not something HeifPixelImage enforces by itself.
+  // Returns a Usage_error naming the offending plane.
+  Error check_sample_value_ranges() const;
+
   heif_chroma get_chroma_format() const { return m_chroma; }
 
   heif_colorspace get_colorspace() const { return m_colorspace; }
