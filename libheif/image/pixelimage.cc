@@ -1102,13 +1102,18 @@ static bool plane_has_sample_with_bits(const void* mem, size_t stride, size_t sa
 
 Error HeifPixelImage::check_sample_value_ranges() const
 {
-  // The interleaved RRGGBB formats store their samples with a fixed byte order.
-  const bool big_endian_samples = (m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
-                                   m_chroma == heif_chroma_interleaved_RRGGBBAA_BE);
-  const bool little_endian_samples = (m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
-                                      m_chroma == heif_chroma_interleaved_RRGGBBAA_LE);
-  const bool swapped_byte_order = (std::endian::native == std::endian::little) ? big_endian_samples
-                                                                               : little_endian_samples;
+  // The interleaved RRGGBB formats store their samples with a fixed byte order, which can
+  // differ from the byte order of the machine.
+  bool swapped_byte_order = false;
+
+  if (m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+      m_chroma == heif_chroma_interleaved_RRGGBBAA_BE) {
+    swapped_byte_order = (std::endian::native != std::endian::big);
+  }
+  else if (m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
+           m_chroma == heif_chroma_interleaved_RRGGBBAA_LE) {
+    swapped_byte_order = (std::endian::native != std::endian::little);
+  }
 
   for (const auto& component : m_storage) {
     if (component.m_datatype != heif_component_datatype_unsigned_integer) {
