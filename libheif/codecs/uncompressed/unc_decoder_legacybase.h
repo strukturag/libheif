@@ -175,6 +175,11 @@ protected:
     uint8_t* chroma_dst_plane[2] = {nullptr, nullptr};
     size_t chroma_dst_plane_stride[2] = {0, 0};
     uint32_t chroma_bytes_per_component_sample[2] = {0, 0};
+    // How each of the two chroma samples is coded in the bitstream: the number of bits of
+    // the value and the component_align_size. This is not the same as the storage width
+    // above: a 12-bit sample is stored in two bytes, but coded with 12 bits.
+    uint16_t chroma_bits_per_component_sample[2] = {0, 0};
+    uint8_t chroma_component_alignment[2] = {0, 0};
     uint16_t bits_per_component_sample;
     uint8_t component_alignment;
     uint32_t bytes_per_tile_row_src;

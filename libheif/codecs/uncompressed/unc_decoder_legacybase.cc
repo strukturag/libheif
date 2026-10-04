@@ -168,6 +168,20 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
 
     entry.chroma_dst_plane[1] = img->get_channel_memory(paired_channel, &(entry.chroma_dst_plane_stride[1]));
     entry.chroma_bytes_per_component_sample[1] = img->get_storage_bits_per_pixel(paired_channel) / 8;
+
+    // The coding of the two samples in the bitstream is taken from their 'uncC' components.
+    entry.chroma_bits_per_component_sample[0] = component.component_bit_depth;
+    entry.chroma_component_alignment[0] = component.component_align_size;
+
+    for (const Box_uncC::Component& other : m_uncC->get_components()) {
+      heif_channel other_channel;
+      if (map_uncompressed_component_to_channel(m_cmpd, other, &other_channel) &&
+          other_channel == paired_channel) {
+        entry.chroma_bits_per_component_sample[1] = other.component_bit_depth;
+        entry.chroma_component_alignment[1] = other.component_align_size;
+        break;
+      }
+    }
   }
   entry.bits_per_component_sample = component.component_bit_depth;
   entry.component_alignment = component.component_align_size;

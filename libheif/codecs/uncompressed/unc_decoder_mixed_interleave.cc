@@ -29,24 +29,67 @@
 Result<std::vector<uint64_t>> unc_decoder_mixed_interleave::get_tile_data_sizes() const
 {
   uint64_t tile_size = 0;
+  bool chroma_counted = false;
 
   for (const ChannelListEntry& entry : channelList) {
-    uint32_t bits_per_component = entry.bits_per_component_sample;
-    if (entry.channel != heif_channel_Cb && entry.channel != heif_channel_Cr
-        && entry.component_alignment > 0) {
-      uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-      skip_to_alignment(bytes_per_component, entry.component_alignment);
-      bits_per_component = bytes_per_component * 8;
+    uint64_t bits_per_row;
+
+    if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
+      // The two chroma components are stored together, like the components of a pixel in
+      // pixel interleave mode. They are counted once, at the first of the two.
+      if (chroma_counted) {
+        continue;
+      }
+      chroma_counted = true;
+
+      // Returns the bit position after one Cb/Cr pair that starts at bit position 'pos'.
+      // This mirrors how processTile() reads the pair: a byte-aligned component starts on a
+      // byte boundary and occupies component_align_size bytes, any other component
+      // occupies exactly its bit depth.
+      auto end_of_chroma_pair = [&entry](uint64_t pos) {
+        for (int c = 0; c < 2; c++) {
+          if (entry.chroma_component_alignment[c] != 0) {
+            pos = (pos + 7) & ~uint64_t{7};
+            pos += entry.chroma_component_alignment[c] * 8;
+          }
+          else {
+            pos += entry.chroma_bits_per_component_sample[c];
+          }
+        }
+        return pos;
+      };
+
+      // The first pair starts at the byte-aligned start of the row. All following pairs
+      // start at the same position within a byte as the second one, so they all have the
+      // size of the second pair.
+      uint64_t end_of_first_pair = end_of_chroma_pair(0);
+      uint64_t end_of_second_pair = end_of_chroma_pair(end_of_first_pair);
+
+      bits_per_row = 0;
+      if (entry.tile_width > 0) {
+        bits_per_row = end_of_first_pair + (end_of_second_pair - end_of_first_pair) * (entry.tile_width - 1);
+      }
+    }
+    else {
+      uint32_t bits_per_component = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        uint32_t bytes_per_component = (bits_per_component + 7) / 8;
+        skip_to_alignment(bytes_per_component, entry.component_alignment);
+        bits_per_component = bytes_per_component * 8;
+      }
+
+      bits_per_row = uint64_t{bits_per_component} * entry.tile_width;
     }
 
-    if (bits_per_component != 0 && entry.tile_width > UINT32_MAX / bits_per_component) {
+    if (bits_per_row > UINT32_MAX) {
       return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
                    "uncompressed tile row size exceeds 32-bit range"};
     }
-    uint32_t bits_per_row = bits_per_component * entry.tile_width;
-    bits_per_row = (bits_per_row + 7) & ~7U; // align to byte boundary
 
-    tile_size += uint64_t{bits_per_row} / 8 * entry.tile_height;
+    uint32_t bytes_per_row = static_cast<uint32_t>((bits_per_row + 7) / 8); // rows end on a byte boundary
+    skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
+
+    tile_size += uint64_t{bytes_per_row} * entry.tile_height;
   }
 
   if (m_uncC->get_tile_align_size() != 0) {
@@ -87,7 +130,7 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
       if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
         if (!haveProcessedChromaForThisTile) {
           for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-            // TODO: row padding
+            srcBits.markRowStart();
             uint64_t dst_row_number = tile_y + channel_y0;
 
             uint64_t chroma_dst_row_offset[2];
@@ -102,21 +145,37 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
               // Each is written using its own plane's byte width -- Cb and Cr can be
               // declared with different bit depths, so reusing one plane's width for
               // the other overruns it (GHSA-x8r2-mggj-j6wr).
+              //
+              // A sample is coded with the bit depth of its component, as in pixel interleave
+              // mode, not with the width of the plane's storage word. Reading the full storage
+              // width instead put the bits of the neighbouring sample (or the alignment
+              // padding) into the upper bits of the value, so that a plane declared with, say,
+              // 12 bits received samples of up to 65535 (GHSA-v5rj-g4wv-j5w3). What such
+              // samples can do downstream is shown by GHSA-q7mw-2fmm-5q94.
               for (int c = 0; c < 2; c++) {
+                if (entry.chroma_component_alignment[c] != 0) {
+                  srcBits.skip_to_byte_boundary();
+                  int numPadBits = (entry.chroma_component_alignment[c] * 8) - entry.chroma_bits_per_component_sample[c];
+                  srcBits.skip_bits(numPadBits);
+                }
+
                 uint32_t bytes_per_sample = entry.chroma_bytes_per_component_sample[c];
                 uint64_t dst_column_offset = dst_column_number * bytes_per_sample;
-                int val = srcBits.get_bits(bytes_per_sample * 8);
+                int val = srcBits.get_bits(entry.chroma_bits_per_component_sample[c]);
                 memcpy_to_native_endian(entry.chroma_dst_plane[c] + chroma_dst_row_offset[c] + dst_column_offset, val, bytes_per_sample);
               }
             }
+            srcBits.handleRowAlignment(m_uncC->get_row_align_size());
             haveProcessedChromaForThisTile = true;
           }
         }
       }
       else {
         for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
+          srcBits.markRowStart();
           uint64_t dst_row_offset = (channel_y0 + tile_y) * entry.dst_plane_stride;
           processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
+          srcBits.handleRowAlignment(m_uncC->get_row_align_size());
         }
       }
     }
