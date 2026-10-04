@@ -24,6 +24,8 @@
 #include "decoder_openjpeg.h"
 #include "common_utils.h"
 #include <openjpeg.h>
+#include <algorithm>
+#include <cstdint>
 #include <cstring>
 
 #include <vector>
@@ -463,6 +465,18 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     }
   }
 
+  // A JPEG 2000 codestream can declare its components as signed. OpenJPEG then returns
+  // negative sample values, but the planes created below hold unsigned samples. The cast
+  // in the copy loop turned a negative value into a sample far above the bit depth of the
+  // plane (e.g. -1 into 65535 in a 10-bit plane), and code that relies on the bit depth
+  // then read out of bounds (GHSA-q7mw-2fmm-5q94).
+  for (size_t c = 0; c < image->numcomps; c++) {
+    if (image->comps[c].sgnd) {
+      return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version,
+              "JPEG 2000 images with signed components are not supported"};
+    }
+  }
+
   heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
   if (error.code) {
     return error;
@@ -493,10 +507,15 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
     // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
 
+    // OpenJPEG clamps the decoded values of an unsigned component to the range of its
+    // precision. We clamp them nevertheless: a sample outside of the range of the plane's
+    // bit depth must not leave the plugin, whatever the library does.
+    const OPJ_INT32 max_value = (bit_depth < 31) ? ((OPJ_INT32{1} << bit_depth) - 1) : INT32_MAX;
+
     if (bit_depth <= 8) {
       for (int y = 0; y < cheight; y++) {
         for (int x = 0; x < cwidth; x++) {
-          p[y * stride + x] = (uint8_t) opj_comp.data[y * cwidth + x];
+          p[y * stride + x] = (uint8_t) std::clamp(opj_comp.data[y * cwidth + x], OPJ_INT32{0}, max_value);
         }
       }
     }
@@ -504,7 +523,7 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
       uint16_t* p16 = (uint16_t*)p;
       for (int y = 0; y < cheight; y++) {
         for (int x = 0; x < cwidth; x++) {
-          p16[y * stride/2 + x] = (uint16_t) opj_comp.data[y * cwidth + x];
+          p16[y * stride/2 + x] = (uint16_t) std::clamp(opj_comp.data[y * cwidth + x], OPJ_INT32{0}, max_value);
         }
       }
     }
