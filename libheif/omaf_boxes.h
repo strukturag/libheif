@@ -42,7 +42,7 @@ public:
 
   Error set_image_projection(heif_omaf_image_projection projection);
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Projection Format"; }
 

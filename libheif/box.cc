@@ -404,9 +404,8 @@ Error Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit)
 }
 
 
-std::string BoxHeader::dump(Indent& indent) const
+void BoxHeader::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
   sstr << indent << "Box: " << get_type_string();
   const char* debug_name = debug_box_name();
   if (debug_name) {
@@ -418,7 +417,7 @@ std::string BoxHeader::dump(Indent& indent) const
 
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1025,26 +1024,24 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
 }
 
 
-std::string Box::dump(Indent& indent) const
+void Box::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << BoxHeader::dump(indent);
+  BoxHeader::dump(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
-std::string FullBox::dump(Indent& indent) const
+void FullBox::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "version: " << ((int) m_version) << "\n"
-       << indent << "flags: " << std::hex << m_flags << "\n";
+       << indent << "flags: " << std::hex << m_flags << std::dec << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1212,10 +1209,8 @@ Error Box::write_children(StreamWriter& writer) const
 }
 
 
-std::string Box::dump_children(Indent& indent, bool with_index) const
+void Box::dump_children(std::ostream& sstr, Indent& indent, bool full_log, bool with_index) const
 {
-  std::ostringstream sstr;
-
   bool first = true;
   int idx=1;
 
@@ -1233,11 +1228,10 @@ std::string Box::dump_children(Indent& indent, bool with_index) const
       idx++;
     }
 
-    sstr << childBox->dump(indent);
+    childBox->dump(sstr, indent, full_log);
+    reset_stream_format(sstr);
   }
   indent--;
-
-  return sstr.str();
 }
 
 
@@ -1307,11 +1301,10 @@ Error Box_other::write(StreamWriter& writer) const
 }
 
 
-std::string Box_other::dump(Indent& indent) const
+void Box_other::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << BoxHeader::dump(indent);
+  BoxHeader::dump(sstr, indent, full_log);
 
   // --- show raw box content
 
@@ -1322,20 +1315,19 @@ std::string Box_other::dump(Indent& indent) const
   }
   else {
     sstr << indent << "invalid box size " << get_box_size() << " (smaller than header)\n";
-    return sstr.str();
+    return;
   }
 
   sstr << write_raw_data_as_hex(m_data.data(), len,
                                 indent.get_string() + "data: ",
                                 indent.get_string() + "      ");
 
-  return sstr.str();
+  return;
 }
 
 
-std::string Box_Error::dump(Indent& indent) const
+void Box_Error::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
   sstr << indent << '\'' << fourcc_to_string(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
   sstr << indent << "fatality: ";
   switch (m_fatality) {
@@ -1344,7 +1336,7 @@ std::string Box_Error::dump(Indent& indent) const
     case parse_error_fatality::optional: sstr << "optional\n"; break;
   }
 
-  return sstr.str();
+  return;
 }
 
 parse_error_fatality Box_Error::get_parse_error_fatality() const
@@ -1393,11 +1385,10 @@ bool Box_ftyp::has_compatible_brand(heif_brand2 brand) const
 }
 
 
-std::string Box_ftyp::dump(Indent& indent) const
+void Box_ftyp::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << BoxHeader::dump(indent);
+  BoxHeader::dump(sstr, indent, full_log);
 
   sstr << indent << "major brand: " << fourcc_to_string(m_major_brand) << "\n"
        << indent << "minor version: ";
@@ -1419,7 +1410,7 @@ std::string Box_ftyp::dump(Indent& indent) const
   }
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1455,11 +1446,10 @@ Error Box_free::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_free::dump(Indent& indent) const
+void Box_free::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << BoxHeader::dump(indent);
-  return sstr.str();
+  BoxHeader::dump(sstr, indent, full_log);
+  return;
 }
 
 
@@ -1493,13 +1483,12 @@ Error Box_meta::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_meta::dump(Indent& indent) const
+void Box_meta::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << dump_children(indent);
+  Box::dump(sstr, indent, full_log);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1535,15 +1524,14 @@ Error Box_hdlr::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_hdlr::dump(Indent& indent) const
+void Box_hdlr::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "pre_defined: " << m_pre_defined << "\n"
        << indent << "handler_type: " << fourcc_to_string(m_handler_type) << "\n"
        << indent << "name: " << m_name << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1586,13 +1574,12 @@ Error Box_pitm::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_pitm::dump(Indent& indent) const
+void Box_pitm::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "item_ID: " << m_item_ID << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1804,10 +1791,9 @@ void Box_iloc::set_use_tmp_file(bool flag)
 }
 
 
-std::string Box_iloc::dump(Indent& indent) const
+void Box_iloc::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const Item& item : m_items) {
     sstr << indent << "item ID: " << item.item_ID << "\n"
@@ -1827,7 +1813,7 @@ std::string Box_iloc::dump(Indent& indent) const
     sstr << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2628,10 +2614,9 @@ Error Box_infe::write(StreamWriter& writer) const
 }
 
 
-std::string Box_infe::dump(Indent& indent) const
+void Box_infe::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "item_ID: " << m_item_ID << "\n"
        << indent << "item_protection_index: " << m_item_protection_index << "\n"
@@ -2649,7 +2634,7 @@ std::string Box_infe::dump(Indent& indent) const
 
   sstr << indent << "hidden item: " << std::boolalpha << m_hidden_item << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2691,14 +2676,13 @@ Error Box_iinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_iinf::dump(Indent& indent) const
+void Box_iinf::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
-  sstr << dump_children(indent);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2738,14 +2722,13 @@ Error Box_iinf::write(StreamWriter& writer) const
 }
 
 
-std::string Box_iprp::dump(Indent& indent) const
+void Box_iprp::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
-  sstr << dump_children(indent);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2768,14 +2751,13 @@ Error Box_ipco::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_ipco::dump(Indent& indent) const
+void Box_ipco::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
-  sstr << dump_children(indent, true);
+  dump_children(sstr, indent, full_log, true);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2805,10 +2787,9 @@ Error Box_pixi::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_pixi::dump(Indent& indent) const
+void Box_pixi::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "bits_per_channel: ";
 
@@ -2819,7 +2800,7 @@ std::string Box_pixi::dump(Indent& indent) const
 
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2855,15 +2836,14 @@ Error Box_pasp::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_pasp::dump(Indent& indent) const
+void Box_pasp::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "hSpacing: " << hSpacing << "\n";
   sstr << indent << "vSpacing: " << vSpacing << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2888,14 +2868,13 @@ Error Box_lsel::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_lsel::dump(Indent& indent) const
+void Box_lsel::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "layer_id: " << layer_id << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2922,15 +2901,14 @@ Error Box_clli::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_clli::dump(Indent& indent) const
+void Box_clli::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "max_content_light_level: " << clli.max_content_light_level << "\n";
   sstr << indent << "max_pic_average_light_level: " << clli.max_pic_average_light_level << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -2973,10 +2951,9 @@ Error Box_mdcv::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_mdcv::dump(Indent& indent) const
+void Box_mdcv::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "display_primaries (x,y): ";
   sstr << "(" << mdcv.display_primaries_x[0] << ";" << mdcv.display_primaries_y[0] << "), ";
@@ -2987,7 +2964,7 @@ std::string Box_mdcv::dump(Indent& indent) const
   sstr << indent << "max display mastering luminance: " << mdcv.max_display_mastering_luminance << "\n";
   sstr << indent << "min display mastering luminance: " << mdcv.min_display_mastering_luminance << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3031,16 +3008,15 @@ Error Box_amve::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_amve::dump(Indent& indent) const
+void Box_amve::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "ambient_illumination: " << amve.ambient_illumination << "\n";
   sstr << indent << "ambient_light_x: " << amve.ambient_light_x << "\n";
   sstr << indent << "ambient_light_y: " << amve.ambient_light_y << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3072,14 +3048,13 @@ Error Box_ndwt::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_ndwt::dump(Indent& indent) const
+void Box_ndwt::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "diffuse_white_luminance: " << m_diffuse_white_luminance << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3160,10 +3135,9 @@ template <typename T> std::ostream& operator<<(std::ostream& ostr, const std::op
 }
 
 
-std::string Box_cclv::dump(Indent& indent) const
+void Box_cclv::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "ccv_primaries_present_flag: " << m_ccv_primaries_valid << "\n";
   if (m_ccv_primaries_valid) {
@@ -3177,7 +3151,7 @@ std::string Box_cclv::dump(Indent& indent) const
   sstr << indent << "ccv_max_luminance_value: " << m_ccv_max_luminance_value << "\n";
   sstr << indent << "ccv_avg_luminance_value: " << m_ccv_avg_luminance_value << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3310,15 +3284,14 @@ Error Box_ispe::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_ispe::dump(Indent& indent) const
+void Box_ispe::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "image width: " << m_image_width << "\n"
        << indent << "image height: " << m_image_height << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3500,10 +3473,9 @@ heif_property_id Box_ipma::get_property_id_for_item_ID(heif_item_id itemID, uint
 }
 
 
-std::string Box_ipma::dump(Indent& indent) const
+void Box_ipma::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const Entry& entry : m_entries) {
     sstr << indent << "associations for item ID: " << entry.item_ID << "\n";
@@ -3515,7 +3487,7 @@ std::string Box_ipma::dump(Indent& indent) const
     indent--;
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3644,10 +3616,9 @@ Error Box_auxC::write(StreamWriter& writer) const
 }
 
 
-std::string Box_auxC::dump(Indent& indent) const
+void Box_auxC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "aux type: " << m_aux_type << "\n"
        << indent << "aux subtypes: ";
@@ -3657,7 +3628,7 @@ std::string Box_auxC::dump(Indent& indent) const
 
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3686,14 +3657,13 @@ Error Box_irot::write(StreamWriter& writer) const
 }
 
 
-std::string Box_irot::dump(Indent& indent) const
+void Box_irot::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "rotation: " << m_rotation << " degrees (CCW)\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3725,10 +3695,9 @@ Error Box_imir::write(StreamWriter& writer) const
 }
 
 
-std::string Box_imir::dump(Indent& indent) const
+void Box_imir::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "mirror direction: ";
   switch (m_axis) {
@@ -3743,7 +3712,7 @@ std::string Box_imir::dump(Indent& indent) const
       break;
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3786,15 +3755,14 @@ Error Box_iscl::write(StreamWriter& writer) const
 }
 
 
-std::string Box_iscl::dump(Indent& indent) const
+void Box_iscl::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   sstr << indent << "horizontal scaling factor: " << m_target_width_numerator << " / " << m_target_width_denominator << "\n";
   sstr << indent << "vertical scaling factor:   " << m_target_height_numerator << " / " << m_target_height_denominator << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -3856,10 +3824,9 @@ Error Box_clap::write(StreamWriter& writer) const
 }
 
 
-std::string Box_clap::dump(Indent& indent) const
+void Box_clap::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "clean_aperture: " << m_clean_aperture_width.numerator
        << "/" << m_clean_aperture_width.denominator << " x "
@@ -3870,7 +3837,7 @@ std::string Box_clap::dump(Indent& indent) const
        << m_vertical_offset.numerator << "/"
        << m_vertical_offset.denominator << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4196,10 +4163,9 @@ Error Box_iref::write(StreamWriter& writer) const
 }
 
 
-std::string Box_iref::dump(Indent& indent) const
+void Box_iref::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const auto& ref : m_references) {
     sstr << indent << "reference with type '" << ref.header.get_type_string() << "'"
@@ -4211,7 +4177,7 @@ std::string Box_iref::dump(Indent& indent) const
     sstr << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4425,10 +4391,9 @@ Error Box_rref::write(StreamWriter& writer) const
 }
 
 
-std::string Box_rref::dump(Indent& indent) const
+void Box_rref::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "reference types: ";
   for (size_t i = 0; i < m_reference_types.size(); i++) {
@@ -4437,7 +4402,7 @@ std::string Box_rref::dump(Indent& indent) const
   }
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4463,10 +4428,9 @@ Error Box_idat::write(StreamWriter& writer) const
 }
 
 
-std::string Box_idat::dump(Indent& indent) const
+void Box_idat::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   if (get_box_size() >= get_header_size()) {
     sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
@@ -4474,7 +4438,7 @@ std::string Box_idat::dump(Indent& indent) const
      sstr << indent << "number of data bytes is invalid\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4545,12 +4509,11 @@ Error Box_grpl::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_grpl::dump(Indent& indent) const
+void Box_grpl::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << dump_children(indent);
-  return sstr.str();
+  Box::dump(sstr, indent, full_log);
+  dump_children(sstr, indent, full_log);
+  return;
 }
 
 
@@ -4617,10 +4580,9 @@ void Box_EntityToGroup::write_entity_group_ids(StreamWriter& writer) const
 }
 
 
-std::string Box_EntityToGroup::dump(Indent& indent) const
+void Box_EntityToGroup::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "group id: " << group_id << "\n"
        << indent << "entity IDs: ";
@@ -4639,7 +4601,7 @@ std::string Box_EntityToGroup::dump(Indent& indent) const
 
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4660,16 +4622,15 @@ Error Box_ster::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_ster::dump(Indent& indent) const
+void Box_ster::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "group id: " << group_id << "\n"
        << indent << "left image ID: " << entity_ids[0] << "\n"
        << indent << "right image ID: " << entity_ids[1] << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4720,10 +4681,9 @@ Error Box_pymd::write(StreamWriter& writer) const
 }
 
 
-std::string Box_pymd::dump(Indent& indent) const
+void Box_pymd::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box_EntityToGroup::dump(indent);
+  Box_EntityToGroup::dump(sstr, indent, full_log);
 
   sstr << indent << "tile size: " << tile_size_x << "x" << tile_size_y << "\n";
 
@@ -4736,7 +4696,7 @@ std::string Box_pymd::dump(Indent& indent) const
     layerNr++;
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4748,13 +4708,12 @@ Error Box_dinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_dinf::dump(Indent& indent) const
+void Box_dinf::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << dump_children(indent);
+  Box::dump(sstr, indent, full_log);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4807,13 +4766,12 @@ Error Box_dref::write(StreamWriter& writer) const
 }
 
 
-std::string Box_dref::dump(Indent& indent) const
+void Box_dref::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << dump_children(indent);
+  Box::dump(sstr, indent, full_log);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4854,15 +4812,14 @@ Error Box_url::write(StreamWriter& writer) const
 }
 
 
-std::string Box_url::dump(Indent& indent) const
+void Box_url::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  //sstr << dump_children(indent);
+  Box::dump(sstr, indent, full_log);
+  //dump_children(sstr, indent, full_log);
 
   sstr << indent << "location: " << m_location << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -4881,15 +4838,14 @@ Error Box_udes::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_udes::dump(Indent& indent) const
+void Box_udes::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "lang: " << m_lang << "\n";
   sstr << indent << "name: " << m_name << "\n";
   sstr << indent << "description: " << m_description << "\n";
   sstr << indent << "tags: " << m_tags << "\n";
-  return sstr.str();
+  return;
 }
 
 Error Box_udes::write(StreamWriter& writer) const
@@ -4937,10 +4893,9 @@ Box_cmin::AbsoluteIntrinsicMatrix Box_cmin::RelativeIntrinsicMatrix::to_absolute
 }
 
 
-std::string Box_cmin::dump(Indent& indent) const
+void Box_cmin::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "principal-point: " << m_matrix.principal_point_x << ", " << m_matrix.principal_point_y << "\n";
   if (m_matrix.is_anisotropic) {
     sstr << indent << "focal-length: " << m_matrix.focal_length_x << ", " << m_matrix.focal_length_y << "\n";
@@ -4951,7 +4906,7 @@ std::string Box_cmin::dump(Indent& indent) const
     sstr << indent << "no skew\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -5212,10 +5167,9 @@ Error Box_cmex::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_cmex::dump(Indent& indent) const
+void Box_cmex::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "camera position (um): ";
   sstr << m_matrix.pos_x << " ; ";
   sstr << m_matrix.pos_y << " ; ";
@@ -5239,7 +5193,7 @@ std::string Box_cmex::dump(Indent& indent) const
 
   sstr << indent << "world coordinate system id: " << m_matrix.world_coordinate_system_id << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -5409,12 +5363,11 @@ std::string Box_taic::dump(const heif_tai_clock_info& info, Indent& indent)
 }
 
 
-std::string Box_taic::dump(Indent& indent) const {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+void Box_taic::dump(std::ostream& sstr, Indent& indent, bool full_log) const {
+  Box::dump(sstr, indent, full_log);
   sstr << dump(m_info, indent);
 
-  return sstr.str();
+  return;
 }
 
 Error Box_taic::write(StreamWriter& writer) const {
@@ -5462,14 +5415,13 @@ bool Box_taic::operator==(const Box& other) const
 }
 
 
-std::string Box_itai::dump(Indent& indent) const {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+void Box_itai::dump(std::ostream& sstr, Indent& indent, bool full_log) const {
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "tai_timestamp: " << m_timestamp.tai_timestamp << "\n";
   sstr << indent << "synchronization_state: " << int(m_timestamp.synchronization_state) << "\n";
   sstr << indent << "timestamp_generation_failure: " << int(m_timestamp.timestamp_generation_failure) << "\n";
   sstr << indent << "timestamp_is_modified: " << int(m_timestamp.timestamp_is_modified) << "\n";
-  return sstr.str();
+  return;
 }
 
 
@@ -5584,12 +5536,11 @@ Error Box_elng::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_elng::dump(Indent& indent) const
+void Box_elng::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "extended_language: " << m_lang << "\n";
-  return sstr.str();
+  return;
 }
 
 Error Box_elng::write(StreamWriter& writer) const
@@ -5621,12 +5572,11 @@ Error Box_gimi_content_id::write(StreamWriter& writer) const
 }
 
 
-std::string Box_gimi_content_id::dump(Indent& indent) const
+void Box_gimi_content_id::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "content ID: " << m_content_id << "\n";
 
-  return sstr.str();
+  return;
 }

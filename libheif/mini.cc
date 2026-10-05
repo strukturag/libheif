@@ -561,10 +561,9 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
   return range.get_error();
 }
 
-std::string Box_mini::dump(Indent &indent) const
+void Box_mini::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "version: " << (int)m_version << "\n";
 
   sstr << indent << "explicit_codec_types_flag: " << m_explicit_codec_types_flag << "\n";
@@ -845,7 +844,7 @@ std::string Box_mini::dump(Indent &indent) const
   {
     sstr << "xmp_data offset: " << m_xmp_item_data_offset << ", size: " << m_xmp_data_size << "\n";
   }
-  return sstr.str();
+  return;
 }
 
 

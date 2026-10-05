@@ -203,10 +203,9 @@ bool Box_cmpd::has_component(heif_cmpd_component_type type) const
 }
 
 
-std::string Box_cmpd::dump(Indent& indent) const
+void Box_cmpd::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const auto& component : m_components) {
     sstr << indent << "component_type: " << component.get_component_type_name();
@@ -216,7 +215,7 @@ std::string Box_cmpd::dump(Indent& indent) const
     }
   }
 
-  return sstr.str();
+  return;
 }
 
 Error Box_cmpd::write(StreamWriter& writer) const
@@ -374,10 +373,9 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
 
 
-std::string Box_uncC::dump(Indent& indent) const
+void Box_uncC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "profile: " << m_profile;
   if (m_profile != 0) {
@@ -416,7 +414,7 @@ std::string Box_uncC::dump(Indent& indent) const
 
     sstr << indent << "num_tile_rows: " << m_num_tile_rows << "\n";
   }
-  return sstr.str();
+  return;
 }
 
 
@@ -769,13 +767,12 @@ Error Box_cmpC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_cmpC::dump(Indent& indent) const
+void Box_cmpC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "compression_type: " << fourcc_to_string(m_compression_type) << "\n";
   sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
-  return sstr.str();
+  return;
 }
 
 Error Box_cmpC::write(StreamWriter& writer) const
@@ -885,15 +882,14 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_icef::dump(Indent& indent) const
+void Box_icef::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "num_compressed_units: " << m_unit_infos.size() << "\n";
   for (CompressedUnitInfo unit_info: m_unit_infos) {
     sstr << indent << "unit_offset: " << unit_info.unit_offset << ", unit_size: " << unit_info.unit_size << "\n";
   }
-  return sstr.str();
+  return;
 }
 
 Error Box_icef::write(StreamWriter& writer) const
@@ -1048,18 +1044,17 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_cpat::dump(Indent& indent) const
+void Box_cpat::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
   sstr << indent << "pattern_width: " << get_pattern_width() << "\n";
   sstr << indent << "pattern_height: " << get_pattern_height() << "\n";
 
   for (const auto& pixel : m_pattern.pixels) {
     sstr << indent << "component index: " << pixel.cmpd_index << ", gain: " << pixel.component_gain << "\n";
   }
-  return sstr.str();
+  return;
 }
 
 
@@ -1134,11 +1129,10 @@ Error Box_splz::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_splz::dump(Indent& indent) const
+void Box_splz::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   sstr << indent << "component_count: " << m_pattern.component_ids.size() << "\n";
   for (size_t i = 0; i < m_pattern.component_ids.size(); i++) {
@@ -1160,7 +1154,7 @@ std::string Box_splz::dump(Indent& indent) const
     }
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1248,11 +1242,10 @@ Error Box_sbpm::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_sbpm::dump(Indent& indent) const
+void Box_sbpm::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   sstr << indent << "component_count: " << m_map.component_ids.size() << "\n";
   for (size_t i = 0; i < m_map.component_ids.size(); i++) {
@@ -1277,7 +1270,7 @@ std::string Box_sbpm::dump(Indent& indent) const
          << ", column=" << m_map.bad_pixels[i].column << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1376,11 +1369,10 @@ Error Box_snuc::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_snuc::dump(Indent& indent) const
+void Box_snuc::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   sstr << indent << "component_count: " << m_nuc.component_ids.size() << "\n";
   for (size_t i = 0; i < m_nuc.component_ids.size(); i++) {
@@ -1395,7 +1387,7 @@ std::string Box_snuc::dump(Indent& indent) const
   sstr << indent << "nuc_gains: " << num_pixels << " values\n";
   sstr << indent << "nuc_offsets: " << num_pixels << " values\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1448,11 +1440,10 @@ Error Box_cloc::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_cloc::dump(Indent& indent) const
+void Box_cloc::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   static const char* location_names[] = {
     "h=0,   v=0.5",   // 0
@@ -1470,7 +1461,7 @@ std::string Box_cloc::dump(Indent& indent) const
   }
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -1528,14 +1519,13 @@ Error Box_gimi_component_content_ids::write(StreamWriter& writer) const
 }
 
 
-std::string Box_gimi_component_content_ids::dump(Indent& indent) const
+void Box_gimi_component_content_ids::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (size_t i = 0; i < m_content_ids.size(); i++) {
     sstr << indent << "[" << i << "] content ID: " << m_content_ids[i] << "\n";
   }
 
-  return sstr.str();
+  return;
 }

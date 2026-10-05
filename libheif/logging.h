@@ -29,6 +29,7 @@
 #include <memory>
 #include <limits>
 #include <istream>
+#include <ostream>
 
 
 class Indent
@@ -58,6 +59,18 @@ inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent)
   ostr << indent.get_string();
   return ostr;
 }
+
+
+// dump() writes every box into one shared stream, so a sticky modifier such as
+// std::hex or std::setfill left behind by one box would leak into the next.
+// Reset the stream to its defaults (decimal, blank fill) between boxes so each
+// one starts formatting from a known state.
+inline void reset_stream_format(std::ostream& ostr)
+{
+  ostr << std::dec << std::noboolalpha;
+  ostr.fill(' ');
+}
+
 
 std::string write_raw_data_as_hex(const uint8_t* data, size_t len,
                                   const std::string& firstLineIndent,

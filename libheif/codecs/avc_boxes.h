@@ -86,7 +86,7 @@ public:
 
   void append_pps_nal(const uint8_t* data, size_t size);
 
-  std::string dump(Indent &) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter &writer) const override;
 

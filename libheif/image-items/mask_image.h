@@ -53,7 +53,7 @@ public:
 
   bool is_essential() const override { return true; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 

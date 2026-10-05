@@ -49,7 +49,7 @@ TEST_CASE("prfr") {
   std::shared_ptr<Box_prfr> prfr = std::dynamic_pointer_cast<Box_prfr>(box);
   REQUIRE(prfr->get_omaf_image_projection() == heif_omaf_image_projection_cube_map);
   Indent indent;
-  std::string dumpResult = box->dump(indent);
+  std::string dumpResult = box->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: prfr ----- (Projection Format)\n"
                         "size: 13   (header size: 12)\n"
                         "projection_type: cube-map\n");

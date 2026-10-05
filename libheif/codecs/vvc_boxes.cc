@@ -368,10 +368,9 @@ const char* NAL_name(uint8_t nal_type)
 }
 
 
-std::string Box_vvcC::dump(Indent& indent) const
+void Box_vvcC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << FullBox::dump(indent);
+  FullBox::dump(sstr, indent, full_log);
 
   const auto& c = m_configuration; // abbreviation
 
@@ -411,7 +410,7 @@ std::string Box_vvcC::dump(Indent& indent) const
     indent--;
   }
 
-  return sstr.str();
+  return;
 }
 
 

@@ -47,7 +47,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     box->get_type();
     box->get_type_string();
     Indent indent;
-    box->dump(indent);
+    box->dump_to_string(indent);
   }
 
   return 0;

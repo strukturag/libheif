@@ -57,7 +57,7 @@ class Box_cdef : public Box {
 public:
     Box_cdef() { set_short_type(fourcc("cdef")); }
 
-    std::string dump(Indent &) const override;
+    void dump(std::ostream&, Indent&, bool full_log) const override;
 
     Error write(StreamWriter &writer) const override;
 
@@ -141,7 +141,7 @@ class Box_cmap : public Box
 public:
     Box_cmap() { set_short_type(fourcc("cmap")); }
 
-    std::string dump(Indent &) const override;
+    void dump(std::ostream&, Indent&, bool full_log) const override;
 
     Error write(StreamWriter &writer) const override;
 
@@ -188,7 +188,7 @@ public:
         set_short_type(fourcc("pclr"));
     }
 
-    std::string dump(Indent &) const override;
+    void dump(std::ostream&, Indent&, bool full_log) const override;
 
     Error write(StreamWriter &writer) const override;
 
@@ -274,7 +274,7 @@ class Box_j2kL : public FullBox
 public:
     Box_j2kL() { set_short_type(fourcc("j2kL")); }
 
-    std::string dump(Indent &) const override;
+    void dump(std::ostream&, Indent&, bool full_log) const override;
 
     Error write(StreamWriter &writer) const override;
 
@@ -321,7 +321,7 @@ public:
 
     bool is_essential() const override { return true; }
 
-    std::string dump(Indent &) const override;
+    void dump(std::ostream&, Indent&, bool full_log) const override;
 
     // Default write behaviour for a container is to write children
 

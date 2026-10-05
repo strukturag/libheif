@@ -93,7 +93,7 @@ public:
 
   virtual uint32_t get_type() const = 0;
 
-  virtual std::string dump(Indent&) const = 0;
+  virtual void dump(std::ostream&, Indent&, bool full_log) const = 0;
 
   virtual Error write(StreamWriter& writer) const = 0;
 };
@@ -108,7 +108,7 @@ public:
 
   const std::vector<uint8_t>& get_data() const { return m_data; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -183,7 +183,7 @@ public:
 
   uint32_t get_type() const override { return fourcc("nclx"); }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error parse(BitstreamRange& range);
 
@@ -206,7 +206,7 @@ public:
     set_short_type(fourcc("colr"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   uint32_t get_color_profile_type() const { return m_color_profile->get_type(); }
 

@@ -70,7 +70,7 @@ TEST_CASE("mini")
   REQUIRE(ftyp->get_minor_version() == fourcc("avif"));
   REQUIRE(ftyp->list_brands().size() == 0);
   Indent indent;
-  std::string dumpResult = box->dump(indent);
+  std::string dumpResult = box->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: ftyp ----- (File Type)\n"
                         "size: 16   (header size: 8)\n"
                         "major brand: mif3\n"
@@ -97,7 +97,7 @@ TEST_CASE("mini")
   REQUIRE((int)(mini->get_main_item_codec_config().data()[1]) == 0x20);
   REQUIRE((int)(mini->get_main_item_codec_config().data()[2]) == 0x00);
   REQUIRE((int)(mini->get_main_item_codec_config().data()[3]) == 0x00);
-  dumpResult = box->dump(indent);
+  dumpResult = box->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
                         "size: 74   (header size: 8)\n"
                         "version: 0\n"
@@ -404,7 +404,7 @@ TEST_CASE("check mini+alpha version")
   REQUIRE((int)(mini->get_main_item_codec_config().data()[2]) == 0x00);
   REQUIRE((int)(mini->get_main_item_codec_config().data()[3]) == 0x00);
   Indent indent;
-  std::string dumpResult = mini->dump(indent);
+  std::string dumpResult = mini->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
                         "size: 1923   (header size: 8)\n"
                         "version: 0\n"
@@ -456,7 +456,7 @@ TEST_CASE("check mini+exif+xmp version")
   REQUIRE((int)(mini->get_main_item_codec_config().data()[2]) == 0x00);
   REQUIRE((int)(mini->get_main_item_codec_config().data()[3]) == 0x00);
   Indent indent;
-  std::string dumpResult = mini->dump(indent);
+  std::string dumpResult = mini->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
                         "size: 6294   (header size: 8)\n"
                         "version: 0\n"
@@ -504,7 +504,7 @@ TEST_CASE("check heif mini")
   REQUIRE(mini->get_height() == 256);
   REQUIRE(mini->get_main_item_codec_config().size() == 113);
   Indent indent;
-  std::string dumpResult = mini->dump(indent);
+  std::string dumpResult = mini->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: mini -----\n"
                         "size: 19229   (header size: 8)\n"
                         "version: 0\n"

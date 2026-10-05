@@ -41,7 +41,7 @@ public:
 
   void set_data(const std::vector<uint8_t>& data) { m_data = data; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 

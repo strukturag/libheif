@@ -113,10 +113,9 @@ Error Box_av1C::write(StreamWriter& writer) const
 }
 
 
-std::string Box_av1C::dump(Indent& indent) const
+void Box_av1C::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   const auto& c = m_configuration; // abbreviation
 
@@ -145,7 +144,7 @@ std::string Box_av1C::dump(Indent& indent) const
   }
   sstr << std::dec << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -199,14 +198,13 @@ Error Box_a1op::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_a1op::dump(Indent& indent) const
+void Box_a1op::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "op-index: " << ((int) op_index) << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -239,14 +237,13 @@ Error Box_a1lx::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_a1lx::dump(Indent& indent) const
+void Box_a1lx::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "layer-sizes: [" << layer_size[0] << "," << layer_size[1] << "," << layer_size[2] << "]\n";
 
-  return sstr.str();
+  return;
 }
 
 

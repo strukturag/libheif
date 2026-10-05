@@ -38,14 +38,13 @@ size_t find_jpeg_marker_start(const std::vector<uint8_t>& data, uint8_t marker_t
 }
 
 
-std::string Box_jpgC::dump(Indent& indent) const
+void Box_jpgC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "num bytes: " << m_data.size() << "\n";
 
-  return sstr.str();
+  return;
 }
 
 

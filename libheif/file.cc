@@ -353,7 +353,8 @@ std::string HeifFile::debug_dump_boxes() const
     }
 
     Indent indent;
-    sstr << box->dump(indent);
+    box->dump(sstr, indent, false);
+    reset_stream_format(sstr);
   }
 
   return sstr.str();

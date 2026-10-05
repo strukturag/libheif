@@ -438,40 +438,37 @@ Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_colr::dump(Indent& indent) const
+void Box_colr::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   if (m_color_profile) {
     sstr << indent << "colour_type: " << fourcc_to_string(get_color_profile_type()) << "\n";
-    sstr << m_color_profile->dump(indent);
+    m_color_profile->dump(sstr, indent, full_log);
   }
   else {
     sstr << indent << "colour_type: ---\n";
     sstr << "no color profile\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
-std::string color_profile_raw::dump(Indent& indent) const
+void color_profile_raw::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
   sstr << indent << "profile size: " << m_data.size() << "\n";
-  return sstr.str();
+  return;
 }
 
 
-std::string color_profile_nclx::dump(Indent& indent) const
+void color_profile_nclx::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
   sstr << indent << "colour_primaries: " << m_profile.m_colour_primaries << "\n"
        << indent << "transfer_characteristics: " << m_profile.m_transfer_characteristics << "\n"
        << indent << "matrix_coefficients: " << m_profile.m_matrix_coefficients << "\n"
        << indent << "full_range_flag: " << m_profile.m_full_range_flag << "\n";
-  return sstr.str();
+  return;
 }
 
 

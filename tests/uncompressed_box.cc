@@ -54,7 +54,7 @@ TEST_CASE( "cmpd" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = cmpd->dump(indent);
+    std::string dump_output = cmpd->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpd -----\nsize: 0   (header size: 0)\ncomponent_type: Y\n");
 }
 
@@ -93,7 +93,7 @@ TEST_CASE( "cmpd_multi" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = cmpd->dump(indent);
+    std::string dump_output = cmpd->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpd -----\nsize: 0   (header size: 0)\ncomponent_type: red\ncomponent_type: green\ncomponent_type: blue\n");
 }
 
@@ -127,7 +127,7 @@ TEST_CASE( "cmpd_custom" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = cmpd->dump(indent);
+    std::string dump_output = cmpd->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpd -----\nsize: 0   (header size: 0)\ncomponent_type: 0x8000\n| component_type_uri: http://example.com/custom_component_uri\ncomponent_type: 0x8002\n| component_type_uri: http://example.com/another_custom_component_uri\n");
 }
 
@@ -214,7 +214,7 @@ TEST_CASE( "uncC" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = uncC->dump(indent);
+    std::string dump_output = uncC->dump_to_string(indent);
     REQUIRE(dump_output == "Box: uncC -----\nsize: 0   (header size: 0)\nprofile: 1919378017 (rgba)\ncomponent_index: 0\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 1\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 2\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 3\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\nsampling_type: no subsampling\ninterleave_type: pixel\nblock_size: 0\ncomponents_little_endian: 0\nblock_pad_lsb: 0\nblock_little_endian: 0\nblock_reversed: 0\npad_unknown: 0\npixel_size: 0\nrow_align_size: 0\ntile_align_size: 0\nnum_tile_cols: 1\nnum_tile_rows: 1\n");
 }
 
@@ -245,7 +245,7 @@ TEST_CASE("uncC_parse") {
   REQUIRE(uncC->get_number_of_tile_columns() == 2);
   REQUIRE(uncC->get_number_of_tile_rows() == 3);
   Indent indent;
-  std::string dumpResult = box->dump(indent);
+  std::string dumpResult = box->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: uncC -----\n"
                         "size: 64   (header size: 12)\n"
                         "profile: 1919378017 (rgba)\n"
@@ -382,7 +382,7 @@ TEST_CASE("cmpC_defl") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = cmpC->dump(indent);
+    std::string dump_output = cmpC->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: defl\ncompressed_entity_type: 0\n");
 
 }
@@ -418,7 +418,7 @@ TEST_CASE("cmpC_zlib") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = cmpC->dump(indent);
+    std::string dump_output = cmpC->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: zlib\ncompressed_entity_type: 2\n");
 
 }
@@ -453,7 +453,7 @@ TEST_CASE("cmpC_brot") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = cmpC->dump(indent);
+    std::string dump_output = cmpC->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: brot\ncompressed_entity_type: 1\n");
 
   }
@@ -492,7 +492,7 @@ TEST_CASE("icef_24_8_bit") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icef->dump(indent);
+    std::string dump_output = icef->dump_to_string(indent);
     REQUIRE(dump_output == "Box: icef -----\nsize: 25   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 2563, unit_size: 3\nunit_offset: 131850, unit_size: 7\n");
 }
 
@@ -534,7 +534,7 @@ TEST_CASE("icef_0_16_bit") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icef->dump(indent);
+    std::string dump_output = icef->dump_to_string(indent);
     REQUIRE(dump_output == "Box: icef -----\nsize: 21   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 0, unit_size: 16387\nunit_offset: 16387, unit_size: 2567\n");
 }
 
@@ -576,7 +576,7 @@ TEST_CASE("icef_32bit") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icef->dump(indent);
+    std::string dump_output = icef->dump_to_string(indent);
     REQUIRE(dump_output == "Box: icef -----\nsize: 33   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 772, unit_size: 16843267\nunit_offset: 16909066, unit_size: 263431\n");
 }
 
@@ -620,7 +620,7 @@ TEST_CASE("icef_uint64") {
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icef->dump(indent);
+    std::string dump_output = icef->dump_to_string(indent);
     REQUIRE(dump_output == "Box: icef -----\nsize: 49   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 4294969859, unit_size: 8590000643\nunit_offset: 8590066442, unit_size: 12885165319\n");
 }
 
@@ -683,7 +683,7 @@ TEST_CASE("cloc")
 
   // Dump
   Indent indent;
-  std::string dump_output = parsed->dump(indent);
+  std::string dump_output = parsed->dump_to_string(indent);
   REQUIRE(dump_output == "Box: cloc -----\nsize: 13   (header size: 12)\nversion: 0\nflags: 0\nchroma_location: 2 (h=0,   v=0)\n");
 }
 
@@ -778,7 +778,7 @@ TEST_CASE("splz")
 
   // Dump
   Indent indent;
-  std::string dump_output = parsed->dump(indent);
+  std::string dump_output = parsed->dump_to_string(indent);
   REQUIRE(dump_output == "Box: splz -----\n"
                          "size: 36   (header size: 12)\n"
                          "version: 0\n"
@@ -880,7 +880,7 @@ TEST_CASE("snuc")
 
   // Dump
   Indent indent;
-  std::string dump_output = parsed->dump(indent);
+  std::string dump_output = parsed->dump_to_string(indent);
   REQUIRE(dump_output == "Box: snuc -----\n"
                          "size: 45   (header size: 12)\n"
                          "version: 0\n"

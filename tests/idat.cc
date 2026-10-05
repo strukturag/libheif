@@ -46,6 +46,6 @@ TEST_CASE("idat bad") {
     box->get_type();
     box->get_type_string();
     Indent indent;
-    box->dump(indent);
+    box->dump_to_string(indent);
   }
 }

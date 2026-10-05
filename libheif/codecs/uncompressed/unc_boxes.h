@@ -46,7 +46,7 @@ public:
     set_short_type(fourcc("cmpd"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -103,7 +103,7 @@ public:
     set_version(is_minimized() ? 1 : 0);
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -271,7 +271,7 @@ public:
     set_short_type(fourcc("cmpC"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   uint32_t get_compression_type() const { return m_compression_type; }
 
@@ -327,7 +327,7 @@ public:
     m_unit_infos[tile_idx] = unit_info;
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -368,7 +368,7 @@ public:
 
   void set_pattern(const BayerPatternCmpd& pattern) { m_pattern = pattern; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -397,7 +397,7 @@ public:
 
   void set_pattern(const PolarizationPattern& pattern) { m_pattern = pattern; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -425,7 +425,7 @@ public:
   const SensorBadPixelsMap& get_bad_pixels_map() const { return m_map; }
   void set_bad_pixels_map(const SensorBadPixelsMap& map) { m_map = map; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -451,7 +451,7 @@ public:
   const SensorNonUniformityCorrection& get_nuc() const { return m_nuc; }
   void set_nuc(const SensorNonUniformityCorrection& nuc) { m_nuc = nuc; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -477,7 +477,7 @@ public:
   uint8_t get_chroma_location() const { return m_chroma_location; }
   void set_chroma_location(uint8_t loc) { m_chroma_location = loc; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -522,7 +522,7 @@ public:
 
   bool is_transformative_property() const override { return false; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "GIMI Component Content IDs"; }
 

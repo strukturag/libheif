@@ -58,7 +58,7 @@ TEST_CASE( "cdef" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = cdef->dump(indent);
+    std::string dump_output = cdef->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cdef -----\nsize: 0   (header size: 0)\nchannel_index: 1, channel_type: 2, channel_association: 0\n");
 }
 
@@ -92,7 +92,7 @@ TEST_CASE( "cmap" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = cmap->dump(indent);
+    std::string dump_output = cmap->dump_to_string(indent);
     REQUIRE(dump_output == "Box: cmap -----\nsize: 0   (header size: 0)\ncomponent_index: 2, mapping_type: 1, palette_colour: 3\ncomponent_index: 4, mapping_type: 0, palette_colour: 0\n");
 }
 
@@ -105,7 +105,7 @@ TEST_CASE( "pclr empty" )
     REQUIRE(pclr->get_bit_depths().size() == 0);
 
     Indent indent;
-    std::string dump_output = pclr->dump(indent);
+    std::string dump_output = pclr->dump_to_string(indent);
     REQUIRE(dump_output == "Box: pclr -----\nsize: 0   (header size: 0)\nNE: 0, NPC: 0, B: \n");
 
     StreamWriter writer;
@@ -139,7 +139,7 @@ TEST_CASE( "pclr" )
     std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x14, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x07, 0x07, 0x07, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD};
     REQUIRE(bytes == expected);
     Indent indent;
-    std::string dump_output = pclr->dump(indent);
+    std::string dump_output = pclr->dump_to_string(indent);
     REQUIRE(dump_output == "Box: pclr -----\nsize: 0   (header size: 0)\nNE: 2, NPC: 3, B: 8, 8, 8, \n");
 }
 
@@ -167,7 +167,7 @@ TEST_CASE( "pclr 12 bit" )
     std::vector<uint8_t> expected = {0x00, 0x00, 0x00, 0x1A, 'p', 'c', 'l', 'r', 0x00, 0x02, 0x03, 0x0B, 0x0B, 0x0B, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x0F, 0xFF, 0x0F, 0xFE, 0x0F, 0xFD};
     REQUIRE(bytes == expected);
     Indent indent;
-    std::string dump_output = pclr->dump(indent);
+    std::string dump_output = pclr->dump_to_string(indent);
     REQUIRE(dump_output == "Box: pclr -----\nsize: 0   (header size: 0)\nNE: 2, NPC: 3, B: 12, 12, 12, \n");
 }
 
@@ -193,7 +193,7 @@ TEST_CASE( "j2kL" )
     REQUIRE(bytes == expected);
 
     Indent indent;
-    std::string dump_output = j2kL->dump(indent);
+    std::string dump_output = j2kL->dump_to_string(indent);
     REQUIRE(dump_output == "Box: j2kL -----\nsize: 0   (header size: 0)\nlayer_id: 1, discard_levels: 2, decode_layers: 3\n");
 }
 

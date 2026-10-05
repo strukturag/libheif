@@ -38,7 +38,7 @@ public:
     set_short_type(fourcc(type));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -62,7 +62,7 @@ public:
     set_short_type(fourcc("mvhd"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Movie Header"; }
 
@@ -142,7 +142,7 @@ public:
     Track_size_is_aspect_ratio = 0x08
   };
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Track Header"; }
 
@@ -209,7 +209,7 @@ public:
     set_short_type(fourcc("mdhd"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Media Header"; }
 
@@ -258,7 +258,7 @@ public:
     set_flags(1);
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Video Media Header"; }
 
@@ -282,7 +282,7 @@ public:
     set_flags(1);
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Null Media Header"; }
 
@@ -310,7 +310,7 @@ public:
     set_short_type(fourcc("stsd"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Description"; }
 
@@ -348,7 +348,7 @@ public:
     set_short_type(fourcc("stts"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Decoding Time to Sample"; }
 
@@ -394,7 +394,7 @@ public:
     set_short_type(fourcc("ctts"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Composition Time to Sample"; }
 
@@ -434,7 +434,7 @@ public:
     set_short_type(fourcc("stsc"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample to Chunk"; }
 
@@ -478,7 +478,7 @@ public:
     set_short_type(fourcc("stco"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Offset"; }
 
@@ -511,7 +511,7 @@ public:
     set_short_type(fourcc("stsz"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Size"; }
 
@@ -546,7 +546,7 @@ public:
     set_short_type(fourcc("stss"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sync Sample"; }
 
@@ -585,7 +585,7 @@ public:
     set_short_type(fourcc("ccst"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Coding Constraints"; }
 
@@ -610,7 +610,7 @@ public:
     set_short_type(fourcc("auxi"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Auxiliary Info Type"; }
 
@@ -659,7 +659,7 @@ struct VisualSampleEntry {
 
   Error write(StreamWriter& writer) const;
 
-  std::string dump(Indent&) const;
+  void dump(std::ostream&, Indent&, bool full_log) const;
 };
 
 
@@ -667,7 +667,7 @@ class Box_VisualSampleEntry : public Box {
 public:
   Error write(StreamWriter& writer) const override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const VisualSampleEntry& get_VisualSampleEntry_const() const { return m_visualSampleEntry; }
 
@@ -690,7 +690,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "URI Meta Sample Entry"; }
 
@@ -717,7 +717,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "URI"; }
 
@@ -739,7 +739,7 @@ public:
 
   void derive_box_version() override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample to Group"; }
 
@@ -800,7 +800,7 @@ public:
 
   void derive_box_version() override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Group Description"; }
 
@@ -831,7 +831,7 @@ public:
     set_short_type(fourcc("btrt"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Bitrate"; }
 
@@ -870,7 +870,7 @@ public:
 
   uint32_t get_num_samples() const { return m_num_samples; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Auxiliary Information Sizes"; }
 
@@ -910,7 +910,7 @@ public:
 
   uint64_t get_chunk_offset(uint32_t idx) const;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Sample Auxiliary Information Offsets"; }
 
@@ -942,7 +942,7 @@ public:
     set_short_type(fourcc("sdtp"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Independent and Disposable Samples"; }
 
@@ -977,7 +977,7 @@ public:
     std::vector<uint32_t> to_track_id;
   };
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Track Reference"; }
 
@@ -1022,7 +1022,7 @@ public:
     Repeat_EditList = 0x01
   };
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Edit List"; }
 

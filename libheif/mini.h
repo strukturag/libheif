@@ -140,7 +140,7 @@ public:
   void set_tmap_amve(std::shared_ptr<Box_amve> box) { m_tmap_amve = std::move(box); }
   void set_tmap_ndwt(std::shared_ptr<Box_ndwt> box) { m_tmap_ndwt = std::move(box); }
 
-  std::string dump(Indent &) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 

@@ -218,11 +218,10 @@ Error Box_tilC::write(StreamWriter& writer) const
 }
 
 
-std::string Box_tilC::dump(Indent& indent) const
+void Box_tilC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
 
-  sstr << BoxHeader::dump(indent);
+  BoxHeader::dump(sstr, indent, full_log);
 
   sstr << indent << "version: " << ((int) get_version()) << "\n"
        //<< indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
@@ -233,11 +232,8 @@ std::string Box_tilC::dump(Indent& indent) const
        << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"
        << indent << "number of extra dimensions: " << ((int) m_parameters.number_of_extra_dimensions) << "\n";
 
-  sstr << indent << "tile properties:\n"
-       << dump_children(indent, true);
-
-  return sstr.str();
-
+  sstr << indent << "tile properties:\n";
+  dump_children(sstr, indent, full_log, true);
 }
 
 

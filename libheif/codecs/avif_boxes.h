@@ -88,7 +88,7 @@ public:
   };
 
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   bool get_headers(std::vector<uint8_t>* dest) const
   {
@@ -134,7 +134,7 @@ public:
 
   uint8_t op_index = 0;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -153,7 +153,7 @@ public:
 
   uint32_t layer_size[3]{};
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 

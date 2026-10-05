@@ -38,10 +38,9 @@ Error Box_prfr::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_prfr::dump(Indent& indent) const
+void Box_prfr::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "projection_type: ";
   switch (m_projection) {
     case heif_omaf_image_projection_equirectangular:
@@ -54,7 +53,7 @@ std::string Box_prfr::dump(Indent& indent) const
       sstr << "unknown (" << m_projection << ")\n";
       break;
   }
-  return sstr.str();
+  return;
 }
 
 Error Box_prfr::write(StreamWriter& writer) const

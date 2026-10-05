@@ -147,7 +147,17 @@ public:
 
   Error parse_header(BitstreamRange& range);
 
-  virtual std::string dump(Indent&) const;
+  virtual void dump(std::ostream&, Indent&, bool full_log) const;
+
+  // Convenience wrapper that collects dump() into a string. By default only a
+  // bounded amount of each box is written (see MAX_DUMP_ENTRIES); pass
+  // full_log=true for the complete, potentially very large, output.
+  std::string dump_to_string(Indent& indent, bool full_log = false) const
+  {
+    std::ostringstream sstr;
+    dump(sstr, indent, full_log);
+    return sstr.str();
+  }
 
 
   virtual bool is_full_box_header() const { return false; }
@@ -206,7 +216,7 @@ public:
 
   void patch_file_pointers_recursively(StreamWriter&, size_t offset);
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   template<typename T> [[nodiscard]] std::shared_ptr<T> get_child_box() const
   {
@@ -300,7 +310,7 @@ protected:
 
   Error write_children(StreamWriter& writer) const;
 
-  std::string dump_children(Indent&, bool with_index = false) const;
+  void dump_children(std::ostream&, Indent&, bool full_log, bool with_index = false) const;
 
 
   // --- writing
@@ -318,7 +328,7 @@ class FullBox : public Box
 public:
   bool is_full_box_header() const override { return true; }
 
-  std::string dump(Indent& indent) const override;
+  void dump(std::ostream&, Indent& indent, bool full_log) const override;
 
   void derive_box_version() override { set_version(0); }
 
@@ -363,7 +373,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -387,7 +397,7 @@ public:
 
   Error write(StreamWriter& writer) const override { return {heif_error_Usage_error, heif_suberror_Unspecified, "Cannot write dummy error box."}; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override;
 
@@ -412,7 +422,7 @@ public:
     set_short_type(fourcc("ftyp"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "File Type"; }
 
@@ -452,7 +462,7 @@ public:
     set_short_type(fourcc("free"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Free Space"; }
 
@@ -471,7 +481,7 @@ public:
     set_short_type(fourcc("meta"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Metadata"; }
 
@@ -488,7 +498,7 @@ public:
     set_short_type(fourcc("hdlr"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Handler Reference"; }
 
@@ -519,7 +529,7 @@ public:
     set_short_type(fourcc("pitm"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Primary Item"; }
 
@@ -548,7 +558,7 @@ public:
 
   void set_use_tmp_file(bool flag);
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Location"; }
 
@@ -649,7 +659,7 @@ public:
     set_short_type(fourcc("infe"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Info Entry"; }
 
@@ -711,7 +721,7 @@ public:
     set_short_type(fourcc("iinf"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Information"; }
 
@@ -735,7 +745,7 @@ public:
     set_short_type(fourcc("iprp"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Properties"; }
 
@@ -766,7 +776,7 @@ public:
                                       const std::shared_ptr<const class Box>& property,
                                       const std::shared_ptr<class Box_ipma>&) const;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Property Container"; }
 
@@ -793,7 +803,7 @@ public:
     m_image_height = height;
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image Spatial Extents"; }
 
@@ -821,7 +831,7 @@ public:
     set_short_type(fourcc("ipma"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Property Association"; }
 
@@ -886,7 +896,7 @@ public:
 
   bool is_essential() const override { return true; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image Properties for Auxiliary Images"; }
 
@@ -913,7 +923,7 @@ public:
 
   bool is_transformative_property() const override { return true; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image Rotation"; }
 
@@ -950,7 +960,7 @@ public:
 
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image Mirroring"; }
 
@@ -991,7 +1001,7 @@ public:
     m_target_height_denominator = h_den;
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image Scaling"; }
 
@@ -1022,7 +1032,7 @@ public:
 
   bool is_transformative_property() const override { return true; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Clean Aperture"; }
 
@@ -1084,7 +1094,7 @@ public:
   };
 
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Reference"; }
 
@@ -1131,7 +1141,7 @@ public:
 
   bool is_essential() const override { return true; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Required Reference Types"; }
 
@@ -1156,7 +1166,7 @@ private:
 class Box_idat : public Box
 {
 public:
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item Data"; }
 
@@ -1195,7 +1205,7 @@ public:
     set_short_type(fourcc("grpl"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Groups List"; }
 
@@ -1207,7 +1217,7 @@ protected:
 class Box_EntityToGroup : public FullBox
 {
 public:
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -1237,7 +1247,7 @@ public:
     set_short_type(fourcc("ster"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Stereo pair"; }
 
@@ -1258,7 +1268,7 @@ public:
     set_short_type(fourcc("pymd"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Image pyramid group"; }
 
@@ -1305,7 +1315,7 @@ public:
     set_short_type(fourcc("dinf"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Data Information"; }
 
@@ -1322,7 +1332,7 @@ public:
     set_short_type(fourcc("dref"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Data Reference"; }
 
@@ -1342,7 +1352,7 @@ public:
     set_flags(1);
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Data Entry URL"; }
 
@@ -1383,7 +1393,7 @@ public:
     }
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Pixel Information"; }
 
@@ -1410,7 +1420,7 @@ public:
   uint32_t hSpacing = 1;
   uint32_t vSpacing = 1;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Pixel Aspect Ratio"; }
 
@@ -1433,7 +1443,7 @@ public:
 
   uint16_t layer_id = 0;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Layer Selection"; }
 
@@ -1459,7 +1469,7 @@ public:
 
   heif_content_light_level clli;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Content Light Level Information"; }
 
@@ -1479,7 +1489,7 @@ public:
 
   heif_mastering_display_colour_volume mdcv;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Master Display Colour Volume"; }
 
@@ -1499,7 +1509,7 @@ public:
 
   heif_ambient_viewing_environment amve;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Ambient Viewing Environment"; }
 
@@ -1526,7 +1536,7 @@ public:
 
   void set_diffuse_white_luminance(uint32_t luminance) { m_diffuse_white_luminance = luminance; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Nominal Diffuse White"; }
 
@@ -1568,7 +1578,7 @@ public:
   uint32_t get_avg_luminance() const { return *m_ccv_avg_luminance_value; }
   void set_avg_luminance(uint32_t luminance) { m_ccv_avg_luminance_value = luminance; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   // TODO const char* debug_box_name() const override { return ""; }
 
@@ -1649,7 +1659,7 @@ public:
     }
   };
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Camera Intrinsic Matrix"; }
 
@@ -1706,7 +1716,7 @@ public:
     std::array<double,9> calculate_rotation_matrix() const;
   };
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Camera Extrinsic Matrix"; }
 
@@ -1760,7 +1770,7 @@ public:
     set_short_type(fourcc("udes"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "User Description"; }
 
@@ -1856,7 +1866,7 @@ public:
 
   static std::string dump(const heif_tai_clock_info& info, Indent&);
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "TAI Clock Information"; }
 
@@ -1934,7 +1944,7 @@ public:
     initialize_heif_tai_timestamp_packet(&m_timestamp);
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Item TAI Timestamp"; }
 
@@ -2002,7 +2012,7 @@ public:
 
   bool is_transformative_property() const override { return false; }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "GIMI Content ID"; }
 
@@ -2041,7 +2051,7 @@ public:
     set_short_type(fourcc("elng"));
   }
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   const char* debug_box_name() const override { return "Extended language"; }
 

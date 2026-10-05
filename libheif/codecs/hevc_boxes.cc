@@ -272,10 +272,9 @@ Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_hvcC::dump(Indent& indent) const
+void Box_hvcC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   const auto& c = m_configuration; // abbreviation
 
@@ -356,7 +355,7 @@ std::string Box_hvcC::dump(Indent& indent) const
     indent--;
   }
 
-  return sstr.str();
+  return;
 }
 
 

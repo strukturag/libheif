@@ -69,7 +69,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   std::vector<std::shared_ptr<Box>>& get_tile_properties() { return m_children; }
 

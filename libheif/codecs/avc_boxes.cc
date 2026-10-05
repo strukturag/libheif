@@ -166,10 +166,9 @@ Error Box_avcC::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
-std::string Box_avcC::dump(Indent& indent) const
+void Box_avcC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "configuration_version: " << ((int) m_configuration.configuration_version) << "\n"
       << indent << "AVCProfileIndication: " << ((int) m_configuration.AVCProfileIndication) << " (" << profileIndicationAsText() << ")\n"
       << indent << "profile_compatibility: " << ((int) m_configuration.profile_compatibility) << "\n"
@@ -224,7 +223,7 @@ std::string Box_avcC::dump(Indent& indent) const
     sstr << std::dec;
   }
 
-  return sstr.str();
+  return;
 }
 
 std::string Box_avcC::profileIndicationAsText() const

@@ -64,10 +64,9 @@ Error Box_cdef::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_cdef::dump(Indent& indent) const
+void Box_cdef::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const auto& channel : m_channels) {
     sstr << indent << "channel_index: " << channel.channel_index
@@ -75,7 +74,7 @@ std::string Box_cdef::dump(Indent& indent) const
          << ", channel_association: " << channel.channel_association << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -146,10 +145,9 @@ Error Box_cmap::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_cmap::dump(Indent& indent) const
+void Box_cmap::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const auto& component : m_components) {
     sstr << indent << "component_index: " << component.component_index
@@ -157,7 +155,7 @@ std::string Box_cmap::dump(Indent& indent) const
          << ", palette_colour: " << (int) (component.palette_colour) << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -257,10 +255,9 @@ Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-std::string Box_pclr::dump(Indent& indent) const
+void Box_pclr::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   sstr << indent << "NE: " << m_entries.size();
   sstr << ", NPC: " << (int) get_num_columns();
@@ -271,7 +268,7 @@ std::string Box_pclr::dump(Indent& indent) const
   // TODO: maybe dump entries too?
   sstr << "\n";
 
-  return sstr.str();
+  return;
 }
 
 
@@ -344,10 +341,9 @@ Error Box_j2kL::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_j2kL::dump(Indent& indent) const
+void Box_j2kL::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
   for (const auto& layer : m_layers) {
     sstr << indent << "layer_id: " << layer.layer_id
@@ -355,7 +351,7 @@ std::string Box_j2kL::dump(Indent& indent) const
          << ", decode_layers: " << layer.decode_layers << "\n";
   }
 
-  return sstr.str();
+  return;
 }
 
 
@@ -381,14 +377,13 @@ Error Box_j2kH::parse(BitstreamRange& range, const heif_security_limits* limits)
   return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
-std::string Box_j2kH::dump(Indent& indent) const
+void Box_j2kH::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
 
-  sstr << dump_children(indent);
+  dump_children(sstr, indent, full_log);
 
-  return sstr.str();
+  return;
 }
 
 

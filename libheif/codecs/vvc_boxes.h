@@ -72,7 +72,7 @@ public:
   };
 
 
-  std::string dump(Indent&) const override;
+  void dump(std::ostream&, Indent&, bool full_log) const override;
 
   bool get_headers(std::vector<uint8_t>* dest) const;
 

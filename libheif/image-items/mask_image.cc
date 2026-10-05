@@ -40,12 +40,11 @@ Error Box_mskC::parse(BitstreamRange& range, const heif_security_limits* limits)
   return range.get_error();
 }
 
-std::string Box_mskC::dump(Indent& indent) const
+void Box_mskC::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  Box::dump(sstr, indent, full_log);
   sstr << indent << "bits_per_pixel: " << ((int)m_bits_per_pixel) << "\n";
-  return sstr.str();
+  return;
 }
 
 Error Box_mskC::write(StreamWriter& writer) const

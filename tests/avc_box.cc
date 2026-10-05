@@ -63,7 +63,7 @@ TEST_CASE("avcC") {
   REQUIRE(avcC->getPictureParameterSets().size() == 1);
   REQUIRE(avcC->getPictureParameterSets()[0].size() == 7);
   Indent indent;
-  std::string dumpResult = box->dump(indent);
+  std::string dumpResult = box->dump_to_string(indent);
   REQUIRE(dumpResult == "Box: avcC -----\n"
                         "size: 52   (header size: 8)\n"
                         "configuration_version: 1\n"
