@@ -418,15 +418,25 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
 
   // The RRGGBB(AA) interleaved formats store each component as 16 bit. A bit depth
   // of <= 8 would be self-inconsistent: the allocated plane would only hold one byte
-  // per component while readers/writers access the samples as 16-bit values.
+  // per component while readers/writers access the samples as 16-bit values. A bit depth
+  // above 16 is no RRGGBB(AA) format either: the components would not be 16-bit words.
   if ((m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
        m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
        m_chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
        m_chroma == heif_chroma_interleaved_RRGGBBAA_LE) &&
-      bit_depth <= 8) {
+      (bit_depth <= 8 || bit_depth > 16)) {
     return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "Cannot create a 16-bit interleaved channel with a bit depth of 8 or less"};
+            heif_suberror_Invalid_parameter_value,
+            "The interleaved RRGGBB formats require a bit depth of 9 to 16"};
+  }
+
+  // The interleaved RGB and RGBA formats have 8 bits per component.
+  if ((m_chroma == heif_chroma_interleaved_RGB ||
+       m_chroma == heif_chroma_interleaved_RGBA) &&
+      bit_depth != 8) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "The interleaved RGB and RGBA formats require a bit depth of 8"};
   }
 
   int num_interleaved_pixels = num_interleaved_components_per_plane(m_chroma);
@@ -1198,9 +1208,11 @@ uint16_t HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) c
     return 0;
   }
 
+  // The widest pixels are a 128-bit complex sample and four interleaved 16-bit components.
+  // add_channel() does not let an interleaved plane have wider components.
   uint32_t bpp = comp->get_bytes_per_pixel() * 8;
   assert(bpp <= 256);
-  return static_cast<uint8_t>(bpp);
+  return static_cast<uint16_t>(bpp);
 }
 
 

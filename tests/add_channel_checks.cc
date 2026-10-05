@@ -112,3 +112,84 @@ TEST_CASE("add_channel does not constrain non-chroma auxiliary planes") {
 
   REQUIRE(image->add_channel(heif_channel_depth, 5, 5, 8, limits).error_code == heif_error_Ok);
 }
+
+// The interleaved chroma formats define the bit depth of their components: 8 bits for RGB
+// and RGBA, 9 to 16 bits (stored as 16-bit words) for the RRGGBB formats. add_channel()
+// accepted any bit depth for them. An interleaved plane with 64-bit or 128-bit components
+// has pixels of more than 255 bits, for which get_storage_bits_per_pixel() ran into its
+// assertion, or, without assertions, reported a truncated size (384 bits as 128, and 256
+// bits as 0, which the API turned into "no such channel").
+TEST_CASE("add_channel checks the bit depth of interleaved formats") {
+  auto* limits = heif_get_global_security_limits();
+
+  auto add = [limits](heif_chroma chroma, int bit_depth, std::shared_ptr<HeifPixelImage>* out_image = nullptr) {
+    auto image = std::make_shared<HeifPixelImage>();
+    image->create(16, 16, heif_colorspace_RGB, chroma);
+    Error err = image->add_channel(heif_channel_interleaved, 16, 16, bit_depth, limits);
+    if (out_image) {
+      *out_image = image;
+    }
+    return err;
+  };
+
+  SECTION("RGB and RGBA have 8 bits per component") {
+    for (heif_chroma chroma : {heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA}) {
+      const int num_components = (chroma == heif_chroma_interleaved_RGB) ? 3 : 4;
+      INFO("chroma " << chroma);
+
+      std::shared_ptr<HeifPixelImage> image;
+      REQUIRE(!add(chroma, 8, &image));
+      CHECK(image->get_bits_per_pixel(heif_channel_interleaved) == 8);
+      CHECK(image->get_storage_bits_per_pixel(heif_channel_interleaved) == 8 * num_components);
+
+      // for backwards compatibility, the size of the whole pixel is accepted as well
+      REQUIRE(!add(chroma, 8 * num_components, &image));
+      CHECK(image->get_bits_per_pixel(heif_channel_interleaved) == 8);
+      CHECK(image->get_storage_bits_per_pixel(heif_channel_interleaved) == 8 * num_components);
+
+      for (int bit_depth : {1, 7, 9, 10, 16, 64, 128}) {
+        INFO("bit depth " << bit_depth);
+        Error err = add(chroma, bit_depth);
+        CHECK(err.error_code == heif_error_Usage_error);
+        CHECK(err.sub_error_code == heif_suberror_Invalid_parameter_value);
+      }
+    }
+  }
+
+  SECTION("the RRGGBB formats have 9 to 16 bits per component") {
+    for (heif_chroma chroma : {heif_chroma_interleaved_RRGGBB_LE, heif_chroma_interleaved_RRGGBB_BE,
+                               heif_chroma_interleaved_RRGGBBAA_LE, heif_chroma_interleaved_RRGGBBAA_BE}) {
+      const int num_components = (chroma == heif_chroma_interleaved_RRGGBB_LE ||
+                                  chroma == heif_chroma_interleaved_RRGGBB_BE) ? 3 : 4;
+      INFO("chroma " << chroma);
+
+      for (int bit_depth : {9, 10, 12, 16}) {
+        INFO("bit depth " << bit_depth);
+        std::shared_ptr<HeifPixelImage> image;
+        REQUIRE(!add(chroma, bit_depth, &image));
+        CHECK(image->get_bits_per_pixel(heif_channel_interleaved) == bit_depth);
+        CHECK(image->get_storage_bits_per_pixel(heif_channel_interleaved) == 16 * num_components);
+      }
+
+      for (int bit_depth : {1, 8, 17, 32, 64, 128}) {
+        INFO("bit depth " << bit_depth);
+        Error err = add(chroma, bit_depth);
+        CHECK(err.error_code == heif_error_Usage_error);
+        CHECK(err.sub_error_code == heif_suberror_Invalid_parameter_value);
+      }
+    }
+  }
+
+  SECTION("planes of other formats keep their wide components") {
+    auto image = std::make_shared<HeifPixelImage>();
+    image->create(16, 16, heif_colorspace_custom, heif_chroma_planar);
+    REQUIRE(!image->add_channel(heif_channel_Y, 16, 16, 128, limits, heif_component_datatype_complex_number));
+    CHECK(image->get_storage_bits_per_pixel(heif_channel_Y) == 128);
+  }
+
+  SECTION("a channel that does not exist") {
+    auto image = std::make_shared<HeifPixelImage>();
+    image->create(16, 16, heif_colorspace_RGB, heif_chroma_interleaved_RGB);
+    CHECK(image->get_storage_bits_per_pixel(heif_channel_interleaved) == 0);
+  }
+}

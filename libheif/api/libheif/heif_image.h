@@ -368,6 +368,11 @@ heif_error heif_image_create(int width, int height,
  * with an interleaved format like RRGGBB where each color is represented by 10 bits,
  * the {@code bit_depth} would be {@code 10} rather than {@code 30}.
  *
+ * <p>The interleaved formats define the bit depth of their components:
+ * {@code heif_chroma_interleaved_RGB} and {@code heif_chroma_interleaved_RGBA} have 8 bits,
+ * the {@code heif_chroma_interleaved_RRGGBB...} formats have 9 to 16 bits.
+ * Other bit depths are rejected for these formats.
+ *
  * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
  * instead of the preferred 8 bits. However, this use is deprecated.
  *
