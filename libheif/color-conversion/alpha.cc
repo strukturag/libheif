@@ -76,6 +76,15 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but convert_colorspace() only copies
+  // the Y/Cb/Cr/R/G/B planes and would return an image without its filter-array plane. A filter
+  // array with an alpha plane is not a plane layout that the pipeline accepts
+  // (HeifPixelImage::check_plane_layout()), so decline it instead of declaring a state for it.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
+    return {};
+  }
+
   if (options_ext.alpha_composition_mode != heif_alpha_composition_mode_none) {
     return {};
   }
@@ -450,6 +459,14 @@ Op_adjust_alpha_bit_depth::state_after_conversion(const ColorState& input_state,
       input_state.chroma != heif_chroma_420 &&
       input_state.chroma != heif_chroma_422 &&
       input_state.chroma != heif_chroma_444) {
+    return {};
+  }
+
+  // A Bayer image (colorspace filter_array with chroma planar, which has the same value as
+  // heif_chroma_monochrome) passes the chroma test above, but convert_colorspace() only copies
+  // the Y/Cb/Cr/R/G/B planes and would return the alpha plane alone. Decline it, like
+  // Op_drop_alpha_plane does.
+  if (input_state.colorspace == heif_colorspace_filter_array) {
     return {};
   }
 

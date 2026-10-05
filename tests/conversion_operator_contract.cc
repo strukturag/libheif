@@ -228,6 +228,14 @@ std::shared_ptr<HeifPixelImage> make_bayer_image(const ColorState& state, uint32
   REQUIRE(mem != nullptr);
   fill_plane(mem, stride, w, h, bits, false);
 
+  if (state.bits_per_pixel_alpha) {
+    REQUIRE(!img->add_channel(heif_channel_Alpha, w, h, state.bits_per_pixel_alpha, heif_get_disabled_security_limits()));
+
+    mem = img->get_channel_memory(heif_channel_Alpha, &stride);
+    REQUIRE(mem != nullptr);
+    fill_plane(mem, stride, w, h, state.bits_per_pixel_alpha, std::endian::native == std::endian::big);
+  }
+
   return img;
 }
 
@@ -375,6 +383,32 @@ std::vector<ColorState> image_states()
 }
 
 
+// States that convert_colorspace() refuses at its entry (HeifPixelImage::check_plane_layout()),
+// but that an image can be built with, because HeifPixelImage accepts any set of planes: a
+// filter array with an alpha plane. What an operator declares for such an input has to hold as
+// well. Op_drop_alpha_plane and Op_adjust_alpha_bit_depth took the chroma format of a filter
+// array (planar, the same value as monochrome) for a monochrome image, declared the input
+// state with another alpha plane and returned an image without the filter-array plane.
+std::vector<ColorState> refused_input_states()
+{
+  std::vector<ColorState> states;
+
+  for (int bpp : {8, 10, 16}) {
+    for (int alpha_bpp : {8, 10, 16}) {
+      ColorState state;
+      state.colorspace = heif_colorspace_filter_array;
+      state.chroma = heif_chroma_planar;
+      state.bits_per_pixel_filter_array = bpp;
+      state.bits_per_pixel_alpha = alpha_bpp;
+      state.nclx = nclx_profile::defaults();
+      states.push_back(state);
+    }
+  }
+
+  return states;
+}
+
+
 struct Options
 {
   heif_color_conversion_options options;
@@ -405,8 +439,12 @@ std::vector<Options> option_sets()
 TEST_CASE("conversion operators return the image that they declared")
 {
   const std::vector<ColorState> targets = all_states();
-  const std::vector<ColorState> inputs = image_states();
   const heif_security_limits* limits = heif_get_disabled_security_limits();
+
+  std::vector<ColorState> inputs = image_states();
+  for (const ColorState& state : refused_input_states()) {
+    inputs.push_back(state);
+  }
 
   size_t num_operators_used = 0;
   size_t num_conversions = 0;
