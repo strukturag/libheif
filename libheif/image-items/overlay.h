@@ -138,6 +138,11 @@ private:
   ImageOverlay m_overlay_spec;
   std::vector<heif_item_id> m_overlay_image_ids;
 
+  int get_first_image_bit_depth() const;
+
+  // The bit depth of the canvas that the images are composed on.
+  int get_canvas_bit_depth() const;
+
   Error read_overlay_spec();
 
   Result<std::shared_ptr<HeifPixelImage>> decode_overlay_image(const heif_decoding_options& options,

@@ -24,6 +24,7 @@
 #include "color-conversion/colorconversion.h"
 #include "security_limits.h"
 
+#include <algorithm>
 #include <utility>
 
 
@@ -334,19 +335,25 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
     return err;
   }
 
+  // The canvas has the bit depth of the first image, which is the bit depth that the image
+  // handle of the overlay reports. Images with a lower bit depth are brought to that depth
+  // before they are composed. The samples are composed with 8 or 16 bits.
+  const int canvas_bit_depth = get_canvas_bit_depth();
+  if (canvas_bit_depth > 16) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unspecified,
+                 "Overlay images with more than 16 bits per sample are not supported"};
+  }
+
   // TODO: seems we always have to compose this in RGB since the background color is an RGB value
   img = std::make_shared<HeifPixelImage>();
   img->create(w, h,
               heif_colorspace_RGB,
               heif_chroma_444);
-  if (auto error = img->add_channel(heif_channel_R, w, h, 8, get_context()->get_security_limits())) { // TODO: other bit depths
-    return error;
-  }
-  if (auto error = img->add_channel(heif_channel_G, w, h, 8, get_context()->get_security_limits())) { // TODO: other bit depths
-    return error;
-  }
-  if (auto error = img->add_channel(heif_channel_B, w, h, 8, get_context()->get_security_limits())) { // TODO: other bit depths
-    return error;
+  for (heif_channel channel : {heif_channel_R, heif_channel_G, heif_channel_B}) {
+    if (auto error = img->add_channel(channel, w, h, canvas_bit_depth, get_context()->get_security_limits())) {
+      return error;
+    }
   }
 
   uint16_t bkg_color[4];
@@ -384,20 +391,30 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
 
 
     // process overlay in RGB space
+    //
+    // HeifPixelImage::overlay() needs the image as RGB 4:4:4 with the bit depth of the canvas.
+    // The conversion is requested for every image, also for one that already has this
+    // format: convert_colorspace() hands such an image through unchanged, but it first checks
+    // that the image has the planes of its format in the right sizes.
+    // An image with a higher bit depth than the canvas would have to be reduced, which loses
+    // accuracy. That is refused. (The images used to be composed byte by byte whatever their
+    // bit depth, which gave a wrong picture for more than 8 bits.)
 
-    if (overlay_img->get_colorspace() != heif_colorspace_RGB ||
-        overlay_img->get_chroma_format() != heif_chroma_444) {
-      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444,
-                                                   nclx_profile::undefined(),
-                                                   0, options.color_conversion_options, options.color_conversion_options_ext,
-                                                   get_context()->get_security_limits());
-      if (!overlay_img_result) {
-        return overlay_img_result.error();
-      }
-      else {
-        overlay_img = *overlay_img_result;
-      }
+    if (overlay_img->get_visual_image_bits_per_pixel() > canvas_bit_depth) {
+      return Error{heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "An overlay input image with a higher bit depth than the first input image is not supported"};
     }
+
+    auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444,
+                                                 nclx_profile::undefined(),
+                                                 canvas_bit_depth, options.color_conversion_options, options.color_conversion_options_ext,
+                                                 get_context()->get_security_limits());
+    if (!overlay_img_result) {
+      return overlay_img_result.error();
+    }
+
+    overlay_img = *overlay_img_result;
 
     int32_t dx, dy;
     m_overlay_spec.get_offset(i, &dx, &dy);
@@ -418,7 +435,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
 }
 
 
-int ImageItem_Overlay::get_luma_bits_per_pixel() const
+// The bit depth of the first coded image that the overlay is composed of, or -1 if it is
+// not known (yet: while the file is loaded, the image may not have been read).
+int ImageItem_Overlay::get_first_image_bit_depth() const
 {
   auto child_result = get_context()->find_first_coded_image_id(get_id());
   if (child_result.is_error()) {
@@ -426,19 +445,36 @@ int ImageItem_Overlay::get_luma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(*child_result, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_luma_bits_per_pixel();
+}
+
+
+int ImageItem_Overlay::get_canvas_bit_depth() const
+{
+  // The canvas has at least 8 bits. An image with fewer bits is converted up.
+  return std::max(get_first_image_bit_depth(), 8);
+}
+
+
+// The overlay image is the canvas, so these report the bit depth of the canvas.
+
+int ImageItem_Overlay::get_luma_bits_per_pixel() const
+{
+  if (get_first_image_bit_depth() < 0) {
+    return -1;
+  }
+
+  return get_canvas_bit_depth();
 }
 
 
 int ImageItem_Overlay::get_chroma_bits_per_pixel() const
 {
-  auto child_result = get_context()->find_first_coded_image_id(get_id());
-  if (child_result.is_error()) {
-    return -1;
-  }
-
-  auto image = get_context()->get_image(*child_result, true);
-  return image->get_chroma_bits_per_pixel();
+  return get_luma_bits_per_pixel();
 }
 
 
@@ -457,23 +493,32 @@ void ImageItem_Overlay::populate_component_descriptions()
     return;
   }
 
-  // The overlay is always composed in RGB 8-bit 4:4:4 onto the canvas
+  // The overlay is always composed in RGB 4:4:4 onto the canvas
   // (decode_overlay_image converts each input child to RGB and uses an RGB
   // background color). So the description we publish reflects that fixed
-  // output format, not the children's formats.
+  // output format, not the children's formats. The bit depth is the one of the
+  // canvas, which is taken from the first input image. If that image has not
+  // been read yet (it comes later in the file than the overlay), the bit depth
+  // is not known. The overlay is then described in the second pass of
+  // HeifContext::interpret_heif_file_images().
+  if (get_first_image_bit_depth() < 0) {
+    return;
+  }
+
+  const auto canvas_bit_depth = static_cast<uint16_t>(get_canvas_bit_depth());
   uint32_t w = get_ispe_width();
   uint32_t h = get_ispe_height();
   if (w == 0 || h == 0) {
     return;
   }
 
-  auto emit = [this, w, h](heif_channel ch, uint16_t type) {
+  auto emit = [this, w, h, canvas_bit_depth](heif_channel ch, uint16_t type) {
     ComponentDescription d;
     d.component_id = mint_component_id();
     d.channel = ch;
     d.component_type = type;
     d.datatype = heif_component_datatype_unsigned_integer;
-    d.bit_depth = 8;
+    d.bit_depth = canvas_bit_depth;
     d.width = w;
     d.height = h;
     d.has_data_plane = true;

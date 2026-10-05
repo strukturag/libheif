@@ -60,10 +60,12 @@ const uint32_t BASE_H = 8;
 
 const heif_item_id BASE_ID = 1;
 const heif_item_id IOVL_ID = 2;
+const heif_item_id BASE2_ID = 3;  // an optional second base image with another bit depth
 
 struct Layer {
   int32_t x;
   int32_t y;
+  bool second_base = false;  // place the second base image instead of the first one
 };
 
 
@@ -99,8 +101,42 @@ std::vector<uint8_t> make_overlay_spec(uint16_t canvas_w, uint16_t canvas_h, con
 // A file with two items: item 1 is an 8x8 'mski' base image whose pixel value is
 // 8*y+x, item 2 is the primary 'iovl' that references the base once per layer.
 // With two or more layers, the 'dimg' entry therefore lists item 1 repeatedly.
-std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std::vector<Layer>& layers, bool long_fields)
+// The pixel value of a base image at pixel index i (= 8*y+x).
+uint16_t base_sample(uint8_t bits_per_pixel, uint32_t i, bool second_base)
 {
+  if (bits_per_pixel == 8) {
+    return static_cast<uint8_t>(second_base ? 255 - 2 * i : i);
+  }
+
+  // 16 bits, with different upper and lower bytes
+  return static_cast<uint16_t>(second_base ? 65000 - i * 700 : i * 1000 + 300);
+}
+
+std::vector<uint8_t> base_image_data(uint8_t bits_per_pixel, bool second_base)
+{
+  std::vector<uint8_t> data;
+  for (uint32_t i = 0; i < BASE_W * BASE_H; i++) {
+    uint16_t value = base_sample(bits_per_pixel, i, second_base);
+    if (bits_per_pixel == 8) {
+      data.push_back(static_cast<uint8_t>(value));
+    }
+    else {
+      // 16-bit samples in the byte order of the machine
+      uint8_t bytes[2];
+      memcpy(bytes, &value, 2);
+      data.push_back(bytes[0]);
+      data.push_back(bytes[1]);
+    }
+  }
+  return data;
+}
+
+// 'second_base_bits_per_pixel' = 0: there is no second base image.
+std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std::vector<Layer>& layers, bool long_fields,
+                                uint8_t base_bits_per_pixel = 8, uint8_t second_base_bits_per_pixel = 0)
+{
+  const bool has_second_base = (second_base_bits_per_pixel != 0);
+
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "mif1");
   put_u32_be(ftyp_payload, 0);
@@ -122,9 +158,14 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   auto pitm = make_box("pitm", pitm_payload, /*full=*/true);
 
   // iinf
+  std::vector<std::pair<heif_item_id, const char*>> items = {{BASE_ID, "mski"}, {IOVL_ID, "iovl"}};
+  if (has_second_base) {
+    items.emplace_back(BASE2_ID, "mski");
+  }
+
   std::vector<uint8_t> iinf_payload;
-  put_u16_be(iinf_payload, 2);
-  for (const auto& item : {std::make_pair(BASE_ID, "mski"), std::make_pair(IOVL_ID, "iovl")}) {
+  put_u16_be(iinf_payload, static_cast<uint16_t>(items.size()));
+  for (const auto& item : items) {
     std::vector<uint8_t> infe_payload;
     put_u16_be(infe_payload, static_cast<uint16_t>(item.first));
     put_u16_be(infe_payload, 0);
@@ -134,14 +175,14 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   }
   auto iinf = make_box("iinf", iinf_payload, /*full=*/true);
 
-  // iprp: property 1 = ispe of the base, 2 = mskC, 3 = ispe of the canvas
+  // iprp: property 1 = ispe of the base, 2 = mskC, 3 = ispe of the canvas, 4 = mskC of the second base
   std::vector<uint8_t> ispe_base_payload;
   put_u32_be(ispe_base_payload, BASE_W);
   put_u32_be(ispe_base_payload, BASE_H);
   auto ispe_base = make_box("ispe", ispe_base_payload, /*full=*/true);
 
   std::vector<uint8_t> mskC_payload;
-  mskC_payload.push_back(8);  // bits_per_pixel
+  mskC_payload.push_back(base_bits_per_pixel);
   auto mskC = make_box("mskC", mskC_payload, /*full=*/true);
 
   std::vector<uint8_t> ispe_canvas_payload;
@@ -149,14 +190,21 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   put_u32_be(ispe_canvas_payload, canvas_h);
   auto ispe_canvas = make_box("ispe", ispe_canvas_payload, /*full=*/true);
 
+  std::vector<uint8_t> mskC2_payload;
+  mskC2_payload.push_back(second_base_bits_per_pixel);
+  auto mskC2 = make_box("mskC", mskC2_payload, /*full=*/true);
+
   std::vector<uint8_t> ipco_payload;
   append(ipco_payload, ispe_base);
   append(ipco_payload, mskC);
   append(ipco_payload, ispe_canvas);
+  if (has_second_base) {
+    append(ipco_payload, mskC2);
+  }
   auto ipco = make_box("ipco", ipco_payload);
 
   std::vector<uint8_t> ipma_payload;
-  put_u32_be(ipma_payload, 2);                  // entry_count
+  put_u32_be(ipma_payload, has_second_base ? 3 : 2); // entry_count
   put_u16_be(ipma_payload, static_cast<uint16_t>(BASE_ID));
   ipma_payload.push_back(2);                    // association_count
   ipma_payload.push_back(0x80 | 1);             // essential, ispe (base)
@@ -164,6 +212,12 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   put_u16_be(ipma_payload, static_cast<uint16_t>(IOVL_ID));
   ipma_payload.push_back(1);
   ipma_payload.push_back(0x80 | 3);             // essential, ispe (canvas)
+  if (has_second_base) {
+    put_u16_be(ipma_payload, static_cast<uint16_t>(BASE2_ID));
+    ipma_payload.push_back(2);
+    ipma_payload.push_back(0x80 | 1);           // essential, ispe (same size as the base)
+    ipma_payload.push_back(0x80 | 4);           // essential, mskC of the second base
+  }
   auto ipma = make_box("ipma", ipma_payload, /*full=*/true);
 
   std::vector<uint8_t> iprp_payload;
@@ -171,25 +225,33 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   append(iprp_payload, ipma);
   auto iprp = make_box("iprp", iprp_payload);
 
-  // idat: base pixels, then the overlay spec
-  std::vector<uint8_t> base_data(BASE_W * BASE_H);
-  for (uint32_t i = 0; i < BASE_W * BASE_H; i++) {
-    base_data[i] = static_cast<uint8_t>(i);
+  // idat: base pixels, the pixels of the second base, then the overlay spec
+  std::vector<uint8_t> base_data = base_image_data(base_bits_per_pixel, false);
+  std::vector<uint8_t> base2_data;
+  if (has_second_base) {
+    base2_data = base_image_data(second_base_bits_per_pixel, true);
   }
   auto spec = make_overlay_spec(canvas_w, canvas_h, layers, long_fields);
 
   std::vector<uint8_t> idat_payload;
   append(idat_payload, base_data);
+  append(idat_payload, base2_data);
   append(idat_payload, spec);
   auto idat = make_box("idat", idat_payload);
+
+  struct Extent { heif_item_id id; uint32_t off; uint32_t len; };
+  std::vector<Extent> extents = {
+      Extent{BASE_ID, 0, static_cast<uint32_t>(base_data.size())},
+      Extent{IOVL_ID, static_cast<uint32_t>(base_data.size() + base2_data.size()), static_cast<uint32_t>(spec.size())}};
+  if (has_second_base) {
+    extents.push_back(Extent{BASE2_ID, static_cast<uint32_t>(base_data.size()), static_cast<uint32_t>(base2_data.size())});
+  }
 
   std::vector<uint8_t> iloc_payload;
   iloc_payload.push_back((4 << 4) | 4);         // offset_size=4, length_size=4
   iloc_payload.push_back((0 << 4) | 0);         // base_offset_size=0, index_size=0
-  put_u16_be(iloc_payload, 2);                  // item_count
-  struct Extent { heif_item_id id; uint32_t off; uint32_t len; };
-  for (const Extent& e : {Extent{BASE_ID, 0, static_cast<uint32_t>(base_data.size())},
-                          Extent{IOVL_ID, static_cast<uint32_t>(base_data.size()), static_cast<uint32_t>(spec.size())}}) {
+  put_u16_be(iloc_payload, static_cast<uint16_t>(extents.size())); // item_count
+  for (const Extent& e : extents) {
     put_u16_be(iloc_payload, static_cast<uint16_t>(e.id));
     put_u16_be(iloc_payload, 0x0001);           // reserved(12) + construction_method=1 (idat)
     put_u16_be(iloc_payload, 0);                // data_reference_index
@@ -203,8 +265,8 @@ std::vector<uint8_t> build_file(uint16_t canvas_w, uint16_t canvas_h, const std:
   std::vector<uint8_t> dimg_payload;
   put_u16_be(dimg_payload, static_cast<uint16_t>(IOVL_ID));
   put_u16_be(dimg_payload, static_cast<uint16_t>(layers.size()));
-  for (size_t i = 0; i < layers.size(); i++) {
-    put_u16_be(dimg_payload, static_cast<uint16_t>(BASE_ID));
+  for (const Layer& layer : layers) {
+    put_u16_be(dimg_payload, static_cast<uint16_t>(layer.second_base ? BASE2_ID : BASE_ID));
   }
   auto iref = make_box("iref", make_box("dimg", dimg_payload), /*full=*/true);
 
@@ -328,12 +390,13 @@ void require_same_pixels(const Pixels& actual, const std::vector<uint8_t>& expec
 
 
 void check_composition_with_field_size(uint16_t canvas_w, uint16_t canvas_h, const std::vector<Layer>& layers,
-                                       bool long_fields)
+                                       bool long_fields, uint8_t base_bits_per_pixel = 8)
 {
   INFO("canvas " << canvas_w << "x" << canvas_h << ", " << layers.size() << " layer(s), first offset ("
-                 << layers[0].x << "," << layers[0].y << "), " << (long_fields ? 32 : 16) << "-bit fields");
+                 << layers[0].x << "," << layers[0].y << "), " << (long_fields ? 32 : 16) << "-bit fields, "
+                 << static_cast<int>(base_bits_per_pixel) << "-bit base image");
 
-  auto data = build_file(canvas_w, canvas_h, layers, long_fields);
+  auto data = build_file(canvas_w, canvas_h, layers, long_fields, base_bits_per_pixel);
 
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
@@ -462,4 +525,245 @@ TEST_CASE("overlay offsets: overlay written through the API may reference one im
   require_same_pixels(canvas, composite(base_px, 8, 8, layers));
 
   heif_context_free(ctx);
+}
+
+
+// --- input images with more than 8 bits per sample
+//
+// The canvas of an overlay had 8 bits per sample, and HeifPixelImage::overlay() composed the
+// planes byte by byte. An input image with more than 8 bits was handed to it with its
+// 16-bit samples, so each sample was treated as two pixels and the overlay showed a
+// stretched, wrong picture of the left half of the image.
+// The canvas now has the bit depth of the first input image, and the samples are composed
+// with 8 or 16 bits.
+
+namespace {
+
+struct Planes {
+  uint32_t w = 0;
+  uint32_t h = 0;
+  int bits = 0;
+  std::vector<uint16_t> rgb[3];
+};
+
+// Decodes to planar RGB, which keeps the bit depth of the image.
+Planes decode_planar_rgb(heif_image_handle* handle)
+{
+  heif_image* img = nullptr;
+  heif_error err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_444, nullptr);
+  INFO("decode: " << err.message);
+  REQUIRE(err.code == heif_error_Ok);
+
+  Planes px;
+  px.w = static_cast<uint32_t>(heif_image_get_width(img, heif_channel_R));
+  px.h = static_cast<uint32_t>(heif_image_get_height(img, heif_channel_R));
+  px.bits = heif_image_get_bits_per_pixel_range(img, heif_channel_R);
+
+  const heif_channel channels[3] = {heif_channel_R, heif_channel_G, heif_channel_B};
+  for (int c = 0; c < 3; c++) {
+    REQUIRE(heif_image_get_bits_per_pixel_range(img, channels[c]) == px.bits);
+
+    size_t stride = 0;
+    const uint8_t* p = heif_image_get_plane_readonly2(img, channels[c], &stride);
+    REQUIRE(p != nullptr);
+
+    for (uint32_t y = 0; y < px.h; y++) {
+      for (uint32_t x = 0; x < px.w; x++) {
+        if (px.bits <= 8) {
+          px.rgb[c].push_back(p[y * stride + x]);
+        }
+        else {
+          px.rgb[c].push_back(reinterpret_cast<const uint16_t*>(p + y * stride)[x]);
+        }
+      }
+    }
+  }
+
+  heif_image_release(img);
+  return px;
+}
+
+Planes decode_planar_rgb(heif_context* ctx, heif_item_id id)
+{
+  heif_image_handle* handle = nullptr;
+  REQUIRE(heif_context_get_image_handle(ctx, id, &handle).code == heif_error_Ok);
+  Planes px = decode_planar_rgb(handle);
+  heif_image_handle_release(handle);
+  return px;
+}
+
+// The image handle of an overlay describes the canvas: R, G, B with its bit depth.
+void require_canvas_description(const heif_image_handle* handle, int bits)
+{
+  CHECK(heif_image_handle_get_luma_bits_per_pixel(handle) == bits);
+  CHECK(heif_image_handle_get_chroma_bits_per_pixel(handle) == bits);
+
+  REQUIRE(heif_image_handle_get_number_of_components(handle) == 3);
+
+  uint32_t ids[3];
+  heif_image_handle_get_used_component_ids(handle, ids);
+  for (uint32_t id : ids) {
+    CHECK(heif_image_handle_get_component_bits_per_pixel(handle, id) == bits);
+  }
+}
+
+// Brings a sample to a higher bit depth the way the color conversion does it.
+uint16_t to_bit_depth(uint16_t value, int from_bits, int to_bits)
+{
+  if (from_bits == to_bits) {
+    return value;
+  }
+  REQUIRE(from_bits == 8);
+  REQUIRE(to_bits == 16);
+  return static_cast<uint16_t>((value << 8) | value);
+}
+
+} // namespace
+
+
+TEST_CASE("overlay offsets: input image with 16 bits per sample") {
+  const std::vector<std::vector<Layer>> layer_sets = {{{0, 0}}, {{3, 2}}, {{-3, -2}}, {{2, 2}, {-4, 5}}};
+
+  for (const auto& layers : layer_sets) {
+    for (bool long_fields : {false, true}) {
+      INFO("first offset (" << layers[0].x << "," << layers[0].y << "), " << layers.size() << " layer(s), "
+                            << (long_fields ? 32 : 16) << "-bit fields");
+
+      const uint32_t canvas_w = 10, canvas_h = 9;
+      auto data = build_file(canvas_w, canvas_h, layers, long_fields, 16);
+
+      heif_context* ctx = heif_context_alloc();
+      heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+      INFO("read error: " << err.message);
+      REQUIRE(err.code == heif_error_Ok);
+
+      // The handle of the overlay reports the bit depth of the canvas.
+      heif_image_handle* handle = nullptr;
+      REQUIRE(heif_context_get_primary_image_handle(ctx, &handle).code == heif_error_Ok);
+      require_canvas_description(handle, 16);
+      heif_image_handle_release(handle);
+
+      Planes base = decode_planar_rgb(ctx, BASE_ID);
+      REQUIRE(base.bits == 16);
+      REQUIRE(base.rgb[0][1] == base_sample(16, 1, false)); // the samples are not reduced to 8 bits
+
+      Planes canvas = decode_planar_rgb(ctx, IOVL_ID);
+      REQUIRE(canvas.w == canvas_w);
+      REQUIRE(canvas.h == canvas_h);
+      REQUIRE(canvas.bits == 16);
+
+      for (int c = 0; c < 3; c++) {
+        // reference: an opaque white canvas with the base painted at every offset in order
+        std::vector<uint16_t> expected(static_cast<size_t>(canvas_w) * canvas_h, 0xFFFF);
+        for (const Layer& l : layers) {
+          for (uint32_t y = 0; y < base.h; y++) {
+            for (uint32_t x = 0; x < base.w; x++) {
+              int64_t cx = static_cast<int64_t>(l.x) + x;
+              int64_t cy = static_cast<int64_t>(l.y) + y;
+              if (cx >= 0 && cy >= 0 && cx < canvas_w && cy < canvas_h) {
+                expected[static_cast<size_t>(cy) * canvas_w + static_cast<size_t>(cx)] = base.rgb[c][y * base.w + x];
+              }
+            }
+          }
+        }
+
+        for (size_t i = 0; i < expected.size(); i++) {
+          INFO("channel " << c << ", pixel (" << i % canvas_w << "," << i / canvas_w << ")");
+          REQUIRE(canvas.rgb[c][i] == expected[i]);
+        }
+      }
+
+      heif_context_free(ctx);
+    }
+  }
+}
+
+
+TEST_CASE("overlay offsets: input images with different bit depths") {
+  SECTION("an image with fewer bits than the first image is brought to its bit depth") {
+    // first the 16-bit base, then the 8-bit base on top of its right half
+    auto data = build_file(8, 8, {{0, 0}, {4, 0, true}}, false, 16, 8);
+
+    heif_context* ctx = heif_context_alloc();
+    heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+    INFO("read error: " << err.message);
+    REQUIRE(err.code == heif_error_Ok);
+
+    Planes canvas = decode_planar_rgb(ctx, IOVL_ID);
+    REQUIRE(canvas.bits == 16);
+
+    for (uint32_t y = 0; y < 8; y++) {
+      for (uint32_t x = 0; x < 8; x++) {
+        INFO("pixel (" << x << "," << y << ")");
+        uint16_t expected;
+        if (x < 4) {
+          expected = base_sample(16, 8 * y + x, false);
+        }
+        else {
+          expected = to_bit_depth(base_sample(8, 8 * y + (x - 4), true), 8, 16);
+        }
+        REQUIRE(canvas.rgb[0][y * 8 + x] == expected);
+      }
+    }
+
+    heif_context_free(ctx);
+  }
+
+  SECTION("the first input image comes later in the file than the overlay") {
+    // The second base image (16 bits) has a higher item ID than the overlay. It is the first
+    // input image, so it sets the bit depth of the canvas, although it is not known yet when
+    // the overlay item is read. The 8-bit base is then drawn onto the right half.
+    auto data = build_file(8, 8, {{0, 0, true}, {4, 0}}, false, 8, 16);
+
+    heif_context* ctx = heif_context_alloc();
+    heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+    INFO("read error: " << err.message);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* handle = nullptr;
+    REQUIRE(heif_context_get_primary_image_handle(ctx, &handle).code == heif_error_Ok);
+    require_canvas_description(handle, 16);
+    heif_image_handle_release(handle);
+
+    Planes canvas = decode_planar_rgb(ctx, IOVL_ID);
+    REQUIRE(canvas.bits == 16);
+
+    for (uint32_t y = 0; y < 8; y++) {
+      for (uint32_t x = 0; x < 8; x++) {
+        INFO("pixel (" << x << "," << y << ")");
+        uint16_t expected;
+        if (x < 4) {
+          expected = base_sample(16, 8 * y + x, true);
+        }
+        else {
+          expected = to_bit_depth(base_sample(8, 8 * y + (x - 4), false), 8, 16);
+        }
+        REQUIRE(canvas.rgb[0][y * 8 + x] == expected);
+      }
+    }
+
+    heif_context_free(ctx);
+  }
+
+  SECTION("an image with more bits than the first image is refused") {
+    // first the 8-bit base, then the 16-bit base: it would have to be reduced to 8 bits
+    auto data = build_file(8, 8, {{0, 0}, {4, 0, true}}, false, 8, 16);
+
+    heif_context* ctx = heif_context_alloc();
+    heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+    INFO("read error: " << err.message);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* handle = nullptr;
+    REQUIRE(heif_context_get_primary_image_handle(ctx, &handle).code == heif_error_Ok);
+
+    heif_image* img = nullptr;
+    err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
+    INFO("decode: " << err.message);
+    CHECK(err.code == heif_error_Unsupported_feature);
+    CHECK(img == nullptr);
+
+    heif_image_handle_release(handle);
+    heif_context_free(ctx);
+  }
 }

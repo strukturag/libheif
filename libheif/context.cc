@@ -670,6 +670,21 @@ Error HeifContext::interpret_heif_file_images()
     }
   }
 
+
+  // --- component descriptions of derived images
+  //
+  // A derived image (grid, overlay, 'iden') takes its component descriptions from its
+  // input images. An input image that comes later in the file than the derived image
+  // was not known yet when the derived image was read above. Now that all images are
+  // known, describe the images that are still without a description. This does nothing
+  // for images that have one.
+
+  for (auto& pair : m_all_images) {
+    if (!pair.second->get_item_error()) {
+      pair.second->populate_component_descriptions();
+    }
+  }
+
   if (!m_primary_image) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Nonexisting_item_referenced,
