@@ -2263,10 +2263,22 @@ Error Box_sdtp::parse(BitstreamRange& range, const heif_security_limits* limits)
   // in the standard. Instead, we read until the end of the box.
   size_t nSamples = range.get_remaining_bytes();
 
+  if (limits && limits->max_sequence_frames > 0 && nSamples > limits->max_sequence_frames) {
+    return {
+      heif_error_Memory_allocation_error,
+      heif_suberror_Security_limit_exceeded,
+      "Number of 'sdtp' samples exceeds the maximum number of sequence frames."
+    };
+  }
+
+  if (auto err = m_memory_handle.alloc(nSamples, limits, "the 'sdtp' table")) {
+    return err;
+  }
+
   m_sample_information.resize(nSamples);
   range.read(m_sample_information.data(), nSamples);
 
-  return Error::Ok;
+  return range.get_error();
 }
 
 

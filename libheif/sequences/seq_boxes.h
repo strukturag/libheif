@@ -961,6 +961,7 @@ protected:
 
 private:
   std::vector<uint8_t> m_sample_information;
+  MemoryHandle m_memory_handle;
 };
 
 
