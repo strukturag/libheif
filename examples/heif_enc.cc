@@ -356,7 +356,6 @@ static option long_options[] = {
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
     {(char* const) "encoder",                 required_argument, 0,              'e'},
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
-    {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "hevc",                    no_argument,       0,              OPTION_USE_HEVC_COMPRESSION},
     {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
