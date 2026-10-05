@@ -1669,7 +1669,18 @@ Error ImageItem::check_decoded_image_bit_depth(const HeifPixelImage& img) const
 
   bool mismatch = false;
 
-  if (luma_bpp > 0 && img.has_channel(heif_channel_Y) &&
+  // The handle reports a single luma bit depth. An 'unci' image can have several components
+  // that are mapped to the Y channel (e.g. several monochrome bands) with different bit
+  // depths. A single value cannot describe them (the handle reports the largest one), so the
+  // luma depth is not compared when there are several such components.
+  int num_luma_components = 0;
+  for (const ComponentDescription& component : img.get_component_descriptions()) {
+    if (component.channel == heif_channel_Y && component.has_data_plane) {
+      num_luma_components++;
+    }
+  }
+
+  if (luma_bpp > 0 && num_luma_components <= 1 && img.has_channel(heif_channel_Y) &&
       img.get_bits_per_pixel(heif_channel_Y) != luma_bpp) {
     mismatch = true;
   }
