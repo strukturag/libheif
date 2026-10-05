@@ -152,8 +152,8 @@ The following are targets, not commitments (see [Maintenance capacity](#maintena
 libheif and libde265 are maintained by one independent developer, largely in unpaid evenings
 and weekends. There is no security team.
 
-To make the workload concrete: from January to September 2026, 61 security advisories were
-published for libheif (4 rated critical, 20 high), and nine releases were made mainly to ship
+To make the workload concrete: from January to October 2026, 73 security advisories were
+published for libheif (4 rated critical, 24 high), and ten releases were made mainly to ship
 security fixes. Most of the 2026 reports were found with automated or AI-assisted tools,
 often run by organizations that use libheif in their products.
 Reproducing, fixing, testing, fuzzing and releasing each fix takes hours to days.
