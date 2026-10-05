@@ -32,6 +32,14 @@
 #include <ostream>
 
 
+// dump() is a debugging aid. Boxes whose content scales with the file size (the
+// sample tables, reference lists, ...) can otherwise produce gigabytes of text
+// from a small input, which nested containers then copy at every level. Unless
+// the caller passes full_log=true, such boxes print at most this many entries
+// and then a short note about how many were omitted.
+static const size_t MAX_DUMP_ENTRIES = 100;
+
+
 class Indent
 {
 public:
@@ -71,6 +79,22 @@ inline void reset_stream_format(std::ostream& ostr)
   ostr.fill(' ');
 }
 
+
+// Helper for dump() loops over a container whose length scales with the file
+// size. Call it at the top of the loop body with the current index and the
+// total count. When full_log is false and MAX_DUMP_ENTRIES items have already
+// been written, it writes a short note about the remaining items and returns
+// true, telling the loop to stop.
+inline bool dump_reached_entry_limit(std::ostream& ostr, const Indent& indent,
+                                     bool full_log, size_t index, size_t total)
+{
+  if (full_log || index < MAX_DUMP_ENTRIES) {
+    return false;
+  }
+
+  ostr << indent << "... (" << (total - index) << " more)\n";
+  return true;
+}
 
 std::string write_raw_data_as_hex(const uint8_t* data, size_t len,
                                   const std::string& firstLineIndent,

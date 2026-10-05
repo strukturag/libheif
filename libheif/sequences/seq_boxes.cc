@@ -622,6 +622,7 @@ void Box_stts::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
   FullBox::dump(sstr, indent, full_log);
   for (size_t i = 0; i < m_entries.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_entries.size())) break;
     sstr << indent << "[" << i << "] : cnt=" << m_entries[i].sample_count << ", delta=" << m_entries[i].sample_delta << "\n";
   }
 
@@ -815,6 +816,7 @@ void Box_ctts::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
   FullBox::dump(sstr, indent, full_log);
   for (size_t i = 0; i < m_entries.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_entries.size())) break;
     sstr << indent << "[" << i << "] : cnt=" << m_entries[i].sample_count << ", offset=" << m_entries[i].sample_offset << "\n";
   }
 
@@ -984,6 +986,7 @@ void Box_stsc::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
   FullBox::dump(sstr, indent, full_log);
   for (size_t i = 0; i < m_entries.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_entries.size())) break;
     sstr << indent << "[" << i << "]\n"
         << indent << "  first chunk: " << m_entries[i].first_chunk << "\n"
         << indent << "  samples per chunk: " << m_entries[i].samples_per_chunk << "\n"
@@ -1085,6 +1088,7 @@ void Box_stco::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
   FullBox::dump(sstr, indent, full_log);
   for (size_t i = 0; i < m_offsets.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_offsets.size())) break;
     sstr << indent << "[" << i << "] : 0x" << std::hex << m_offsets[i] << std::dec << "\n";
   }
 
@@ -1188,6 +1192,7 @@ void Box_stsz::dump(std::ostream& sstr, Indent& indent, bool full_log) const
   sstr << indent << "sample count: " << m_sample_count << "\n";
   if (m_fixed_sample_size == 0) {
     for (size_t i = 0; i < m_sample_sizes.size(); i++) {
+      if (dump_reached_entry_limit(sstr, indent, full_log, i, m_sample_sizes.size())) break;
       sstr << indent << "[" << i << "] : " << m_sample_sizes[i] << "\n";
     }
   }
@@ -1280,6 +1285,7 @@ void Box_stss::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 {
   FullBox::dump(sstr, indent, full_log);
   for (size_t i = 0; i < m_sync_samples.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_sync_samples.size())) break;
     sstr << indent << "[" << i << "] : " << m_sync_samples[i] << "\n";
   }
 
@@ -1606,8 +1612,13 @@ void Box_sbgp::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 
   uint32_t total_samples = 0;
   for (size_t i = 0; i < m_entries.size(); i++) {
-    sstr << indent << "[" << std::setw(2) << (i + 1) << "] : " << std::setw(3) << m_entries[i].sample_count << "x " << m_entries[i].group_description_index << "\n";
+    if (full_log || i < MAX_DUMP_ENTRIES) {
+      sstr << indent << "[" << std::setw(2) << (i + 1) << "] : " << std::setw(3) << m_entries[i].sample_count << "x " << m_entries[i].group_description_index << "\n";
+    }
     total_samples += m_entries[i].sample_count;
+  }
+  if (!full_log && m_entries.size() > MAX_DUMP_ENTRIES) {
+    sstr << indent << "... (" << (m_entries.size() - MAX_DUMP_ENTRIES) << " more)\n";
   }
   sstr << indent << "total samples: " << total_samples << "\n";
 
@@ -1750,6 +1761,7 @@ void Box_sgpd::dump(std::ostream& sstr, Indent& indent, bool full_log) const
   }
 
   for (size_t i=0; i<m_entries.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_entries.size())) break;
     sstr << indent << "[" << (i+1) << "] : ";
     if (m_entries[i].sample_group_entry) {
       sstr << m_entries[i].sample_group_entry->dump() << "\n";
@@ -1969,6 +1981,7 @@ void Box_saiz::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 
   if (m_default_sample_info_size == 0) {
     for (size_t i = 0; i < m_sample_sizes.size(); i++) {
+      if (dump_reached_entry_limit(sstr, indent, full_log, i, m_sample_sizes.size())) break;
       sstr << indent << "[" << i << "] : " << ((int) m_sample_sizes[i]) << "\n";
     }
   }
@@ -2104,6 +2117,7 @@ void Box_saio::dump(std::ostream& sstr, Indent& indent, bool full_log) const
   }
 
   for (size_t i = 0; i < m_chunk_offset.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_chunk_offset.size())) break;
     sstr << indent << "[" << i << "] : 0x" << std::hex << m_chunk_offset[i] << "\n";
   }
 
@@ -2218,6 +2232,8 @@ void Box_sdtp::dump(std::ostream& sstr, Indent& indent, bool full_log) const
   assert(m_sample_information.size() <= UINT32_MAX);
 
   for (uint32_t i = 0; i < static_cast<uint32_t>(m_sample_information.size()); i++) {
+
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_sample_information.size())) break;
 
     const char* spaces = "            ";
     int nSpaces = 6;
@@ -2493,7 +2509,9 @@ void Box_elst::dump(std::ostream& sstr, Indent& indent, bool full_log) const
 
   sstr << indent << "repeat list: " << ((get_flags() & Flags::Repeat_EditList) ? "yes" : "no") << "\n";
 
-  for (const auto& entry : m_entries) {
+  for (size_t i = 0; i < m_entries.size(); i++) {
+    if (dump_reached_entry_limit(sstr, indent, full_log, i, m_entries.size())) break;
+    const auto& entry = m_entries[i];
     sstr << indent << "segment duration: " << entry.segment_duration << "\n";
     sstr << indent << "media time: " << entry.media_time << "\n";
     sstr << indent << "media rate integer: " << entry.media_rate_integer << "\n";
