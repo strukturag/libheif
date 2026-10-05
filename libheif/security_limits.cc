@@ -79,8 +79,13 @@ uint32_t max_coding_unit_size_for_codec(heif_compression_format format)
     case heif_compression_AV1:      return 128;  // AV1 max superblock
     case heif_compression_VVC:      return 128;  // VVC max CTU
     case heif_compression_HEVC:     return 64;   // HEVC max CTU
-    case heif_compression_AVC:      return 16;   // H.264 macroblock
-    case heif_compression_JPEG:     return 16;   // JPEG MCU (4:2:0)
+    // The coding units of AVC (macroblock) and JPEG (4:2:0 MCU) are 16 pixels. Their margin
+    // is larger because the tightened limit is also given to the decoder plugin as its
+    // maximum picture size, and FFmpeg compares that with the picture width rounded up to
+    // its stride alignment (up to 64 pixels). With a margin of 16, FFmpeg refused images
+    // like 720x1280, since 768*1280 is more than (720+16)*(1280+16).
+    case heif_compression_AVC:      return 64;
+    case heif_compression_JPEG:     return 64;
     case heif_compression_JPEG2000: return 64;
     case heif_compression_HTJ2K:    return 64;
     default:                        return 0;

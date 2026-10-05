@@ -105,6 +105,8 @@ Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t wi
 
 // Maximum coding-unit size (in pixels) that the given codec may pad a coded
 // frame up to. Used as the margin for tighten_image_size_limit_for_ispe.
+// For AVC and JPEG, this is 64 instead of their coding-unit size of 16, so that
+// the margin also covers the stride alignment of the decoder (see the implementation).
 // Returns 0 for codecs without coding-unit padding (e.g. uncompressed).
 uint32_t max_coding_unit_size_for_codec(heif_compression_format format);
 
@@ -115,7 +117,7 @@ uint32_t max_coding_unit_size_for_codec(heif_compression_format format);
 // to parse the codec bitstream ourselves.
 //
 // `coding_unit_size` is the maximum coding-unit size of the target codec
-// (e.g. 128 for AV1/VVC, 64 for HEVC, 16 for AVC). The allowed coded
+// (e.g. 128 for AV1/VVC, 64 for HEVC), see max_coding_unit_size_for_codec(). The allowed coded
 // dimensions are (ispe + coding_unit_size) in each axis, since a codec may
 // pad the coded frame up to a coding-unit boundary.
 //
