@@ -279,6 +279,105 @@ opj_stream_t* opj_stream_create_default_memory_stream(openjpeg_decoder* p_decode
 //**************************************************************************
 
 
+// Memory that OpenJPEG allocates while it reads the SIZ marker segment: the coding
+// parameters (opj_tcp_t) and the codestream index of each tile, and the coding parameters
+// of each component of each tile (opj_tccp_t). These are the sizes of OpenJPEG 2.5 on a
+// 64-bit platform, rounded up.
+static const uint64_t OPENJPEG_HEADER_BYTES_PER_TILE = 8192;
+static const uint64_t OPENJPEG_HEADER_BYTES_PER_TILE_COMPONENT = 1088;
+
+// Each tile has at least one tile-part, which consists at least of an SOT marker segment
+// (12 bytes) and an SOD marker (2 bytes).
+static const uint64_t JPEG2000_MIN_BYTES_PER_TILE = 14;
+
+
+static uint32_t read_uint32_be(const uint8_t* p)
+{
+  return (uint32_t{p[0]} << 24) | (uint32_t{p[1]} << 16) | (uint32_t{p[2]} << 8) | uint32_t{p[3]};
+}
+
+
+// OpenJPEG allocates memory for every tile and for every component of every tile already
+// when it reads the SIZ marker segment in opj_read_header(), and there is no way to limit
+// that. A SIZ marker segment of less than 100 bytes can declare 65535 tiles of one pixel
+// with up to 16384 components each, for which OpenJPEG allocates many gigabytes before we
+// get to see the image header. Hence, we read the SIZ marker segment ourselves and check
+// the number of tiles and components before we call OpenJPEG (GHSA-h4h8-qgvc-m7r2).
+static heif_error openjpeg_check_siz_marker_segment(const std::vector<uint8_t>& data,
+                                                    const heif_security_limits* limits)
+{
+  // SOC marker, SIZ marker, Lsiz, Rsiz, eight 32-bit sizes and offsets, Csiz
+  const size_t fixed_part_size = 2 + 2 + 2 + 2 + 8 * 4 + 2;
+
+  // The SIZ marker segment has to follow the SOC marker directly. OpenJPEG does not insist
+  // on this, it skips over other data until it finds an SIZ marker. We do insist, because
+  // this is the only way to know which SIZ marker segment OpenJPEG is going to use.
+  if (data.size() < fixed_part_size ||
+      data[0] != 0xFF || data[1] != 0x4F ||
+      data[2] != 0xFF || data[3] != 0x51) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_J2K_codestream,
+            "JPEG 2000 codestream does not start with an SOC marker and an SIZ marker segment"};
+  }
+
+  const uint64_t xsiz = read_uint32_be(&data[8]);
+  const uint64_t ysiz = read_uint32_be(&data[12]);
+  const uint64_t xtsiz = read_uint32_be(&data[24]);
+  const uint64_t ytsiz = read_uint32_be(&data[28]);
+  const uint64_t xtosiz = read_uint32_be(&data[32]);
+  const uint64_t ytosiz = read_uint32_be(&data[36]);
+  const uint32_t csiz = (uint32_t{data[40]} << 8) | uint32_t{data[41]};
+
+  if (xtsiz == 0 || ytsiz == 0 || xtosiz >= xsiz || ytosiz >= ysiz) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_J2K_codestream,
+            "Invalid tile geometry in JPEG 2000 codestream"};
+  }
+
+  // This plugin handles the image size as 'int'. Moreover, OpenJPEG versions before 2.5.1
+  // compute the number of tiles with signed 32-bit integers. With a reference grid of
+  // more than INT32_MAX in one direction, they can get to 65535 tiles where we compute
+  // a single one here.
+  if (xsiz > INT32_MAX || ysiz > INT32_MAX) {
+    return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version,
+            "JPEG 2000 reference grid is too large"};
+  }
+
+  if (limits->max_components > 0 && csiz > limits->max_components) {
+    return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+            "JPEG 2000 image exceeds the maximum number of components"};
+  }
+
+  if (csiz != 3 && csiz != 1) {
+    //TODO - Handle other numbers of components
+    return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3 or 1"};
+  }
+
+  // Both factors are below 2^31, thus there is no overflow in the product.
+  const uint64_t num_tiles = ((xsiz - xtosiz + xtsiz - 1) / xtsiz) * ((ysiz - ytosiz + ytsiz - 1) / ytsiz);
+
+  if (limits->max_number_of_tiles > 0 && num_tiles > limits->max_number_of_tiles) {
+    return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+            "JPEG 2000 image exceeds the maximum number of tiles"};
+  }
+
+  // A codestream that is shorter than the minimum size of its tiles cannot be complete.
+  // This check ties the memory that OpenJPEG allocates for the tiles to the input size.
+  if (num_tiles > data.size() / JPEG2000_MIN_BYTES_PER_TILE) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_J2K_codestream,
+            "JPEG 2000 codestream is too short for its number of tiles"};
+  }
+
+  // num_tiles is bounded by the input size here and csiz is at most 3, no overflow.
+  const uint64_t header_memory = num_tiles * (OPENJPEG_HEADER_BYTES_PER_TILE +
+                                              csiz * OPENJPEG_HEADER_BYTES_PER_TILE_COMPONENT);
+  if (limits->max_memory_block_size > 0 && header_memory > limits->max_memory_block_size) {
+    return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+            "JPEG 2000 image would require too much memory for its tiles"};
+  }
+
+  return heif_error_ok;
+}
+
+
 // Conservative upper bound on bytes OpenJPEG will allocate to decode this
 // codestream. Saturates to UINT64_MAX on overflow. OpenJPEG stores each sample
 // internally as OPJ_INT32 regardless of the codestream bit depth; the 3x
@@ -319,6 +418,15 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     *out_img = nullptr;
     return heif_error_ok;
   }
+
+
+  heif_error siz_error = openjpeg_check_siz_marker_segment(decoder->encoded_data, limits);
+  if (siz_error.code) {
+    return siz_error;
+  }
+
+  // OpenJPEG has to read the data from its start, as we did in the check above.
+  decoder->read_position = 0;
 
 
   OPJ_BOOL success;
@@ -385,9 +493,6 @@ heif_error openjpeg_decode_next_image2(void* decoder_raw, heif_image** out_img,
     return {heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
             "JPEG 2000 image would require too much memory to decode"};
   }
-
-  // TODO: also enforce limits->max_components against image->numcomps, and
-  // limits->max_number_of_tiles against opj_get_cstr_info()->tw * th.
 
   if (image->numcomps != 3 && image->numcomps != 1) {
     //TODO - Handle other numbers of components
