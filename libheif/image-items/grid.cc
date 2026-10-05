@@ -939,6 +939,11 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                      const std::shared_ptr<HeifPixelImage>& image,
                                      heif_encoder* encoder)
 {
+  // TODO(v1.24.x): return an error when the tile does not have the format of the tiles that
+  // were added before (colorspace, chroma format, bit depths and components, e.g. an alpha
+  // plane that only some of the tiles have). Such a grid is still written here, but the
+  // decoder refuses it (check_tile_format()).
+
   auto encodingResult = get_context()->encode_image(image,
                                             encoder,
                                             *m_tile_encoding_options,
@@ -998,6 +1003,9 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
                                                                                  const heif_encoding_options& options)
 {
   std::shared_ptr<ImageItem_Grid> griditem;
+
+  // TODO(v1.24.x): return an error when the tiles do not all have the same format (see
+  // add_image_tile()).
 
   // Create ImageGrid
 
