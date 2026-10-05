@@ -46,17 +46,17 @@ Result<std::optional<ImageSize>> Decoder_JPEG2000::get_max_coded_image_size(cons
   JPEG2000MainHeader header;
   Error err = header.parseHeader(compressed_data);
   if (err) {
-    // Not a parseable codestream header; let the decoder plugin deal with it.
-    return std::optional<ImageSize>{};
+    // We do not hand a codestream to the decoder plugin when we cannot read its SIZ
+    // marker segment ourselves. The SIZ marker segment has to follow the SOC marker
+    // directly, but the decoder libraries are more lenient: they skip what they do not
+    // know (OpenJPEG skips arbitrary data) and use the SIZ marker segment they find
+    // later. Passing such a codestream on would let the plugin work with a reference
+    // grid that was never checked against the limits.
+    return err;
   }
 
-  uint32_t w = header.getXSize();
-  uint32_t h = header.getYSize();
-  if (w == 0 || h == 0) {
-    return std::optional<ImageSize>{};
-  }
-
-  return std::optional<ImageSize>{ImageSize{w, h}};
+  // A reference grid without any pixels is rejected by the size check of the caller.
+  return std::optional<ImageSize>{ImageSize{header.getXSize(), header.getYSize()}};
 }
 
 

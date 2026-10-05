@@ -154,14 +154,22 @@ void append_be(std::vector<uint8_t>& data, uint32_t value, int num_bytes) {
 }
 
 
-// A codestream that consists of the SOC marker and an SIZ marker segment for three 8-bit
-// components. It is padded with zeros to the size of the item. Nothing more is needed,
-// because the codestream has to be rejected based on its SIZ marker segment.
+// A codestream that consists of the SOC marker, optionally an unknown marker segment, and
+// an SIZ marker segment for three 8-bit components. It is padded with zeros to the size
+// of the item. Nothing more is needed, because the codestream has to be rejected based on
+// its SIZ marker segment.
 std::vector<uint8_t> build_codestream(uint32_t width, uint32_t height,
-                                      uint32_t tile_width, uint32_t tile_height) {
+                                      uint32_t tile_width, uint32_t tile_height,
+                                      bool data_before_siz = false) {
   const uint16_t num_components = 3;
 
   std::vector<uint8_t> j2k = {0xFF, 0x4F}; // SOC
+
+  if (data_before_siz) {
+    // A marker that does not exist in JPEG 2000, with a segment length of 4 and two bytes
+    // of data. OpenJPEG and FFmpeg both skip it and continue with the SIZ marker segment.
+    j2k.insert(j2k.end(), {0xFF, 0xD8, 0x00, 0x04, 0x12, 0x34});
+  }
 
   j2k.insert(j2k.end(), {0xFF, 0x51}); // SIZ
   append_be(j2k, 38 + 3 * num_components, 2); // Lsiz
@@ -184,11 +192,21 @@ std::vector<uint8_t> build_codestream(uint32_t width, uint32_t height,
 }
 
 
-bool have_openjpeg_decoder() {
+std::vector<std::string> jpeg2000_decoder_ids() {
   const heif_decoder_descriptor* descriptors[10];
   int n = heif_get_decoder_descriptors(heif_compression_JPEG2000, descriptors, 10);
+
+  std::vector<std::string> ids;
   for (int i = 0; i < n && i < 10; i++) {
-    if (std::string(heif_decoder_descriptor_get_id_name(descriptors[i])) == "openjpeg") {
+    ids.emplace_back(heif_decoder_descriptor_get_id_name(descriptors[i]));
+  }
+  return ids;
+}
+
+
+bool have_openjpeg_decoder() {
+  for (const std::string& id : jpeg2000_decoder_ids()) {
+    if (id == "openjpeg") {
       return true;
     }
   }
@@ -333,5 +351,35 @@ TEST_CASE("jpeg2000: OpenJPEG plugin checks the number of tiles before it reads 
     // the SIZ marker segment.
     DecodeResult result = decode_codestream(build_codestream(4, 2, 1, 1), "openjpeg");
     REQUIRE(result.code == heif_error_Decoder_plugin_error);
+  }
+}
+
+
+
+// libheif checks the reference grid of a JPEG 2000 codestream against the image size limit
+// before it calls a decoder plugin. This check was skipped when libheif could not read the
+// SIZ marker segment, which it expects directly after the SOC marker. The decoder
+// libraries are more lenient. They skip what comes between the SOC marker and the SIZ
+// marker segment, so they got to work with a reference grid that libheif had not checked.
+// The file that OSS-Fuzz found for GHSA-h4h8-qgvc-m7r2 came through this way.
+
+TEST_CASE("jpeg2000: codestream with data between SOC and SIZ is not passed to the decoder")
+{
+  std::vector<std::string> decoder_ids = jpeg2000_decoder_ids();
+  if (decoder_ids.empty()) {
+    SKIP("JPEG 2000 decoder not available, skipping test");
+  }
+
+  // The reference grid is far above the image size limit.
+  std::vector<uint8_t> j2k = build_codestream(12000, 12000, 12000, 12000, true);
+
+  for (const std::string& id : decoder_ids) {
+    INFO("decoder: " << id);
+    DecodeResult result = decode_codestream(j2k, id.c_str());
+
+    // This is the error of libheif. Before the fix, the plugin got the codestream and
+    // the error was the one of the plugin.
+    REQUIRE(result.code == heif_error_Invalid_input);
+    REQUIRE(result.subcode == heif_suberror_Invalid_J2K_codestream);
   }
 }
