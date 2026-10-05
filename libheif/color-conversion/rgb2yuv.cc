@@ -56,6 +56,17 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  // The output is planar YCbCr, and its chroma format is taken from the target state below.
+  // A target with another chroma format (monochrome or an interleaved RGB format) would be
+  // declared as a YCbCr state with that chroma format, which no image can have:
+  // convert_colorspace() then returns an image with Y, Cb and Cr planes that contradicts
+  // the declared state.
+  if (target_state.chroma != heif_chroma_420 &&
+      target_state.chroma != heif_chroma_422 &&
+      target_state.chroma != heif_chroma_444) {
+    return {};
+  }
+
   int matrix = target_state.nclx.get_matrix_coefficients();
   if (matrix == 11 || matrix == 14) {
     return {};
