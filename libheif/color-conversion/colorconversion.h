@@ -58,6 +58,14 @@ struct ColorState
   // if 'with_alpha' is set, an alpha plane of the same depth is added.
   ColorState(heif_colorspace cs, heif_chroma chr, bool with_alpha, int bpp);
 
+  // The state that describes the planes of an image: its colorspace, its chroma format and
+  // the bit depth of every plane it has. The nclx is left at its default.
+  static ColorState from_image_planes(const HeifPixelImage& image);
+
+  // True if both states have the same colorspace, the same chroma format and the same planes
+  // with the same bit depths. Unlike operator==(), this does not look at the nclx.
+  bool has_same_planes(const ColorState&) const;
+
   bool has_alpha() const { return bits_per_pixel_alpha != 0; }
 
   // Bit depth of a single plane, 0 if the plane does not exist.
@@ -158,6 +166,13 @@ public:
                          const heif_color_conversion_options& options,
                          const heif_color_conversion_options_ext& options_ext) const = 0;
 
+  // Converts 'input', which is in 'input_state', into 'target_state', which is one of the
+  // states that state_after_conversion() returned for this input state.
+  // The returned image has to have exactly the planes of 'target_state': the pipeline is
+  // planned with the declared states, so the next operation reads the planes that the state
+  // lists, with the bit depths given there. ColorConversionPipeline::convert_image() checks
+  // this. An image that contradicts the declared state is an error in the operation: it
+  // triggers an assertion in debug builds and fails the conversion otherwise.
   virtual Result<std::shared_ptr<HeifPixelImage>>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
@@ -173,6 +188,16 @@ class ColorConversionPipeline
 public:
   static void init_ops();
   static void release_ops();
+
+  // All conversion operations that a pipeline can be built from.
+  static const std::vector<std::shared_ptr<ColorConversionOperation>>& get_operations();
+
+  // Checks the image that a conversion operation returned against the state that the
+  // operation declared for it in state_after_conversion(): the same colorspace, the same
+  // chroma format and the same planes with the same bit depths, each plane with the size
+  // that its channel implies.
+  static Error check_operation_output(const std::shared_ptr<HeifPixelImage>& image,
+                                      const ColorState& declared_state);
 
   bool is_nop() const { return m_conversion_steps.empty(); }
 
