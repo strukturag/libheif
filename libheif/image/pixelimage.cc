@@ -1996,16 +1996,11 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 
     ComponentStorage& plane = *comp;
 
-    if (plane.m_bit_depth != 8) {
+    if (plane.m_bit_depth > 16 || plane.m_datatype != heif_component_datatype_unsigned_integer) {
       return {heif_error_Unsupported_feature,
               heif_suberror_Unspecified,
-              "Can currently only fill images with 8 bits per pixel"};
+              "Can only fill images with unsigned samples of up to 16 bits"};
     }
-
-    size_t h = plane.m_height;
-
-    size_t stride = plane.stride;
-    auto* data = static_cast<uint8_t*>(plane.mem);
 
     uint16_t val16;
     switch (channel) {
@@ -2028,27 +2023,33 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
         assert(false);
     }
 
-    auto val8 = static_cast<uint8_t>(val16 >> 8U);
+    // The values are given with 16 bits. Reduce them to the bit depth of the plane.
+    auto value = static_cast<uint16_t>(val16 >> (16 - plane.m_bit_depth));
 
-
-    // memset() even when h * stride > sizeof(size_t)
-
-    if (std::numeric_limits<size_t>::max() / stride > h) {
-      // can fill in one step
-      memset(data, val8, stride * h);
+    if (plane.m_bit_depth <= 8) {
+      plane.fill<uint8_t>(static_cast<uint8_t>(value));
     }
     else {
-      // fill line by line
-      auto* p = data;
-
-      for (size_t y=0;y<h;y++) {
-        memset(p, val8, stride);
-        p += stride;
-      }
+      plane.fill<uint16_t>(value);
     }
   }
 
   return Error::Ok;
+}
+
+
+// Blends one row of the overlay into the canvas: out = in * alpha + out * (1 - alpha).
+template <typename T, typename A>
+static void blend_row(T* out, const T* in, const A* alpha, uint32_t n, uint32_t alpha_max)
+{
+  for (uint32_t x = 0; x < n; x++) {
+    // An alpha sample above its bit depth would make (alpha_max - a) wrap around.
+    uint32_t a = std::min<uint32_t>(alpha[x], alpha_max);
+
+    // in and out are at most 65535 and the two weights add up to alpha_max (at most 65535),
+    // so the sum fits into 32 bits.
+    out[x] = static_cast<T>((uint32_t{in[x]} * a + uint32_t{out[x]} * (alpha_max - a)) / alpha_max);
+  }
 }
 
 
@@ -2077,18 +2078,47 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
 
   // The blend loop below indexes the Alpha plane using the extent of each color
   // channel (in_w/in_h, out_w/out_h), not the Alpha plane's own reported extent.
-  // If the Alpha plane were smaller than the other channels, that would read past
-  // its allocation, so reject that case up front instead of trusting the sizes
-  // to agree.
+  // All planes of the overlay therefore have to have the same size. A HeifPixelImage
+  // does not guarantee that: its planes can have any size. Comparing only the Alpha
+  // plane with the size of the image was not enough, since the color planes can be
+  // larger than the image, and the loop then read past the end of the Alpha plane.
+  // check_plane_layout() checks all planes against the size of the image.
   // Note that differently sized Alpha channels are allowed, but we currently do
   // not support it here (TODO).
-  if (has_alpha &&
-      (overlay->get_width(heif_channel_Alpha) != overlay->get_width() ||
-       overlay->get_height(heif_channel_Alpha) != overlay->get_height())) {
+  if (Error err = overlay->check_plane_layout()) {
     return {heif_error_Unsupported_feature,
             heif_suberror_Unspecified,
-            "Overlay image Alpha plane size does not match the other color planes"};
+            "Cannot overlay image: " + err.message};
   }
+
+  // The planes are composed sample by sample, with 8-bit or 16-bit samples. A plane of the
+  // overlay and the plane of the canvas it is drawn into have to have the same bit depth.
+  // (They used to be composed byte by byte whatever their bit depth, so that the two bytes
+  // of a 16-bit sample were blended as if they were two pixels.)
+  for (heif_channel channel : channels) {
+    const bool used = (channel == heif_channel_Alpha) || has_channel(channel);
+    if (!used) {
+      continue;
+    }
+
+    if (overlay->get_bits_per_pixel(channel) > 16 ||
+        overlay->get_datatype(channel) != heif_component_datatype_unsigned_integer) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unspecified,
+              "Overlaying images is only implemented for unsigned samples of up to 16 bits"};
+    }
+
+    if (has_channel(channel) &&
+        (get_bits_per_pixel(channel) != overlay->get_bits_per_pixel(channel) ||
+         get_datatype(channel) != heif_component_datatype_unsigned_integer)) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unspecified,
+              "Overlaying an image onto an image with another bit depth is not implemented"};
+    }
+  }
+
+  const int alpha_bytes = has_alpha ? bytes_per_sample_for_bit_depth(overlay->get_bits_per_pixel(heif_channel_Alpha)) : 0;
+  const uint32_t alpha_max = has_alpha ? ((1U << overlay->get_bits_per_pixel(heif_channel_Alpha)) - 1) : 0;
 
   size_t alpha_stride = 0;
   uint8_t* alpha_p;
@@ -2149,19 +2179,32 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t 
 
     // --- composite the overlay in the overlapping area
 
+    const int bytes = bytes_per_sample_for_bit_depth(overlay->get_bits_per_pixel(channel)); // 1 or 2, checked above
+
     for (uint32_t y = 0; y < copy_h; y++) {
-      const uint8_t* in_row = in_p + in_x0 + static_cast<size_t>(in_y0 + y) * in_stride;
-      uint8_t* out_row = out_p + out_x0 + static_cast<size_t>(out_y0 + y) * out_stride;
+      const uint8_t* in_row = in_p + static_cast<size_t>(in_x0) * bytes + static_cast<size_t>(in_y0 + y) * in_stride;
+      uint8_t* out_row = out_p + static_cast<size_t>(out_x0) * bytes + static_cast<size_t>(out_y0 + y) * out_stride;
 
       if (!has_alpha) {
-        memcpy(out_row, in_row, copy_w);
+        memcpy(out_row, in_row, static_cast<size_t>(copy_w) * bytes);
+        continue;
+      }
+
+      const uint8_t* alpha_row = alpha_p + static_cast<size_t>(in_x0) * alpha_bytes + static_cast<size_t>(in_y0 + y) * alpha_stride;
+
+      if (bytes == 1 && alpha_bytes == 1) {
+        blend_row(out_row, in_row, alpha_row, copy_w, alpha_max);
+      }
+      else if (bytes == 1) {
+        blend_row(out_row, in_row, reinterpret_cast<const uint16_t*>(alpha_row), copy_w, alpha_max);
+      }
+      else if (alpha_bytes == 1) {
+        blend_row(reinterpret_cast<uint16_t*>(out_row), reinterpret_cast<const uint16_t*>(in_row),
+                  alpha_row, copy_w, alpha_max);
       }
       else {
-        const uint8_t* alpha_row = alpha_p + in_x0 + static_cast<size_t>(in_y0 + y) * alpha_stride;
-
-        for (uint32_t x = 0; x < copy_w; x++) {
-          out_row[x] = static_cast<uint8_t>((in_row[x] * alpha_row[x] + out_row[x] * (255 - alpha_row[x])) / 255);
-        }
+        blend_row(reinterpret_cast<uint16_t*>(out_row), reinterpret_cast<const uint16_t*>(in_row),
+                  reinterpret_cast<const uint16_t*>(alpha_row), copy_w, alpha_max);
       }
     }
   }
