@@ -409,6 +409,10 @@ public:
                                          bool decode_tile_only,
                                          uint32_t tile_x0, uint32_t tile_y0) const;
 
+  // Checks that the decoded image has the bit depths that the image handle reports
+  // (get_luma_bits_per_pixel() and get_chroma_bits_per_pixel()).
+  Error check_decoded_image_bit_depth(const HeifPixelImage& img) const;
+
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
 
   bool has_essential_property_other_than(const std::set<uint32_t>&) const;

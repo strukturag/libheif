@@ -540,6 +540,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
   tile_img = *decodeResult;
 
+  // All tiles have to have the same format. The first decoded tile defines it.
+  if (Error err = check_tile_format(*tile_img)) {
+    return err;
+  }
+
   uint32_t w = get_grid_spec().get_width();
   uint32_t h = get_grid_spec().get_height();
 
@@ -612,8 +617,19 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
             "Image tile has different chroma format than combined image"};
   }
 
+  // The grid may have more rows or columns of tiles than the output image needs. A tile
+  // that lies completely outside of the image has nothing to contribute.
+  if (x0 >= inout_image->get_width() || y0 >= inout_image->get_height()) {
+    return progress_and_return_ok(options, progress_counter);
+  }
 
-  inout_image->copy_image_to(tile_img, x0, y0);
+  // copy_image_to() refuses a tile whose planes have another bit depth than the canvas.
+  // Its error used to be discarded: such a tile was left out, its area stayed zero, and
+  // decoding reported success (GHSA-vv35-6hxg-95x8). check_tile_format() above finds such
+  // a tile already.
+  if (Error err = inout_image->copy_image_to(tile_img, x0, y0)) {
+    return err;
+  }
 
   return progress_and_return_ok(options, progress_counter);
 }
@@ -644,7 +660,75 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
   // Decode the tile like the full grid decoding does. This includes the transformations
   // of the tile image and its alpha image. With decode_compressed_image(), a tile that
   // has an alpha image of its own would be decoded without alpha channel.
-  return tile_item->decode_image(options, false, 0, 0, std::move(decode_state));
+  auto tileResult = tile_item->decode_image(options, false, 0, 0, std::move(decode_state));
+  if (!tileResult) {
+    return tileResult;
+  }
+
+  // A single tile is handed out as it is. It has to have the format of the other tiles,
+  // like the tiles that are copied into the canvas when the whole grid is decoded.
+  if (Error error = check_tile_format(**tileResult)) {
+    return error;
+  }
+
+  return tileResult;
+}
+
+
+Error ImageItem_Grid::check_tile_format(const HeifPixelImage& tile_img) const
+{
+  std::lock_guard<std::mutex> lock(m_reference_tile_format_mutex);
+
+  if (!m_reference_tile_format) {
+    m_reference_tile_format = TileFormat{tile_img.get_colorspace(),
+                                         tile_img.get_chroma_format(),
+                                         static_cast<const ImageDescription&>(tile_img)};
+    return Error::Ok;
+  }
+
+  const TileFormat& reference = *m_reference_tile_format;
+
+  if (tile_img.get_colorspace() != reference.colorspace ||
+      tile_img.get_chroma_format() != reference.chroma) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Wrong_tile_image_chroma_format,
+            "Image tile has different colorspace or chroma format than the other tiles of the grid"};
+  }
+
+  // The tiles have to consist of the same components in the same order. This also holds
+  // for 'unci' tiles, which can have any number of components of any type. The size of the
+  // components is not compared here: the tile sizes are checked on their own.
+
+  const std::vector<ComponentDescription>& reference_components = reference.description.get_component_descriptions();
+  const std::vector<ComponentDescription>& components = tile_img.get_component_descriptions();
+
+  if (components.size() != reference_components.size()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_grid_data,
+            "Image tile has a different number of components than the other tiles of the grid"};
+  }
+
+  for (size_t i = 0; i < components.size(); i++) {
+    const ComponentDescription& c = components[i];
+    const ComponentDescription& ref = reference_components[i];
+
+    if (c.channel != ref.channel ||
+        c.component_type != ref.component_type ||
+        c.datatype != ref.datatype ||
+        c.has_data_plane != ref.has_data_plane) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_grid_data,
+              "Image tile has different components than the other tiles of the grid"};
+    }
+
+    if (c.bit_depth != ref.bit_depth) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Wrong_tile_image_pixel_depth,
+              "Image tile has different bit depth than the other tiles of the grid"};
+    }
+  }
+
+  return Error::Ok;
 }
 
 

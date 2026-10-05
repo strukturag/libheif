@@ -22,9 +22,12 @@
 #define LIBHEIF_IMAGEITEM_GRID_H
 
 #include "image_item.h"
+#include "image/image_description.h"
 #include <vector>
 #include <string>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <set>
 
 
@@ -162,6 +165,51 @@ public:
 private:
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;
+
+  // --- the format that all tiles of the grid have to share
+
+  // All tiles of a grid have to decode to images of the same format. The first tile that
+  // is decoded (in whatever order, and through whichever decoding interface) stores its
+  // description here, and every tile that is decoded afterwards is compared with it.
+  //
+  // TODO: move the colorspace and the chroma format into ImageDescription.
+  //   They are members of HeifPixelImage only, although they are the top level of the
+  //   structure that ImageDescription describes: without them, a list of components does
+  //   not tell whether the components are subsampled or interleaved. That is why this
+  //   struct has to carry them next to the description. With both in ImageDescription,
+  //   TileFormat becomes a plain ImageDescription, and check_tile_format() becomes a
+  //   function of ImageDescription that compares two descriptions for having the same
+  //   format. That function can then also compare a decoded image with what its image item
+  //   advertises, of which ImageItem::check_decoded_image_bit_depth() covers only the luma
+  //   and chroma bit depths today (not, e.g., a configuration box that claims another
+  //   chroma format than the bitstream has).
+  //   Things to take care of:
+  //   - ImageDescription::copy_metadata_from() must not copy them. It copies the metadata
+  //     (colour profile, light levels, ...), but not the component list, because the
+  //     target image can have another layout, e.g. after a colour conversion. Colorspace
+  //     and chroma format belong to that structural part.
+  //   - An image item knows two colorspaces: the coded one, and the preferred decoding
+  //     colorspace, which proposes RGB for matrix_coefficients=0 while the decoded image is
+  //     still tagged as YCbCr. The description has to hold the coded one, otherwise it
+  //     does not match the decoded image.
+  //   - Every implementation of populate_component_descriptions() has to set them:
+  //     ImageItem, ImageItem_iden, ImageItem_Grid, ImageItem_uncompressed, ImageItem_Tiled
+  //     and ImageItem_Overlay. Where the format is not known, they stay undefined, and a
+  //     comparison has to treat that as unknown, not as a mismatch.
+  //   - In HeifPixelImage, the two values are tied to the planes of the image and are set
+  //     in create() only. They should not become freely settable through the base class.
+  struct TileFormat
+  {
+    heif_colorspace colorspace = heif_colorspace_undefined;
+    heif_chroma chroma = heif_chroma_undefined;
+    ImageDescription description;
+  };
+
+  mutable std::mutex m_reference_tile_format_mutex; // tiles are decoded in parallel
+  mutable std::optional<TileFormat> m_reference_tile_format;
+
+  // Stores the format of the first decoded tile, or compares the tile with the stored format.
+  Error check_tile_format(const HeifPixelImage& tile_img) const;
 
   heif_orientation m_grid_orientation = heif_orientation_normal;
   heif_encoding_options* m_tile_encoding_options = nullptr;

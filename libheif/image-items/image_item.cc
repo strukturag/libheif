@@ -1260,6 +1260,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     return err;
   }
 
+  // --- validate the decoded image against the signaled bit depth
+
+  if (Error err = check_decoded_image_bit_depth(*img)) {
+    return err;
+  }
+
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
 
 
@@ -1643,6 +1649,44 @@ Error ImageItem::check_decoded_image_size(const HeifPixelImage& img,
     return Error{heif_error_Invalid_input,
                  heif_suberror_Invalid_image_size,
                  "Decoded image does not have the size signaled in the file."};
+  }
+
+  return Error::Ok;
+}
+
+
+Error ImageItem::check_decoded_image_bit_depth(const HeifPixelImage& img) const
+{
+  // The bit depths that the image handle reports (heif_image_handle_get_luma_bits_per_pixel()
+  // and ..._chroma_...) are taken from the configuration of the item, e.g. the 'hvcC' box,
+  // or from the first tile of a grid. The decoded image gets its bit depth from the
+  // bitstream. A file can make the two disagree. An application that reads the planes of
+  // the decoded image with the bit depth it got from the handle would then read out of
+  // bounds, so the decoded image must not contradict the handle (GHSA-vv35-6hxg-95x8).
+
+  int luma_bpp = get_luma_bits_per_pixel();
+  int chroma_bpp = get_chroma_bits_per_pixel();
+
+  bool mismatch = false;
+
+  if (luma_bpp > 0 && img.has_channel(heif_channel_Y) &&
+      img.get_bits_per_pixel(heif_channel_Y) != luma_bpp) {
+    mismatch = true;
+  }
+
+  // The handle reports a single bit depth for both chroma planes. An 'unci' image can have
+  // Cb and Cr planes of different depths, which a single value cannot describe, so the
+  // chroma depth is only compared when both planes have the same.
+  if (chroma_bpp > 0 && img.has_channel(heif_channel_Cb) && img.has_channel(heif_channel_Cr) &&
+      img.get_bits_per_pixel(heif_channel_Cb) == img.get_bits_per_pixel(heif_channel_Cr) &&
+      img.get_bits_per_pixel(heif_channel_Cb) != chroma_bpp) {
+    mismatch = true;
+  }
+
+  if (mismatch) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Decoded image does not have the bit depth signaled in the file."};
   }
 
   return Error::Ok;

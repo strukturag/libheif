@@ -153,6 +153,9 @@ struct ComponentDescription
 };
 
 
+// TODO: the colorspace and the chroma format of the image should be part of this class,
+//       together with a function that compares two descriptions for having the same format.
+//       See the notes at ImageItem_Grid::TileFormat (image-items/grid.h).
 class ImageDescription
 {
 public:
