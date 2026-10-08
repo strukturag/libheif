@@ -30,6 +30,7 @@
 #include <utility>
 #include <limits>
 #include <algorithm>
+#include <bit>
 #include <map>
 #include <string>
 #include <sstream>
@@ -1722,6 +1723,28 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
   return out_img;
 }
 
+// Transposes the 8x8 block of 8-bit samples held in eight 64-bit words, row i in r[i] and its
+// column j in byte j of that word (little-endian), by exchanging its 4x4, 2x2 and 1x1 sub-blocks.
+static void transpose_8x8(uint64_t r[8])
+{
+  for (int i = 0; i < 4; i++) {
+    uint64_t t = ((r[i] >> 32) ^ r[i + 4]) & 0x00000000FFFFFFFFULL;
+    r[i] ^= t << 32;
+    r[i + 4] ^= t;
+  }
+  for (int i : {0, 1, 4, 5}) {
+    uint64_t t = ((r[i] >> 16) ^ r[i + 2]) & 0x0000FFFF0000FFFFULL;
+    r[i] ^= t << 16;
+    r[i + 2] ^= t;
+  }
+  for (int i : {0, 2, 4, 6}) {
+    uint64_t t = ((r[i] >> 8) ^ r[i + 1]) & 0x00FF00FF00FF00FFULL;
+    r[i] ^= t << 8;
+    r[i + 1] ^= t;
+  }
+}
+
+
 template<typename T>
 void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
                                             ComponentStorage& out_plane) const
@@ -1735,21 +1758,78 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
   size_t out_stride = out_plane.stride / sizeof(T);
   T* out_data = static_cast<T*>(out_plane.mem);
 
-  if (angle_degrees == 270) {
-    for (uint32_t x = 0; x < h; x++)
-      for (uint32_t y = 0; y < w; y++) {
-        out_data[y * out_stride + x] = in_data[(h - 1 - x) * in_stride + y];
-      }
-  } else if (angle_degrees == 180) {
+  if (angle_degrees == 180) {
     for (uint32_t y = 0; y < h; y++)
       for (uint32_t x = 0; x < w; x++) {
         out_data[y * out_stride + x] = in_data[(h - 1 - y) * in_stride + (w - 1 - x)];
       }
-  } else if (angle_degrees == 90) {
-    for (uint32_t x = 0; x < h; x++)
-      for (uint32_t y = 0; y < w; y++) {
-        out_data[y * out_stride + x] = in_data[x * in_stride + (w - 1 - y)];
+    return;
+  }
+
+  if (angle_degrees != 90 && angle_degrees != 270) {
+    return;
+  }
+
+  // Rotating by 90 or 270 degrees transposes the plane: going along the rows of one plane goes down
+  // the columns of the other, which misses the cache on nearly every sample. The plane is therefore
+  // rotated in blocks of 64x64 samples, whose rows stay in the cache while the block is copied.
+  constexpr uint32_t block = 64;
+
+  // 8-bit samples move as 8x8 tiles, read as eight 64-bit words and transposed in registers. The
+  // columns and rows at the edges that do not fill a tile are left to the loop below.
+  uint32_t w8 = 0;
+  uint32_t h8 = 0;
+  if constexpr (sizeof(T) == 1 && std::endian::native == std::endian::little) {
+    w8 = w & ~7U;
+    h8 = h & ~7U;
+    for (uint32_t y0 = 0; y0 < w8; y0 += block) {
+      for (uint32_t x0 = 0; x0 < h8; x0 += block) {
+        for (uint32_t y = y0; y < std::min(y0 + block, w8); y += 8) {
+          for (uint32_t x = x0; x < std::min(x0 + block, h8); x += 8) {
+            // Output rows y to y+7, columns x to x+7.
+            uint64_t r[8];
+            if (angle_degrees == 270) {
+              for (uint32_t j = 0; j < 8; j++) {
+                memcpy(&r[j], in_data + (h - 1 - x - j) * in_stride + y, 8);
+              }
+              transpose_8x8(r);
+            }
+            else {
+              for (uint32_t j = 0; j < 8; j++) {
+                memcpy(&r[j], in_data + (x + j) * in_stride + (w - 8 - y), 8);
+              }
+              transpose_8x8(r);
+            }
+            // Word i is output row y+i at 270 degrees and row y+7-i at 90 degrees.
+            for (uint32_t i = 0; i < 8; i++) {
+              uint32_t row = angle_degrees == 270 ? y + i : y + 7 - i;
+              memcpy(out_data + row * out_stride + x, &r[i], 8);
+            }
+          }
+        }
       }
+    }
+  }
+
+  for (uint32_t y0 = 0; y0 < w; y0 += block) {
+    uint32_t y1 = std::min(y0 + block, w);
+    for (uint32_t x0 = 0; x0 < h; x0 += block) {
+      uint32_t x1 = std::min(x0 + block, h);
+      for (uint32_t y = y0; y < y1; y++) {
+        T* out_row = out_data + y * out_stride;
+        uint32_t x_start = std::max(x0, y < w8 ? h8 : 0);
+        if (angle_degrees == 270) {
+          for (uint32_t x = x_start; x < x1; x++) {
+            out_row[x] = in_data[(h - 1 - x) * in_stride + y];
+          }
+        }
+        else {
+          for (uint32_t x = x_start; x < x1; x++) {
+            out_row[x] = in_data[x * in_stride + (w - 1 - y)];
+          }
+        }
+      }
+    }
   }
 }
 
