@@ -250,7 +250,7 @@ namespace heif {
     
     bool has_nominal_diffuse_white_luminance() const noexcept;
 
-    // Returns a zero-initialized struct if the image has no such information.
+    // Returns a zero if the image has no such information.
     uint32_t get_nominal_diffuse_white_luminance() const noexcept;
 
     void set_nominal_diffuse_white_luminance(const uint32_t&) noexcept;
