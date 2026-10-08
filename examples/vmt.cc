@@ -121,14 +121,15 @@ static std::vector<uint8_t> parse_vmt_sync_data(const std::string& content)
 {
   std::vector<uint8_t> data;
 
-  std::regex pattern_sync(R"(\s*\{\s*\"sync\"\s*:\s*\{(.*?)\}\s*\}\s*)");
+  // [\s\S] instead of '.' because '.' does not match line breaks and a sync command may span several lines.
+  std::regex pattern_sync(R"(\s*\{\s*\"sync\"\s*:\s*\{([\s\S]*?)\}\s*\}\s*)");
   const std::sregex_token_iterator ti_end;
 
   for (std::sregex_token_iterator ti(content.begin(), content.end(), pattern_sync, 1); ti != ti_end; ++ti)
   {
     std::string sync = *ti;
-    std::regex pattern_type(R"(.*\"type\"\s*:\s*\"(.*?)\".*)");
-    std::regex pattern_data(R"(.*\"data\"\s*:\s*\"(.*?)\".*)");
+    std::regex pattern_type(R"([\s\S]*\"type\"\s*:\s*\"(.*?)\"[\s\S]*)");
+    std::regex pattern_data(R"([\s\S]*\"data\"\s*:\s*\"(.*?)\"[\s\S]*)");
     std::smatch match;
 
     if (std::regex_match(sync, match, pattern_type)) {
@@ -217,8 +218,10 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
   std::regex pattern_cue(R"(^\s*(-?(\d|:|\.)*)\s*-->\s*(-?(\d|:|\.)*)?.*)");
   std::regex pattern_note(R"(^\s*(NOTE).*)");
 
-  static std::vector<uint8_t> prev_metadata;
-  static std::optional<uint32_t> prev_ts;
+  // Each cue closes the packet that was opened by the previous cue. A packet is written as soon as its duration is known.
+  // The track starts at time 0. If the first cue starts later, an empty packet covers the time before it.
+  std::vector<uint8_t> prev_metadata;
+  uint32_t prev_ts = 0;
 
   std::string line;
   while (std::getline(istr, line))
@@ -272,25 +275,27 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
       concat = parse_vmt_sync_data(content);
     }
 
-    if (ts != BAD_VMT_TIMESTAMP) {
+    if (ts == BAD_VMT_TIMESTAMP) {
+      std::cerr << "Bad WebVMT timestamp: " << cue_start << "\n";
+      continue;
+    }
 
-      if (ts > *prev_ts) {
-        heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
-        heif_raw_sequence_sample_set_duration(sample, ts - *prev_ts);
-        heif_track_add_raw_sequence_sample(track, sample);
-      }
-      else if (ts == *prev_ts) {
-        concat.insert(concat.begin(), prev_metadata.begin(), prev_metadata.end());
-      }
-      else {
-        std::cerr << "Bad WebVMT timestamp order: " << cue_start << "\n";
-      }
+    if (ts < prev_ts) {
+      std::cerr << "Bad WebVMT timestamp order: " << cue_start << "\n";
+      continue;
+    }
+
+    if (ts == prev_ts) {
+      // Cues with the same start time are combined into one packet.
+      prev_metadata.insert(prev_metadata.end(), concat.begin(), concat.end());
+    }
+    else {
+      heif_raw_sequence_sample_set_data(sample, (const uint8_t*)prev_metadata.data(), prev_metadata.size());
+      heif_raw_sequence_sample_set_duration(sample, ts - prev_ts);
+      heif_track_add_raw_sequence_sample(track, sample);
 
       prev_ts = ts;
       prev_metadata = concat;
-    }
-    else {
-      std::cerr << "Bad WebVMT timestamp: " << cue_start << "\n";
     }
   }
 
