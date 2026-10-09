@@ -61,6 +61,11 @@ add_libheif_test(sdtp_sample_limit)
     add_libheif_test(extract_area_plane_checks)
     add_libheif_test(extend_to_size_checks)
     add_libheif_test(rotate_planes)
+
+    # Benchmark for HeifPixelImage::rotate_ccw(), not a test; see the comment in the source.
+    add_executable(rotate_benchmark rotate_benchmark.cc)
+    target_link_libraries(rotate_benchmark PRIVATE heif)
+
     add_libheif_test(pixelimage_overlay)
     add_libheif_test(overlay_spec_parse)
     add_libheif_test(add_channel_checks)
