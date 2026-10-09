@@ -100,8 +100,8 @@ static void check_rotation(uint32_t w, uint32_t h, int angle)
 
 TEST_CASE("rotate_ccw moves every sample where the rotation puts it")
 {
-  // Sizes below, at and above the 8x8 tiles and the 64x64 blocks 8-bit planes are rotated in,
-  // with edges that do not fill a tile.
+  // Sizes below, at and above the 8x8 tiles of 8-bit planes, the 4x4 tiles of 16-bit planes and
+  // the 64x64 blocks, with edges that do not fill a tile.
   const uint32_t sizes[][2] = {{1, 1}, {7, 9}, {9, 7}, {8, 8}, {64, 64}, {65, 130}, {130, 65}, {200, 123}};
 
   for (auto& size : sizes) {

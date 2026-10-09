@@ -1733,7 +1733,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
   return out_img;
 }
 
-// Transposes the 8x8 block of 8-bit samples held in eight 64-bit words, row i in r[i] and its
+// Transposes the 8x8 tile of 8-bit samples held in eight 64-bit words, row i in r[i] and its
 // column j in byte j of that word (little-endian), by exchanging its 4x4, 2x2 and 1x1 sub-blocks.
 static void transpose_8x8(uint64_t r[8])
 {
@@ -1750,6 +1750,23 @@ static void transpose_8x8(uint64_t r[8])
   for (int i : {0, 2, 4, 6}) {
     uint64_t t = ((r[i] >> 8) ^ r[i + 1]) & 0x00FF00FF00FF00FFULL;
     r[i] ^= t << 8;
+    r[i + 1] ^= t;
+  }
+}
+
+
+// Transposes the 4x4 tile of 16-bit samples held in four 64-bit words, row i in r[i] and its
+// column j in 16-bit lane j of that word (little-endian), by exchanging its 2x2 and 1x1 sub-blocks.
+static void transpose_4x4(uint64_t r[4])
+{
+  for (int i : {0, 1}) {
+    uint64_t t = ((r[i] >> 32) ^ r[i + 2]) & 0x00000000FFFFFFFFULL;
+    r[i] ^= t << 32;
+    r[i + 2] ^= t;
+  }
+  for (int i : {0, 2}) {
+    uint64_t t = ((r[i] >> 16) ^ r[i + 1]) & 0x0000FFFF0000FFFFULL;
+    r[i] ^= t << 16;
     r[i + 1] ^= t;
   }
 }
@@ -1791,34 +1808,41 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
     return size - start > block ? start + block : size;
   };
 
-  // 8-bit samples move as 8x8 tiles, read as eight 64-bit words and transposed in registers. The
-  // columns and rows at the edges that do not fill a tile are left to the loop below.
-  uint32_t w8 = 0;
-  uint32_t h8 = 0;
-  if constexpr (sizeof(T) == 1 && std::endian::native == std::endian::little) {
-    w8 = w & ~7U;
-    h8 = h & ~7U;
-    for (uint32_t y0 = 0; y0 < w8; y0 = block_end(y0, w8)) {
-      for (uint32_t x0 = 0; x0 < h8; x0 = block_end(x0, h8)) {
-        for (uint32_t y = y0; y < block_end(y0, w8); y += 8) {
-          for (uint32_t x = x0; x < block_end(x0, h8); x += 8) {
-            // Output rows y to y+7, columns x to x+7.
-            uint64_t r[8];
+  // 8-bit samples move as 8x8 tiles and 16-bit samples as 4x4 tiles: each tile row is one 64-bit
+  // word and the tile is transposed in registers. The columns and rows at the edges that do not
+  // fill a tile are left to the loop below.
+  constexpr bool tiled = (sizeof(T) == 1 || sizeof(T) == 2) && std::endian::native == std::endian::little;
+  uint32_t wt = 0;
+  uint32_t ht = 0;
+  if constexpr (tiled) {
+    constexpr uint32_t tile = 8 / sizeof(T);
+    wt = w & ~(tile - 1);
+    ht = h & ~(tile - 1);
+    for (uint32_t y0 = 0; y0 < wt; y0 = block_end(y0, wt)) {
+      for (uint32_t x0 = 0; x0 < ht; x0 = block_end(x0, ht)) {
+        for (uint32_t y = y0; y < block_end(y0, wt); y += tile) {
+          for (uint32_t x = x0; x < block_end(x0, ht); x += tile) {
+            // Output rows y to y+tile-1, columns x to x+tile-1.
+            uint64_t r[tile];
             if (angle_degrees == 270) {
-              for (uint32_t j = 0; j < 8; j++) {
+              for (uint32_t j = 0; j < tile; j++) {
                 memcpy(&r[j], in_data + (h - 1 - x - j) * in_stride + y, 8);
               }
+            }
+            else {
+              for (uint32_t j = 0; j < tile; j++) {
+                memcpy(&r[j], in_data + (x + j) * in_stride + (w - tile - y), 8);
+              }
+            }
+            if constexpr (sizeof(T) == 1) {
               transpose_8x8(r);
             }
             else {
-              for (uint32_t j = 0; j < 8; j++) {
-                memcpy(&r[j], in_data + (x + j) * in_stride + (w - 8 - y), 8);
-              }
-              transpose_8x8(r);
+              transpose_4x4(r);
             }
-            // Word i is output row y+i at 270 degrees and row y+7-i at 90 degrees.
-            for (uint32_t i = 0; i < 8; i++) {
-              uint32_t row = angle_degrees == 270 ? y + i : y + 7 - i;
+            // Word i is output row y+i at 270 degrees and row y+tile-1-i at 90 degrees.
+            for (uint32_t i = 0; i < tile; i++) {
+              uint32_t row = angle_degrees == 270 ? y + i : y + tile - 1 - i;
               memcpy(out_data + row * out_stride + x, &r[i], 8);
             }
           }
@@ -1833,7 +1857,7 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
       uint32_t x1 = block_end(x0, h);
       for (uint32_t y = y0; y < y1; y++) {
         T* out_row = out_data + y * out_stride;
-        uint32_t x_start = std::max(x0, y < w8 ? h8 : 0);
+        uint32_t x_start = std::max(x0, y < wt ? ht : 0);
         if (angle_degrees == 270) {
           for (uint32_t x = x_start; x < x1; x++) {
             out_row[x] = in_data[(h - 1 - x) * in_stride + y];
