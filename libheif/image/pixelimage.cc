@@ -519,6 +519,17 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
 
   uint64_t stride_64 = static_cast<uint64_t>(m_mem_width) * bytes_per_pixel;
   stride_64 = (stride_64 + alignment - 1U) & ~static_cast<uint64_t>(alignment - 1U);
+
+  // L1 data caches are set associative. The set that holds a cache line is selected by the
+  // line's position within a 4 KB (x86) or 8/16 KB (ARM) window of the address space, and a set
+  // holds only 4 to 12 lines. With a stride that is a multiple of 512 bytes, 8 or more of any 64
+  // consecutive rows fall into the same set, so a loop that walks down a column of rows, such as
+  // the blocked rotation, evicts the rows before it comes back to them. One extra cache line
+  // makes the stride an odd number of lines, which spreads consecutive rows over all sets.
+  if (stride_64 % 512 == 0) {
+    stride_64 += 64;
+  }
+
   if (stride_64 > std::numeric_limits<size_t>::max()) {
     return {heif_error_Memory_allocation_error,
             heif_suberror_Security_limit_exceeded,
