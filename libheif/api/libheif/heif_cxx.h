@@ -247,6 +247,13 @@ namespace heif {
     heif_mastering_display_colour_volume get_mastering_display_colour_volume() const noexcept;
 
     void set_mastering_display_colour_volume(const heif_mastering_display_colour_volume&) noexcept;
+    
+    bool has_nominal_diffuse_white_luminance() const noexcept;
+
+    // Returns a zero if the image has no such information.
+    uint32_t get_nominal_diffuse_white_luminance() const noexcept;
+
+    void set_nominal_diffuse_white_luminance(const uint32_t&) noexcept;
 
     // ------------------------- depth images -------------------------
 
@@ -786,6 +793,21 @@ namespace heif {
   inline void ImageHandle::set_mastering_display_colour_volume(const heif_mastering_display_colour_volume& mdcv) noexcept
   {
     heif_image_handle_set_mastering_display_colour_volume(m_image_handle.get(), &mdcv);
+  }
+  
+  inline bool ImageHandle::has_nominal_diffuse_white_luminance() const noexcept
+  {
+    return heif_image_handle_has_nominal_diffuse_white_luminance(m_image_handle.get()) != 0;
+  }
+
+  inline uint32_t ImageHandle::get_nominal_diffuse_white_luminance() const noexcept
+  {
+    return heif_image_handle_get_nominal_diffuse_white_luminance(m_image_handle.get());
+  }
+
+  inline void ImageHandle::set_nominal_diffuse_white_luminance(const uint32_t& diffWhite) noexcept
+  {
+    heif_image_handle_set_nominal_diffuse_white_luminance(m_image_handle.get(), diffWhite);
   }
 
   // ------------------------- depth images -------------------------
