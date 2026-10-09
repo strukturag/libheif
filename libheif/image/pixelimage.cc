@@ -30,7 +30,6 @@
 #include <utility>
 #include <limits>
 #include <algorithm>
-#include <bit>
 #include <map>
 #include <string>
 #include <sstream>
@@ -1775,6 +1774,12 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
   // rotated in blocks of 64x64 samples, whose rows stay in the cache while the block is copied.
   constexpr uint32_t block = 64;
 
+  // End of the block that starts at `start` in a dimension of `size` samples. `start + block`
+  // would wrap for sizes close to 2^32 (reachable with the security limits disabled).
+  auto block_end = [](uint32_t start, uint32_t size) {
+    return size - start > block ? start + block : size;
+  };
+
   // 8-bit samples move as 8x8 tiles, read as eight 64-bit words and transposed in registers. The
   // columns and rows at the edges that do not fill a tile are left to the loop below.
   uint32_t w8 = 0;
@@ -1782,10 +1787,10 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
   if constexpr (sizeof(T) == 1 && std::endian::native == std::endian::little) {
     w8 = w & ~7U;
     h8 = h & ~7U;
-    for (uint32_t y0 = 0; y0 < w8; y0 += block) {
-      for (uint32_t x0 = 0; x0 < h8; x0 += block) {
-        for (uint32_t y = y0; y < std::min(y0 + block, w8); y += 8) {
-          for (uint32_t x = x0; x < std::min(x0 + block, h8); x += 8) {
+    for (uint32_t y0 = 0; y0 < w8; y0 = block_end(y0, w8)) {
+      for (uint32_t x0 = 0; x0 < h8; x0 = block_end(x0, h8)) {
+        for (uint32_t y = y0; y < block_end(y0, w8); y += 8) {
+          for (uint32_t x = x0; x < block_end(x0, h8); x += 8) {
             // Output rows y to y+7, columns x to x+7.
             uint64_t r[8];
             if (angle_degrees == 270) {
@@ -1811,10 +1816,10 @@ void HeifPixelImage::ComponentStorage::rotate_ccw(int angle_degrees,
     }
   }
 
-  for (uint32_t y0 = 0; y0 < w; y0 += block) {
-    uint32_t y1 = std::min(y0 + block, w);
-    for (uint32_t x0 = 0; x0 < h; x0 += block) {
-      uint32_t x1 = std::min(x0 + block, h);
+  for (uint32_t y0 = 0; y0 < w; y0 = block_end(y0, w)) {
+    uint32_t y1 = block_end(y0, w);
+    for (uint32_t x0 = 0; x0 < h; x0 = block_end(x0, h)) {
+      uint32_t x1 = block_end(x0, h);
       for (uint32_t y = y0; y < y1; y++) {
         T* out_row = out_data + y * out_stride;
         uint32_t x_start = std::max(x0, y < w8 ? h8 : 0);

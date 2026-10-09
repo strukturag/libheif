@@ -47,13 +47,15 @@ static void check_rotation(uint32_t w, uint32_t h, int angle)
   CAPTURE(sizeof(T) * 8, w, h, angle);
   auto* limits = heif_get_global_security_limits();
 
-  HeifPixelImage image;
-  image.create(w, h, heif_colorspace_monochrome, heif_chroma_monochrome);
-  REQUIRE(image.add_channel(heif_channel_Y, w, h, sizeof(T) * 8, limits,
-                            heif_component_datatype_unsigned_integer).error_code == heif_error_Ok);
+  // rotate_ccw() calls shared_from_this() for some inputs, so the image must be owned by a
+  // shared_ptr.
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(w, h, heif_colorspace_monochrome, heif_chroma_monochrome);
+  REQUIRE(image->add_channel(heif_channel_Y, w, h, sizeof(T) * 8, limits,
+                             heif_component_datatype_unsigned_integer).error_code == heif_error_Ok);
 
   size_t in_stride;
-  T* in = image.get_channel_memory<T>(heif_channel_Y, &in_stride);
+  T* in = image->get_channel_memory<T>(heif_channel_Y, &in_stride);
   in_stride /= sizeof(T);
   for (uint32_t y = 0; y < h; y++) {
     for (uint32_t x = 0; x < w; x++) {
@@ -61,7 +63,7 @@ static void check_rotation(uint32_t w, uint32_t h, int angle)
     }
   }
 
-  auto rotated = image.rotate_ccw(angle, limits);
+  auto rotated = image->rotate_ccw(angle, limits);
   REQUIRE(rotated.error().error_code == heif_error_Ok);
   std::shared_ptr<HeifPixelImage> out_image = *rotated;
 
