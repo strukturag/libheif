@@ -1542,7 +1542,8 @@ int main(int argc, char** argv)
         break;
       case 'b':
         output_bit_depth = atoi(optarg);
-        if (output_bit_depth < 9 || output_bit_depth > 16) {
+        // either 8-bit SDR, or HDR
+        if (output_bit_depth < 8 || output_bit_depth > 16) {
           std::cerr << "Bit depth for input HDR images must be 9-16 bits.\n";
           return 5;
         }
