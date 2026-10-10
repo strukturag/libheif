@@ -73,67 +73,76 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
  * cases where the native pixel format is something else. That's why RGBA is
  * used as a fallback format, b/c the browser can always convert to it.
  */
-EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uintptr_t hvcc_record_ptr, size_t hvcc_record_size, uintptr_t data_ptr, size_t data_size), {
-  return Asyncify.handleSleep((callback) => {
-    const codec = UTF8ToString(codec_ptr);
-    const data = HEAPU8.subarray(data_ptr, data_ptr + data_size);
-    const description = HEAPU8.subarray(hvcc_record_ptr, hvcc_record_ptr + hvcc_record_size);
-    let returnedError = false;
-
-    function returnError(err) {
-      if (!returnedError) {
-        returnedError = true;
-
-        console.error(err);
-        callback({'error': err.stack});
-      }
+EM_ASYNC_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uintptr_t hvcc_record_ptr, size_t hvcc_record_size, uintptr_t data_ptr, size_t data_size), {
+  /** @type {VideoDecoder | undefined} */
+  let decoder;
+  try {
+    if (typeof VideoDecoder === "undefined") {
+      throw new Error("VideoDecoder API is not available");
     }
 
+    const codec = UTF8ToString(codec_ptr);
+    const data = HEAPU8.subarray(data_ptr, data_ptr + data_size);
+    const description = HEAPU8.subarray(
+        hvcc_record_ptr,
+        hvcc_record_ptr + hvcc_record_size,
+    );
+
+    /** @type {VideoDecoderConfig} */
+    const videoDecoderConfig = {
+      codec,
+      hardwareAcceleration : "prefer-hardware",
+      optimizeForLatency : true,
+      description,
+    };
+
+    const {supported} =
+        await VideoDecoder.isConfigSupported(videoDecoderConfig);
+
+    if (!supported) {
+      throw new Error("VideoDecoder config is not supported");
+    }
+
+    /**
+     * @param {VideoFrame} decoded
+     * @returns {Emval}
+     */
     function handleEmptyFormat(decoded) {
       // Use the visible rectangle, not the coded rectangle. The coded rectangle
       // may include non-visible padding (HEVC conformance window) that is not
       // part of the image.
-      const width = decoded.visibleRect.width;
-      const height = decoded.visibleRect.height;
+      const {width, height} = decoded.visibleRect;
       const canvas = new OffscreenCanvas(width, height);
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext("2d");
       context.drawImage(decoded, 0, 0, width, height);
       const imageData = context.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      const format = 'RGBA';
-      const planes = [{offset: 0, stride: width * 4}];
-      callback(Emval.toHandle({
-        'buffer': data,
-        'format': format,
-        'planes': planes,
-        'width': width,
-        'height': height,
-      }));
-
-      decoded.close();
+      return Emval.toHandle({
+        buffer : imageData.data,
+        format : "RGBA",
+        planes : [ {offset : 0, stride : width * 4} ],
+        width,
+        height,
+      });
     }
 
-    if (typeof VideoDecoder === 'undefined') {
-      returnError(new Error('VideoDecoder API is not available'));
-
-      return;
-    }
-
-    const decoder = new VideoDecoder({
-      output: (decoded) => {
+    const outputPromise = new Promise((resolve, reject) => {
+      /**
+       * @param {VideoFrame} decoded
+       * @returns {Promise<Emval>}
+       */
+      const processFrame = async (decoded) => {
         // For 10-bit color images, the format is observed to be null. In this
         // case the VideoFrame.copyTo API doesn't work, however, it does work
         // to draw the VideoFrame to a Canvas and then extract the image bytes.
         // Drawing to a canvas is slower than copyTo, so only use it when
         // necessary.
         if (!decoded.format) {
-          handleEmptyFormat(decoded);
-          return;
+          return handleEmptyFormat(decoded);
         }
-
-        const nativeFormats = ['NV12', 'I420', 'I422', 'I444'];
-        const format = nativeFormats.includes(decoded.format) ? decoded.format : 'RGBA';
-        const fullRange = decoded.colorSpace ? decoded.colorSpace.fullRange : false;
+        const nativeFormats = [ "NV12", "I420", "I422", "I444" ];
+        const isNativeFormat = nativeFormats.includes(decoded.format);
+        const format = isNativeFormat ? decoded.format : "RGBA";
+        const fullRange = !!decoded.colorSpace.fullRange;
 
         // Always operate on the visible rectangle. allocationSize() and
         // copyTo() default to it anyway, but pass it explicitly so that the
@@ -143,59 +152,57 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         // conformance window, which is set by the file being decoded. It must
         // never be used as the geometry of the copied buffer.
         const rect = decoded.visibleRect;
-        const width = rect.width;
-        const height = rect.height;
-        const formatOptions = nativeFormats.includes(format) ?
-          {'rect': rect} :
-          {'rect': rect, 'format': format, 'colorSpace': 'srgb'};
-        const bufferSize = nativeFormats.includes(format) ?
-          decoded.allocationSize(formatOptions) :
-          width * height * 4;
+        const {width, height} = rect;
+        const formatOptions =
+            isNativeFormat ? {rect} : {rect, format, colorSpace : "srgb"};
+        const bufferSize = isNativeFormat
+                               ? decoded.allocationSize(formatOptions)
+                               : width * height * 4;
 
         const buffer = new Uint8Array(bufferSize);
+        const planes = await decoded.copyTo(buffer, formatOptions);
 
-        Promise.resolve().then(
-          () => decoded.copyTo(buffer, formatOptions)
-        ).then((planes) => {
-          callback(Emval.toHandle({
-            'buffer': buffer,
-            'format': format,
-            'planes': planes,
-            'width': width,
-            'height': height,
-            'fullRange': fullRange,
-          }));
-
-          decoded.close();
-        }).catch((e) => {
-          returnError(e);
+        return Emval.toHandle({
+          buffer,
+          format,
+          planes,
+          width,
+          height,
+          fullRange,
         });
-      },
-      error: (e) => {
-        returnError(e);
-      }
+      };
+
+      decoder = new VideoDecoder({
+        output : (decoded) => {
+          processFrame(decoded)
+              .then(resolve, reject)
+              .finally(() => decoded.close());
+        },
+        error : reject,
+      });
     });
 
-    try {
-      decoder.configure({
-        codec,
-        hardwareAcceleration: 'prefer-hardware',
-        optimizeForLatency: true,
-        description,
-      });
-
-      const chunk = new EncodedVideoChunk({
-        timestamp: 0,
-        type: 'key',
-        data: data,
-      });
-
-      decoder.decode(chunk);
-      decoder.flush();
-    } catch (e) {
-      returnError(e);
+    if (decoder === undefined) {
+      throw new Error("VideoDecoder never instantiated");
     }
-  });
+
+    decoder.configure(videoDecoderConfig);
+
+    const chunk = new EncodedVideoChunk({
+      timestamp : 0,
+      type : "key",
+      data : data,
+    });
+
+    decoder.decode(chunk);
+    const [output] = await Promise.all([ outputPromise, decoder.flush() ]);
+    return output;
+  } catch (e) {
+    console.error(e);
+    return {error : e.stack};
+  } finally {
+    decoder?.close();
+  }
 });
 
 
