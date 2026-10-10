@@ -24,6 +24,7 @@
 #include "image_item.h"
 #include "codecs/decoder.h"
 #include "box.h"
+#include "security_limits.h"
 #include <vector>
 #include <string>
 #include <memory>
@@ -92,7 +93,14 @@ private:
 class TiledHeader
 {
 public:
-  Error set_parameters(const heif_tiled_image_parameters& params);
+  // `limits` are the caller's security limits. They are enforced on the tile
+  // count (max_number_of_tiles) and the offset-table allocation is accounted
+  // against max_total_memory / max_memory_block_size, so that a small 'tili'
+  // file cannot pre-allocate hundreds of MB when the caller tightened the
+  // limits (GHSA-x8xm-cm2c-cfc8, variant V3). If `limits` is null, the global
+  // defaults are used.
+  Error set_parameters(const heif_tiled_image_parameters& params,
+                       const heif_security_limits* limits);
 
   const heif_tiled_image_parameters& get_parameters() const { return m_parameters; }
 
@@ -139,6 +147,9 @@ private:
 
   // TODO uint64_t m_start_of_offset_table_in_file = 0;
   std::vector<TileOffset> m_offsets;
+
+  // Accounts the m_offsets allocation against the caller's memory limits.
+  MemoryHandle m_offsets_memory;
 
   // TODO size_t m_offset_table_start = 0; // start of offset table (= number of bytes in header)
   size_t m_header_size = 0; // including offset table
@@ -203,7 +214,7 @@ public:
 
   // --- tild
 
-  void set_tild_header(const TiledHeader& header) { m_tild_header = header; }
+  void set_tild_header(TiledHeader&& header) { m_tild_header = std::move(header); }
 
   TiledHeader& get_tild_header() { return m_tild_header; }
 
