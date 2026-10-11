@@ -510,6 +510,7 @@ void ColorConversionPipeline::init_ops()
   ops.emplace_back(std::make_shared<Op_RGB24_32_to_RGB>());
   ops.emplace_back(std::make_shared<Op_YCbCr_to_RGB<uint16_t>>());
   ops.emplace_back(std::make_shared<Op_YCbCr_to_RGB<uint8_t>>());
+  ops.emplace_back(std::make_shared<Op_YCbCr10_to_RGBA8>());
   ops.emplace_back(std::make_shared<Op_YCbCr420_to_RGB24>());
   ops.emplace_back(std::make_shared<Op_YCbCr420_to_RGB32>());
   ops.emplace_back(std::make_shared<Op_YCbCr420_to_RRGGBBaa>());

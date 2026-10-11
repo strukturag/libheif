@@ -66,6 +66,10 @@ add_libheif_test(sdtp_sample_limit)
     add_executable(rotate_benchmark rotate_benchmark.cc)
     target_link_libraries(rotate_benchmark PRIVATE heif)
 
+    # Generated YUV and real-file conversion benchmark, not a test.
+    add_executable(color_conversion_benchmark color_conversion_benchmark.cc)
+    target_link_libraries(color_conversion_benchmark PRIVATE heif)
+
     add_libheif_test(pixelimage_overlay)
     add_libheif_test(overlay_spec_parse)
     add_libheif_test(add_channel_checks)
