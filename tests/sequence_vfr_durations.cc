@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -79,7 +80,8 @@ heif_image* make_gray_image(uint32_t duration, uint8_t value)
 }
 
 std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations, heif_compression_format format,
-                                         bool intra_only = false, uint32_t repetitions = 1)
+                                         bool intra_only = false, uint32_t repetitions = 1,
+                                         bool reordered = false)
 {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
@@ -101,6 +103,9 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
   REQUIRE(options != nullptr);
   if (intra_only) {
     options->gop_structure = heif_sequence_gop_structure_intra_only;
+  }
+  else if (reordered) {
+    options->gop_structure = heif_sequence_gop_structure_unrestricted;
   }
   for (size_t i = 0; i < durations.size(); ++i) {
     heif_image* img = make_gray_image(durations[i], static_cast<uint8_t>((i + 1) * 60));
@@ -311,11 +316,13 @@ TEST_CASE("sequence decoding drains all frames across chunk decoder changes")
 }
 
 
-TEST_CASE("sequence decoding recreates flushed FFmpeg decoders for repeated playback")
+TEST_CASE("sequence decoding drains pending FFmpeg packets and recreates flushed decoders")
 {
-  const int count = heif_get_decoder_descriptors(heif_compression_AV1, nullptr, 0);
+  const auto format = GENERATE(heif_compression_AV1, heif_compression_HEVC);
+  INFO("compression format: " << format);
+  const int count = heif_get_decoder_descriptors(format, nullptr, 0);
   std::vector<const heif_decoder_descriptor*> decoders(count);
-  const int available = heif_get_decoder_descriptors(heif_compression_AV1, decoders.data(), count);
+  const int available = heif_get_decoder_descriptors(format, decoders.data(), count);
   bool have_ffmpeg = false;
   for (int i = 0; i < available; ++i) {
     const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
@@ -323,14 +330,29 @@ TEST_CASE("sequence decoding recreates flushed FFmpeg decoders for repeated play
       have_ffmpeg = true;
     }
   }
-  if (!heif_have_encoder_for_format(heif_compression_AV1) || !have_ffmpeg) {
-    SKIP("No AV1 encoder/FFmpeg decoder pair available");
+  if (!heif_have_encoder_for_format(format) || !have_ffmpeg) {
+    SKIP("No encoder/FFmpeg decoder pair available");
   }
 
-  const std::vector<uint32_t> durations = {100, 250, 400};
-  const auto file = make_two_chunk_sequence(
-    encode_vfr_sequence(durations, heif_compression_AV1, true, 2), true);
-  const std::vector<uint32_t> expected = {100, 250, 400, 100, 250, 400};
+  enum class SequenceLayout { short_stream, inter_frame, different_descriptions };
+  const auto layout = GENERATE(SequenceLayout::short_stream, SequenceLayout::inter_frame,
+                               SequenceLayout::different_descriptions);
+  const bool different_descriptions = layout == SequenceLayout::different_descriptions;
+  const uint32_t repetitions = GENERATE(1u, 2u);
+  const bool short_sequence = layout == SequenceLayout::short_stream;
+  const std::vector<uint32_t> durations = short_sequence ? std::vector<uint32_t>{100}
+                                                       : std::vector<uint32_t>{100, 250, 400};
+  auto file = encode_vfr_sequence(durations, format, different_descriptions, repetitions,
+                                  format == heif_compression_HEVC);
+  if (different_descriptions) {
+    file = make_two_chunk_sequence(std::move(file), true);
+  }
+  std::vector<uint32_t> expected;
+  for (uint32_t i = 0; i < repetitions; ++i) {
+    expected.insert(expected.end(), durations.begin(), durations.end());
+  }
   CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
-                         true, false, "ffmpeg") == expected);
+                         !short_sequence, false, "ffmpeg") == expected);
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                         !short_sequence, true, "ffmpeg") == durations);
 }
