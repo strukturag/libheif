@@ -272,6 +272,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
                        heif_suberror_Unspecified,
                        "Did not decode all frames");
         }
+        m_active_decoder->release_decoder();
         m_active_decoder.reset();
         m_decoder_is_flushed = false;
       }

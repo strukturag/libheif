@@ -42,6 +42,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace {
@@ -129,7 +130,8 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
 
 std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
                                        heif_colorspace colorspace, heif_chroma chroma,
-                                       bool check_pixels = false, bool ignore_editlist = false)
+                                       bool check_pixels = false, bool ignore_editlist = false,
+                                       const char* decoder_id = nullptr)
 {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
@@ -142,6 +144,7 @@ std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
   heif_decoding_options* options = heif_decoding_options_alloc();
   REQUIRE(options != nullptr);
   options->ignore_sequence_editlist = ignore_editlist;
+  options->decoder_id = decoder_id;
   std::vector<uint32_t> durations;
   for (;;) {
     heif_image* img = nullptr;
@@ -305,4 +308,29 @@ TEST_CASE("sequence decoding drains all frames across chunk decoder changes")
   CHECK(decode_durations(file, heif_colorspace_undefined, heif_chroma_undefined) == expected);
   CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB, true) == expected);
   CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB, true, true) == durations);
+}
+
+
+TEST_CASE("sequence decoding recreates flushed FFmpeg decoders for repeated playback")
+{
+  const int count = heif_get_decoder_descriptors(heif_compression_AV1, nullptr, 0);
+  std::vector<const heif_decoder_descriptor*> decoders(count);
+  const int available = heif_get_decoder_descriptors(heif_compression_AV1, decoders.data(), count);
+  bool have_ffmpeg = false;
+  for (int i = 0; i < available; ++i) {
+    const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
+    if (id && std::string(id) == "ffmpeg") {
+      have_ffmpeg = true;
+    }
+  }
+  if (!heif_have_encoder_for_format(heif_compression_AV1) || !have_ffmpeg) {
+    SKIP("No AV1 encoder/FFmpeg decoder pair available");
+  }
+
+  const std::vector<uint32_t> durations = {100, 250, 400};
+  const auto file = make_two_chunk_sequence(
+    encode_vfr_sequence(durations, heif_compression_AV1, true, 2), true);
+  const std::vector<uint32_t> expected = {100, 250, 400, 100, 250, 400};
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                         true, false, "ffmpeg") == expected);
 }
