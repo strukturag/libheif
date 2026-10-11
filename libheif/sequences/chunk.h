@@ -61,6 +61,10 @@ public:
 
   uint32_t last_sample_number() const { return m_last_sample; }
 
+  uint32_t get_sample_description_index() const { return m_sample_description_index; }
+
+  void set_sample_description_index(uint32_t index) { m_sample_description_index = index; }
+
   DataExtent get_data_extent_for_sample(uint32_t n) const;
 
   void set_decoder(std::shared_ptr<class Decoder> dec) { m_decoder = std::move(dec); }
@@ -81,7 +85,7 @@ private:
   uint32_t m_first_sample = 0;
   uint32_t m_last_sample = 0;
 
-  //uint32_t m_sample_description_index = 0;
+  uint32_t m_sample_description_index = 0;
 
   uint32_t m_next_sample_to_be_decoded = 0;
 

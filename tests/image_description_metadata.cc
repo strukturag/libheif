@@ -323,6 +323,7 @@ static std::vector<uint8_t> encode_metadata_sequence()
   heif_sequence_encoding_options* encoding_options = heif_sequence_encoding_options_alloc();
   REQUIRE(encoding_options != nullptr);
   encoding_options->output_nclx_profile = nclx;
+  encoding_options->gop_structure = heif_sequence_gop_structure_intra_only;
   for (int frame = 0; frame < 3; ++frame) {
     REQUIRE(heif_track_encode_sequence_image(track, image, encoder, encoding_options).code == heif_error_Ok);
   }
@@ -341,7 +342,8 @@ static std::vector<uint8_t> encode_metadata_sequence()
   return file;
 }
 
-static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<uint8_t>& icc)
+static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<uint8_t>& icc,
+                                  bool multiple_descriptions = false)
 {
   auto reader = std::make_shared<StreamReader_memory>(file.data(), file.size(), false);
   BitstreamRange range(reader, file.size());
@@ -385,6 +387,57 @@ static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<
     auto clli = std::make_shared<Box_clli>();
     clli->clli = {1000, 400};
     entry->append_child_box(clli);
+    if (multiple_descriptions) {
+      StreamWriter entry_writer;
+      REQUIRE(entry->write(entry_writer) == Error::Ok);
+      const auto entry_data = entry_writer.get_data();
+      auto entry_reader = std::make_shared<StreamReader_memory>(entry_data.data(), entry_data.size(), false);
+      BitstreamRange entry_range(entry_reader, entry_data.size());
+      std::shared_ptr<Box> second_entry;
+      REQUIRE(Box::read(entry_range, &second_entry, heif_get_global_security_limits()) == Error::Ok);
+      second_entry->get_child_box<Box_clli>()->clli = {2000, 800};
+      stsd->add_sample_entry(second_entry);
+
+      auto stco = stbl->get_child_box<Box_stco>();
+      auto stsz = stbl->get_child_box<Box_stsz>();
+      REQUIRE(stco != nullptr);
+      REQUIRE(stsz != nullptr);
+      REQUIRE(stco->get_offsets().size() == 1);
+      REQUIRE(stsz->num_samples() == 3);
+      StreamWriter tables;
+      tables.write32(40);
+      tables.write32(fourcc("stsc"));
+      tables.write32(0);
+      tables.write32(2);
+      for (uint32_t value : {1u, 1u, 1u, 2u, 2u, 2u}) {
+        tables.write32(value);
+      }
+      tables.write32(24);
+      tables.write32(fourcc("stco"));
+      tables.write32(0);
+      tables.write32(2);
+      tables.write32(stco->get_offsets()[0]);
+      const uint32_t first_sample_size = stsz->has_fixed_sample_size() ?
+        stsz->get_fixed_sample_size() : stsz->get_sample_sizes()[0];
+      tables.write32(stco->get_offsets()[0] + first_sample_size);
+      const auto table_data = tables.get_data();
+      auto table_reader = std::make_shared<StreamReader_memory>(table_data.data(), table_data.size(), false);
+      BitstreamRange table_range(table_reader, table_data.size());
+      for (int i = 0; i < 2; ++i) {
+        std::shared_ptr<Box> table;
+        REQUIRE(Box::read(table_range, &table, heif_get_global_security_limits()) == Error::Ok);
+        if (i == 0) {
+          auto mapping = std::dynamic_pointer_cast<Box_stsc>(table);
+          REQUIRE(mapping != nullptr);
+          REQUIRE(stbl->replace_child_box(mapping));
+        }
+        else {
+          auto offsets = std::dynamic_pointer_cast<Box_stco>(table);
+          REQUIRE(offsets != nullptr);
+          REQUIRE(stbl->replace_child_box(offsets));
+        }
+      }
+    }
     StreamWriter output;
     REQUIRE(moov->write(output) == Error::Ok);
     const auto data = output.get_data();
@@ -408,22 +461,28 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
   const bool with_metadata = GENERATE(false, true);
   const bool convert_to_rgb = GENERATE(false, true);
   const bool autocorrect = GENERATE(false, true);
+  const bool multiple_descriptions = GENERATE(false, true);
   INFO("sample-entry metadata: " << with_metadata << ", RGB conversion: " << convert_to_rgb);
   INFO("autocorrect: " << autocorrect);
   auto file = encode_metadata_sequence();
   const std::vector<uint8_t> icc = {1, 2, 3, 4, 5};
   if (with_metadata) {
-    add_sequence_metadata(file, icc);
+    add_sequence_metadata(file, icc, multiple_descriptions);
   }
   heif_context* context = heif_context_alloc();
-  REQUIRE(heif_context_read_from_memory(context, file.data(), file.size(), nullptr).code == heif_error_Ok);
+  const auto read_error = heif_context_read_from_memory(context, file.data(), file.size(), nullptr);
+  INFO(read_error.message);
+  REQUIRE(read_error.code == heif_error_Ok);
   heif_track* track = heif_context_get_track(context, 0);
   REQUIRE(track != nullptr);
   heif_decoding_options* options = heif_decoding_options_alloc();
   options->ignore_sequence_editlist = 1;
   options->output_image_nclx_profile_passthrough = 1;
   options->autocorrect_broken_input = autocorrect;
-  for (int frame = 0; frame < 3; ++frame) {
+  // Check both descriptions across the chunk boundary. Final flushing with
+  // multiple decoder instances is not yet supported by the sequence decoder.
+  const int frames_to_check = with_metadata && multiple_descriptions ? 2 : 3;
+  for (int frame = 0; frame < frames_to_check; ++frame) {
     INFO("frame: " << frame);
     heif_image* image = nullptr;
     REQUIRE(heif_track_decode_next_image(track, &image,
@@ -460,14 +519,16 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
       CHECK(actual == icc);
       heif_content_light_level clli{};
       heif_image_get_content_light_level(image, &clli);
-      CHECK(clli.max_content_light_level == 1000);
-      CHECK(clli.max_pic_average_light_level == 400);
+      CHECK(clli.max_content_light_level == (multiple_descriptions && frame > 0 ? 2000 : 1000));
+      CHECK(clli.max_pic_average_light_level == (multiple_descriptions && frame > 0 ? 800 : 400));
     }
     heif_image_release(image);
   }
-  heif_image* image = nullptr;
-  CHECK(heif_track_decode_next_image(track, &image, heif_colorspace_undefined,
-                                     heif_chroma_undefined, options).code == heif_error_End_of_sequence);
+  if (!(with_metadata && multiple_descriptions)) {
+    heif_image* image = nullptr;
+    CHECK(heif_track_decode_next_image(track, &image, heif_colorspace_undefined,
+                                       heif_chroma_undefined, options).code == heif_error_End_of_sequence);
+  }
   heif_decoding_options_free(options);
   heif_track_release(track);
   heif_context_free(context);
