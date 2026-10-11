@@ -316,8 +316,15 @@ static std::vector<uint8_t> encode_metadata_sequence()
     }
   }
   heif_image_set_duration(image, 1);
+  heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+  REQUIRE(nclx != nullptr);
+  nclx->full_range_flag = 1;
+  REQUIRE(heif_image_set_nclx_color_profile(image, nclx).code == heif_error_Ok);
+  heif_sequence_encoding_options* encoding_options = heif_sequence_encoding_options_alloc();
+  REQUIRE(encoding_options != nullptr);
+  encoding_options->output_nclx_profile = nclx;
   for (int frame = 0; frame < 3; ++frame) {
-    REQUIRE(heif_track_encode_sequence_image(track, image, encoder, nullptr).code == heif_error_Ok);
+    REQUIRE(heif_track_encode_sequence_image(track, image, encoder, encoding_options).code == heif_error_Ok);
   }
   REQUIRE(heif_track_encode_end_of_sequence(track, encoder).code == heif_error_Ok);
   std::vector<uint8_t> file;
@@ -325,6 +332,8 @@ static std::vector<uint8_t> encode_metadata_sequence()
   writer.writer_api_version = 1;
   writer.write = sequence_metadata_writer;
   REQUIRE(heif_context_write(context, &writer, &file).code == heif_error_Ok);
+  heif_sequence_encoding_options_release(encoding_options);
+  heif_nclx_color_profile_free(nclx);
   heif_image_release(image);
   heif_track_release(track);
   heif_encoder_release(encoder);
@@ -398,7 +407,9 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
   }
   const bool with_metadata = GENERATE(false, true);
   const bool convert_to_rgb = GENERATE(false, true);
+  const bool autocorrect = GENERATE(false, true);
   INFO("sample-entry metadata: " << with_metadata << ", RGB conversion: " << convert_to_rgb);
+  INFO("autocorrect: " << autocorrect);
   auto file = encode_metadata_sequence();
   const std::vector<uint8_t> icc = {1, 2, 3, 4, 5};
   if (with_metadata) {
@@ -411,6 +422,7 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
   heif_decoding_options* options = heif_decoding_options_alloc();
   options->ignore_sequence_editlist = 1;
   options->output_image_nclx_profile_passthrough = 1;
+  options->autocorrect_broken_input = autocorrect;
   for (int frame = 0; frame < 3; ++frame) {
     INFO("frame: " << frame);
     heif_image* image = nullptr;
@@ -419,12 +431,17 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
                                          convert_to_rgb ? heif_chroma_444 : heif_chroma_undefined,
                                          options).code == heif_error_Ok);
     REQUIRE(image != nullptr);
+    if (with_metadata && autocorrect) {
+      heif_error warning{};
+      REQUIRE(heif_image_get_decoding_warnings(image, 0, &warning, 1) == 1);
+      CHECK(warning.subcode == heif_suberror_NCLX_colr_VUI_mismatch);
+    }
     if (with_metadata && convert_to_rgb) {
       size_t stride = 0;
       const uint8_t* pixels = heif_image_get_plane_readonly2(image, heif_channel_R, &stride);
       REQUIRE(pixels != nullptr);
-      CHECK(pixels[0] >= 55);
-      CHECK(pixels[0] <= 57);
+      CHECK(pixels[0] >= (autocorrect ? 63 : 55));
+      CHECK(pixels[0] <= (autocorrect ? 65 : 57));
     }
     if (with_metadata && !convert_to_rgb) {
       heif_color_profile_nclx* nclx = nullptr;
@@ -432,7 +449,7 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
       CHECK(nclx->color_primaries == 9);
       CHECK(nclx->transfer_characteristics == 16);
       CHECK(nclx->matrix_coefficients == 9);
-      CHECK(nclx->full_range_flag == 0);
+      CHECK(nclx->full_range_flag == (autocorrect ? 1 : 0));
       heif_nclx_color_profile_free(nclx);
     }
     CHECK(heif_image_get_raw_color_profile_size(image) == (with_metadata ? icc.size() : 0));
