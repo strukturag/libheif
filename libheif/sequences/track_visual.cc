@@ -236,11 +236,21 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       };
     }
 
-    // avoid calling get_decoded_frame() before starting the decoder.
-    if (m_next_sample_to_be_decoded != 0) {
-      Result<std::shared_ptr<HeifPixelImage> > getFrameResult = decoder->get_decoded_frame(options,
-                                                                                           &decoded_sample_idx,
-                                                                                           m_heif_context->get_security_limits());
+    if (m_active_decoder) {
+      // Drain the decoder that received the samples before switching descriptions
+      // or finishing input. The next sample may belong to another decoder.
+      const bool end_of_input = m_next_sample_to_be_decoded >= num_output_samples;
+      const bool switching_decoder = decoder != m_active_decoder;
+      if ((end_of_input || switching_decoder) && !m_decoder_is_flushed) {
+        if (Error err = m_active_decoder->flush_decoder()) {
+          return err;
+        }
+        m_decoder_is_flushed = true;
+      }
+
+      Result<std::shared_ptr<HeifPixelImage> > getFrameResult = m_active_decoder->get_decoded_frame(options,
+                                                                                                    &decoded_sample_idx,
+                                                                                                    m_heif_context->get_security_limits());
       if (getFrameResult.error()) {
         return getFrameResult.error();
       }
@@ -251,28 +261,26 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       if (*getFrameResult != nullptr) {
         image = *getFrameResult;
 
-        // If this was the last frame in the EditList segment, reset the 'flushed' flag
-        // in case we have to restart the decoder for another repetition of the segment.
-        if ((m_next_sample_to_be_output + 1) % m_presentation_timeline.size() == 0) {
-          m_decoder_is_flushed = false;
-        }
-
         break;
       }
 
-      // If the sequence has ended and the decoder was flushed, but we still did not receive
-      // the image, we are waiting for, this is an error.
+      // A drained decoder can be replaced at a chunk boundary. At end-of-input,
+      // a missing output frame is an error.
       if (m_decoder_is_flushed) {
-        return Error(heif_error_Decoder_plugin_error,
-                     heif_suberror_Unspecified,
-                     "Did not decode all frames");
+        if (end_of_input) {
+          return Error(heif_error_Decoder_plugin_error,
+                       heif_suberror_Unspecified,
+                       "Did not decode all frames");
+        }
+        m_active_decoder.reset();
+        m_decoder_is_flushed = false;
       }
     }
 
 
     // --- Push more data into the decoder (or send end-of-sequence).
 
-    if (m_next_sample_to_be_decoded < m_num_output_samples) {
+    if (m_next_sample_to_be_decoded < num_output_samples) {
 
       // --- Find the data extent that stores the compressed frame data.
 
@@ -286,7 +294,7 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
       // Send the decoder configuration when we send the first sample of the chunk.
       // The configuration NALs might change for each chunk.
-      const bool is_first_sample = (sample_idx_in_chunk == 0);
+      const bool is_first_sample = (sample_idx_in_chunk == chunk->first_sample_number());
 
       // --- Push data into the decoder.
       Error decodingError = decoder->decode_sequence_frame_from_compressed_data(is_first_sample,
@@ -296,17 +304,12 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       if (decodingError) {
         return decodingError;
       }
+      m_active_decoder = decoder;
     }
     else {
-      // --- End of sequence (Editlist segment) reached.
-
-      // std::cout << "FLUSH\n";
-      Error flushError = decoder->flush_decoder();
-      if (flushError) {
-        return flushError;
-      }
-
-      m_decoder_is_flushed = true;
+      return Error(heif_error_Decoder_plugin_error,
+                   heif_suberror_Unspecified,
+                   "Did not decode all frames");
     }
   }
 
