@@ -665,7 +665,7 @@ static heif_error ffmpeg_av_decode(ffmpeg_decoder* decoder, AVCodecContext* av_d
   int ret;
 
   ret = avcodec_receive_frame(av_dec_ctx, av_frame);
-  if (ret == AVERROR(EAGAIN) || ret == AVERROR(AVERROR_EOF)) {
+  if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
     *image = nullptr;
     return heif_error_ok;
   }
