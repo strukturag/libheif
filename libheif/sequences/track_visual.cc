@@ -313,13 +313,6 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       // or finishing input. The next sample may belong to another decoder.
       const bool end_of_input = m_next_sample_to_be_decoded >= num_output_samples;
       const bool switching_decoder = decoder != m_active_decoder;
-      if ((end_of_input || switching_decoder) && !m_decoder_is_flushed) {
-        if (Error err = m_active_decoder->flush_decoder()) {
-          return err;
-        }
-        m_decoder_is_flushed = true;
-      }
-
       Result<std::shared_ptr<HeifPixelImage> > getFrameResult = m_active_decoder->get_decoded_frame(options,
                                                                                                     &decoded_sample_idx,
                                                                                                     m_heif_context->get_security_limits());
@@ -338,6 +331,14 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
         decode_work_debt = (decode_work_debt > 2) ? decode_work_debt - 2 : 0;
 
         break;
+      }
+
+      if ((end_of_input || switching_decoder) && !m_decoder_is_flushed) {
+        if (Error err = m_active_decoder->flush_decoder()) {
+          return err;
+        }
+        m_decoder_is_flushed = true;
+        continue;
       }
 
       // A drained decoder can be replaced at a chunk boundary. At end-of-input,
