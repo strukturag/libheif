@@ -23,7 +23,7 @@
 """Alternate three benchmark executables, save every timing and compare packed RGBA.
 
 Usage: benchmark-color-conversion.py MASTER PORTABLE SIMD --output results
-       [--file sample.heic ...] [--passes 12]
+       [--file sample.heic ...] [--passes 12] [--files-only]
 
 Executables are built from tests/color_conversion_benchmark.cc. Master needs the
 same benchmark target added, with no conversion changes. A directory containing
@@ -64,11 +64,14 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--file", type=Path, action="append", default=[])
     parser.add_argument("--passes", type=int, default=12)
+    parser.add_argument("--files-only", action="store_true", help="Benchmark only the --file inputs")
     args = parser.parse_args()
     if args.passes < 6 or args.passes % 3:
         parser.error("passes must be a multiple of three and at least six")
     if len({file.name for file in args.file}) != len(args.file):
         parser.error("sample filenames must be distinct")
+    if args.files_only and not args.file:
+        parser.error("--files-only requires at least one --file")
     args.output.mkdir(parents=True, exist_ok=True)
     pixel_directory = args.output / "pixels"
     pixel_directory.mkdir(exist_ok=True)
@@ -76,7 +79,7 @@ def main():
     for executable in executables.values():
         if not executable.is_file():
             parser.error(f"executable does not exist: {executable}")
-    cases = [("synthetic", None)]
+    cases = [] if args.files_only else [("synthetic", None)]
     for file in args.file:
         cases += [("full", file.resolve()), ("convert", file.resolve())]
     rows, hashes = [], []
