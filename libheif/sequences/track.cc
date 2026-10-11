@@ -427,6 +427,8 @@ Error Track::load(const std::shared_ptr<Box_trak>& trak_box)
       };
     }
 
+    chunk->set_sample_description_index(sampleToChunk.sample_description_index);
+
     if (auto visualSampleDescription = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description)) {
       if (chunk_idx > 0 && (int32_t) sampleToChunk.sample_description_index == previous_sample_description_index) {
         // reuse decoder from previous chunk if it uses the sample sample_description_index

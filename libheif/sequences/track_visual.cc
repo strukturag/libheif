@@ -315,8 +315,8 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   //     Postprocess decoded image, attach metadata.
 
   const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
-  const auto* sampleToChunk = m_stsc->get_chunk(outputTiming.chunkIdx + 1);
-  auto sampleDescription = m_stsd->get_sample_entry(sampleToChunk->sample_description_index - 1);
+  const auto& chunk = m_chunks[outputTiming.chunkIdx];
+  auto sampleDescription = m_stsd->get_sample_entry(chunk->get_sample_description_index() - 1);
   const auto bitstream_nclx = image->get_color_profile_nclx();
 
   // Sample-entry colour information takes precedence over bitstream metadata.
