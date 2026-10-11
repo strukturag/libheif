@@ -365,11 +365,22 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- We have received a new decoded image.
   //     Postprocess decoded image, attach metadata.
 
+  const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
+  const auto* sampleToChunk = m_stsc->get_chunk(outputTiming.chunkIdx + 1);
+  auto sampleDescription = m_stsd->get_sample_entry(sampleToChunk->sample_description_index - 1);
+
+  // Sample-entry colour information takes precedence over bitstream metadata.
+  for (const auto& colr : sampleDescription->get_child_boxes<Box_colr>()) {
+    image->set_color_profile(colr->get_color_profile());
+  }
+  if (auto clli = sampleDescription->get_child_box<Box_clli>()) {
+    image->set_clli(clli->clli);
+  }
+
   if (m_stts) {
     // 'sample_idx_in_chunk' follows m_next_sample_to_be_decoded, which runs ahead of the output
     // by the decoder latency. Look the duration up by the output position instead, like
     // Track::get_next_sample_raw_data() does.
-    const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
     image->set_sample_duration(m_stts->get_sample_duration(outputTiming.sampleIdx));
   }
 

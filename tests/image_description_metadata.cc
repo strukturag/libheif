@@ -1,6 +1,6 @@
 /*
   libheif unit tests for ImageDescription metadata preservation across
-  HeifPixelImage transforms (rotation, crop, clone).
+  HeifPixelImage transforms (rotation, crop, clone) and sequence decoding.
 
   MIT License
 
@@ -30,6 +30,9 @@
 #include "image/image_description.h"
 #include "libheif/heif.h"
 #include "libheif/heif_uncompressed.h"
+#include "libheif/heif_sequences.h"
+#include "sequences/seq_boxes.h"
+#include <algorithm>
 #include <cstring>
 #include <memory>
 
@@ -282,4 +285,173 @@ TEST_CASE("create_clone_image_at_new_size preserves metadata and components",
   REQUIRE(clone->get_height() == 8);
 
   check_metadata(clone, fix);
+}
+
+
+static heif_error sequence_metadata_writer(heif_context*, const void* data, size_t size, void* userdata)
+{
+  auto& output = *static_cast<std::vector<uint8_t>*>(userdata);
+  const auto* bytes = static_cast<const uint8_t*>(data);
+  output.insert(output.end(), bytes, bytes + size);
+  return {heif_error_Ok, heif_suberror_Unspecified, nullptr};
+}
+
+static std::vector<uint8_t> encode_metadata_sequence()
+{
+  heif_context* context = heif_context_alloc();
+  heif_encoder* encoder = nullptr;
+  REQUIRE(heif_context_get_encoder_for_format(context, heif_compression_AV1, &encoder).code == heif_error_Ok);
+  heif_track* track = nullptr;
+  REQUIRE(heif_context_add_visual_sequence_track(context, 64, 64, heif_track_type_image_sequence,
+                                                nullptr, nullptr, &track).code == heif_error_Ok);
+  heif_image* image = nullptr;
+  REQUIRE(heif_image_create(64, 64, heif_colorspace_YCbCr, heif_chroma_444, &image).code == heif_error_Ok);
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+    REQUIRE(heif_image_add_plane(image, channel, 64, 64, 8).code == heif_error_Ok);
+    size_t stride = 0;
+    uint8_t* pixels = heif_image_get_plane2(image, channel, &stride);
+    REQUIRE(pixels != nullptr);
+    for (size_t y = 0; y < 64; ++y) {
+      std::fill(pixels + y * stride, pixels + y * stride + 64, channel == heif_channel_Y ? 64 : 128);
+    }
+  }
+  heif_image_set_duration(image, 1);
+  for (int frame = 0; frame < 3; ++frame) {
+    REQUIRE(heif_track_encode_sequence_image(track, image, encoder, nullptr).code == heif_error_Ok);
+  }
+  REQUIRE(heif_track_encode_end_of_sequence(track, encoder).code == heif_error_Ok);
+  std::vector<uint8_t> file;
+  heif_writer writer{};
+  writer.writer_api_version = 1;
+  writer.write = sequence_metadata_writer;
+  REQUIRE(heif_context_write(context, &writer, &file).code == heif_error_Ok);
+  heif_image_release(image);
+  heif_track_release(track);
+  heif_encoder_release(encoder);
+  heif_context_free(context);
+  return file;
+}
+
+static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<uint8_t>& icc)
+{
+  auto reader = std::make_shared<StreamReader_memory>(file.data(), file.size(), false);
+  BitstreamRange range(reader, file.size());
+  while (reader->get_position() < file.size()) {
+    const size_t start = reader->get_position();
+    BoxHeader header;
+    REQUIRE(header.parse_header(range) == Error::Ok);
+    REQUIRE(header.get_box_size() >= header.get_header_size());
+    REQUIRE(header.get_box_size() <= file.size() - start);
+    if (header.get_short_type() != fourcc("moov")) {
+      REQUIRE(reader->seek(start + header.get_box_size()));
+      continue;
+    }
+    REQUIRE(reader->seek(start));
+    BitstreamRange movie_range(reader, header.get_box_size());
+    std::shared_ptr<Box> moov;
+    REQUIRE(Box::read(movie_range, &moov, heif_get_global_security_limits()) == Error::Ok);
+    auto trak = moov->get_child_box<Box_trak>();
+    REQUIRE(trak != nullptr);
+    auto mdia = trak->get_child_box<Box_mdia>();
+    REQUIRE(mdia != nullptr);
+    auto minf = mdia->get_child_box<Box_minf>();
+    REQUIRE(minf != nullptr);
+    auto stbl = minf->get_child_box<Box_stbl>();
+    REQUIRE(stbl != nullptr);
+    auto stsd = stbl->get_child_box<Box_stsd>();
+    REQUIRE(stsd != nullptr);
+    auto entry = std::const_pointer_cast<Box>(stsd->get_sample_entry(0));
+    REQUIRE(entry != nullptr);
+    nclx_profile profile;
+    profile.set_colour_primaries(9);
+    profile.set_transfer_characteristics(16);
+    profile.set_matrix_coefficients(9);
+    profile.set_full_range_flag(false);
+    auto colr = std::make_shared<Box_colr>();
+    colr->set_color_profile(std::make_shared<color_profile_nclx>(profile));
+    entry->replace_child_box(colr);
+    auto raw_colr = std::make_shared<Box_colr>();
+    raw_colr->set_color_profile(std::make_shared<color_profile_raw>(fourcc("prof"), icc));
+    entry->append_child_box(raw_colr);
+    auto clli = std::make_shared<Box_clli>();
+    clli->clli = {1000, 400};
+    entry->append_child_box(clli);
+    StreamWriter output;
+    REQUIRE(moov->write(output) == Error::Ok);
+    const auto data = output.get_data();
+    // Leave a same-sized free box in place and append the modified movie box,
+    // preserving the offsets of all encoded samples.
+    std::memcpy(file.data() + start + 4, "free", 4);
+    std::fill(file.begin() + start + header.get_header_size(),
+              file.begin() + start + header.get_box_size(), 0);
+    file.insert(file.end(), data.begin(), data.end());
+    return;
+  }
+  FAIL("Encoded sequence has no movie box");
+}
+
+TEST_CASE("sequence sample-entry colour metadata is applied to every decoded frame")
+{
+  if (!heif_have_encoder_for_format(heif_compression_AV1) ||
+      !heif_have_decoder_for_format(heif_compression_AV1)) {
+    SKIP("No AV1 encoder/decoder pair available");
+  }
+  const bool with_metadata = GENERATE(false, true);
+  const bool convert_to_rgb = GENERATE(false, true);
+  INFO("sample-entry metadata: " << with_metadata << ", RGB conversion: " << convert_to_rgb);
+  auto file = encode_metadata_sequence();
+  const std::vector<uint8_t> icc = {1, 2, 3, 4, 5};
+  if (with_metadata) {
+    add_sequence_metadata(file, icc);
+  }
+  heif_context* context = heif_context_alloc();
+  REQUIRE(heif_context_read_from_memory(context, file.data(), file.size(), nullptr).code == heif_error_Ok);
+  heif_track* track = heif_context_get_track(context, 0);
+  REQUIRE(track != nullptr);
+  heif_decoding_options* options = heif_decoding_options_alloc();
+  options->ignore_sequence_editlist = 1;
+  options->output_image_nclx_profile_passthrough = 1;
+  for (int frame = 0; frame < 3; ++frame) {
+    INFO("frame: " << frame);
+    heif_image* image = nullptr;
+    REQUIRE(heif_track_decode_next_image(track, &image,
+                                         convert_to_rgb ? heif_colorspace_RGB : heif_colorspace_undefined,
+                                         convert_to_rgb ? heif_chroma_444 : heif_chroma_undefined,
+                                         options).code == heif_error_Ok);
+    REQUIRE(image != nullptr);
+    if (with_metadata && convert_to_rgb) {
+      size_t stride = 0;
+      const uint8_t* pixels = heif_image_get_plane_readonly2(image, heif_channel_R, &stride);
+      REQUIRE(pixels != nullptr);
+      CHECK(pixels[0] >= 55);
+      CHECK(pixels[0] <= 57);
+    }
+    if (with_metadata && !convert_to_rgb) {
+      heif_color_profile_nclx* nclx = nullptr;
+      REQUIRE(heif_image_get_nclx_color_profile(image, &nclx).code == heif_error_Ok);
+      CHECK(nclx->color_primaries == 9);
+      CHECK(nclx->transfer_characteristics == 16);
+      CHECK(nclx->matrix_coefficients == 9);
+      CHECK(nclx->full_range_flag == 0);
+      heif_nclx_color_profile_free(nclx);
+    }
+    CHECK(heif_image_get_raw_color_profile_size(image) == (with_metadata ? icc.size() : 0));
+    CHECK(heif_image_has_content_light_level(image) == (with_metadata ? 1 : 0));
+    if (with_metadata) {
+      std::vector<uint8_t> actual(icc.size());
+      REQUIRE(heif_image_get_raw_color_profile(image, actual.data()).code == heif_error_Ok);
+      CHECK(actual == icc);
+      heif_content_light_level clli{};
+      heif_image_get_content_light_level(image, &clli);
+      CHECK(clli.max_content_light_level == 1000);
+      CHECK(clli.max_pic_average_light_level == 400);
+    }
+    heif_image_release(image);
+  }
+  heif_image* image = nullptr;
+  CHECK(heif_track_decode_next_image(track, &image, heif_colorspace_undefined,
+                                     heif_chroma_undefined, options).code == heif_error_End_of_sequence);
+  heif_decoding_options_free(options);
+  heif_track_release(track);
+  heif_context_free(context);
 }
