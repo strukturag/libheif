@@ -24,6 +24,13 @@
 #include "nclx.h"
 #include "common_utils.h"
 
+// SSE2 is part of the x86-64 baseline. Other architectures use the portable loop.
+#if defined(ENABLE_YUV_TO_RGB_SIMD) && (defined(__x86_64__) || defined(_M_X64))
+#include <emmintrin.h>
+#define LIBHEIF_YUV_TO_RGB_SSE2 1
+#endif
+
+
 std::vector<ColorStateWithCost>
 Op_YCbCr10_to_RGBA8::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
@@ -71,6 +78,76 @@ Op_YCbCr10_to_RGBA8::state_after_conversion(const ColorState& input_state,
   // 4:2:2/4:4:4 conversion still costs less than the three operations it replaces.
   return {ColorStateWithCost(output_state, 2 * SpeedCosts_Unoptimized + SpeedCosts_Trivial)};
 }
+
+
+#if defined(LIBHEIF_YUV_TO_RGB_SSE2)
+static uint32_t ycbcr10_to_rgba8_sse2(const uint16_t* in_y, const uint16_t* in_cb,
+                                     const uint16_t* in_cr, uint8_t* out_p, uint32_t width,
+                                     int shift_h, bool full_range,
+                                     const YCbCr_to_RGB_coefficients& coeffs)
+{
+  const __m128 zero = _mm_setzero_ps();
+  const __m128 midpoint = _mm_set1_ps(512.0f);
+  const __m128 half = _mm_set1_ps(0.5f);
+  const __m128 maximum = _mm_set1_ps(1023.0f);
+  const __m128 r_cr = _mm_set1_ps(coeffs.r_cr);
+  const __m128 g_cb = _mm_set1_ps(coeffs.g_cb);
+  const __m128 g_cr = _mm_set1_ps(coeffs.g_cr);
+  const __m128 b_cb = _mm_set1_ps(coeffs.b_cb);
+  const __m128 offset = _mm_set1_ps(64.0f);
+  const __m128 y_scale = _mm_set1_ps(1.1689f);
+  const __m128 c_scale = _mm_set1_ps(1.1429f);
+  const __m128i alpha = _mm_set1_epi32(-16777216); // 0xff000000
+
+  uint32_t x = 0;
+  for (; width - x >= 4; x += 4) {
+    __m128i cb, cr;
+    if (shift_h) {
+      // Two 4:2:2 chroma samples supply four pixels. Read exactly four bytes, even at
+      // the right edge, and duplicate each sample before expanding it to 32 bits.
+      uint32_t cb_pair, cr_pair;
+      memcpy(&cb_pair, in_cb + x / 2, sizeof(cb_pair));
+      memcpy(&cr_pair, in_cr + x / 2, sizeof(cr_pair));
+      cb = _mm_cvtsi32_si128(static_cast<int32_t>(cb_pair));
+      cr = _mm_cvtsi32_si128(static_cast<int32_t>(cr_pair));
+      cb = _mm_unpacklo_epi16(cb, cb);
+      cr = _mm_unpacklo_epi16(cr, cr);
+    }
+    else {
+      cb = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_cb + x));
+      cr = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_cr + x));
+    }
+
+    __m128i y = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_y + x));
+    __m128 yv = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y, _mm_setzero_si128()));
+    __m128 cbv = _mm_sub_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(cb, _mm_setzero_si128())), midpoint);
+    __m128 crv = _mm_sub_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(cr, _mm_setzero_si128())), midpoint);
+    if (!full_range) {
+      yv = _mm_mul_ps(_mm_sub_ps(yv, offset), y_scale);
+      cbv = _mm_mul_ps(cbv, c_scale);
+      crv = _mm_mul_ps(crv, c_scale);
+    }
+
+    __m128 r = _mm_add_ps(yv, _mm_mul_ps(r_cr, crv));
+    __m128 g = _mm_add_ps(_mm_add_ps(yv, _mm_mul_ps(g_cb, cbv)), _mm_mul_ps(g_cr, crv));
+    __m128 b = _mm_add_ps(yv, _mm_mul_ps(b_cb, cbv));
+
+    // Match clip_f_u16() followed by Op_to_sdr_planes: round and clip at 10 bits,
+    // then discard two low bits. Scaling directly to 8 bits changes the rounding.
+    r = _mm_min_ps(_mm_max_ps(_mm_add_ps(r, half), zero), maximum);
+    g = _mm_min_ps(_mm_max_ps(_mm_add_ps(g, half), zero), maximum);
+    b = _mm_min_ps(_mm_max_ps(_mm_add_ps(b, half), zero), maximum);
+    __m128i ri = _mm_srli_epi32(_mm_cvttps_epi32(r), 2);
+    __m128i gi = _mm_srli_epi32(_mm_cvttps_epi32(g), 2);
+    __m128i bi = _mm_srli_epi32(_mm_cvttps_epi32(b), 2);
+    __m128i rgba = _mm_or_si128(_mm_or_si128(ri, _mm_slli_epi32(gi, 8)),
+                               _mm_or_si128(_mm_slli_epi32(bi, 16), alpha));
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(out_p + 4 * static_cast<size_t>(x)), rgba);
+  }
+
+  return x;
+}
+#endif
 
 
 Result<std::shared_ptr<HeifPixelImage>>
@@ -126,6 +203,9 @@ Op_YCbCr10_to_RGBA8::convert_colorspace(const std::shared_ptr<const HeifPixelIma
     const uint16_t* row_cr = in_cr + y * in_cr_stride;
     uint8_t* row_out = out_p + y * out_p_stride;
     uint32_t x = 0;
+#if defined(LIBHEIF_YUV_TO_RGB_SSE2)
+    x = ycbcr10_to_rgba8_sse2(row_y, row_cb, row_cr, row_out, width, shift_h, full_range, coeffs);
+#endif
     for (; x < width; x++) {
       float yv = static_cast<float>(row_y[x]);
       float cb = static_cast<float>(row_cb[x >> shift_h] - 512);
