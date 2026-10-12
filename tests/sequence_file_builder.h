@@ -110,6 +110,8 @@ struct SampleAuxInfo
   const char* type = "suid";     // aux_info_type: 'suid' = GIMI content ID, 'stai' = TAI timestamp
   std::vector<uint8_t> data;     // per-sample payload, identical for all samples
   bool offset_past_eof = false;  // let 'saio' point beyond the end of the file
+  uint32_t sample_count = 0;     // samples the 'saiz' describes; 0 -> p.num_samples. Set lower
+                                 // to make 'saiz' cover fewer samples than the track has.
 };
 
 struct SequenceFileParams
@@ -280,6 +282,10 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   std::vector<uint8_t> stsz = box("stsz", stsz_payload);
 
   // --- saiz: one per aux info, constant per-sample size
+  auto aux_sample_count = [&](const SampleAuxInfo& aux) {
+    return aux.sample_count ? aux.sample_count : p.num_samples;
+  };
+
   std::vector<std::vector<uint8_t>> saiz_boxes;
   for (const auto& aux : p.aux_infos) {
     std::vector<uint8_t> saiz_payload;
@@ -287,7 +293,7 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
     put_fourcc(saiz_payload, aux.type);
     put32(saiz_payload, 0);          // aux_info_type_parameter
     saiz_payload.push_back(static_cast<uint8_t>(aux.data.size())); // default_sample_info_size
-    put32(saiz_payload, p.num_samples); // sample_count
+    put32(saiz_payload, aux_sample_count(aux)); // sample_count
     saiz_boxes.push_back(box("saiz", saiz_payload));
   }
 
@@ -336,7 +342,7 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   std::vector<size_t> aux_block_offsets; // relative to the start of the mdat payload
   for (const auto& aux : p.aux_infos) {
     aux_block_offsets.push_back(mdat_payload.size());
-    for (uint32_t s = 0; s < p.num_samples; s++) {
+    for (uint32_t s = 0; s < aux_sample_count(aux); s++) {
       append(mdat_payload, aux.data);
     }
   }

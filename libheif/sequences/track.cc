@@ -169,6 +169,13 @@ Result<std::vector<uint8_t> > SampleAuxInfoReader::get_sample_info(const HeifFil
   uint8_t size;
 
   if (m_contiguous_and_constant_size) {
+    if (sample_idx >= m_saiz->get_num_samples()) {
+      // The 'saiz' describes aux info for fewer samples than the track contains;
+      // samples beyond its range carry none. The variable-size branch below already
+      // handles this via get_sample_size(); without the same bound here the offset
+      // runs past the aux-info chunk into an unrelated file region.
+      return {};
+    }
     size = m_saiz->get_sample_size(0);
     offset = m_singleChunk_offset + uint64_t{sample_idx} * size;
   }
