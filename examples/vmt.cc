@@ -39,7 +39,7 @@
 #include <libheif/heif_sequences.h>
 
 
-static const uint32_t BAD_VMT_TIMESTAMP = 0xFFFFFFFE;
+static const uint32_t BAD_VMT_TIMESTAMP = UINT32_MAX;
 
 
 static std::optional<uint8_t> nibble_to_val(char c)
