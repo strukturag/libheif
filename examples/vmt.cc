@@ -163,7 +163,7 @@ static std::vector<uint8_t> parse_vmt_sync_data(const std::string& content)
 
 static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
 {
-  std::regex pattern(R"(-?((\d*):)?(\d\d):(\d\d)(\.(\d*))?)");
+  std::regex pattern(R"(-?((\d{1,}):)?(\d{2}):(\d{2})(\.(\d{3})))");
   std::smatch match;
 
   if (!std::regex_match(vmt_time, match, pattern)) {
