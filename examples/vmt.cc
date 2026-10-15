@@ -181,12 +181,22 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
 
   uint32_t ms = std::stoi(fs); // the pattern guarantees exactly three digits
 
-  uint32_t ts = ((hh != "" ? std::stoi(hh) : 0) * 3600 * 1000 +
+  // The timestamp is stored in a 32 bit millisecond counter. Reject hour values that cannot fit
+  // (and that would overflow std::stoi) before doing any arithmetic.
+  if (hh.length() > 9) {
+    return BAD_VMT_TIMESTAMP;
+  }
+
+  uint64_t ts = ((hh != "" ? std::stoull(hh) : 0) * 3600 * 1000 +
                  std::stoi(mm) * 60 * 1000 +
                  std::stoi(ss) * 1000 +
                  ms);
 
-  return ts;
+  if (ts >= BAD_VMT_TIMESTAMP) {
+    return BAD_VMT_TIMESTAMP;
+  }
+
+  return static_cast<uint32_t>(ts);
 }
 
 int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
