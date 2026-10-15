@@ -167,28 +167,19 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   std::smatch match;
 
   if (!std::regex_match(vmt_time, match, pattern)) {
-    return 0; // no match
+    return BAD_VMT_TIMESTAMP; // no match
   }
 
   std::string hh = match[2]; // optional
   std::string mm = match[3];
   std::string ss = match[4];
-  std::string fs = match[6]; // optional
+  std::string fs = match[6];
 
   if (vmt_time.find('-') != std::string::npos) {
     return 0; // negative time not supported
   }
 
-  uint32_t ms = 0;
-
-  if (fs != "") {
-    if (fs.length() == 3) {
-      ms = std::stoi(fs);
-    }
-    else {
-      return BAD_VMT_TIMESTAMP; // invalid
-    }
-  }
+  uint32_t ms = std::stoi(fs); // the pattern guarantees exactly three digits
 
   uint32_t ts = ((hh != "" ? std::stoi(hh) : 0) * 3600 * 1000 +
                  std::stoi(mm) * 60 * 1000 +
