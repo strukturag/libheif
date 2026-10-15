@@ -140,8 +140,10 @@ The following are targets, not commitments (see [Maintenance capacity](#maintena
 
 * Advisories are published on GitHub when the fixed release is available. CVE IDs are requested
   through GitHub.
-* The default embargo is 90 days from the report, or shorter when the fix is released earlier.
-  Reporters are credited in the advisory unless they ask not to be.
+* Reporters may publish their findings 90 days after the report, or earlier once the fix is
+  released. This is the usual period and not a promise that a fix exists by then, see
+  [Maintenance capacity](#maintenance-capacity). Reporters are credited in the advisory unless
+  they ask not to be.
 * Pre-release notification of embargoed advisories is available on request to downstream
   distributors and to commercial support customers.
 * libheif does not run a bug bounty program and does not pay for reports.
@@ -156,8 +158,10 @@ To make the workload concrete: from January to October 2026, 73 security advisor
 published for libheif (4 rated critical, 24 high), and ten releases were made mainly to ship
 security fixes. Most of the 2026 reports were found with automated or AI-assisted tools,
 often run by organizations that use libheif in their products.
-Reproducing, fixing, testing, fuzzing and releasing each fix takes hours to days.
+Reproducing, fixing, testing, fuzzing and releasing each fix takes several hours.
 
+Reports currently arrive faster than they can be handled in volunteer time. They are processed
+in severity order whenever time is available, and there is no guarantee how long that takes.
 The response times above are therefore best-effort. If your organization depends on libheif and
 needs response-time commitments, advisory pre-notification, or dedicated engineering time,
 please fund this work:
