@@ -179,7 +179,13 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
     return 0; // negative time not supported
   }
 
+  int minutes = std::stoi(mm);
+  int seconds = std::stoi(ss);
   uint32_t ms = std::stoi(fs); // the pattern guarantees exactly three digits
+
+  if (minutes > 59 || seconds > 59) {
+    return BAD_VMT_TIMESTAMP;
+  }
 
   // The timestamp is stored in a 32 bit millisecond counter. Reject hour values that cannot fit
   // (and that would overflow std::stoi) before doing any arithmetic.
@@ -188,8 +194,8 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   }
 
   uint64_t ts = ((hh != "" ? std::stoull(hh) : 0) * 3600 * 1000 +
-                 std::stoi(mm) * 60 * 1000 +
-                 std::stoi(ss) * 1000 +
+                 minutes * 60 * 1000 +
+                 seconds * 1000 +
                  ms);
 
   if (ts >= BAD_VMT_TIMESTAMP) {
