@@ -43,9 +43,6 @@
 // recurses once per input character for patterns like ".*", which overflows the stack for inputs of
 // a few ten thousand characters, e.g. a base64 blob in a sync command.
 
-static const uint32_t BAD_VMT_TIMESTAMP = UINT32_MAX;
-
-
 static bool is_space(char c)
 {
   return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
@@ -558,7 +555,7 @@ static bool parse_vmt_sync_data(const std::string& content, std::vector<uint8_t>
 // Parse a WebVMT timestamp "[hh:]mm:ss.fff" into milliseconds.
 // Hours are optional and may have any number of digits, minutes and seconds are exactly two digits
 // and at most 59, the fraction is mandatory and exactly three digits.
-static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
+static std::optional<uint32_t> parse_vmt_timestamp(const std::string& vmt_time)
 {
   size_t pos = 0;
   const size_t n = vmt_time.size();
@@ -581,30 +578,30 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   std::string g1, g2, g3, fs;
 
   if (!read_digits(g1) || pos >= n || vmt_time[pos] != ':') {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
   pos++;
 
   if (!read_digits(g2)) {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
 
   bool has_hours = false;
   if (pos < n && vmt_time[pos] == ':') {
     pos++;
     if (!read_digits(g3)) {
-      return BAD_VMT_TIMESTAMP;
+      return std::nullopt;
     }
     has_hours = true;
   }
 
   if (pos >= n || vmt_time[pos] != '.') {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
   pos++;
 
   if (!read_digits(fs) || fs.size() != 3 || pos != n) {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
 
   const std::string hh = has_hours ? g1 : "";
@@ -612,7 +609,7 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   const std::string ss = has_hours ? g3 : g2;
 
   if (mm.size() != 2 || ss.size() != 2) {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
 
   int minutes = std::stoi(mm);
@@ -620,13 +617,13 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
   uint32_t ms = std::stoi(fs);
 
   if (minutes > 59 || seconds > 59) {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
 
   // The timestamp is stored in a 32 bit millisecond counter. Reject hour values that cannot fit
   // (and that would overflow std::stoull) before doing any arithmetic.
   if (hh.size() > 9) {
-    return BAD_VMT_TIMESTAMP;
+    return std::nullopt;
   }
 
   if (negative) {
@@ -638,8 +635,8 @@ static uint32_t parse_vmt_timestamp(const std::string& vmt_time)
                  seconds * 1000 +
                  ms);
 
-  if (ts >= BAD_VMT_TIMESTAMP) {
-    return BAD_VMT_TIMESTAMP;
+  if (ts > UINT32_MAX) {
+    return std::nullopt;
   }
 
   return static_cast<uint32_t>(ts);
@@ -783,7 +780,7 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
     std::string cue_start = trim(line.substr(0, arrow));
     // The cue end time and the cue settings after the arrow are ignored. Unbounded cues have no end time.
 
-    uint32_t ts = parse_vmt_timestamp(cue_start);
+    std::optional<uint32_t> parsed_ts = parse_vmt_timestamp(cue_start);
 
     // --- collect the cue payload up to the next blank line
 
@@ -793,10 +790,12 @@ int encode_vmt_metadata_track(heif_context* context, heif_track* visual_track,
       payload.push_back(lines[i]);
     }
 
-    if (ts == BAD_VMT_TIMESTAMP) {
+    if (!parsed_ts) {
       std::cerr << "WebVMT line " << cue_line << ": bad timestamp '" << excerpt(cue_start) << "'\n";
       continue;
     }
+
+    uint32_t ts = *parsed_ts;
 
     if (ts < prev_ts) {
       std::cerr << "WebVMT line " << cue_line << ": timestamp '" << excerpt(cue_start) << "' is before the previous cue\n";
