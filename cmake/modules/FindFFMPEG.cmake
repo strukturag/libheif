@@ -197,6 +197,37 @@ if (FFMPEG_INCLUDE_DIRS)
   list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
 endif ()
 
+if (FFMPEG_LIBRARIES)
+  find_package(PkgConfig QUIET)
+  if (PKG_CONFIG_FOUND)
+    set(_ffmpeg_pkg_modules)
+    foreach (_ffmpeg_component IN LISTS FFMPEG_FIND_COMPONENTS)
+      if (FFMPEG_${_ffmpeg_component}_FOUND)
+        list(APPEND _ffmpeg_pkg_modules "lib${_ffmpeg_component}")
+      endif ()
+    endforeach ()
+    pkg_check_modules(_ffmpeg_pkg QUIET ${_ffmpeg_pkg_modules})
+    if (_ffmpeg_pkg_FOUND)
+      set(_ffmpeg_pkg_matches TRUE)
+      foreach (_ffmpeg_component IN LISTS FFMPEG_FIND_COMPONENTS)
+        if (FFMPEG_${_ffmpeg_component}_FOUND AND
+            NOT FFMPEG_${_ffmpeg_component}_LIBRARY IN_LIST _ffmpeg_pkg_LINK_LIBRARIES)
+          set(_ffmpeg_pkg_matches FALSE)
+        endif ()
+      endforeach ()
+      if (_ffmpeg_pkg_matches)
+        if (MSVC)
+          # MSVC does not accept pkg-config's Unix-style -L and -l flags.
+          set(FFMPEG_LIBRARIES
+            ${_ffmpeg_pkg_LINK_LIBRARIES} ${_ffmpeg_pkg_LDFLAGS_OTHER})
+        else ()
+          set(FFMPEG_LIBRARIES ${_ffmpeg_pkg_LDFLAGS})
+        endif ()
+      endif ()
+    endif ()
+  endif ()
+endif ()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(FFMPEG
   REQUIRED_VARS FFMPEG_INCLUDE_DIRS FFMPEG_LIBRARIES ${_ffmpeg_required_vars}
