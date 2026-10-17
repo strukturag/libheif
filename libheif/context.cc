@@ -1651,9 +1651,16 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspac
       output_profile.set_sRGB_defaults();
     }
 
-    return convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
-                                         options.color_conversion_options, options.color_conversion_options_ext,
-                                         get_security_limits());
+    auto converted = convert_colorspace(img, target_colorspace, target_chroma, output_profile, converted_output_bpp,
+                                        options.color_conversion_options, options.color_conversion_options_ext,
+                                        get_security_limits());
+    if (converted && nclx_passthrough && target_colorspace == heif_colorspace_RGB) {
+      // Some RGB conversion operations drop NCLX metadata from their output
+      // state. Restore the source profile only for the passthrough option;
+      // default and explicit output-profile behavior remain unchanged.
+      (*converted)->set_color_profile_nclx(img_nclx);
+    }
+    return converted;
   }
   else {
     return img;
