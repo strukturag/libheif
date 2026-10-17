@@ -314,11 +314,40 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
   // --- We have received a new decoded image.
   //     Postprocess decoded image, attach metadata.
 
+  const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
+  const auto& chunk = m_chunks[outputTiming.chunkIdx];
+  auto sampleDescription = m_stsd->get_sample_entry(chunk->get_sample_description_index() - 1);
+  const auto bitstream_nclx = image->get_color_profile_nclx();
+
+  // Sample-entry colour information takes precedence over bitstream metadata.
+  for (const auto& colr : sampleDescription->get_child_boxes<Box_colr>()) {
+    auto profile = colr->get_color_profile();
+    if (auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile)) {
+      auto consolidated_nclx = nclx->get_nclx_color_profile();
+      if (options.version >= 9 && options.autocorrect_broken_input &&
+          bitstream_nclx.is_defined() && bitstream_nclx.get_full_range_flag() &&
+          !consolidated_nclx.get_full_range_flag()) {
+        image->add_warning({
+          heif_error_Invalid_input,
+          heif_suberror_NCLX_colr_VUI_mismatch,
+          "Autocorrecting full-range flag to ON (colr=limited, bitstream=full)"
+        });
+        consolidated_nclx.set_full_range_flag(true);
+      }
+      image->set_color_profile_nclx(consolidated_nclx);
+    }
+    else {
+      image->set_color_profile(profile);
+    }
+  }
+  if (auto clli = sampleDescription->get_child_box<Box_clli>()) {
+    image->set_clli(clli->clli);
+  }
+
   if (m_stts) {
     // 'sample_idx_in_chunk' follows m_next_sample_to_be_decoded, which runs ahead of the output
     // by the decoder latency. Look the duration up by the output position instead, like
     // Track::get_next_sample_raw_data() does.
-    const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
     image->set_sample_duration(m_stts->get_sample_duration(outputTiming.sampleIdx));
   }
 
