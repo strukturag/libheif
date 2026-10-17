@@ -27,9 +27,11 @@
 #include <iomanip>
 #include "catch_amalgamated.hpp"
 #include "color-conversion/colorconversion.h"
+#include "color-conversion/chroma_sampling.h"
 #include "color-conversion/hdr_sdr.h"
 #include "color-conversion/monochrome.h"
 #include "color-conversion/rgb2yuv.h"
+#include "color-conversion/rgb2rgb.h"
 #include "color-conversion/yuv2rgb.h"
 #include "image/pixelimage.h"
 #include <cmath>
@@ -37,6 +39,270 @@
 
 // Enable for more verbose test output.
 constexpr bool kEnableDebugOutput = false;
+
+TEST_CASE("Fused 10-bit YCbCr to RGBA matches the planar conversion", "[heif_image][fused_rgba]")
+{
+  heif_color_conversion_options options{};
+  heif_color_conversion_options_set_defaults(&options);
+  options.only_use_preferred_chroma_algorithm = false;
+  auto options_ext = std::unique_ptr<heif_color_conversion_options_ext,
+                                    void (*)(heif_color_conversion_options_ext*)>(
+      heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+
+  for (heif_chroma chroma : {heif_chroma_422, heif_chroma_444}) {
+    for (int matrix : {1, 4, 5, 6, 7, 9}) {
+      for (bool full_range : {false, true}) {
+        for (uint32_t width : {1U, 2U, 3U, 4U, 5U, 7U, 8U, 9U, 15U, 16U, 17U, 31U, 65U}) {
+          INFO("chroma=" << chroma << " matrix=" << matrix << " full_range=" << full_range
+                           << " width=" << width);
+          const uint32_t height = 5;
+          auto image = std::make_shared<HeifPixelImage>();
+          image->create(width, height, heif_colorspace_YCbCr, chroma);
+          nclx_profile profile = nclx_profile::defaults();
+          profile.set_matrix_coefficients(static_cast<uint16_t>(matrix));
+          profile.set_full_range_flag(full_range);
+          image->set_color_profile_nclx(profile);
+          uint32_t random = 1234567;
+          for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+            uint32_t plane_width = channel != heif_channel_Y && chroma == heif_chroma_422
+                                       ? (width + 1) / 2 : width;
+            REQUIRE(!image->add_channel(channel, plane_width, height, 10, nullptr));
+            size_t stride;
+            uint8_t* data = image->get_channel_memory(channel, &stride);
+            for (uint32_t y = 0; y < height; y++) {
+              auto row = reinterpret_cast<uint16_t*>(data + y * stride);
+              for (uint32_t x = 0; x < plane_width; x++) {
+                random = random * 1664525U + 1013904223U;
+                row[x] = static_cast<uint16_t>((random >> 16) & 1023);
+              }
+            }
+            auto first_row = reinterpret_cast<uint16_t*>(data);
+            // Include clipping boundaries and values outside the signaled bit depth.
+            const uint16_t boundary[] = {0, 64, 512, 940, 1023, 1024, 32768, 65535};
+            for (uint32_t x = 0; x < plane_width && x < 8; x++) {
+              first_row[x] = boundary[(x + static_cast<uint32_t>(channel)) % 8];
+            }
+          }
+
+          ColorState input_state = ColorState::from_image_planes(*image);
+          input_state.nclx = profile;
+          ColorState rgb10(heif_colorspace_RGB, heif_chroma_444, false, 10);
+          ColorState rgb8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+          ColorState rgba8(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
+          auto planar10 = Op_YCbCr_to_RGB<uint16_t>().convert_colorspace(
+              image, input_state, rgb10, options, *options_ext, nullptr);
+          REQUIRE(planar10);
+          auto planar8 = Op_to_sdr_planes().convert_colorspace(
+              *planar10, rgb10, rgb8, options, *options_ext, nullptr);
+          REQUIRE(planar8);
+          auto reference = Op_RGB_to_RGB24_32().convert_colorspace(
+              *planar8, rgb8, rgba8, options, *options_ext, nullptr);
+          REQUIRE(reference);
+          auto fused = Op_YCbCr10_to_RGBA8().convert_colorspace(
+              image, input_state, rgba8, options, *options_ext, nullptr);
+          REQUIRE(fused);
+          size_t reference_stride, fused_stride;
+          const uint8_t* reference_data = (*reference)->get_channel_memory(heif_channel_interleaved, &reference_stride);
+          const uint8_t* fused_data = (*fused)->get_channel_memory(heif_channel_interleaved, &fused_stride);
+          for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < 4 * width; x++) {
+              REQUIRE(fused_data[y * fused_stride + x] == reference_data[y * reference_stride + x]);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+TEST_CASE("Fused 10-bit conversion preserves unsupported paths", "[heif_image][fused_rgba]")
+{
+  heif_color_conversion_options options{};
+  heif_color_conversion_options_set_defaults(&options);
+  options.only_use_preferred_chroma_algorithm = false;
+  auto options_ext = std::unique_ptr<heif_color_conversion_options_ext,
+                                    void (*)(heif_color_conversion_options_ext*)>(
+      heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+  Op_YCbCr10_to_RGBA8 operation;
+  ColorState input(heif_colorspace_YCbCr, heif_chroma_422, false, 10);
+  input.nclx.set_matrix_coefficients(5);
+  ColorState target(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
+  REQUIRE(operation.state_after_conversion(input, target, options, *options_ext).size() == 1);
+
+  for (int matrix : {0, 8, 10, 11, 14, 16, 17}) {
+    auto unsupported = input;
+    unsupported.nclx.set_matrix_coefficients(static_cast<uint16_t>(matrix));
+    CHECK(operation.state_after_conversion(unsupported, target, options, *options_ext).empty());
+  }
+  for (int depth : {8, 12, 16, 32}) {
+    auto unsupported = input;
+    unsupported.set_color_bits_per_pixel(depth);
+    CHECK(operation.state_after_conversion(unsupported, target, options, *options_ext).empty());
+  }
+  auto unsupported = input;
+  unsupported.bits_per_pixel_alpha = 10;
+  CHECK(operation.state_after_conversion(unsupported, target, options, *options_ext).empty());
+  unsupported = input;
+  unsupported.bits_per_pixel_Cb = 8;
+  CHECK(operation.state_after_conversion(unsupported, target, options, *options_ext).empty());
+  unsupported = input;
+  unsupported.chroma = heif_chroma_420;
+  CHECK(operation.state_after_conversion(unsupported, target, options, *options_ext).empty());
+  options.only_use_preferred_chroma_algorithm = true;
+  options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  CHECK(operation.state_after_conversion(input, target, options, *options_ext).empty());
+  input.chroma = heif_chroma_444;
+  CHECK(operation.state_after_conversion(input, target, options, *options_ext).empty());
+  options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_nearest_neighbor;
+  CHECK(operation.state_after_conversion(input, target, options, *options_ext).size() == 1);
+  input.chroma = heif_chroma_422;
+  CHECK(operation.state_after_conversion(input, target, options, *options_ext).size() == 1);
+}
+
+
+TEST_CASE("Fused conversion preserves the existing 4:2:0 paths", "[heif_image][fused_rgba]")
+{
+  const bool full_range = GENERATE(false, true);
+  heif_color_conversion_options options{};
+  heif_color_conversion_options_set_defaults(&options);
+  options.only_use_preferred_chroma_algorithm = false;
+  auto options_ext = std::unique_ptr<heif_color_conversion_options_ext,
+                                    void (*)(heif_color_conversion_options_ext*)>(
+      heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+  auto image = std::make_shared<HeifPixelImage>();
+  const uint32_t width = 17, height = 7;
+  image->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
+  nclx_profile profile = nclx_profile::defaults();
+  profile.set_matrix_coefficients(5);
+  profile.set_full_range_flag(full_range);
+  image->set_color_profile_nclx(profile);
+  uint32_t random = 87654321;
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+    uint32_t plane_width = channel == heif_channel_Y ? width : (width + 1) / 2;
+    uint32_t plane_height = channel == heif_channel_Y ? height : (height + 1) / 2;
+    REQUIRE(!image->add_channel(channel, plane_width, plane_height, 10, nullptr));
+    size_t stride;
+    uint8_t* data = image->get_channel_memory(channel, &stride);
+    for (uint32_t y = 0; y < plane_height; y++) {
+      auto row = reinterpret_cast<uint16_t*>(data + y * stride);
+      for (uint32_t x = 0; x < plane_width; x++) {
+        random = random * 1664525U + 1013904223U;
+        row[x] = static_cast<uint16_t>((random >> 16) & 1023);
+      }
+    }
+  }
+
+  ColorState input = ColorState::from_image_planes(*image);
+  input.nclx = profile;
+  ColorState yuv8(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
+  yuv8.nclx = profile;
+  ColorState target(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
+  auto reference = [&]() {
+    if (full_range) {
+      // The direct 8-bit 4:2:0 operator only accepts full-range input.
+      auto reduced = Op_to_sdr_planes().convert_colorspace(image, input, yuv8, options, *options_ext, nullptr);
+      REQUIRE(reduced);
+      (*reduced)->set_color_profile_nclx(profile);
+      return Op_YCbCr420_to_RGB32().convert_colorspace(
+          *reduced, yuv8, target, options, *options_ext, nullptr);
+    }
+    ColorState rgb10(heif_colorspace_RGB, heif_chroma_444, false, 10);
+    ColorState rgb8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+    auto planar10 = Op_YCbCr_to_RGB<uint16_t>().convert_colorspace(
+        image, input, rgb10, options, *options_ext, nullptr);
+    REQUIRE(planar10);
+    auto planar8 = Op_to_sdr_planes().convert_colorspace(
+        *planar10, rgb10, rgb8, options, *options_ext, nullptr);
+    REQUIRE(planar8);
+    return Op_RGB_to_RGB24_32().convert_colorspace(
+        *planar8, rgb8, target, options, *options_ext, nullptr);
+  }();
+  REQUIRE(reference);
+  auto converted = convert_colorspace(image, heif_colorspace_RGB, heif_chroma_interleaved_RGBA,
+                                      profile, 8, options, options_ext.get(), nullptr);
+  REQUIRE(converted);
+  size_t reference_stride, converted_stride;
+  const uint8_t* reference_data = (*reference)->get_channel_memory(heif_channel_interleaved, &reference_stride);
+  const uint8_t* converted_data = (*converted)->get_channel_memory(heif_channel_interleaved, &converted_stride);
+  for (uint32_t y = 0; y < height; y++) {
+    for (uint32_t x = 0; x < 4 * width; x++) {
+      REQUIRE(converted_data[y * converted_stride + x] == reference_data[y * reference_stride + x]);
+    }
+  }
+}
+
+
+TEST_CASE("Fused conversion preserves forced bilinear upsampling", "[heif_image][fused_rgba]")
+{
+  const heif_chroma chroma = GENERATE(heif_chroma_420, heif_chroma_422);
+  const bool full_range = GENERATE(false, true);
+  const uint32_t width = GENERATE(4U, 5U, 17U, 32U, 33U);
+  const uint32_t height = 3;
+  heif_color_conversion_options options{};
+  heif_color_conversion_options_set_defaults(&options);
+  options.only_use_preferred_chroma_algorithm = true;
+  options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  auto options_ext = std::unique_ptr<heif_color_conversion_options_ext,
+                                    void (*)(heif_color_conversion_options_ext*)>(
+      heif_color_conversion_options_ext_alloc(), heif_color_conversion_options_ext_free);
+  nclx_profile profile = nclx_profile::defaults();
+  profile.set_matrix_coefficients(5);
+  profile.set_full_range_flag(full_range);
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(width, height, heif_colorspace_YCbCr, chroma);
+  image->set_color_profile_nclx(profile);
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+    const uint32_t plane_width = channel == heif_channel_Y ? width : (width + 1) / 2;
+    const uint32_t plane_height = channel != heif_channel_Y && chroma == heif_chroma_420 ? (height + 1) / 2 : height;
+    REQUIRE(!image->add_channel(channel, plane_width, plane_height, 10, nullptr));
+    size_t stride;
+    auto data = image->get_channel_memory<uint16_t>(channel, &stride);
+    for (uint32_t y = 0; y < plane_height; y++) {
+      auto row = reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(data) + y * stride);
+      for (uint32_t x = 0; x < plane_width; x++) {
+        row[x] = channel == heif_channel_Y ? 513 : ((x + y) % 2 ? 895 : 129);
+      }
+    }
+  }
+
+  ColorState input = ColorState::from_image_planes(*image);
+  input.nclx = profile;
+  // Master reduces to 8 bits before bilinear upsampling for both subsampled formats.
+  ColorState yuv8(heif_colorspace_YCbCr, chroma, false, 8);
+  yuv8.nclx = profile;
+  auto reduced = Op_to_sdr_planes().convert_colorspace(image, input, yuv8, options, *options_ext, nullptr);
+  REQUIRE(reduced);
+  (*reduced)->set_color_profile_nclx(profile);
+  ColorState yuv444(heif_colorspace_YCbCr, heif_chroma_444, false, 8);
+  yuv444.nclx = profile;
+  ColorState rgb8(heif_colorspace_RGB, heif_chroma_444, false, 8);
+  ColorState target(heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8);
+  auto upsampled = chroma == heif_chroma_420
+                       ? Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>().convert_colorspace(
+                             *reduced, yuv8, yuv444, options, *options_ext, nullptr)
+                       : Op_YCbCr422_bilinear_to_YCbCr444<uint8_t>().convert_colorspace(
+                             *reduced, yuv8, yuv444, options, *options_ext, nullptr);
+  REQUIRE(upsampled);
+  (*upsampled)->set_color_profile_nclx(profile);
+  auto planar8 = Op_YCbCr_to_RGB<uint8_t>().convert_colorspace(
+      *upsampled, yuv444, rgb8, options, *options_ext, nullptr);
+  REQUIRE(planar8);
+  auto reference = Op_RGB_to_RGB24_32().convert_colorspace(
+      *planar8, rgb8, target, options, *options_ext, nullptr);
+  REQUIRE(reference);
+  auto converted = convert_colorspace(image, heif_colorspace_RGB, heif_chroma_interleaved_RGBA,
+                                      profile, 8, options, options_ext.get(), nullptr);
+  REQUIRE(converted);
+  size_t reference_stride, converted_stride;
+  const uint8_t* reference_data = (*reference)->get_channel_memory(heif_channel_interleaved, &reference_stride);
+  const uint8_t* converted_data = (*converted)->get_channel_memory(heif_channel_interleaved, &converted_stride);
+  for (uint32_t y = 0; y < height; y++) {
+    for (uint32_t x = 0; x < 4 * width; x++) {
+      REQUIRE(converted_data[y * converted_stride + x] == reference_data[y * reference_stride + x]);
+    }
+  }
+}
 
 struct Plane {
   heif_channel channel;

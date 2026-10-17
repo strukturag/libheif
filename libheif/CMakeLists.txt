@@ -196,6 +196,10 @@ set(libheif_sources
 
 add_library(heif ${libheif_sources})
 
+if (ENABLE_YUV_TO_RGB_SIMD)
+    set_source_files_properties(color-conversion/yuv2rgb.cc PROPERTIES COMPILE_DEFINITIONS ENABLE_YUV_TO_RGB_SIMD=1)
+endif ()
+
 if (ENABLE_PLUGIN_LOADING)
     if (WIN32)
         target_sources(heif PRIVATE plugins_windows.cc plugins_windows.h)
