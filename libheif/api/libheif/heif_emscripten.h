@@ -389,7 +389,11 @@ EMSCRIPTEN_BINDINGS(libheif) {
     emscripten::function("heif_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
     emscripten::function("heif_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
     emscripten::function("heif_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
+#if HAVE_WEBCODECS
+    emscripten::function("heif_js_decode_image2", &heif_js_decode_image2, emscripten::allow_raw_pointers(), emscripten::async());
+#else
     emscripten::function("heif_js_decode_image2", &heif_js_decode_image2, emscripten::allow_raw_pointers());
+#endif
     EXPORT_HEIF_FUNCTION(heif_get_version_number);
     EXPORT_HEIF_FUNCTION(heif_context_alloc);
     EXPORT_HEIF_FUNCTION(heif_context_free);
