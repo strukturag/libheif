@@ -121,8 +121,15 @@ heif_error heif_context_get_encoder(heif_context* context,
     return heif_error_null_pointer_argument;
   }
 
-  *encoder = new heif_encoder(descriptor->plugin);
-  return (*encoder)->alloc();
+  heif_encoder* candidate = new heif_encoder(descriptor->plugin);
+  heif_error err = candidate->alloc();
+  if (err.code != heif_error_Ok) {
+    delete candidate;
+    *encoder = nullptr;
+    return err;
+  }
+  *encoder = candidate;
+  return err;
 }
 
 
@@ -140,8 +147,15 @@ heif_error heif_context_get_encoder_for_format(heif_context* context,
   descriptors = get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size() > 0) {
-    *encoder = new heif_encoder(descriptors[0]->plugin);
-    return (*encoder)->alloc();
+    heif_encoder* candidate = new heif_encoder(descriptors[0]->plugin);
+    heif_error err = candidate->alloc();
+    if (err.code != heif_error_Ok) {
+      delete candidate;
+      *encoder = nullptr;
+      return err;
+    }
+    *encoder = candidate;
+    return err;
   }
   else {
     *encoder = nullptr;
