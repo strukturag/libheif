@@ -93,6 +93,8 @@ private:
   // If there is an alpha-channel track associated with this color track, we reference it from here
   std::shared_ptr<Track_Visual> m_aux_alpha_track;
 
+  std::shared_ptr<class Decoder> m_active_decoder;
+
   heif_encoder* m_active_encoder = nullptr;
   std::unique_ptr<heif_encoder> m_alpha_track_encoder;
 

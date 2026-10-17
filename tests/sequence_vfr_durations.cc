@@ -38,9 +38,12 @@
 #include "libheif/heif.h"
 #include "libheif/heif_sequences.h"
 #include "test_utils.h"
+#include "sequence_file_builder.h"
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -76,10 +79,13 @@ heif_image* make_gray_image(uint32_t duration, uint8_t value)
   return img;
 }
 
-std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations, heif_compression_format format)
+std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations, heif_compression_format format,
+                                         bool intra_only = false, uint32_t repetitions = 1,
+                                         bool reordered = false)
 {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
+  heif_context_set_number_of_sequence_repetitions(ctx, repetitions);
 
   heif_encoder* encoder = nullptr;
   REQUIRE(heif_context_get_encoder_for_format(ctx, format, &encoder).code == heif_error_Ok);
@@ -93,10 +99,18 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
   REQUIRE(err.code == heif_error_Ok);
   REQUIRE(track != nullptr);
 
+  heif_sequence_encoding_options* options = heif_sequence_encoding_options_alloc();
+  REQUIRE(options != nullptr);
+  if (intra_only) {
+    options->gop_structure = heif_sequence_gop_structure_intra_only;
+  }
+  else if (reordered) {
+    options->gop_structure = heif_sequence_gop_structure_unrestricted;
+  }
   for (size_t i = 0; i < durations.size(); ++i) {
     heif_image* img = make_gray_image(durations[i], static_cast<uint8_t>((i + 1) * 60));
 
-    err = heif_track_encode_sequence_image(track, img, encoder, nullptr);
+    err = heif_track_encode_sequence_image(track, img, encoder, options);
     INFO("encode_sequence_image: " << (err.message ? err.message : ""));
     REQUIRE(err.code == heif_error_Ok);
     heif_image_release(img);
@@ -111,6 +125,7 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
   writer.write = mem_writer;
   REQUIRE(heif_context_write(ctx, &writer, &file).code == heif_error_Ok);
 
+  heif_sequence_encoding_options_release(options);
   heif_track_release(track);
   heif_encoder_release(encoder);
   heif_context_free(ctx);
@@ -119,7 +134,9 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
 }
 
 std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
-                                       heif_colorspace colorspace, heif_chroma chroma)
+                                       heif_colorspace colorspace, heif_chroma chroma,
+                                       bool check_pixels = false, bool ignore_editlist = false,
+                                       const char* decoder_id = nullptr)
 {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
@@ -129,10 +146,14 @@ std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
   heif_track* track = heif_context_get_track(ctx, 0);
   REQUIRE(track != nullptr);
 
+  heif_decoding_options* options = heif_decoding_options_alloc();
+  REQUIRE(options != nullptr);
+  options->ignore_sequence_editlist = ignore_editlist;
+  options->decoder_id = decoder_id;
   std::vector<uint32_t> durations;
   for (;;) {
     heif_image* img = nullptr;
-    heif_error err = heif_track_decode_next_image(track, &img, colorspace, chroma, nullptr);
+    heif_error err = heif_track_decode_next_image(track, &img, colorspace, chroma, options);
     if (err.code == heif_error_End_of_sequence) {
       break;
     }
@@ -140,10 +161,21 @@ std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
     REQUIRE(err.code == heif_error_Ok);
     REQUIRE(img != nullptr);
 
+    if (check_pixels) {
+      size_t stride = 0;
+      const auto* pixels = heif_image_get_plane_readonly2(img, heif_channel_interleaved, &stride);
+      REQUIRE(pixels != nullptr);
+      const int expected = static_cast<int>((durations.size() % 3 + 1) * 60);
+      for (size_t channel = 0; channel < 3; ++channel) {
+        CHECK(pixels[channel] >= expected - 3);
+        CHECK(pixels[channel] <= expected + 3);
+      }
+    }
     durations.push_back(heif_image_get_duration(img));
     heif_image_release(img);
   }
 
+  heif_decoding_options_free(options);
   heif_track_release(track);
   heif_context_free(ctx);
 
@@ -151,6 +183,94 @@ std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
 }
 
 } // namespace
+
+static uint32_t sequence_box_u32(const std::vector<uint8_t>& data, size_t offset)
+{
+  REQUIRE(offset + 4 <= data.size());
+  return (static_cast<uint32_t>(data[offset]) << 24) |
+         (static_cast<uint32_t>(data[offset + 1]) << 16) |
+         (static_cast<uint32_t>(data[offset + 2]) << 8) | data[offset + 3];
+}
+
+static std::vector<uint8_t> split_sequence_chunks(const std::vector<uint8_t>& data,
+                                                  bool different_descriptions,
+                                                  uint32_t& first_sample_size)
+{
+  std::vector<uint8_t> output;
+  for (size_t offset = 0; offset < data.size();) {
+    const uint32_t size = sequence_box_u32(data, offset);
+    REQUIRE(size >= 8);
+    REQUIRE(size <= data.size() - offset);
+    const std::string type(data.begin() + offset + 4, data.begin() + offset + 8);
+    std::vector<uint8_t> payload(data.begin() + offset + 8, data.begin() + offset + size);
+    if (type == "moov" || type == "trak" || type == "mdia" || type == "minf" || type == "stbl") {
+      // Read stsz before rewriting stco, regardless of their order in the file.
+      if (type == "stbl") {
+        for (size_t child = 0; child < payload.size();) {
+          const uint32_t child_size = sequence_box_u32(payload, child);
+          REQUIRE(child_size >= 8);
+          REQUIRE(child_size <= payload.size() - child);
+          if (std::string(payload.begin() + child + 4, payload.begin() + child + 8) == "stsz") {
+            REQUIRE(sequence_box_u32(payload, child + 16) == 3);
+            first_sample_size = sequence_box_u32(payload, child + 12);
+            if (first_sample_size == 0) {
+              first_sample_size = sequence_box_u32(payload, child + 20);
+            }
+          }
+          child += child_size;
+        }
+      }
+      payload = split_sequence_chunks(payload, different_descriptions, first_sample_size);
+    }
+    else if (type == "stsd" && different_descriptions) {
+      REQUIRE(sequence_box_u32(payload, 4) == 1);
+      const std::vector<uint8_t> entry(payload.begin() + 8, payload.end());
+      payload[7] = 2;
+      seqfile::append(payload, entry);
+    }
+    else if (type == "stsc") {
+      payload.clear();
+      for (uint32_t value : {0u, 2u, 1u, 1u, 1u, 2u, 2u, different_descriptions ? 2u : 1u}) {
+        seqfile::put32(payload, value);
+      }
+    }
+    else if (type == "stco") {
+      REQUIRE(sequence_box_u32(payload, 4) == 1);
+      REQUIRE(first_sample_size > 0);
+      const uint32_t first_offset = sequence_box_u32(payload, 8);
+      payload.clear();
+      for (uint32_t value : {0u, 2u, first_offset, first_offset + first_sample_size}) {
+        seqfile::put32(payload, value);
+      }
+    }
+    seqfile::append(output, seqfile::box(type.c_str(), payload));
+    offset += size;
+  }
+  return output;
+}
+
+static std::vector<uint8_t> make_two_chunk_sequence(std::vector<uint8_t> file,
+                                                    bool different_descriptions)
+{
+  for (size_t offset = 0; offset < file.size();) {
+    const uint32_t size = sequence_box_u32(file, offset);
+    REQUIRE(size >= 8);
+    REQUIRE(size <= file.size() - offset);
+    if (std::string(file.begin() + offset + 4, file.begin() + offset + 8) == "moov") {
+      const std::vector<uint8_t> movie(file.begin() + offset, file.begin() + offset + size);
+      uint32_t first_sample_size = 0;
+      const auto replacement = split_sequence_chunks(movie, different_descriptions, first_sample_size);
+      // Keep media offsets unchanged by replacing the old movie with a free box.
+      std::copy_n("free", 4, file.begin() + offset + 4);
+      std::fill(file.begin() + offset + 8, file.begin() + offset + size, 0);
+      seqfile::append(file, replacement);
+      return file;
+    }
+    offset += size;
+  }
+  FAIL("Encoded sequence has no movie box");
+  return {};
+}
 
 
 TEST_CASE("variable frame rate sequence reports the per-frame durations")
@@ -172,4 +292,67 @@ TEST_CASE("variable frame rate sequence reports the per-frame durations")
 
   CHECK(decode_durations(file, heif_colorspace_undefined, heif_chroma_undefined) == expected_durations);
   CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB) == expected_durations);
+}
+
+
+TEST_CASE("sequence decoding drains all frames across chunk decoder changes")
+{
+  if (!heif_have_encoder_for_format(heif_compression_AV1) ||
+      !heif_have_decoder_for_format(heif_compression_AV1)) {
+    SKIP("No AV1 encoder/decoder pair available");
+  }
+  const bool different_descriptions = GENERATE(false, true);
+  const uint32_t repetitions = GENERATE(1u, 2u);
+  const std::vector<uint32_t> durations = {100, 250, 400};
+  const auto file = make_two_chunk_sequence(
+    encode_vfr_sequence(durations, heif_compression_AV1, true, repetitions), different_descriptions);
+  std::vector<uint32_t> expected;
+  for (uint32_t i = 0; i < repetitions; ++i) {
+    expected.insert(expected.end(), durations.begin(), durations.end());
+  }
+  CHECK(decode_durations(file, heif_colorspace_undefined, heif_chroma_undefined) == expected);
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB, true) == expected);
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB, true, true) == durations);
+}
+
+
+TEST_CASE("sequence decoding drains pending FFmpeg packets and recreates flushed decoders")
+{
+  const auto format = GENERATE(heif_compression_AV1, heif_compression_HEVC);
+  INFO("compression format: " << format);
+  const int count = heif_get_decoder_descriptors(format, nullptr, 0);
+  std::vector<const heif_decoder_descriptor*> decoders(count);
+  const int available = heif_get_decoder_descriptors(format, decoders.data(), count);
+  bool have_ffmpeg = false;
+  for (int i = 0; i < available; ++i) {
+    const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
+    if (id && std::string(id) == "ffmpeg") {
+      have_ffmpeg = true;
+    }
+  }
+  if (!heif_have_encoder_for_format(format) || !have_ffmpeg) {
+    SKIP("No encoder/FFmpeg decoder pair available");
+  }
+
+  enum class SequenceLayout { short_stream, inter_frame, different_descriptions };
+  const auto layout = GENERATE(SequenceLayout::short_stream, SequenceLayout::inter_frame,
+                               SequenceLayout::different_descriptions);
+  const bool different_descriptions = layout == SequenceLayout::different_descriptions;
+  const uint32_t repetitions = GENERATE(1u, 2u);
+  const bool short_sequence = layout == SequenceLayout::short_stream;
+  const std::vector<uint32_t> durations = short_sequence ? std::vector<uint32_t>{100}
+                                                       : std::vector<uint32_t>{100, 250, 400};
+  auto file = encode_vfr_sequence(durations, format, different_descriptions, repetitions,
+                                  format == heif_compression_HEVC);
+  if (different_descriptions) {
+    file = make_two_chunk_sequence(std::move(file), true);
+  }
+  std::vector<uint32_t> expected;
+  for (uint32_t i = 0; i < repetitions; ++i) {
+    expected.insert(expected.end(), durations.begin(), durations.end());
+  }
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                         !short_sequence, false, "ffmpeg") == expected);
+  CHECK(decode_durations(file, heif_colorspace_RGB, heif_chroma_interleaved_RGB,
+                         !short_sequence, true, "ffmpeg") == durations);
 }
