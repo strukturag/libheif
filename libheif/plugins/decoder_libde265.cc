@@ -195,6 +195,17 @@ heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options* 
     else {
       de265_limits->max_image_size_pixels = static_cast<uint32_t>(limits->max_image_size_pixels);
     }
+
+    // libde265 rejects NAL units larger than 16 MiB by default. libheif has already
+    // read the whole item into memory under max_memory_block_size, so use that
+    // limit for the NAL size too. Otherwise, large images (e.g. lossless) that
+    // libheif can write could not be decoded, even with the limits disabled.
+    if (limits->max_memory_block_size > std::numeric_limits<uint32_t>::max()) {
+      de265_limits->max_NAL_size_bytes = 0;
+    }
+    else {
+      de265_limits->max_NAL_size_bytes = static_cast<uint32_t>(limits->max_memory_block_size);
+    }
   }
 #endif
 
@@ -358,11 +369,18 @@ static heif_error libde265_v1_push_data2(void* decoder_raw, const void* data, si
 #endif
 
     // The codec hands this opaque pointer back unchanged; it carries an integer, not an address.
-    de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data); // NOLINT(performance-no-int-to-ptr)
+    de265_error push_err = de265_push_NAL(decoder->ctx, cdata + ptr, nal_size, 0, (void*)user_data); // NOLINT(performance-no-int-to-ptr)
+    if (!de265_isOK(push_err)) {
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_Unspecified,
+        de265_get_error_text(push_err)
+      };
+    }
+
     ptr += nal_size;
   }
 
-  // TODO(farindk): Set "err" if data could not be pushed
   //de265_push_data(decoder->ctx, data, size, 0, nullptr);
 
   return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
