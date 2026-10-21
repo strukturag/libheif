@@ -698,6 +698,15 @@ void svt_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t input_height,
                             uint32_t* encoded_width, uint32_t* encoded_height)
 {
+#if SVT_AV1_CHECK_VERSION(4, 2, 0)
+  // SVT-AV1 >= 4.2.0 supports odd sizes (since 3.0.0) and dimensions down to 1 pixel.
+  *encoded_width = input_width;
+  *encoded_height = input_height;
+#elif SVT_AV1_CHECK_VERSION(3, 0, 0)
+  // SVT-AV1 >= 3.0.0 supports odd sizes, but dimensions must be at least 4 pixels.
+  *encoded_width = std::max(input_width, 4u);
+  *encoded_height = std::max(input_height, 4u);
+#else
   auto* encoder = (encoder_struct_svt*) encoder_raw;
 
   // SVT-AV1 (as of version 1.2.1) can only create image sizes matching the chroma format. Add padding if necessary.
@@ -721,6 +730,7 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
   else {
     *encoded_height = input_height;
   }
+#endif
 }
 
 
