@@ -182,10 +182,6 @@ public:
 
   Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const override;
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                          heif_encoder* encoder,
                                          const heif_encoding_options& options,
@@ -216,6 +212,10 @@ public:
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
 private:
+  int get_luma_bits_per_pixel_unlocked() const override;
+
+  int get_chroma_bits_per_pixel_unlocked() const override;
+
   TiledHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
 

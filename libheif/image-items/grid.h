@@ -120,10 +120,6 @@ public:
   // (which the base populate would mis-tag as unsigned_integer).
   void populate_component_descriptions() override;
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   void set_tile_encoding_options(const heif_encoding_options* options);
 
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
@@ -163,6 +159,10 @@ public:
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
 private:
+  int get_luma_bits_per_pixel_unlocked() const override;
+
+  int get_chroma_bits_per_pixel_unlocked() const override;
+
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;
 

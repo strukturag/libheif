@@ -545,6 +545,20 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
 
 int ImageItem::get_luma_bits_per_pixel() const
 {
+  std::lock_guard<std::mutex> lock(m_decode_mutex);
+  return get_luma_bits_per_pixel_unlocked();
+}
+
+
+int ImageItem::get_chroma_bits_per_pixel() const
+{
+  std::lock_guard<std::mutex> lock(m_decode_mutex);
+  return get_chroma_bits_per_pixel_unlocked();
+}
+
+
+int ImageItem::get_luma_bits_per_pixel_unlocked() const
+{
   auto decoderResult = get_decoder();
   if (!decoderResult) {
     return -1;
@@ -556,7 +570,7 @@ int ImageItem::get_luma_bits_per_pixel() const
 }
 
 
-int ImageItem::get_chroma_bits_per_pixel() const
+int ImageItem::get_chroma_bits_per_pixel_unlocked() const
 {
   auto decoderResult = get_decoder();
   if (!decoderResult) {
@@ -1664,8 +1678,9 @@ Error ImageItem::check_decoded_image_bit_depth(const HeifPixelImage& img) const
   // the decoded image with the bit depth it got from the handle would then read out of
   // bounds, so the decoded image must not contradict the handle (GHSA-vv35-6hxg-95x8).
 
-  int luma_bpp = get_luma_bits_per_pixel();
-  int chroma_bpp = get_chroma_bits_per_pixel();
+  // decode_image() already holds this item's non-recursive decode mutex.
+  int luma_bpp = get_luma_bits_per_pixel_unlocked();
+  int chroma_bpp = get_chroma_bits_per_pixel_unlocked();
 
   bool mismatch = false;
 

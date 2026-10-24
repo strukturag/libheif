@@ -791,7 +791,7 @@ void ImageItem_Grid::get_tile_size(uint32_t& w, uint32_t& h) const
 
 
 
-int ImageItem_Grid::get_luma_bits_per_pixel() const
+int ImageItem_Grid::get_luma_bits_per_pixel_unlocked() const
 {
   auto child_result = get_context()->find_first_coded_image_id(get_id());
   if (child_result.is_error()) {
@@ -807,7 +807,7 @@ int ImageItem_Grid::get_luma_bits_per_pixel() const
 }
 
 
-int ImageItem_Grid::get_chroma_bits_per_pixel() const
+int ImageItem_Grid::get_chroma_bits_per_pixel_unlocked() const
 {
   auto child_result = get_context()->find_first_coded_image_id(get_id());
   if (child_result.is_error()) {

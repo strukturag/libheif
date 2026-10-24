@@ -462,7 +462,7 @@ int ImageItem_Overlay::get_canvas_bit_depth() const
 
 // The overlay image is the canvas, so these report the bit depth of the canvas.
 
-int ImageItem_Overlay::get_luma_bits_per_pixel() const
+int ImageItem_Overlay::get_luma_bits_per_pixel_unlocked() const
 {
   if (get_first_image_bit_depth() < 0) {
     return -1;
@@ -472,9 +472,9 @@ int ImageItem_Overlay::get_luma_bits_per_pixel() const
 }
 
 
-int ImageItem_Overlay::get_chroma_bits_per_pixel() const
+int ImageItem_Overlay::get_chroma_bits_per_pixel_unlocked() const
 {
-  return get_luma_bits_per_pixel();
+  return get_luma_bits_per_pixel_unlocked();
 }
 
 

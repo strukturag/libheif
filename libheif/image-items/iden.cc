@@ -116,7 +116,7 @@ Error ImageItem_iden::get_coded_image_colorspace(heif_colorspace* out_colorspace
 }
 
 
-int ImageItem_iden::get_luma_bits_per_pixel() const
+int ImageItem_iden::get_luma_bits_per_pixel_unlocked() const
 {
   auto child_result = get_context()->find_first_coded_image_id(get_id());
   if (child_result.is_error()) {
@@ -132,7 +132,7 @@ int ImageItem_iden::get_luma_bits_per_pixel() const
 }
 
 
-int ImageItem_iden::get_chroma_bits_per_pixel() const
+int ImageItem_iden::get_chroma_bits_per_pixel_unlocked() const
 {
   auto child_result = get_context()->find_first_coded_image_id(get_id());
   if (child_result.is_error()) {

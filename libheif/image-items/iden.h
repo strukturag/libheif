@@ -51,10 +51,6 @@ public:
   // (iden has no get_decoder()) and the handle would report 0 components.
   void populate_component_descriptions() override;
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                          heif_encoder* encoder,
                                          const heif_encoding_options& options,
@@ -71,6 +67,11 @@ public:
   heif_brand2 get_compatible_brand() const override;
 
   // No check_decoded_image_size() override: the base class implementation is correct here too.
+
+private:
+  int get_luma_bits_per_pixel_unlocked() const override;
+
+  int get_chroma_bits_per_pixel_unlocked() const override;
 };
 
 

@@ -94,10 +94,6 @@ public:
 
   bool is_ispe_essential() const override { return true; }
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override { return 0; }
-
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
                                                                   DecodeTraversalState decode_state) const override;
@@ -106,6 +102,11 @@ public:
                                          heif_encoder* encoder,
                                          const heif_encoding_options& options,
                                          heif_image_input_class input_class) override;
+
+private:
+  int get_luma_bits_per_pixel_unlocked() const override;
+
+  int get_chroma_bits_per_pixel_unlocked() const override { return 0; }
 };
 
 #endif //LIBHEIF_MASK_IMAGE_H

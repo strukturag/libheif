@@ -1113,7 +1113,7 @@ Error ImageItem_Tiled::get_coded_image_colorspace(heif_colorspace* out_colorspac
 }
 
 
-int ImageItem_Tiled::get_luma_bits_per_pixel() const
+int ImageItem_Tiled::get_luma_bits_per_pixel_unlocked() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
@@ -1122,7 +1122,7 @@ int ImageItem_Tiled::get_luma_bits_per_pixel() const
   return m_tile_decoder->get_luma_bits_per_pixel();
 }
 
-int ImageItem_Tiled::get_chroma_bits_per_pixel() const
+int ImageItem_Tiled::get_chroma_bits_per_pixel_unlocked() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded

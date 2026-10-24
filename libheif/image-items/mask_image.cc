@@ -207,7 +207,7 @@ Result<Encoder::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<Hei
 }
 
 
-int ImageItem_mask::get_luma_bits_per_pixel() const
+int ImageItem_mask::get_luma_bits_per_pixel_unlocked() const
 {
   auto mskC = get_property<Box_mskC>();
   if (!mskC) {

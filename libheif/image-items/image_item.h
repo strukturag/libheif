@@ -196,11 +196,11 @@ public:
 
   uint32_t get_ispe_height() const;
 
-  // Default behavior: forward call to Decoder
-  [[nodiscard]] virtual int get_luma_bits_per_pixel() const;
+  // Serialize queries with decode_image(), which can replace the decoder's
+  // cached item data while another thread is reading it.
+  [[nodiscard]] int get_luma_bits_per_pixel() const;
 
-  // Default behavior: forward call to Decoder
-  [[nodiscard]] virtual int get_chroma_bits_per_pixel() const;
+  [[nodiscard]] int get_chroma_bits_per_pixel() const;
 
   void set_size(uint32_t w, uint32_t h)
   {
@@ -550,6 +550,13 @@ private:
   void generate_property_boxes_for_ImageDescription();
 
 protected:
+  // decode_image() already holds m_decode_mutex when it checks the decoded bit
+  // depth. Its own queries use these methods to avoid locking the mutex twice.
+  // Implementations that query another item use that item's locking public method.
+  [[nodiscard]] virtual int get_luma_bits_per_pixel_unlocked() const;
+
+  [[nodiscard]] virtual int get_chroma_bits_per_pixel_unlocked() const;
+
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
   virtual Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
@@ -602,11 +609,11 @@ public:
     return m_item_error;
   }
 
-  [[nodiscard]] int get_luma_bits_per_pixel() const override { return -1; }
-
-  [[nodiscard]] int get_chroma_bits_per_pixel() const override { return -1; }
-
 private:
+  [[nodiscard]] int get_luma_bits_per_pixel_unlocked() const override { return -1; }
+
+  [[nodiscard]] int get_chroma_bits_per_pixel_unlocked() const override { return -1; }
+
   uint32_t m_item_type;
   Error m_item_error;
 };
