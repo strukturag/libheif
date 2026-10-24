@@ -815,6 +815,10 @@ int ImageItem_Grid::get_chroma_bits_per_pixel_unlocked() const
   }
 
   auto image = get_context()->get_image(*child_result, true);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_chroma_bits_per_pixel();
 }
 
