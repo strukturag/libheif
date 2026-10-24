@@ -62,6 +62,8 @@ struct encoder_struct_uvg266
   int chroma_height_shift = 0;
   int input_chroma_width = 0;
   int input_chroma_height = 0;
+  int input_width = 0;
+  int input_height = 0;
 
   // --- output data
 
@@ -522,6 +524,8 @@ static heif_error uvg266_start_sequence_encoding_intern(void* encoder_raw, const
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = input_width;
+  encoder->input_height = input_height;
 
   if (isGreyscale) {
     config->input_format = UVG_FORMAT_P400;
@@ -671,6 +675,11 @@ static heif_error uvg266_encode_sequence_frame(void* encoder_raw, const heif_ima
   }
 
   encoder_struct_uvg266* encoder = (encoder_struct_uvg266*) encoder_raw;
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
 
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 

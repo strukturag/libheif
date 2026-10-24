@@ -608,7 +608,15 @@ Error HeifPixelImage::ComponentStorage::alloc(uint32_t width, uint32_t height, h
 Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
                                              const heif_security_limits* limits)
 {
-  for (auto& component : m_storage) {
+  if (width < m_width || height < m_height) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Cannot extend padding to a size smaller than the image."};
+  }
+
+  // Check every plane before changing any of them. In particular, the new
+  // allocation must fit the old plane in both directions before it is copied.
+  for (const auto& component : m_storage) {
     // get_subsampled_size() only adjusts the size for Cb/Cr; for every other
     // channel it assumes the component has the full logical image size. We
     // cannot compute a correct padded size for a non-Cb/Cr component that does
@@ -622,6 +630,19 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
                    "Cannot extend padding for an image with non-uniform component sizes."};
     }
 
+    uint32_t subsampled_width, subsampled_height;
+    get_subsampled_size(width, height, component.m_channel, m_chroma,
+                        &subsampled_width, &subsampled_height);
+
+    if (subsampled_width < component.m_width ||
+        subsampled_height < component.m_height) {
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Invalid_parameter_value,
+                   "Cannot extend padding to a size smaller than an existing plane."};
+    }
+  }
+
+  for (auto& component : m_storage) {
     uint32_t subsampled_width, subsampled_height;
     get_subsampled_size(width, height, component.m_channel, m_chroma,
                         &subsampled_width, &subsampled_height);
@@ -663,6 +684,10 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
       std::free(component.allocated_mem);
 
       component = newPlane;
+      // alloc() set the logical plane size to the allocation size. Growing
+      // padding alone must not change the plane's visible dimensions.
+      component.m_width = old_width;
+      component.m_height = old_height;
     }
 
     // extend plane size

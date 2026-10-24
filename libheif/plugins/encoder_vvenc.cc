@@ -54,6 +54,8 @@ struct encoder_struct_vvenc
   vvencEncoder* vvencoder = nullptr;
   vvencChromaFormat vvencChroma;
   uint32_t encoded_width=0, encoded_height=0;
+  int input_width = 0;
+  int input_height = 0;
 
   // --- output
 
@@ -455,6 +457,8 @@ static heif_error vvenc_start_sequence_encoding_intern(void* encoder_raw, const 
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = input_width;
+  encoder->input_height = input_height;
 
   vvenc_query_encoded_size(encoder_raw, input_width, input_height,
     &encoder->encoded_width, &encoder->encoded_height);
@@ -566,6 +570,14 @@ static heif_error vvenc_encode_sequence_frame(void* encoder_raw, const heif_imag
   }
 
   encoder_struct_vvenc* encoder = (encoder_struct_vvenc*) encoder_raw;
+
+  // VVenC supports resolution changes with suitable maximum picture-size
+  // configuration. This plugin does not set that up yet; lift this check when
+  // we support mixed-size sequences.
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
   vvencEncoder* vvencoder = encoder->vvencoder;
 
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);

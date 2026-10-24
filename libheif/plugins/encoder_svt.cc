@@ -90,6 +90,8 @@ struct encoder_struct_svt
 
   EbComponentType* svt_encoder = nullptr;
   EbSvtAv1EncConfiguration svt_config{}; // value-initialized: svt_encode_sequence_frame() reads encoder_bit_depth from it
+  int input_width = 0;
+  int input_height = 0;
   EbBufferHeaderType input_buffer;
 
   bool still_image_mode = false;
@@ -747,6 +749,8 @@ static heif_error svt_start_sequence_encoding_intern(void* encoder_raw, const he
 
   int w = heif_image_get_width(image, heif_channel_Y);
   int h = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = w;
+  encoder->input_height = h;
 
   uint32_t encoded_width, encoded_height;
   svt_query_encoded_size(encoder_raw, w, h, &encoded_width, &encoded_height);
@@ -1038,6 +1042,11 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
   // svt_config.encoder_bit_depth was taken from the first frame of the sequence,
   // while the plane pointers handed to SVT below are this frame's.
   input_error = check_sequence_frame_bit_depth(image, encoder->svt_config.encoder_bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

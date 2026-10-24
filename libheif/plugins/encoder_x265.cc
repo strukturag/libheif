@@ -64,6 +64,8 @@ struct encoder_struct_x265
   x265_param* param = nullptr;
 
   int bit_depth = 0;
+  int input_width = 0;
+  int input_height = 0;
 
   heif_chroma chroma;
 
@@ -1038,6 +1040,8 @@ static heif_error x265_start_sequence_encoding_intern(void* encoder_raw, const h
 
   param->sourceWidth = heif_image_get_width(image, heif_channel_Y);
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = param->sourceWidth;
+  encoder->input_height = param->sourceHeight;
   param->internalBitDepth = bit_depth;
 
   param->sourceWidth = rounded_size(param->sourceWidth);
@@ -1126,6 +1130,11 @@ static heif_error x265_encode_sequence_frame(void* encoder_raw, const heif_image
   // pointers are this frame's. A deeper first frame would make libx265 read the
   // planes of a shallower later frame at two bytes per sample.
   input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

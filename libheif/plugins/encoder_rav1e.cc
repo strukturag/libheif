@@ -63,6 +63,8 @@ struct encoder_struct_rav1e
 
   // bit depth the context was created with, to check the later frames of a sequence against
   int bit_depth = 8;
+  int input_width = 0;
+  int input_height = 0;
 
   // --- output
 
@@ -609,6 +611,8 @@ heif_error rav1e_start_sequence_encoding_intern(void* encoder_raw, const heif_im
   if (rav1e_config_parse_int(rav1eConfig.get(), "height", heif_image_get_height(image, heif_channel_Y)) == -1) {
     return heif_error_codec_library_error;
   }
+  encoder->input_width = heif_image_get_width(image, heif_channel_Y);
+  encoder->input_height = heif_image_get_height(image, heif_channel_Y);
   if (rav1e_config_parse_int(rav1eConfig.get(), "threads", encoder->threads) == -1) {
     return heif_error_codec_library_error;
   }
@@ -695,6 +699,11 @@ heif_error rav1e_encode_sequence_frame(void* encoder_raw, const heif_image* imag
   // created with, from the first frame of the sequence, while byteWidth is this
   // frame's.
   input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

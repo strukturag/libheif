@@ -100,6 +100,8 @@ struct encoder_struct_aom
 
   // bit depth the codec was initialized with, to check the later frames of a sequence against
   int bit_depth = 8;
+  int input_width = 0;
+  int input_height = 0;
 
   // --- input
 
@@ -936,6 +938,8 @@ static heif_error aom_start_sequence_encoding_intern(void* encoder_raw, const he
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
   const int source_height = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = source_width;
+  encoder->input_height = source_height;
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
@@ -1281,6 +1285,13 @@ static heif_error aom_encode_sequence_frame(void* encoder_raw, const heif_image*
   // first frame of the sequence. libaom refuses a frame that disagrees with it, but
   // with an error that says nothing about the cause.
   input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
+  // libaom can change resolution after reconfiguring the encoder. This plugin
+  // does not do that yet; lift this check when we support mixed-size sequences.
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

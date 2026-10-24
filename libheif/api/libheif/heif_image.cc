@@ -400,6 +400,12 @@ int heif_image_is_premultiplied_alpha(heif_image* image)
 
 heif_error heif_image_extend_padding_to_size(heif_image* image, int min_physical_width, int min_physical_height)
 {
+  if (min_physical_width < 0 || min_physical_height < 0) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value,
+                 "Cannot extend padding to a negative size."}.error_struct(image->image.get());
+  }
+
   Error err = image->image->extend_padding_to_size(min_physical_width, min_physical_height, false, nullptr);
   if (err) {
     return err.error_struct(image->image.get());

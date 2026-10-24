@@ -160,4 +160,21 @@ static inline heif_error check_sequence_frame_bit_depth(const heif_image* image,
   return heif_error_ok;
 }
 
+
+// These plugins open one encoder instance with dimensions taken from the first
+// frame. Reject later frames of a different size before handing their planes
+// to an encoder configured for the old size.
+static inline heif_error check_sequence_frame_size(const heif_image* image,
+                                                   int configured_width, int configured_height)
+{
+  if (heif_image_get_width(image, heif_channel_Y) != configured_width ||
+      heif_image_get_height(image, heif_channel_Y) != configured_height) {
+    return heif_error{heif_error_Invalid_input,
+                      heif_suberror_Unspecified,
+                      "All frames of a sequence must have the size of the first frame"};
+  }
+
+  return heif_error_ok;
+}
+
 #endif // LIBHEIF_ENCODER_INPUT_CHECK_H

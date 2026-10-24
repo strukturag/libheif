@@ -96,6 +96,8 @@ struct encoder_struct_x264
 
   uintptr_t out_frameNr = 0;
   int bit_depth = 0;
+  int input_width = 0;
+  int input_height = 0;
 
   heif_chroma chroma;
 
@@ -927,6 +929,8 @@ static heif_error x264_start_sequence_encoding_intern(void* encoder_raw, const h
 
   param.i_width = heif_image_get_width(image, heif_channel_Y);
   param.i_height = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = param.i_width;
+  encoder->input_height = param.i_height;
   //param->internalBitDepth = bit_depth;
 
   param.i_width = rounded_size(param.i_width);
@@ -1011,6 +1015,11 @@ static heif_error x264_encode_sequence_frame(void* encoder_raw, const heif_image
   // pic.img.i_csp below carries the X264_CSP_HIGH_DEPTH flag of the first frame
   // of the sequence, while the plane pointers are this frame's.
   input_error = check_sequence_frame_bit_depth(image, encoder->bit_depth);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
   if (input_error.code != heif_error_Ok) {
     return input_error;
   }

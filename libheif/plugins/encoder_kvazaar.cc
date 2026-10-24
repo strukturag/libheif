@@ -59,6 +59,8 @@ struct encoder_struct_kvazaar
   const kvz_api* api = nullptr;
   kvz_config* config = nullptr;
   kvz_encoder* kvzencoder = nullptr;
+  int input_width = 0;
+  int input_height = 0;
 
   // --- output
 
@@ -518,6 +520,8 @@ static heif_error kvazaar_start_sequence_encoding_intern(void* encoder_raw, cons
 
   int input_width = heif_image_get_width(image, heif_channel_Y);
   int input_height = heif_image_get_height(image, heif_channel_Y);
+  encoder->input_width = input_width;
+  encoder->input_height = input_height;
 
   uint32_t encoded_width, encoded_height;
   kvazaar_query_encoded_size(encoder_raw, input_width, input_height, &encoded_width, &encoded_height);
@@ -683,6 +687,11 @@ static heif_error kvazaar_encode_sequence_frame(void* encoder_raw, const heif_im
   }
 
   encoder_struct_kvazaar* encoder = (encoder_struct_kvazaar*) encoder_raw;
+
+  input_error = check_sequence_frame_size(image, encoder->input_width, encoder->input_height);
+  if (input_error.code != heif_error_Ok) {
+    return input_error;
+  }
 
   // Note: it is ok to cast away the const, as the image content is not changed.
   // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
