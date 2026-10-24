@@ -26,6 +26,7 @@
 
 #include "catch_amalgamated.hpp"
 #include "codecs/avc_boxes.h"
+#include "codecs/avc_dec.h"
 #include "codecs/decoder.h"
 #include "error.h"
 #include <cstdint>
@@ -185,4 +186,46 @@ TEST_CASE("AVC SPS conformance window crop units") {
     REQUIRE(width == 150);
     REQUIRE(height == 152);
   }
+}
+
+
+TEST_CASE("AVC coded-size scan rejects an unparseable SPS")
+{
+  // Baseline profile SPS for a 64x64 picture without cropping.
+  const std::vector<uint8_t> valid_sps{
+      0x67, 0x42, 0xc0, 0x0a, 0xda, 0x10, 0x9c, 0x9d};
+
+  // The same SPS with frame_crop_top_offset = 2^14+1 and
+  // frame_crop_bottom_offset = 2^31-2^14-1. The latter has a 30-zero
+  // Exp-Golomb prefix that libheif rejects. It must not reach the decoder.
+  const std::vector<uint8_t> invalid_sps{
+      0x67, 0x42, 0xc0, 0x0a, 0xda, 0x10, 0x9c, 0x90, 0x00, 0x20,
+      0x01, 0x00, 0x00, 0x03, 0x00, 0x01, 0xff, 0xff, 0x00, 0x01};
+
+  std::vector<uint8_t> data;
+  auto append_nal = [&data](std::vector<uint8_t> nal, uint8_t nal_header) {
+    nal[0] = nal_header;
+    uint32_t size = static_cast<uint32_t>(nal.size());
+    data.push_back(static_cast<uint8_t>(size >> 24));
+    data.push_back(static_cast<uint8_t>(size >> 16));
+    data.push_back(static_cast<uint8_t>(size >> 8));
+    data.push_back(static_cast<uint8_t>(size));
+    data.insert(data.end(), nal.begin(), nal.end());
+  };
+
+  Decoder_AVC decoder(std::make_shared<Box_avcC>());
+
+  SECTION("ordinary SPS") {
+    append_nal(valid_sps, 0x67);
+    append_nal(invalid_sps, 0x67);
+  }
+
+  SECTION("subset SPS") {
+    append_nal(valid_sps, 0x67);
+    append_nal(invalid_sps, 0x6f);
+  }
+
+  auto result = decoder.get_max_coded_image_size(data);
+  REQUIRE(result.is_error());
+  CHECK(result.error().error_code == heif_error_Invalid_input);
 }
