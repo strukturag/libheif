@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <vector>
 #include "exif.h"
 
 #include "common_utils.h"
@@ -109,61 +110,73 @@ static uint32_t find_exif_tag_in_ifd(const uint8_t* exif, uint32_t size,
                                      uint32_t ifd_offset,
                                      uint16_t query_tag,
                                      bool littleEndian,
-                                     int recursion_depth)
+                                     uint32_t remaining_bytes)
 {
-  const int MAX_IFD_TABLE_RECURSION_DEPTH = 5;
+  struct IFDFrame {
+    uint32_t offset;
+    uint16_t count = 0;
+    uint16_t next_entry = 0;
+    bool initialized = false;
+  };
 
-  if (recursion_depth > MAX_IFD_TABLE_RECURSION_DEPTH) {
-    return 0;
-  }
+  std::vector<IFDFrame> stack;
+  stack.push_back({ifd_offset});
 
-  uint32_t offset = ifd_offset;
+  while (!stack.empty()) {
+    IFDFrame& frame = stack.back();
+    uint32_t offset = frame.offset;
 
-  // is offset valid (i.e. can we read at least the 'size' field and the pointer to the next IFD ?)
-  if (offset == 0) {
-    return 0;
-  }
+    if (!frame.initialized) {
+      if (offset == 0 || size < 6 || offset > size - 6) {
+        stack.pop_back();
+        continue;
+      }
 
-  if (size < 6 || size - 2 - 4 < offset) {
-    return 0;
-  }
+      uint16_t count = read16(exif, size, offset, littleEndian);
+      uint32_t table_size = 2U + count * 12U + 4U;
+      if (table_size > size - offset) {
+        stack.pop_back();
+        continue;
+      }
 
-  uint16_t cnt = read16(exif, size, offset, littleEndian);
+      // Charge the whole IFD, including the next-IFD pointer. Repeated visits
+      // consume the budget even when an IFD has no entries.
+      if (table_size > remaining_bytes) {
+        stack.pop_back();
+        continue;
+      }
+      remaining_bytes -= table_size;
 
-  // Does the IFD table fit into our memory range? We need this check to prevent an underflow in the following statement.
-  uint32_t IFD_table_size = 2U + cnt * 12U + 4U;
-  if (IFD_table_size > size) {
-    return 0;
-  }
-
-  // end of IFD table would exceed the end of the EXIF data
-  // offset + IFD_table_size > size ?
-  if (size - IFD_table_size < offset) {
-    return 0;
-  }
-
-  for (int i = 0; i < cnt; i++) {
-    int tag = read16(exif, size, offset + 2 + i * 12, littleEndian);
-    if (tag == query_tag) {
-      return offset + 2 + i * 12;
+      frame.count = count;
+      frame.initialized = true;
     }
 
-    if (tag == EXIF_TAG_EXIF_IFD_POINTER) {
-      uint32_t exifIFD_offset = read32(exif, size, offset + 2 + i * 12 + 8, littleEndian);
-      uint32_t tag_position = find_exif_tag_in_ifd(exif, size, exifIFD_offset, query_tag, littleEndian,
-                                                   recursion_depth + 1);
-      if (tag_position) {
-        return tag_position;
+    if (frame.next_entry < frame.count) {
+      uint32_t entry_offset = offset + 2U + frame.next_entry * 12U;
+      frame.next_entry++;
+      uint16_t tag = read16(exif, size, entry_offset, littleEndian);
+      if (tag == query_tag) {
+        return entry_offset;
+      }
+
+      if (tag == EXIF_TAG_EXIF_IFD_POINTER) {
+        uint32_t exif_ifd_offset = read32(exif, size, entry_offset + 8, littleEndian);
+        if (exif_ifd_offset != 0) {
+          stack.push_back({exif_ifd_offset});
+        }
+      }
+    }
+    else {
+      uint32_t next_offset_pos = offset + 2U + frame.count * 12U;
+      uint32_t next_ifd_offset = read32(exif, size, next_offset_pos, littleEndian);
+      stack.pop_back();
+      if (next_ifd_offset != 0) {
+        stack.push_back({next_ifd_offset});
       }
     }
   }
 
-  // continue with next IFD table
-
-  uint32_t pos = offset + 2 + cnt * 12;
-  uint32_t next_ifd_offset = read32(exif, size, pos, littleEndian);
-
-  return find_exif_tag_in_ifd(exif, size, next_ifd_offset, query_tag, littleEndian, recursion_depth + 1);
+  return 0;
 }
 
 
@@ -192,7 +205,7 @@ static uint32_t find_exif_tag(const uint8_t* exif, uint32_t size, uint16_t query
   uint32_t offset;
   offset = read32(exif, size, 4, littleEndian);
 
-  uint32_t tag_position = find_exif_tag_in_ifd(exif, size, offset, query_tag, littleEndian, 1);
+  uint32_t tag_position = find_exif_tag_in_ifd(exif, size, offset, query_tag, littleEndian, size);
   return tag_position;
 }
 
