@@ -1254,6 +1254,52 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     }
   }
 
+  // --- validate and limit image transformations before decoding derived inputs
+
+  Result<std::vector<std::shared_ptr<Box>>> properties_result = get_properties();
+  if (!properties_result) {
+    return properties_result.error();
+  }
+
+  bool has_rotation = false;
+  bool has_mirror = false;
+  bool has_crop = false;
+  for (const auto& property : *properties_result) {
+    bool* seen = nullptr;
+    bool applied = true;
+    if (std::dynamic_pointer_cast<Box_irot>(property)) {
+      seen = &has_rotation;
+    }
+    else if (std::dynamic_pointer_cast<Box_imir>(property)) {
+      seen = &has_mirror;
+    }
+    else if (std::dynamic_pointer_cast<Box_clap>(property)) {
+      seen = &has_crop;
+      applied = !decode_tile_only; // A tile uses a shifted grid instead of a crop.
+    }
+
+    if (seen) {
+      // HEIF permits at most one association of each type per item, even when
+      // the same property index appears repeatedly in 'ipma'.
+      if (*seen) {
+        return Error{heif_error_Invalid_input, heif_suberror_Invalid_property,
+                     "Multiple irot, imir, or clap properties associated with one item"};
+      }
+      *seen = true;
+      if (applied && !options.ignore_transformations) {
+        ++decode_state.num_transformations;
+      }
+    }
+  }
+
+  // A derived-image chain can apply one full-image pass at each item. The state
+  // is copied by value at each hop, so this bounds each decode path separately.
+  if (decode_state.max_transformations != 0 &&
+      decode_state.num_transformations > decode_state.max_transformations) {
+    return Error{heif_error_Invalid_input, heif_suberror_Security_limit_exceeded,
+                 "Too many image transformations along the decode path"};
+  }
+
   // --- decode image
 
   Result<std::shared_ptr<HeifPixelImage>> decodingResult = decode_compressed_image(options, decode_coded_tile_only, tile_x0, tile_y0, decode_state);
@@ -1286,12 +1332,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   // --- apply image transformations
 
   if (options.ignore_transformations == false) {
-    Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-    if (!propertiesResult) {
-      return propertiesResult.error();
-    }
-
-    const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
+    const std::vector<std::shared_ptr<Box>>& properties = *properties_result;
 
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {

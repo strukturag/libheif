@@ -1531,6 +1531,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     uint64_t budget = static_cast<uint64_t>(limits->max_items) * MAX_DERIVED_IMAGE_DECODE_FACTOR;
     decode_state.max_decodes = (budget > UINT32_MAX) ? UINT32_MAX : static_cast<uint32_t>(budget);
     decode_state.max_overlay_nesting = MAX_OVERLAY_NESTING_LEVEL;
+    decode_state.max_transformations = MAX_TRANSFORMATIONS_PER_DECODE_PATH;
     decode_state.decode_count = std::make_shared<std::atomic<uint32_t>>(0);
   }
 
