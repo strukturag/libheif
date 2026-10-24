@@ -282,8 +282,13 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(cons
 }
 
 
-Result<std::vector<uint8_t>> Decoder::get_compressed_data(bool with_configuration_NALs) const
+Result<std::vector<uint8_t>> Decoder::get_compressed_data(bool with_configuration_NALs,
+                                                          size_t* out_configuration_data_size) const
 {
+  if (out_configuration_data_size) {
+    *out_configuration_data_size = 0;
+  }
+
   // --- get the compressed image data
 
   if (with_configuration_NALs) {
@@ -295,6 +300,9 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data(bool with_configuratio
     }
 
     std::vector<uint8_t> data = *confData;
+    if (out_configuration_data_size) {
+      *out_configuration_data_size = data.size();
+    }
 
     // append image data
 
@@ -470,7 +478,8 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
   // Fetch the compressed data once. The same buffer is used both to enforce the
   // security limits below and to feed the decoder, so we neither re-read the
   // iloc extents nor rebuild the combined config+bitstream buffer twice.
-  auto dataResult = get_compressed_data(upload_configuration_NALs);
+  size_t configuration_data_size = 0;
+  auto dataResult = get_compressed_data(upload_configuration_NALs, &configuration_data_size);
   if (!dataResult) {
     return dataResult.error();
   }
@@ -486,6 +495,11 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
     };
   }
 
+  Error prepareErr = prepare_compressed_data_for_decoding(*dataResult, configuration_data_size);
+  if (prepareErr) {
+    return prepareErr;
+  }
+
   // Reject memory-bomb inputs whose coded picture size exceeds libheif's
   // security limits, before handing any bytes to the decoder plugin. The coded
   // (pre-crop) size the decoder will allocate lives in the bitstream: the SPS for
@@ -494,7 +508,7 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
   // an SPS may sit in the item data rather than only in the config record, so we
   // scan the whole buffer that is about to be pushed. Codecs that expose no coded
   // size return nullopt and skip the check.
-  auto codedSize = get_max_coded_image_size(*dataResult);
+  auto codedSize = get_max_coded_image_size(*dataResult, configuration_data_size);
   if (codedSize.is_error()) {
     return codedSize.error();
   }

@@ -34,8 +34,10 @@
 // combined config+bitstream buffer for the largest coded size and rejects it
 // against the (ispe-tightened) security limits before any decoder plugin runs.
 //
-// Each file below carries a 64x64 (HEVC: 320x240) 'ispe' but an oversized coded
-// size in the bitstream, and must be rejected with a security-limit error.
+// Most files below carry a 64x64 (HEVC: 320x240) 'ispe' but an oversized coded
+// size in the bitstream, and must be rejected with a security-limit error. The
+// unsized-OBU AVIF instead verifies that its apparent second picture remains
+// payload of the terminal OBU and is never decoded.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
@@ -100,6 +102,37 @@ void expect_security_reject(heif_compression_format format, const char* b64) {
   heif_context_free(ctx);
 }
 
+// Assert that normalizing a terminal unsized OBU prevents a decoder from
+// resynchronizing on bytes inside that OBU's payload.
+void expect_safe_av1_decode(const char* b64) {
+  if (!heif_have_decoder_for_format(heif_compression_AV1)) {
+    SKIP("no AV1 decoder built, skipping");
+  }
+
+  std::vector<uint8_t> data = base64_decode(b64);
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(handle != nullptr);
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(img != nullptr);
+  CHECK(heif_image_get_primary_width(img) == 64);
+  CHECK(heif_image_get_primary_height(img) == 64);
+
+  heif_image_release(img);
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
 // HEVC item, 320x240 ispe, with an extra SPS (declaring 2000x2000) injected into
 // the item data. The hvcC SPS (320x240) passes the tightened limit, so only the
 // in-band 2000x2000 SPS can trip the gate.
@@ -148,11 +181,31 @@ const char* kAvifPocB64 =
   "mLGOwbZyMlmA0easG5s7ljg1k8Hjl6lwngAo89cMZZgd5Q0mv6aYsY7BtnIyWYDR5qwbmzuWODWTweOXqXCe"
 ;
 
+// AVIF item with a 64x64 ispe and picture, followed by a zero byte and bytes
+// encoding a complete 8192x8192 picture. The zero byte is a terminal OBU header
+// without a size field, so all remaining bytes are its payload. Unnormalized,
+// some decoders skip that header and continue with the apparent second picture.
+const char* kAvifUnknownObuSizeB64 =
+  "AAAAHGZ0eXBhdmlmAAAAAG1pZjFhdmlmbWlhZgAAANBtZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAA"
+  "AA5waXRtAAAAAAABAAAAHmlsb2MAAAAARAAAAQABAAAAAQAAAPQAAAHaAAAAI2lpbmYAAAAAAAEAAAAVaW5mZQIAAAAAAQAAYXYw"
+  "MQAAAABUaXBycAAAADZpcGNvAAAADGF2MUOBABwAAAAAFGlzcGUAAAAAAAAAQAAAAEAAAAAOcGl4aQAAAAABCAAAABZpcG1hAAAA"
+  "AAAAAAEAAQOBAgMAAAHibWRhdBIACgYYFX/9hUAyCRgAKKEAvQSfQAASAAoHH/M////+FTK2AxgIACihAAA09cchURGzwfjl07r5"
+  "Ic88I4pqhhpYj1YI07VQ0BKJY+7ObKwfvTSKh+JL9/B5D0mr/b/3RZw09cchURGzwfjl07r5Ic88I4pqhhpYj1YI07VQ0BKJY+7O"
+  "bKwfvTSKh+JL9/B5D0mr/b/3RZw09cchURGzwfjl07r5Ic88I4pqhhpYj1YI07VQ0BKJY+7ObKwfvTSKh+JL9/B5D0mr/b/3RZw0"
+  "9cchURGzwfjl07r5Ic88I4pqhhpYj1YI07VQ0BKJY+7ObKwfvTSKh+JL9/B5D0mr/b/3RZw09cchURGzwfjl07r5Ic88I4pqhhpY"
+  "j1YI07VQ0BKJY+7ObKwfvTSKh+JL9/B5D0mr/b/3RZw09cchURGzwfjl07r5Ic88I4pqhhpYj1YI07VQ0BKJY+7ObKwfvTSKh+JL"
+  "9/B5D0mr/b/3RZw09cchURGzwfjl07r5Ic88I4pqhhpYj1YI07VQ0BKJY+7ObKwfvTSKh+JL9/B5D0mr/b/3RZz1xyFREbPB+OXT"
+  "uvkhzzwjimqGGliPVgjTtVDQEolj7s5srB+9NIqH4kv38HkPSav9v/dFnA==";
+
 } // namespace
 
 
 TEST_CASE("avif: reject in-band AV1 sequence header exceeding the security limit") {
   expect_security_reject(heif_compression_AV1, kAvifPocB64);
+}
+
+TEST_CASE("avif: terminal unsized OBU prevents decoder resynchronization") {
+  expect_safe_av1_decode(kAvifUnknownObuSizeB64);
 }
 
 TEST_CASE("hevc: reject in-band SPS exceeding the security limit") {

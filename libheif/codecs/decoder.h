@@ -142,7 +142,25 @@ public:
     return std::optional<ImageSize>{};
   }
 
-  Result<std::vector<uint8_t>> get_compressed_data(bool with_configuration_NALs) const;
+  // As above, with the length of the configuration-data prefix supplied for
+  // codecs whose framing rules differ between configuration and sample data.
+  [[nodiscard]] virtual Result<std::optional<ImageSize>>
+  get_max_coded_image_size(const std::vector<uint8_t>& compressed_data,
+                           size_t /*configuration_data_size*/) const
+  {
+    return get_max_coded_image_size(compressed_data);
+  }
+
+  // Normalize codec framing in the exact buffer that will be checked and sent
+  // to the decoder. Most codecs need no transformation.
+  virtual Error prepare_compressed_data_for_decoding(std::vector<uint8_t>& /*compressed_data*/,
+                                                     size_t /*configuration_data_size*/) const
+  {
+    return Error::Ok;
+  }
+
+  Result<std::vector<uint8_t>> get_compressed_data(bool with_configuration_NALs,
+                                                   size_t* out_configuration_data_size = nullptr) const;
 
   // --- decoding
 

@@ -269,31 +269,41 @@ Error Box_a1lx::write(StreamWriter& writer) const
 }
 
 
-static uint64_t leb128(BitReader& reader)
+static bool leb128(BitReader& reader, uint64_t* out_value)
 {
   uint64_t val = 0;
   for (int i = 0; i < 8; i++) {
+    if (reader.get_bits_remaining() < 8) {
+      return false;
+    }
+
     int64_t v = reader.get_bits(8);
     val |= (v & 0x7F) << (i * 7);
     if (!(v & 0x80)) {
-      break;
+      *out_value = val;
+      return true;
     }
   }
 
-  return val;
+  return false;
 }
 
 
 struct obu_header_info
 {
-  int type;
-  bool has_size;
+  int type = 0;
+  bool has_size = false;
+  bool valid = false;
   uint64_t size = 0;
 };
 
 static obu_header_info read_obu_header_type(BitReader& reader)
 {
   obu_header_info info;
+
+  if (reader.get_bits_remaining() < 8) {
+    return info;
+  }
 
   reader.skip_bits(1);
   info.type = reader.get_bits(4);
@@ -302,13 +312,19 @@ static obu_header_info read_obu_header_type(BitReader& reader)
   reader.skip_bits(1);
 
   if (has_extension) {
+    if (reader.get_bits_remaining() < 8) {
+      return info;
+    }
     reader.skip_bits(8);
   }
 
   if (info.has_size) {
-    info.size = leb128(reader);
+    if (!leb128(reader, &info.size)) {
+      return info;
+    }
   }
 
+  info.valid = true;
   return info;
 }
 
@@ -336,6 +352,9 @@ bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, co
 
   while (reader.get_bits_remaining() > 0) {
     obu_header_info header_info = read_obu_header_type(reader);
+    if (!header_info.valid) {
+      return false;
+    }
     if (header_info.type == HEIF_OBU_SEQUENCE_HEADER) {
       seq_header_found = true;
       break;
@@ -651,19 +670,94 @@ static bool parse_av1_seq_header_max_frame_size(BitReader& reader,
 }
 
 
-bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
-                                       uint32_t* out_max_width, uint32_t* out_max_height)
+Error normalize_av1_sample_data(std::vector<uint8_t>& data, size_t sample_offset)
 {
-  // The combined AV1 bitstream that libheif pushes to a decoder plugin consists
-  // of the av1C configOBUs followed by the item/sample data. A conforming AVIF
-  // carries exactly one OBU_SEQUENCE_HEADER in the item data (and may duplicate
-  // it in configOBUs). We walk every OBU and keep the largest frame size found
-  // in any sequence header, because that is the buffer a decoder will allocate,
-  // independent of the (possibly much smaller) 'ispe' dimensions.
+  if (sample_offset > data.size()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "AV1 stream was rejected because its sample-data offset is invalid."};
+  }
 
-  if (data == nullptr || dataSize == 0 ||
-      dataSize > (size_t) std::numeric_limits<int>::max()) {
+  size_t pos = sample_offset;
+  while (pos < data.size()) {
+    size_t header_pos = pos++;
+    uint8_t header = data[header_pos];
+    bool has_extension = (header & 0x04) != 0;
+    bool has_size = (header & 0x02) != 0;
+
+    if (has_extension) {
+      if (pos == data.size()) {
+        return Error{heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "AV1 stream was rejected because an OBU header is truncated."};
+      }
+      pos++;
+    }
+
+    if (!has_size) {
+      // AV1 ISOBMFF permits only the last OBU in a sample to omit its size. Its
+      // payload is therefore the complete sample remainder. Make that framing
+      // explicit before either the security scanner or decoder sees the bytes.
+      uint64_t payload_size = data.size() - pos;
+      std::vector<uint8_t> encoded_size;
+      do {
+        uint8_t byte = payload_size & 0x7f;
+        payload_size >>= 7;
+        if (payload_size != 0) {
+          byte |= 0x80;
+        }
+        encoded_size.push_back(byte);
+      } while (payload_size != 0);
+
+      data[header_pos] |= 0x02;
+      data.insert(data.begin() + static_cast<std::ptrdiff_t>(pos),
+                  encoded_size.begin(), encoded_size.end());
+      return Error::Ok;
+    }
+
+    uint64_t payload_size = 0;
+    bool size_complete = false;
+    for (int i = 0; i < 8 && pos < data.size(); i++) {
+      uint8_t byte = data[pos++];
+      payload_size |= static_cast<uint64_t>(byte & 0x7f) << (i * 7);
+      if ((byte & 0x80) == 0) {
+        size_complete = true;
+        break;
+      }
+    }
+
+    if (!size_complete) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because an OBU size is truncated."};
+    }
+    if (payload_size > data.size() - pos) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because an OBU size exceeds the remaining data."};
+    }
+
+    pos += static_cast<size_t>(payload_size);
+  }
+
+  return Error::Ok;
+}
+
+
+Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
+                                               uint32_t* out_max_width, uint32_t* out_max_height)
+{
+  // Walk every OBU and keep the largest frame size found in any sequence header,
+  // because that is the buffer a decoder will allocate, independent of the
+  // (possibly much smaller) 'ispe' dimensions.
+
+  if (dataSize == 0) {
     return false;
+  }
+  if (data == nullptr || dataSize > (size_t) std::numeric_limits<int>::max()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "AV1 stream was rejected because it cannot be scanned completely."};
   }
 
   BitReader reader(data, (int) dataSize);
@@ -675,9 +769,16 @@ bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
   while (reader.get_bits_remaining() >= 8) {
     obu_header_info header = read_obu_header_type(reader);
 
-    // read_obu_header_type() may read past the end on truncated input.
-    if (reader.get_bits_remaining() < 0) {
-      break;
+    if (!header.valid) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because an OBU header or size is truncated."};
+    }
+
+    if (!header.has_size) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because of an unknown OBU header size."};
     }
 
     // The reader is byte-aligned after the OBU header; this is where the payload
@@ -685,41 +786,35 @@ bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
     // payload so that neither the seq-header parse nor a following OBU can read
     // across the declared OBU boundary.
     size_t payload_start = reader.get_current_byte_index();
-    if (payload_start >= dataSize) {
-      break;
+    if (payload_start > dataSize || header.size > dataSize - payload_start) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because an OBU size exceeds the remaining data."};
     }
+
+    size_t payload_len = (size_t) header.size;
 
     if (header.type == HEIF_OBU_SEQUENCE_HEADER) {
-      size_t avail = dataSize - payload_start;
-      size_t payload_len = avail;
-      if (header.has_size && header.size < payload_len) {
-        payload_len = (size_t) header.size;
-      }
-
       BitReader seq_reader(data + payload_start, (int) payload_len);
       uint32_t w = 0, h = 0;
-      if (parse_av1_seq_header_max_frame_size(seq_reader, &w, &h)) {
-        found = true;
-        // Track the largest width and height independently. A conforming file
-        // has a single sequence header (the AVIF spec even requires identical
-        // headers when several are present), so this equals that header's size.
-        // For a non-conforming file with differing headers it over-approximates
-        // rather than under-approximates the buffer any frame could demand,
-        // which is the safe direction for a security gate.
-        max_width = std::max(max_width, w);
-        max_height = std::max(max_height, h);
+      if (!parse_av1_seq_header_max_frame_size(seq_reader, &w, &h)) {
+        return Error{heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "AV1 stream was rejected because a sequence header cannot be scanned completely."};
       }
+
+      found = true;
+      // Track the largest width and height independently. A conforming file
+      // has a single sequence header (the AVIF spec even requires identical
+      // headers when several are present), so this equals that header's size.
+      // For a non-conforming file with differing headers it over-approximates
+      // rather than under-approximates the buffer any frame could demand,
+      // which is the safe direction for a security gate.
+      max_width = std::max(max_width, w);
+      max_height = std::max(max_height, h);
     }
 
-    // Advance to the next OBU. Without an explicit size we cannot locate it.
-    if (!header.has_size) {
-      break;
-    }
-    if (header.size > (uint64_t) std::numeric_limits<int>::max()) {
-      break;
-    }
-
-    reader.skip_bytes((uint32_t) header.size);
+    reader.skip_bytes((uint32_t) payload_len);
   }
 
   if (found) {
