@@ -70,6 +70,7 @@ private:
 
   Error parse_SOF();
   Error parse_SOF(const std::vector<uint8_t>& data);
+  static Error parse_SOF(const std::vector<uint8_t>& data, ConfigInfo* out_config);
 };
 
 #endif

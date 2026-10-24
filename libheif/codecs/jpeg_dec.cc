@@ -66,6 +66,17 @@ Error Decoder_JPEG::parse_SOF(const std::vector<uint8_t>& data)
     return Error::Ok;
   }
 
+  ConfigInfo info;
+  Error err = parse_SOF(data, &info);
+  if (!err) {
+    m_config = info;
+  }
+  return err;
+}
+
+
+Error Decoder_JPEG::parse_SOF(const std::vector<uint8_t>& data, ConfigInfo* out_config)
+{
   Error error_invalidSOF{heif_error_Invalid_input,
                                heif_suberror_Unspecified,
                                "Invalid JPEG SOF header"};
@@ -123,7 +134,7 @@ Error Decoder_JPEG::parse_SOF(const std::vector<uint8_t>& data)
         }
       }
 
-      m_config = info;
+      *out_config = info;
 
       return Error::Ok;
     }
@@ -157,17 +168,18 @@ Result<std::optional<ImageSize>> Decoder_JPEG::get_max_coded_image_size(const st
   // separate configuration record that carries it). `compressed_data` is the
   // buffer about to be handed to the decoder, so an oversized SOF is caught here
   // before libjpeg allocates, regardless of the (possibly tiny) 'ispe'.
-  Error err = const_cast<Decoder_JPEG*>(this)->parse_SOF(compressed_data);
+  // Parse this exact buffer rather than reusing m_config. A sequence decoder is
+  // reused across samples, and every sample can carry a different SOF.
+  ConfigInfo config;
+  Error err = parse_SOF(compressed_data, &config);
   if (err) {
-    // No parseable SOF marker: skip the gate and let the decoder handle it.
-    return std::optional<ImageSize>{};
+    // A JPEG decoder must find the same SOF before allocating its image. If we
+    // cannot parse it, a different or future backend must not receive unchecked
+    // dimensions.
+    return err;
   }
 
-  if (m_config->coded_width == 0 || m_config->coded_height == 0) {
-    return std::optional<ImageSize>{};
-  }
-
-  return std::optional<ImageSize>{ImageSize{m_config->coded_width, m_config->coded_height}};
+  return std::optional<ImageSize>{ImageSize{config.coded_width, config.coded_height}};
 }
 
 
