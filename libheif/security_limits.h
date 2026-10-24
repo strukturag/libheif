@@ -64,14 +64,25 @@ static const uint32_t MAX_OVERLAY_IMAGES = 5;
 // leaving every realistic file untouched.  (GHSA-x8xm-cm2c-cfc8, variants V1/V2.)
 static const uint32_t MAX_DERIVED_IMAGE_DECODE_FACTOR = 2;
 
+// Maximum number of transformative properties ('irot', 'imir', 'clap') that may be
+// applied along a single decode path, i.e. by an item and all the derived images
+// (grid, iovl, iden) through which it is reached. Each one is a pass over the whole
+// image, 'ipma' can associate up to 255 properties with an item (also the same one
+// again and again), and each item of an 'iden' chain applies its own list to the same
+// image. HEIF allows one property of each type per item, but chains can add many
+// items, so this bounds the total amount of repeated pixel processing.
+static const uint32_t MAX_TRANSFORMATIONS_PER_DECODE_PATH = 32;
+
 
 // Traversal state threaded through the derived-image decode recursion for one
 // top-level decode. It is copied by value at every hop, which gives the two
 // members opposite (and intended) sharing semantics:
 //
-//   - processed_ids and overlay_nesting are plain values, so each recursion
-//     branch gets its own copy. processed_ids is a per-path cycle guard;
-//     overlay_nesting counts the overlays nested along the current path.
+//   - processed_ids, overlay_nesting and num_transformations are plain values,
+//     so each recursion branch gets its own copy. processed_ids is a per-path
+//     cycle guard; overlay_nesting counts the overlays nested along the current
+//     path; num_transformations counts the transformative properties of the
+//     items along the current path.
 //
 //   - decode_count is a shared_ptr to an atomic, so every copy (including the
 //     copies handed to parallel tile-decode threads) shares one global counter
@@ -85,6 +96,9 @@ struct DecodeTraversalState
 
   uint32_t overlay_nesting = 0;         // number of overlays on the path to here
   uint32_t max_overlay_nesting = 0;     // 0 == unlimited
+
+  uint32_t num_transformations = 0;     // number of transformations on the path to here
+  uint32_t max_transformations = 0;     // 0 == unlimited
 
   std::shared_ptr<std::atomic<uint32_t>> decode_count;
   uint32_t max_decodes = 0;             // 0 == unlimited
