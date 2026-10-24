@@ -52,6 +52,52 @@ static void append_sequence_header(std::vector<uint8_t>& data, uint32_t width, u
 }
 
 
+static void append_sequence_header_with_uvlc(std::vector<uint8_t>& data,
+                                             uint32_t width, uint32_t height,
+                                             int leading_zeros)
+{
+  BitWriter writer;
+  writer.write_bits(0, 3); // seq_profile
+  writer.write_bits(0, 1); // still_picture
+  writer.write_bits(0, 1); // reduced_still_picture_header
+  writer.write_bits(1, 1); // timing_info_present_flag
+  writer.write_bits(1, 32); // num_units_in_display_tick
+  writer.write_bits(1, 32); // time_scale
+  writer.write_bits(1, 1); // equal_picture_interval
+
+  for (int i = 0; i < leading_zeros; i++) {
+    writer.write_bits(0, 1);
+  }
+  writer.write_bits(1, 1);
+  if (leading_zeros != 0) {
+    writer.write_bits(0, leading_zeros); // uvlc value bits
+  }
+
+  writer.write_bits(0, 1); // decoder_model_info_present_flag
+  writer.write_bits(0, 1); // initial_display_delay_present_flag
+  writer.write_bits(0, 5); // operating_points_cnt_minus_1
+  writer.write_bits(0, 12); // operating_point_idc[0]
+  writer.write_bits(16, 5); // seq_level_idx[0]
+  writer.write_bits(0, 1); // seq_tier[0]
+  writer.write_bits(15, 4); // frame_width_bits_minus_1
+  writer.write_bits(15, 4); // frame_height_bits_minus_1
+  writer.write_bits(width - 1, 16);
+  writer.write_bits(height - 1, 16);
+
+  // Remaining sequence-header fields for an 8-bit 4:2:0 stream, followed by
+  // the trailing_one_bit. These are not needed by the coded-size scanner, but
+  // make the same OBU usable by fill_av1C_configuration_from_stream().
+  writer.write_bits(0b000100101011111001000000000, 27);
+  writer.write_bits(1, 1);
+
+  std::vector<uint8_t> payload = writer.get_data();
+  REQUIRE(payload.size() < 128);
+  data.push_back(0x0a); // obu_type = 1, obu_has_size_field = 1
+  data.push_back(static_cast<uint8_t>(payload.size()));
+  data.insert(data.end(), payload.begin(), payload.end());
+}
+
+
 TEST_CASE("largest of several AV1 sequence headers is found")
 {
   std::vector<uint8_t> data;
@@ -64,6 +110,39 @@ TEST_CASE("largest of several AV1 sequence headers is found")
   REQUIRE(*result);
   CHECK(width == 8192);
   CHECK(height == 4096);
+}
+
+
+TEST_CASE("AV1 sequence-header UVLC permits up to 31 leading zeros")
+{
+  int leading_zeros = GENERATE(21, 31);
+  std::vector<uint8_t> data;
+  append_sequence_header_with_uvlc(data, 8192, 4096, leading_zeros);
+
+  uint32_t width = 0, height = 0;
+  auto result = find_max_av1_frame_size_in_stream(data.data(), data.size(), &width, &height);
+  REQUIRE(result);
+  REQUIRE(*result);
+  CHECK(width == 8192);
+  CHECK(height == 4096);
+
+  Box_av1C::configuration config;
+  CHECK(fill_av1C_configuration_from_stream(&config, data.data(), static_cast<int>(data.size())));
+}
+
+
+TEST_CASE("AV1 sequence-header UVLC rejects 32 leading zeros")
+{
+  std::vector<uint8_t> data;
+  append_sequence_header_with_uvlc(data, 8192, 4096, 32);
+
+  uint32_t width = 0, height = 0;
+  auto result = find_max_av1_frame_size_in_stream(data.data(), data.size(), &width, &height);
+  REQUIRE(result.is_error());
+  CHECK(result.error().message.find("sequence header cannot be scanned completely") != std::string::npos);
+
+  Box_av1C::configuration config;
+  CHECK_FALSE(fill_av1C_configuration_from_stream(&config, data.data(), static_cast<int>(data.size())));
 }
 
 

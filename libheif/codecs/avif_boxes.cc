@@ -289,6 +289,42 @@ static bool leb128(BitReader& reader, uint64_t* out_value)
 }
 
 
+// uvlc() as defined by the AV1 specification. AV1 permits up to 31 leading
+// zero bits. BitReader::get_uvlc() is shared with other codecs and deliberately
+// stops after 20, so using it here would leave the reader in the middle of a
+// valid AV1 code and desynchronize all following fields.
+static bool av1_uvlc(BitReader& reader, uint32_t* out_value)
+{
+  int leading_zeros = 0;
+  while (true) {
+    if (reader.get_bits_remaining() < 1) {
+      return false;
+    }
+
+    if (reader.get_bits(1) != 0) {
+      break;
+    }
+
+    leading_zeros++;
+    if (leading_zeros >= 32) {
+      return false;
+    }
+  }
+
+  if (reader.get_bits_remaining() < leading_zeros) {
+    return false;
+  }
+
+  uint32_t value = (uint32_t{1} << leading_zeros) - 1;
+  if (leading_zeros != 0) {
+    value += reader.get_bits(leading_zeros);
+  }
+
+  *out_value = value;
+  return true;
+}
+
+
 struct obu_header_info
 {
   int type = 0;
@@ -399,7 +435,9 @@ bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, co
       reader.skip_bytes(2 * 4);
       bool equal_picture_interval = reader.get_bits(1);
       if (equal_picture_interval) {
-        reader.get_uvlc(&dummy);
+        if (!av1_uvlc(reader, &dummy)) {
+          return false;
+        }
       }
 
       // --- skip decoder_model_info
@@ -612,7 +650,9 @@ static bool parse_av1_seq_header_max_frame_size(BitReader& reader,
       reader.skip_bytes(2 * 4);
       bool equal_picture_interval = reader.get_bits(1);
       if (equal_picture_interval) {
-        reader.get_uvlc(&dummy);
+        if (!av1_uvlc(reader, &dummy)) {
+          return false;
+        }
       }
 
       // --- skip decoder_model_info
