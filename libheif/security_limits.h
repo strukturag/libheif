@@ -64,16 +64,6 @@ static const uint32_t MAX_OVERLAY_IMAGES = 5;
 // leaving every realistic file untouched.  (GHSA-x8xm-cm2c-cfc8, variants V1/V2.)
 static const uint32_t MAX_DERIVED_IMAGE_DECODE_FACTOR = 2;
 
-// Maximum number of transformative properties ('irot', 'imir', 'clap') that may be
-// applied along a single decode path, i.e. by an item and all the derived images
-// (grid, iovl, iden) through which it is reached. Each one is a pass over the whole
-// image, 'ipma' can associate up to 255 properties with an item (also the same one
-// again and again), and each item of an 'iden' chain applies its own list to the same
-// image. HEIF allows one property of each type per item, but chains can add many
-// items, so this bounds the total amount of repeated pixel processing.
-static const uint32_t MAX_TRANSFORMATIONS_PER_DECODE_PATH = 32;
-
-
 // Traversal state threaded through the derived-image decode recursion for one
 // top-level decode. It is copied by value at every hop, which gives the two
 // members opposite (and intended) sharing semantics:

@@ -69,14 +69,16 @@ heif_security_limits global_security_limits{
 
     // Enforce MIAF derived-image dependency constraints on all files by default,
     // not just those declaring the 'miaf' brand (which an attacker could omit).
-    .always_apply_MIAF_derivation_constraints = 1
+    .always_apply_MIAF_derivation_constraints = 1,
+    .max_transformations_per_decode_path = 32
 };
 
 
 heif_security_limits disabled_security_limits{
     .version = 5,
     .parent = nullptr,
-    .always_apply_MIAF_derivation_constraints = 0
+    .always_apply_MIAF_derivation_constraints = 0,
+    .max_transformations_per_decode_path = 0
 };
 
 

@@ -213,18 +213,28 @@ heif_error decode_primary_image(const std::vector<uint8_t>& data,
   return err;
 }
 
+
+heif_security_limits allow_heif_derivation_chains() {
+  heif_security_limits limits = *heif_get_global_security_limits();
+  // The fixture uses iden-on-iden, which generic HEIF permits but MIAF does not.
+  limits.always_apply_MIAF_derivation_constraints = 0;
+  return limits;
+}
+
 } // namespace
 
 
 TEST_CASE("one transformation per item decodes normally") {
+  heif_security_limits limits = allow_heif_derivation_chains();
   REQUIRE(decode_primary_image(build_heif_with_mirrors(0, 0, 1)).code == heif_error_Ok);
   REQUIRE(decode_primary_image(build_heif_with_mirrors(1, 1, 1)).code == heif_error_Ok);
-  REQUIRE(decode_primary_image(build_heif_with_mirrors(4, 1, 1)).code == heif_error_Ok);
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(4, 1, 1), false, &limits).code == heif_error_Ok);
 }
 
 
 TEST_CASE("a long 'iden' chain without transformations decodes normally") {
-  REQUIRE(decode_primary_image(build_heif_with_mirrors(100, 0, 1)).code == heif_error_Ok);
+  heif_security_limits limits = allow_heif_derivation_chains();
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(100, 0, 1), false, &limits).code == heif_error_Ok);
 }
 
 
@@ -263,15 +273,30 @@ TEST_CASE("a transformative property associated twice with one item is rejected"
 
 
 TEST_CASE("the transformations of the items on an 'iden' chain add up") {
-  REQUIRE(decode_primary_image(build_heif_with_mirrors(31, 1, 1)).code == heif_error_Ok);
-  heif_error err = decode_primary_image(build_heif_with_mirrors(32, 1, 1));
+  heif_security_limits limits = allow_heif_derivation_chains();
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(31, 1, 1), false, &limits).code == heif_error_Ok);
+  heif_error err = decode_primary_image(build_heif_with_mirrors(32, 1, 1), false, &limits);
   REQUIRE(err.code == heif_error_Invalid_input);
   REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
 }
 
 
 TEST_CASE("transformations that are not applied are not counted") {
-  REQUIRE(decode_primary_image(build_heif_with_mirrors(100, 1, 1), true).code == heif_error_Ok);
+  heif_security_limits limits = allow_heif_derivation_chains();
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(100, 1, 1), true, &limits).code == heif_error_Ok);
+}
+
+
+TEST_CASE("the v1.24 security limit is configurable") {
+  heif_security_limits limits = allow_heif_derivation_chains();
+  limits.max_transformations_per_decode_path = 1;
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(0, 0, 1), false, &limits).code == heif_error_Ok);
+  heif_error err = decode_primary_image(build_heif_with_mirrors(1, 1, 1), false, &limits);
+  REQUIRE(err.code == heif_error_Invalid_input);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+
+  limits.max_transformations_per_decode_path = 0;
+  REQUIRE(decode_primary_image(build_heif_with_mirrors(100, 1, 1), false, &limits).code == heif_error_Ok);
 }
 
 

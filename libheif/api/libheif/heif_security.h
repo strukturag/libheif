@@ -96,6 +96,11 @@ typedef struct heif_security_limits
   // brand. Files that do declare the 'miaf' brand are always checked, regardless
   // of this flag.
   uint8_t always_apply_MIAF_derivation_constraints;
+
+  // Maximum number of irot, imir, and clap transformations applied along a
+  // single image decode path, including transformations on derived inputs.
+  // A value of 0 disables this limit. The default is 32.
+  uint16_t max_transformations_per_decode_path;
 } heif_security_limits;
 
 

@@ -216,6 +216,7 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
 
   if (src->version >= 5) {
     dst->always_apply_MIAF_derivation_constraints = src->always_apply_MIAF_derivation_constraints;
+    dst->max_transformations_per_decode_path = src->max_transformations_per_decode_path;
   }
 
   // `parent` is an internal field; user-supplied limits are always treated as
@@ -1512,6 +1513,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   decode_state.processed_ids = std::move(processed_ids);
 
   const heif_security_limits* limits = get_security_limits();
+  decode_state.max_transformations = limits ? limits->max_transformations_per_decode_path : 0;
   if (limits && limits->max_items != 0) {
     // Bound total sub-image decodes at a modest multiple of max_items. A
     // well-formed file decodes each of its (<= max_items) items a small number
@@ -1520,7 +1522,6 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     uint64_t budget = static_cast<uint64_t>(limits->max_items) * MAX_DERIVED_IMAGE_DECODE_FACTOR;
     decode_state.max_decodes = (budget > UINT32_MAX) ? UINT32_MAX : static_cast<uint32_t>(budget);
     decode_state.max_overlay_nesting = MAX_OVERLAY_NESTING_LEVEL;
-    decode_state.max_transformations = MAX_TRANSFORMATIONS_PER_DECODE_PATH;
     decode_state.decode_count = std::make_shared<std::atomic<uint32_t>>(0);
   }
 
