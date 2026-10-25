@@ -217,7 +217,7 @@ heif_error write_to_vector(heif_context*, const void* data, size_t size, void* u
   auto* file = static_cast<std::vector<uint8_t>*>(userdata);
   const uint8_t* bytes = static_cast<const uint8_t*>(data);
   file->insert(file->end(), bytes, bytes + size);
-  return heif_error_success;
+  return heif_error{heif_error_Ok, heif_suberror_Unspecified, nullptr};
 }
 
 typedef std::vector<std::pair<const char*, bool>> CodingTools;
