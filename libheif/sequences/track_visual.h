@@ -96,6 +96,11 @@ private:
   heif_encoder* m_active_encoder = nullptr;
   std::unique_ptr<heif_encoder> m_alpha_track_encoder;
 
+  // Separate amortized work budgets for each compression format. A frame credits
+  // its own format only; balances saturate at zero and persist across decode calls.
+  std::map<heif_compression_format, uint16_t> m_decode_work_debt;
+  bool m_decode_work_limit_exceeded = false;
+
   Result<bool> process_encoded_data(heif_encoder* encoder);
 };
 

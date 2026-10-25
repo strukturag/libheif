@@ -24,10 +24,9 @@
   SOFTWARE.
 */
 
-// Builds minimal, structurally valid HEIF sequence files containing a single
-// 'urim' metadata track, following the box tree that Track::load() requires.
-// A metadata track is used so that the raw-sample API path can be exercised
-// without any codec plugin. Shared by the sequence_* tests.
+// Builds minimal, structurally valid HEIF sequence files following the box
+// tree that Track::load() requires. Defaults to a 'urim' metadata track for
+// raw-sample API tests; visual-track tests can override its sample entries.
 
 #ifndef LIBHEIF_TESTS_SEQUENCE_FILE_BUILDER_H
 #define LIBHEIF_TESTS_SEQUENCE_FILE_BUILDER_H
@@ -124,12 +123,22 @@ struct SequenceFileParams
 
   uint32_t num_samples = 1;
   uint32_t sample_size = 1;
+  std::vector<uint8_t> sample_bytes; // if set, repeat these bytes for every sample
+
+  // Override these two to build a track of a different kind, e.g. a 'pict' track with 'hvc1' samples.
+  const char* handler_type = "meta";
+  std::vector<uint8_t> sample_entry; // complete sample entry box, empty -> 'urim'
+  uint32_t first_chunk_num_samples = 0; // nonzero -> split into two chunks
+  std::vector<uint8_t> second_sample_entry;
+  std::vector<uint8_t> second_sample_bytes; // same length as sample_bytes
 
   std::vector<SampleAuxInfo> aux_infos;
 };
 
 inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
 {
+  const uint32_t sample_size = p.sample_bytes.empty() ? p.sample_size : static_cast<uint32_t>(p.sample_bytes.size());
+  const bool two_chunks = p.first_chunk_num_samples != 0;
   // --- ftyp
   std::vector<uint8_t> ftyp_payload;
   put_fourcc(ftyp_payload, "msf1"); // major brand: HEIF image sequence
@@ -206,11 +215,11 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   put16(mdhd_payload, 0);          // pre_defined
   std::vector<uint8_t> mdhd = box("mdhd", mdhd_payload);
 
-  // --- hdlr (handler type 'meta')
+  // --- hdlr (handler type 'meta' by default)
   std::vector<uint8_t> hdlr_payload;
   put32(hdlr_payload, 0x00000000); // version 0, flags 0
   put32(hdlr_payload, 0);          // pre_defined
-  put_fourcc(hdlr_payload, "meta");
+  put_fourcc(hdlr_payload, p.handler_type);
   put32(hdlr_payload, 0);          // reserved
   put32(hdlr_payload, 0);          // reserved
   put32(hdlr_payload, 0);          // reserved
@@ -222,7 +231,7 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   put32(nmhd_payload, 0x00000000); // version 0, flags 0
   std::vector<uint8_t> nmhd = box("nmhd", nmhd_payload);
 
-  // --- stsd with a single 'urim' (URI meta) sample entry
+  // --- stsd with one or two sample entries ('urim', URI meta, by default)
   std::vector<uint8_t> urim_payload;
   for (int i = 0; i < 6; i++) urim_payload.push_back(0); // SampleEntry reserved
   put16(urim_payload, 1);                                // data_reference_index
@@ -230,8 +239,9 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
 
   std::vector<uint8_t> stsd_payload;
   put32(stsd_payload, 0x00000000); // version 0, flags 0
-  put32(stsd_payload, 1);          // entry_count
-  append(stsd_payload, urim);
+  put32(stsd_payload, two_chunks ? 2 : 1); // entry_count
+  append(stsd_payload, p.sample_entry.empty() ? urim : p.sample_entry);
+  if (two_chunks) append(stsd_payload, p.second_sample_entry);
   std::vector<uint8_t> stsd = box("stsd", stsd_payload);
 
   // --- stts
@@ -244,19 +254,24 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   }
   std::vector<uint8_t> stts = box("stts", stts_payload);
 
-  // --- stsc: all samples in a single chunk
+  // --- stsc: one or two chunks, each with its own sample description
   std::vector<uint8_t> stsc_payload;
   put32(stsc_payload, 0x00000000); // version 0, flags 0
-  put32(stsc_payload, 1);          // entry_count
+  put32(stsc_payload, two_chunks ? 2 : 1); // entry_count
   put32(stsc_payload, 1);          // first_chunk
-  put32(stsc_payload, p.num_samples); // samples_per_chunk
+  put32(stsc_payload, two_chunks ? p.first_chunk_num_samples : p.num_samples); // samples_per_chunk
   put32(stsc_payload, 1);          // sample_description_index
+  if (two_chunks) {
+    put32(stsc_payload, 2); // first_chunk
+    put32(stsc_payload, p.num_samples - p.first_chunk_num_samples);
+    put32(stsc_payload, 2); // sample_description_index
+  }
   std::vector<uint8_t> stsc = box("stsc", stsc_payload);
 
   // --- stsz: fixed sample size
   std::vector<uint8_t> stsz_payload;
   put32(stsz_payload, 0x00000000);  // version 0, flags 0
-  put32(stsz_payload, p.sample_size); // fixed sample size (non-zero -> no per-sample array)
+  put32(stsz_payload, sample_size); // fixed sample size (non-zero -> no per-sample array)
   put32(stsz_payload, p.num_samples); // sample_count
   std::vector<uint8_t> stsz = box("stsz", stsz_payload);
 
@@ -273,11 +288,11 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   }
 
   // --- stco / saio: offsets are patched below to point into the mdat payload
-  auto make_stco = [](uint32_t offset) {
+  auto make_stco = [](const std::vector<uint32_t>& offsets) {
     std::vector<uint8_t> stco_payload;
     put32(stco_payload, 0x00000000); // version 0, flags 0
-    put32(stco_payload, 1);          // entry_count
-    put32(stco_payload, offset);     // chunk offset
+    put32(stco_payload, static_cast<uint32_t>(offsets.size())); // entry_count
+    for (uint32_t offset : offsets) put32(stco_payload, offset);
     return box("stco", stco_payload);
   };
 
@@ -306,9 +321,12 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
 
   // --- mdat payload: num_samples * sample_size bytes of arbitrary content,
   //     followed by one block of aux-info payloads per saiz/saio pair.
-  std::vector<uint8_t> mdat_payload(static_cast<size_t>(p.num_samples) * p.sample_size);
+  std::vector<uint8_t> mdat_payload(static_cast<size_t>(p.num_samples) * sample_size);
   for (size_t i = 0; i < mdat_payload.size(); i++) {
-    mdat_payload[i] = static_cast<uint8_t>(0xA0 + (i & 0x0f));
+    const auto& sample_bytes = (two_chunks && i >= static_cast<size_t>(p.first_chunk_num_samples) * sample_size)
+                               ? p.second_sample_bytes : p.sample_bytes;
+    mdat_payload[i] = sample_bytes.empty() ? static_cast<uint8_t>(0xA0 + (i & 0x0f))
+                                          : sample_bytes[i % sample_size];
   }
 
   std::vector<size_t> aux_block_offsets; // relative to the start of the mdat payload
@@ -325,7 +343,8 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   for (const auto& aux : p.aux_infos) {
     saio_placeholders.push_back(make_saio(aux, 0));
   }
-  std::vector<uint8_t> moov0 = assemble(make_stco(0), saio_placeholders);
+  std::vector<uint8_t> moov0 = assemble(make_stco(two_chunks ? std::vector<uint32_t>{0, 0}
+                                                              : std::vector<uint32_t>{0}), saio_placeholders);
   uint32_t mdat_payload_offset = static_cast<uint32_t>(ftyp.size() + moov0.size() + 8 /* mdat header */);
   uint32_t file_size = static_cast<uint32_t>(mdat_payload_offset + mdat_payload.size());
 
@@ -336,7 +355,9 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
                       : mdat_payload_offset + static_cast<uint32_t>(aux_block_offsets[i]);
     saio_boxes.push_back(make_saio(p.aux_infos[i], offset));
   }
-  std::vector<uint8_t> moov = assemble(make_stco(mdat_payload_offset), saio_boxes);
+  std::vector<uint32_t> chunk_offsets = {mdat_payload_offset};
+  if (two_chunks) chunk_offsets.push_back(mdat_payload_offset + p.first_chunk_num_samples * sample_size);
+  std::vector<uint8_t> moov = assemble(make_stco(chunk_offsets), saio_boxes);
 
   std::vector<uint8_t> mdat = box("mdat", mdat_payload);
 

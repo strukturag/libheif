@@ -32,6 +32,35 @@
 #include "codecs/uncompressed/unc_boxes.h"
 
 
+namespace {
+
+// One outstanding sample is enough for codecs without frame reordering: after
+// submitting a complete sample, the next poll must return an image or an error.
+// Video codecs may buffer pictures. This is a work budget, not a codec latency
+// claim: each returned frame also pays for one non-displayed sample.
+uint16_t max_sequence_decode_work_debt(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_JPEG:
+    case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K:
+    case heif_compression_uncompressed:
+    case heif_compression_mask:
+      return 1;
+    default:
+      return 32;
+  }
+}
+
+Error sequence_decode_work_limit_error()
+{
+  return {heif_error_Invalid_input, heif_suberror_Security_limit_exceeded,
+          "Sequence decoding exceeded the limit for samples without enough output frames."};
+}
+
+} // namespace
+
+
 Track_Visual::Track_Visual(HeifContext* ctx)
   : Track(ctx)
 {
@@ -193,6 +222,10 @@ bool Track_Visual::has_alpha_channel() const
 
 Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(const heif_decoding_options& options)
 {
+  if (m_decode_work_limit_exceeded) {
+    return sequence_decode_work_limit_error();
+  }
+
   // --- If we ignore the editlist, we stop when we reached the end of the original samples.
 
   uint64_t num_output_samples = m_num_output_samples;
@@ -223,6 +256,10 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
     const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
 
+    // TODO: A sample-description change can switch codecs (e.g. HEVC to JPEG 2000).
+    // Before using the new decoder, collect any pending output from the previous
+    // decoder in presentation order. Selecting a decoder by the next input sample
+    // alone does not poll the previous decoder after the switch.
     auto decoder = chunk->get_decoder();
     if (!decoder) {
       // Should not happen: Track_Visual::load() rejects any visual track that has a
@@ -235,6 +272,9 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
         "Sequence chunk has no decoder."
       };
     }
+
+    const heif_compression_format format = decoder->get_compression_format();
+    uint16_t& decode_work_debt = m_decode_work_debt[format];
 
     // avoid calling get_decoded_frame() before starting the decoder.
     if (m_next_sample_to_be_decoded != 0) {
@@ -250,6 +290,10 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
       if (*getFrameResult != nullptr) {
         image = *getFrameResult;
+
+        // Credit the returned frame and one potentially non-displayed sample.
+        // Do this at the decoder boundary, even if later image postprocessing fails.
+        decode_work_debt = (decode_work_debt > 2) ? decode_work_debt - 2 : 0;
 
         // If this was the last frame in the EditList segment, reset the 'flushed' flag
         // in case we have to restart the decoder for another repetition of the segment.
@@ -272,7 +316,12 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
     // --- Push more data into the decoder (or send end-of-sequence).
 
-    if (m_next_sample_to_be_decoded < m_num_output_samples) {
+    if (m_next_sample_to_be_decoded < num_output_samples) {
+
+      if (decode_work_debt >= max_sequence_decode_work_debt(format)) {
+        m_decode_work_limit_exceeded = true;
+        return sequence_decode_work_limit_error();
+      }
 
       // --- Find the data extent that stores the compressed frame data.
 
@@ -296,6 +345,8 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       if (decodingError) {
         return decodingError;
       }
+
+      decode_work_debt++;
     }
     else {
       // --- End of sequence (Editlist segment) reached.
