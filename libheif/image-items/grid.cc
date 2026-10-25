@@ -985,7 +985,7 @@ Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                         heif_image_input_class_normal,
                                         m_tile_encoding_options->output_nclx_profile);
     for (auto& property : colr_boxes) {
-      add_property(property, is_property_essential(property));
+      add_color_profile_property(property);
     }
 
     // Add transformative properties

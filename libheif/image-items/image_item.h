@@ -171,6 +171,10 @@ public:
 
   heif_property_id add_property_without_deduplication(const std::shared_ptr<Box>& property, bool essential);
 
+  // Encoding only: attach an already constructed 'colr' property to the file.
+  // Reading a profile and setting ImageDescription metadata must not do this.
+  virtual heif_property_id add_color_profile_property(const std::shared_ptr<Box_colr>& property);
+
   void set_resolution(uint32_t w, uint32_t h)
   {
     m_width = w;
@@ -344,10 +348,6 @@ public:
   void set_nominal_diffuse_white_luminance(uint32_t luminance) override;
 
   void set_pixel_ratio(uint32_t h, uint32_t v) override;
-
-  void set_color_profile_nclx(const nclx_profile& profile) override;
-
-  void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) override;
 
   void set_omaf_image_projection(heif_omaf_image_projection image_projection) override;
 

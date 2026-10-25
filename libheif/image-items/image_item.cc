@@ -108,6 +108,16 @@ heif_property_id ImageItem::add_property_without_deduplication(const std::shared
 }
 
 
+heif_property_id ImageItem::add_color_profile_property(const std::shared_ptr<Box_colr>& property)
+{
+  if (!property) {
+    return 0;
+  }
+
+  return add_property(property, is_property_essential(property));
+}
+
+
 heif_compression_format ImageItem::compression_format_from_fourcc_infe_type(uint32_t type)
 {
   switch (type) {
@@ -417,6 +427,11 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // set item properties
 
   for (auto& propertyBox : codingResult->properties) {
+    if (auto colr = std::dynamic_pointer_cast<Box_colr>(propertyBox)) {
+      add_color_profile_property(colr);
+      continue;
+    }
+
     bool essential = is_property_essential(propertyBox);
 
     // TODO: can we simply use add_property() ?
@@ -898,19 +913,6 @@ void ImageItem::set_pixel_ratio(uint32_t h, uint32_t v)
   add_property(create_pasp_box(), false);
 }
 
-
-void ImageItem::set_color_profile_nclx(const nclx_profile& profile)
-{
-  ImageDescription::set_color_profile_nclx(profile);
-  add_property(create_colr_box_nclx(), false);
-}
-
-
-void ImageItem::set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile)
-{
-  ImageDescription::set_color_profile_icc(profile);
-  add_property(create_colr_box_icc(), false);
-}
 
 void ImageItem::set_omaf_image_projection(heif_omaf_image_projection projection)
 {

@@ -171,22 +171,21 @@ public:
 
   bool has_nclx_color_profile() const;
 
-  virtual void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
+  void set_color_profile_nclx(const nclx_profile& profile) { m_color_profile_nclx = profile; }
 
   nclx_profile get_color_profile_nclx() const { return m_color_profile_nclx; }
 
   // get the stored nclx fallback or return the default nclx if none is stored
   nclx_profile get_color_profile_nclx_with_fallback() const;
 
-  virtual void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
+  void set_color_profile_icc(const std::shared_ptr<const color_profile_raw>& profile) { m_color_profile_icc = profile; }
 
   bool has_icc_color_profile() const { return m_color_profile_icc != nullptr; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
-  // This wrapper calls the virtual setters. On an ImageItem, those setters
-  // also add 'colr' properties for encoding. When reading an existing 'colr'
-  // property, use the qualified ImageDescription setters instead.
+  // These setters only store profile metadata. Encoding an ImageItem must add
+  // a 'colr' property explicitly through ImageItem::add_color_profile_property().
   void set_color_profile(const std::shared_ptr<const color_profile>& profile)
   {
     auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
