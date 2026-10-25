@@ -106,6 +106,14 @@ typedef struct heif_security_limits
   // a grid tile) or one sequence sample, counting configuration OBUs/NALs too.
   // Zero disables this limit. The default is 8.
   uint16_t max_coded_pictures_per_decode;
+
+  // --- version 6 (v1.24.0)
+
+  // Maximum cumulative bytes produced by decompressing MIME metadata in one
+  // file/context, including repeated or unsuccessful reads. This does not
+  // include unci image decompression. Zero disables this budget.
+  // Default: 1 GiB.
+  uint64_t total_metadata_decompression_budget;
 } heif_security_limits;
 
 

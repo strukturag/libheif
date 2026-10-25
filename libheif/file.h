@@ -29,6 +29,7 @@
 #include "image-items/vvc.h"
 //#include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
+#include "compression.h"
 
 #include <map>
 #include <memory>
@@ -66,7 +67,10 @@ public:
 
   // The limits will be shared from the HeifContext limits.
   // You have to make sure that the pointer points to a valid object as long as the HeifFile is used.
-  void set_security_limits(const heif_security_limits* limits) { m_limits = limits; }
+  void set_security_limits(const heif_security_limits* limits) {
+    m_limits = limits;
+    m_metadata_decompression_budget.set_limit(limits ? &limits->total_metadata_decompression_budget : nullptr);
+  }
 
   const heif_security_limits* get_security_limits() const { return m_limits; }
 
@@ -328,6 +332,7 @@ private:
   std::shared_ptr<Box_mvhd> m_mvhd_box;
 
   const heif_security_limits* m_limits = nullptr;
+  mutable MetadataDecompressionBudget m_metadata_decompression_budget;
   IDCreator m_id_creator;
 
   Error parse_heif_file();

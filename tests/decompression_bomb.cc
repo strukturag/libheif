@@ -226,6 +226,73 @@ TEST_CASE("unreferenced compressed mime item is not decompressed during file ope
 }
 
 
+TEST_CASE("metadata decompression budget counts repeated item reads") {
+#if HAVE_BROTLI
+  const size_t output_size = 1024 * 1024;
+  CHECK(heif_get_global_security_limits()->total_metadata_decompression_budget ==
+        uint64_t{1024} * 1024 * 1024);
+  CHECK(heif_get_disabled_security_limits()->total_metadata_decompression_budget == 0);
+
+  std::vector<uint8_t> zeros(output_size, 0);
+  auto compressed = compress_brotli(zeros.data(), zeros.size());
+  auto file = build_heif_with_brotli_mime(compressed, false);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  auto limits = *heif_get_global_security_limits();
+  limits.total_metadata_decompression_budget = output_size + output_size / 2;
+  REQUIRE(heif_context_set_security_limits(ctx, &limits).code == heif_error_Ok);
+  REQUIRE(heif_context_get_security_limits(ctx)->total_metadata_decompression_budget ==
+          limits.total_metadata_decompression_budget);
+  REQUIRE(heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr).code == heif_error_Ok);
+
+  uint8_t* item_data = nullptr;
+  size_t item_size = 0;
+  heif_metadata_compression method;
+  REQUIRE(heif_item_get_item_data2(ctx, 2, &method, output_size,
+                                   &item_data, &item_size).code == heif_error_Ok);
+  REQUIRE(method == heif_metadata_compression_brotli);
+  heif_release_item_data(ctx, &item_data);
+
+  REQUIRE(heif_item_get_item_data2(ctx, 2, nullptr, output_size,
+                                   &item_data, &item_size).code == heif_error_Ok);
+  REQUIRE(item_size == output_size);
+  heif_release_item_data(ctx, &item_data);
+
+  auto err = heif_item_get_item_data2(ctx, 2, nullptr, output_size,
+                                      &item_data, &item_size);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(item_data == nullptr);
+  heif_context_free(ctx);
+
+  ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_context_get_security_limits(ctx)->total_metadata_decompression_budget = 0;
+  REQUIRE(heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr).code == heif_error_Ok);
+  for (int i = 0; i < 2; ++i) {
+    REQUIRE(heif_item_get_item_data2(ctx, 2, nullptr, output_size,
+                                     &item_data, &item_size).code == heif_error_Ok);
+    heif_release_item_data(ctx, &item_data);
+  }
+  heif_context_free(ctx);
+
+  // A failed per-call size check still consumes work already performed.
+  ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_context_get_security_limits(ctx)->total_metadata_decompression_budget =
+      output_size + output_size / 4;
+  REQUIRE(heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr).code == heif_error_Ok);
+  err = heif_item_get_item_data2(ctx, 2, nullptr, output_size / 2,
+                                 &item_data, &item_size);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  err = heif_item_get_item_data2(ctx, 2, nullptr, output_size,
+                                 &item_data, &item_size);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  heif_context_free(ctx);
+#endif
+}
+
+
 TEST_CASE("compressed text item is decompressed only on limited access") {
 #if HAVE_BROTLI
   std::vector<uint8_t> content(1024 * 1024, 'x');

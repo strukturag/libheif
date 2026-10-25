@@ -220,6 +220,10 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
     dst->max_coded_pictures_per_decode = src->max_coded_pictures_per_decode;
   }
 
+  if (src->version >= 6) {
+    dst->total_metadata_decompression_budget = src->total_metadata_decompression_budget;
+  }
+
   // `parent` is an internal field; user-supplied limits are always treated as
   // a root context. dst is HeifContext::m_limits, which is registered.
   dst->parent = nullptr;

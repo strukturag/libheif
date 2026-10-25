@@ -792,7 +792,8 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
           return error;
         }
 
-        return decompress_zlib(compressed_data, m_limits, max_output_size, true);
+        return decompress_zlib(compressed_data, m_limits, max_output_size, true,
+                               &m_metadata_decompression_budget);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -806,7 +807,8 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
         if (error) {
           return error;
         }
-        return decompress_deflate(compressed_data, m_limits, max_output_size, true);
+        return decompress_deflate(compressed_data, m_limits, max_output_size, true,
+                                  &m_metadata_decompression_budget);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -820,7 +822,8 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
         if (error) {
           return error;
         }
-        return decompress_brotli(compressed_data, m_limits, max_output_size, true);
+        return decompress_brotli(compressed_data, m_limits, max_output_size, true,
+                                 &m_metadata_decompression_budget);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -999,13 +1002,16 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
   switch (compression) {
 #if HAVE_ZLIB
     case heif_metadata_compression_zlib:
-      return decompress_zlib(compressed_data, m_limits, max_output_size, true);
+      return decompress_zlib(compressed_data, m_limits, max_output_size, true,
+                             &m_metadata_decompression_budget);
     case heif_metadata_compression_deflate:
-      return decompress_deflate(compressed_data, m_limits, max_output_size, true);
+      return decompress_deflate(compressed_data, m_limits, max_output_size, true,
+                                &m_metadata_decompression_budget);
 #endif
 #if HAVE_BROTLI
     case heif_metadata_compression_brotli:
-      return decompress_brotli(compressed_data, m_limits, max_output_size, true);
+      return decompress_brotli(compressed_data, m_limits, max_output_size, true,
+                               &m_metadata_decompression_budget);
 #endif
     default:
       return Error{heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
