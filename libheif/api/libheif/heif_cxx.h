@@ -159,7 +159,7 @@ namespace heif {
     // throws Error
     void set_primary_image(ImageHandle& new_primary_image_handle);
 
-    // throws Error
+    // Throws Error, or returns an empty ImageHandle if no thumbnail is needed.
     ImageHandle encode_thumbnail(const Image& image,
                                  const ImageHandle& master_image,
                                  Encoder& encoder,
@@ -1457,7 +1457,7 @@ namespace heif {
                                                const EncodingOptions& options,
                                                int bbox_size)
   {
-    struct heif_image_handle* thumb_image_handle;
+    struct heif_image_handle* thumb_image_handle = nullptr;
 
     Error err = Error(heif_context_encode_thumbnail(m_context.get(),
                                                     image.m_image.get(),

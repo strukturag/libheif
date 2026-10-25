@@ -2532,7 +2532,7 @@ int do_encode_images(heif_context* context, heif_encoder* encoder, heif_encoding
     if (thumbnail_bbox_size > 0) {
       // encode thumbnail
 
-      struct heif_image_handle* thumbnail_handle;
+      struct heif_image_handle* thumbnail_handle = nullptr;
 
       options->save_alpha_channel = master_alpha && thumb_alpha;
 

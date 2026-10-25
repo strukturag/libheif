@@ -254,3 +254,38 @@ TEST_CASE("kvazaar encodes monochrome images", "[heif_encoder]") {
   heif_encoder_release(enc);
   heif_context_free(ctx);
 }
+
+
+TEST_CASE("thumbnail of an image fitting the bounding box returns a null handle", "[heif_encoder]") {
+  heif_encoder* enc = get_encoder_or_skip_test(heif_compression_HEVC);
+  heif_context* ctx = heif_context_alloc();
+
+  constexpr int size = 64;
+  heif_image* img = nullptr;
+  heif_error err = heif_image_create(size, size, heif_colorspace_monochrome,
+                                     heif_chroma_monochrome, &img);
+  REQUIRE(err.code == heif_error_Ok);
+  fill_new_plane(img, heif_channel_Y, size, size);
+
+  heif_image_handle* master = nullptr;
+  err = heif_context_encode_image(ctx, img, enc, nullptr, &master);
+  REQUIRE(err.code == heif_error_Ok);
+
+  // An untouched output would alias the master handle and could be released twice.
+  heif_image_handle* thumbnail = master;
+  err = heif_context_encode_thumbnail(ctx, img, master, enc, nullptr, size, &thumbnail);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(thumbnail == nullptr);
+
+  err = heif_context_encode_thumbnail(ctx, img, master, enc, nullptr, size / 2, &thumbnail);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(thumbnail != nullptr);
+  CHECK(heif_image_handle_get_width(thumbnail) == size / 2);
+  CHECK(heif_image_handle_get_height(thumbnail) == size / 2);
+
+  heif_image_handle_release(thumbnail);
+  heif_image_handle_release(master);
+  heif_image_release(img);
+  heif_encoder_release(enc);
+  heif_context_free(ctx);
+}

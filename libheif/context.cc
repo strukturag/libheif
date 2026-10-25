@@ -1858,9 +1858,8 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shar
   int thumb_width, thumb_height;
 
   if (orig_width <= bbox_size && orig_height <= bbox_size) {
-    // original image is smaller than thumbnail size -> do not encode any thumbnail
-
-    return Error::Ok;
+    // No thumbnail is needed. Return an empty value, not an Error alternative.
+    return std::shared_ptr<ImageItem>{};
   }
   else if (orig_width > orig_height) {
     thumb_height = orig_height * bbox_size / orig_width;

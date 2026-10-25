@@ -200,6 +200,10 @@ heif_error heif_context_encode_thumbnail(heif_context* ctx,
                                          int bbox_size,
                                          heif_image_handle** out_image_handle)
 {
+  if (out_image_handle) {
+    *out_image_handle = nullptr;
+  }
+
   heif_encoding_options* options = heif_encoding_options_alloc();
   heif_encoding_options_copy(options, input_options);
 
@@ -216,10 +220,8 @@ heif_error heif_context_encode_thumbnail(heif_context* ctx,
   std::shared_ptr<ImageItem> thumbnail_image = *encodingResult;
 
   if (!thumbnail_image) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Invalid_parameter_value,
-              "Thumbnail images must be smaller than the original image.");
-    return err.error_struct(ctx->context.get());
+    // The image already fits the bounding box; no thumbnail was encoded.
+    return heif_error_success;
   }
 
   Error error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
