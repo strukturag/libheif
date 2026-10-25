@@ -107,6 +107,7 @@ void show_help(const char* argv0)
                //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
                "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n"
                "      --disable-limits disable all security limits (do not use in production environment)\n"
+               "                       metadata and text inspection normally stop at 100 MiB and 1 MiB per item\n"
                "  -h, --help           show help\n"
                "  -v, --version        show version\n";
 }
@@ -616,7 +617,20 @@ int main(int argc, char** argv)
           ID += contenttype;
         }
 
-        printf("  %s: %zu bytes\n", ID.c_str(), heif_image_handle_get_metadata_size(handle, ids[n]));
+        uint8_t* metadata_data = nullptr;
+        size_t metadata_size = 0;
+        // Getting the decompressed size requires reading the item. Bound that
+        // work, and stop on failure rather than repeating it for more items.
+        err = heif_image_handle_get_metadata2(handle, ids[n],
+                                               option_disable_limits ? SIZE_MAX : 100u * 1024 * 1024,
+                                               &metadata_data, &metadata_size);
+        if (err.code != heif_error_Ok) {
+          std::cerr << "Could not read metadata item " << ids[n] << ": " << err.message << "\n";
+          heif_image_handle_release(handle);
+          return 10;
+        }
+        printf("  %s: %zu bytes\n", ID.c_str(), metadata_size);
+        heif_image_handle_release_metadata_data(&metadata_data);
       }
     }
     else {
@@ -811,13 +825,18 @@ int main(int argc, char** argv)
 
         char* text_content = nullptr;
         // heif-info prints text to a terminal; do not expand an unbounded item.
-        err = heif_text_item_get_content2(text_item, 1024 * 1024, &text_content);
+        err = heif_text_item_get_content2(text_item,
+                                          option_disable_limits ? SIZE_MAX : 1024u * 1024,
+                                          &text_content);
         if (err.code == heif_error_Ok) {
           printf("  text item: %s\n", text_content);
           heif_string_release(text_content);
         }
         else {
-          printf("  text item: unavailable\n");
+          std::cerr << "Could not read text item " << text_item_id << ": " << err.message << "\n";
+          heif_text_item_release(text_item);
+          heif_image_handle_release(handle);
+          return 10;
         }
 
         char* elng = nullptr;
