@@ -184,6 +184,9 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+  // This wrapper calls the virtual setters. On an ImageItem, those setters
+  // also add 'colr' properties for encoding. When reading an existing 'colr'
+  // property, use the qualified ImageDescription setters instead.
   void set_color_profile(const std::shared_ptr<const color_profile>& profile)
   {
     auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);

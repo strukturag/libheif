@@ -79,6 +79,7 @@ add_libheif_test(sdtp_sample_limit)
     add_libheif_test(hevc_brands)
     add_libheif_test(file_layout)
     add_libheif_test(image_description_metadata)
+    add_libheif_test(read_color_profile_properties)
     add_libheif_test(exception_guard)
 
     # decompression_bomb builds the bomb payload with the library-internal
