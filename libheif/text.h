@@ -26,6 +26,7 @@
 #include <memory>
 #include <mutex>
 #include <string_view>
+#include <utility>
 #include <vector>
 #include "error.h"
 #include "libheif/heif_text.h"
