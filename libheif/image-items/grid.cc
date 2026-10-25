@@ -26,6 +26,7 @@
 #include <deque>
 #include <future>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <algorithm>
 #include <utility>
@@ -288,7 +289,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   // remember which tile to put where into the image
   struct tile_data
   {
-    heif_item_id tileID;
+    // An empty entry represents a tile skipped during non-strict decoding.
+    // Item ID 0 is not an empty entry.
+    std::optional<heif_item_id> tileID;
     uint32_t x_origin, y_origin;
   };
 
@@ -435,9 +438,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
       tile_data data = tiles.front();
       tiles.pop_front();
 
+      // Skipped tiles leave empty queue entries. Do not decode an unrelated
+      // item (in particular item 0) or start a job for such an entry.
+      if (!data.tileID) {
+        continue;
+      }
+
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
-                                data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
+                                *data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
                                 std::ref(progress_counter), warnings, decode_state));
     }
 

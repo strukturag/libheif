@@ -398,6 +398,82 @@ TEST_CASE("parallel grid: a normal two-tile grid still decodes") {
   REQUIRE(err.code == heif_error_Ok);
 }
 
+// A skipped tile must not turn its default queue entry into a decode of item 0.
+// Use an unrelated item with different pixels so the erroneous decode is
+// visible without making the regression test risk a permanent deadlock.
+TEST_CASE("parallel grid: a skipped tile does not decode item 0") {
+  const std::vector<uint8_t> tile_pixels(32 * 32, 0x7F);
+  const std::vector<uint8_t> unrelated_pixels(32 * 32, 0xFF);
+  std::vector<uint8_t> unsupported_grid = image_grid(1, 1, 32, 32);
+  unsupported_grid[0] = 1;  // unsupported grid version
+
+  std::vector<Item> items;
+  items.push_back({1, "grid", 64, 32, false, {2, 3}, {}, image_grid(1, 2, 64, 32)});
+  items.push_back({2, "mski", 32, 32, false, {},     {}, tile_pixels});
+  items.push_back({3, "grid", 32, 32, false, {},     {}, unsupported_grid});
+  items.push_back({0, "mski", 32, 32, false, {},     {}, unrelated_pixels});
+
+  auto data = build_file(items, /*primary_id=*/1, /*with_miaf_brand=*/false);
+  heif_context* ctx = heif_context_alloc();
+  heif_context_set_max_decoding_threads(ctx, 1);
+
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  size_t stride = 0;
+  const uint8_t* pixels = heif_image_get_plane_readonly2(img, heif_channel_Y, &stride);
+  REQUIRE(pixels != nullptr);
+  REQUIRE(pixels[0] == 0x7F);
+  REQUIRE(heif_image_get_decoding_warnings(img, 0, nullptr, 0) == 1);
+
+  heif_image_release(img);
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
+// An explicitly referenced tile with ID 0 must remain distinguishable from an empty job.
+TEST_CASE("parallel grid: an explicitly referenced item 0 is decoded") {
+  const std::vector<uint8_t> zero_tile_pixels(32 * 32, 0x5A);
+  const std::vector<uint8_t> other_tile_pixels(32 * 32, 0x7F);
+  std::vector<Item> items;
+  items.push_back({1, "grid", 64, 32, false, {0, 2}, {}, image_grid(1, 2, 64, 32)});
+  items.push_back({0, "mski", 32, 32, false, {},     {}, zero_tile_pixels});
+  items.push_back({2, "mski", 32, 32, false, {},     {}, other_tile_pixels});
+
+  auto data = build_file(items, /*primary_id=*/1, /*with_miaf_brand=*/false);
+  heif_context* ctx = heif_context_alloc();
+  heif_context_set_max_decoding_threads(ctx, 1);
+
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, data.data(), data.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_handle* handle = nullptr;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image* img = nullptr;
+  err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  size_t stride = 0;
+  const uint8_t* pixels = heif_image_get_plane_readonly2(img, heif_channel_Y, &stride);
+  REQUIRE(pixels != nullptr);
+  REQUIRE(pixels[0] == 0x5A);
+  REQUIRE(pixels[32] == 0x7F);
+
+  heif_image_release(img);
+  heif_image_handle_release(handle);
+  heif_context_free(ctx);
+}
+
 // A reference cycle is not rejected at file load: the file still opens and its
 // independently valid items still decode. Only the cyclic item itself fails,
 // at decode time. Here the primary (item 1) is a grid whose two sub-grids form
