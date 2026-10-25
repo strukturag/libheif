@@ -33,6 +33,7 @@
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
+#include "libheif/heif_items.h"
 #include "test_utils.h"
 #include "compression.h"
 
@@ -199,6 +200,38 @@ TEST_CASE("unreferenced compressed mime item is not decompressed during file ope
   heif_context_free(ctx);
 #else
   SUCCEED("brotli support not compiled in - skipping decompression bomb test");
+#endif
+}
+
+
+TEST_CASE("metadata decompression work is cumulative across item reads") {
+#if HAVE_BROTLI
+  const size_t output_size = 1024 * 1024;
+  std::vector<uint8_t> zeros(output_size, 0);
+  auto compressed = compress_brotli(zeros.data(), zeros.size());
+  auto file = build_heif_with_brotli_mime(compressed, false);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  auto* limits = heif_context_get_security_limits(ctx);
+  limits->max_total_memory = output_size + output_size / 2;
+  REQUIRE(heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr).code == heif_error_Ok);
+
+  uint8_t* item_data = nullptr;
+  size_t item_size = 0;
+  heif_metadata_compression method;
+  REQUIRE(heif_item_get_item_data(ctx, 2, &method, &item_data, &item_size).code == heif_error_Ok);
+  REQUIRE(method == heif_metadata_compression_brotli);
+  heif_release_item_data(ctx, &item_data);
+
+  REQUIRE(heif_item_get_item_data(ctx, 2, nullptr, &item_data, &item_size).code == heif_error_Ok);
+  REQUIRE(item_size == output_size);
+  heif_release_item_data(ctx, &item_data);
+
+  auto err = heif_item_get_item_data(ctx, 2, nullptr, &item_data, &item_size);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(item_data == nullptr);
+  heif_context_free(ctx);
 #endif
 }
 

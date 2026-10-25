@@ -23,11 +23,47 @@
 #include <vector>
 #include <cinttypes>
 #include <cstddef>
+#include <mutex>
 
 #include <error.h>
 #include <libheif/heif_uncompressed.h>
 
 struct heif_security_limits;
+
+// Counts bytes produced by MIME metadata decompression across all reads of one
+// file, including unsuccessful and repeated reads. Uncompressed image (unci)
+// decoding does not pass a budget to the decompressors.
+class MetadataDecompressionBudget
+{
+public:
+  void set_limit(const uint64_t* limit) { m_limit = limit; }
+
+  bool consume(size_t bytes)
+  {
+    const uint64_t limit = m_limit ? *m_limit : 0;
+    if (limit == 0 || bytes == 0) { return true; }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_used >= limit || bytes > limit - m_used) {
+      // Saturate on an over-budget attempt so later reads fail immediately.
+      if (m_used < limit) { m_used = limit; }
+      return false;
+    }
+    m_used += bytes;
+    return true;
+  }
+
+  bool exhausted() const
+  {
+    const uint64_t limit = m_limit ? *m_limit : 0;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return limit != 0 && m_used >= limit;
+  }
+
+private:
+  const uint64_t* m_limit = nullptr;
+  mutable std::mutex m_mutex;
+  uint64_t m_used = 0;
+};
 
 /**
  * Convert heif_unci_compression enum to a fourcc code.
@@ -88,7 +124,8 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
  */
 Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
                                              const heif_security_limits* limits,
-                                             uint64_t max_output_size = UINT64_MAX);
+                                             uint64_t max_output_size = UINT64_MAX,
+                                             MetadataDecompressionBudget* work_budget = nullptr);
 
 /**
  * Decompress "deflate" compressed data.
@@ -107,7 +144,8 @@ Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compres
  */
 Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
                                                 const heif_security_limits* limits,
-                                                uint64_t max_output_size = UINT64_MAX);
+                                                uint64_t max_output_size = UINT64_MAX,
+                                                MetadataDecompressionBudget* work_budget = nullptr);
 
 #endif
 
@@ -126,7 +164,8 @@ Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& comp
  */
 Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t>& compressed_input,
                                                const heif_security_limits* limits,
-                                               uint64_t max_output_size = UINT64_MAX);
+                                               uint64_t max_output_size = UINT64_MAX,
+                                               MetadataDecompressionBudget* work_budget = nullptr);
 
 std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size);
 #endif

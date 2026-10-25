@@ -36,8 +36,13 @@ const size_t BUF_SIZE = (1 << 18);
 
 Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compressed_input,
                                                const heif_security_limits* limits,
-                                               uint64_t max_output_size)
+                                               uint64_t max_output_size,
+                                               MetadataDecompressionBudget* work_budget)
 {
+    if (work_budget && work_budget->exhausted()) {
+        return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                     "Total metadata decompression budget exceeded");
+    }
     BrotliDecoderResult result = BROTLI_DECODER_RESULT_ERROR;
     std::vector<uint8_t> buffer(BUF_SIZE, 0);
     size_t available_in = compressed_input.size();
@@ -77,6 +82,13 @@ Result<std::vector<uint8_t>> decompress_brotli(const std::vector<uint8_t> &compr
     while (true)
     {
         result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_output, 0);
+
+        // Count bytes produced on failed attempts and before output-size checks.
+        size_t produced = static_cast<size_t>(std::distance(buffer.data(), next_output));
+        if (work_budget && !work_budget->consume(produced)) {
+            return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                         "Total metadata decompression budget exceeded");
+        }
 
         if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT)
         {

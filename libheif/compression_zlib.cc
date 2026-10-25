@@ -83,8 +83,13 @@ std::vector<uint8_t> compress(const uint8_t* input, size_t size, int windowSize)
 
 Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize,
                                         const heif_security_limits* limits,
-                                        uint64_t max_output_size)
+                                        uint64_t max_output_size,
+                                        MetadataDecompressionBudget* work_budget)
 {
+  if (work_budget && work_budget->exhausted()) {
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                 "Total metadata decompression budget exceeded");
+  }
   if (compressed_input.empty()) {
     return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data,
                  "Empty zlib compressed data.");
@@ -130,6 +135,15 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
 
     err = inflate(&strm, Z_NO_FLUSH);
 
+    // Charge produced bytes even if the stream subsequently fails validation
+    // or the caller rejects the output size.
+    size_t n_new_bytes = dst.size() - strm.avail_out;
+    if (work_budget && !work_budget->consume(n_new_bytes)) {
+      inflateEnd(&strm);
+      return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                   "Total metadata decompression budget exceeded");
+    }
+
     if (err == Z_BUF_ERROR) {
       if (strm.avail_in == 0) {
         // All input consumed; decompression is complete even without Z_STREAM_END
@@ -161,8 +175,6 @@ Result<std::vector<uint8_t>> do_inflate(const std::vector<uint8_t>& compressed_i
     }
 
     // account for and append decoded data to output
-
-    size_t n_new_bytes = dst.size() - strm.avail_out;
 
     // Stop as soon as there is more data than the caller expects. This keeps a
     // decompression bomb from inflating up to the security limits when the size
@@ -200,15 +212,17 @@ std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size)
 
 Result<std::vector<uint8_t>> decompress_zlib(const std::vector<uint8_t>& compressed_input,
                                              const heif_security_limits* limits,
-                                             uint64_t max_output_size)
+                                             uint64_t max_output_size,
+                                             MetadataDecompressionBudget* work_budget)
 {
-  return do_inflate(compressed_input, 15, limits, max_output_size);
+  return do_inflate(compressed_input, 15, limits, max_output_size, work_budget);
 }
 
 Result<std::vector<uint8_t>> decompress_deflate(const std::vector<uint8_t>& compressed_input,
                                                 const heif_security_limits* limits,
-                                                uint64_t max_output_size)
+                                                uint64_t max_output_size,
+                                                MetadataDecompressionBudget* work_budget)
 {
-  return do_inflate(compressed_input, -15, limits, max_output_size);
+  return do_inflate(compressed_input, -15, limits, max_output_size, work_budget);
 }
 #endif
