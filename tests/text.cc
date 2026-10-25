@@ -29,9 +29,12 @@
 #include "libheif/heif.h"
 #include "test-config.h"
 #include "test_utils.h"
+#include "security_limits.h"
+#include "text.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include <libheif/heif_items.h>
 #include <libheif/heif_library.h>
 
@@ -48,6 +51,30 @@ TEST_CASE("no text") {
   REQUIRE(num_text_items == 0);
   heif_image_handle_release(handle);
   heif_context_free(context);
+}
+
+
+TEST_CASE("retained text data remains charged to the memory budget") {
+  heif_security_limits limits = global_security_limits;
+  limits.max_total_memory = 48;
+  TotalMemoryTracker tracker(&limits);
+
+  TextItem second;
+  std::vector<uint8_t> second_data(32, 'b');
+  {
+    TextItem first;
+    std::vector<uint8_t> first_data(32, 'a');
+    REQUIRE_FALSE(first.parse(std::move(first_data), &limits));
+    auto first_text = first.get_item_text();
+    REQUIRE(first_text);
+    REQUIRE(*first_text == std::string(32, 'a'));
+
+    Error err = second.parse(std::move(second_data), &limits);
+    REQUIRE(err.error_code == heif_error_Memory_allocation_error);
+    REQUIRE(err.sub_error_code == heif_suberror_Security_limit_exceeded);
+  }
+
+  REQUIRE_FALSE(second.parse(std::move(second_data), &limits));
 }
 
 TEST_CASE("create text item") {
@@ -129,6 +156,21 @@ TEST_CASE("create text item") {
   err = heif_context_get_text_item(readbackCtx, text_item_ids[0], &text0);
   heif_item_id id0 = heif_text_item_get_id(text0);
   REQUIRE(id0 == text_item_ids[0]);
+
+  char* limited_text = nullptr;
+  err = heif_text_item_get_content2(text0, 4, &limited_text);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(limited_text == nullptr);
+
+  err = heif_text_item_get_content2(text0, 1024, &limited_text);
+  INFO(err.message);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(std::string(limited_text) == text_body1);
+  heif_string_release(limited_text);
+  limited_text = nullptr;
+  err = heif_text_item_get_content2(text0, 4, &limited_text);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(limited_text == nullptr);
 
   REQUIRE(heif_item_get_item_type(readbackCtx, text_item_ids[0]) == fourcc("mime"));
   const char* content_type0 = heif_item_get_mime_item_content_type(readbackCtx, text_item_ids[0]);

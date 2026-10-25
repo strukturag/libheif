@@ -24,6 +24,7 @@
 #include "heif_library.h"
 #include "heif_error.h"
 #include "heif_metadata.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,6 +137,7 @@ heif_error heif_item_set_item_name(heif_context* ctx,
 
 /**
  * Gets the raw metadata, as stored in the HEIF file.
+ * DEPRECATED: use heif_item_get_item_data2() to set an explicit output limit.
  *
  * Data in a "mime" item with "content_encoding" can be compressed.
  * When `out_compression_format` is NULL, the decompressed data will be returned.
@@ -161,6 +163,20 @@ heif_error heif_item_get_item_data(const heif_context* ctx,
                                    heif_item_id item_id,
                                    enum heif_metadata_compression* out_compression_format,
                                    uint8_t** out_data, size_t* out_data_size);
+
+/**
+ * Like heif_item_get_item_data(), but refuses to return more than
+ * max_output_size bytes. For compressed MIME items returned decompressed, the
+ * limit is enforced during decompression; when compressed bytes are requested,
+ * it applies to their stored size. Pass SIZE_MAX for no additional limit.
+ * The returned data is released with heif_release_item_data().
+ */
+LIBHEIF_API
+heif_error heif_item_get_item_data2(const heif_context* ctx,
+                                    heif_item_id item_id,
+                                    enum heif_metadata_compression* out_compression_format,
+                                    size_t max_output_size,
+                                    uint8_t** out_data, size_t* out_data_size);
 
 /**
  * Free the item data.

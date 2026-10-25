@@ -145,12 +145,25 @@ heif_error heif_item_get_item_data(const heif_context* ctx,
                                    heif_metadata_compression* out_compression_format,
                                    uint8_t** out_data, size_t* out_data_size)
 {
-  if (out_data && !out_data_size) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
-  }
+  return heif_item_get_item_data2(ctx, item_id, out_compression_format,
+                                  SIZE_MAX, out_data, out_data_size);
+}
 
-  auto dataResult = ctx->context->get_heif_file()->get_item_data(item_id, out_compression_format);
-  if (!dataResult) {
+
+heif_error heif_item_get_item_data2(const heif_context* ctx,
+                                    heif_item_id item_id,
+                                    heif_metadata_compression* out_compression_format,
+                                    size_t max_output_size,
+                                    uint8_t** out_data, size_t* out_data_size)
+{
+  return exception_guard([&]() -> heif_error {
+    if (!ctx || !ctx->context) {
+      return heif_error_null_pointer_argument;
+    }
+    if (out_data && !out_data_size) {
+      return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
+    }
+
     if (out_data_size) {
       *out_data_size = 0;
     }
@@ -158,21 +171,30 @@ heif_error heif_item_get_item_data(const heif_context* ctx,
       *out_data = nullptr;
     }
 
-    return dataResult.error_struct(ctx->context.get());
-  }
-
-  if (out_data_size) {
-    *out_data_size = dataResult->size();
-  }
-
-  if (out_data) {
-    *out_data = new uint8_t[dataResult->size()];
-    if (!dataResult->empty()) { // memcpy() from a NULL pointer is UB even for size 0 (until C2y/N3322), see StreamReader_memory::read()
-      memcpy(*out_data, dataResult->data(), dataResult->size());
+    auto dataResult = ctx->context->get_heif_file()->get_item_data(item_id, out_compression_format,
+                                                                    max_output_size);
+    if (!dataResult) {
+      return dataResult.error_struct(ctx->context.get());
     }
-  }
+    if (dataResult->size() > max_output_size) {
+      Error err(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                "Item data exceeds the requested maximum output size");
+      return err.error_struct(ctx->context.get());
+    }
 
-  return heif_error_success;
+    if (out_data) {
+      *out_data = new uint8_t[dataResult->size()];
+      if (!dataResult->empty()) {
+        memcpy(*out_data, dataResult->data(), dataResult->size());
+      }
+    }
+
+    if (out_data_size) {
+      *out_data_size = dataResult->size();
+    }
+
+    return heif_error_success;
+  });
 }
 
 

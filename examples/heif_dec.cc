@@ -140,7 +140,8 @@ static void show_help(const char* argv0)
                "      --auto-correct             work around known broken-input quirks (e.g. Sony HIF full-range flag mismatch)\n"
                "      --codec-threads #          number of threads to use in the codec plugin (0 = default)\n"
             << "      --tile-threads #           max number of tiles to decode in parallel (default = " << default_tile_threads << ")\n"
-            << "      --extract-mime-item TYPE   extract the MIME item with the given content type into a file (mime-item.data)\n";
+            << "      --extract-mime-item TYPE   extract the first MIME item with the given content type into a file (mime-item.data)\n"
+            << "                                 Extracted items are limited to 100 MiB unless --disable-limits is used.\n";
 }
 
 
@@ -177,6 +178,8 @@ int option_num_codec_threads = 0;
 int option_num_tile_threads = -1;  // -1 means "do not override library default"
 std::string option_extract_mime_item_type;
 std::string output_filename;
+
+constexpr size_t max_extracted_item_size = 100u * 1024 * 1024;
 
 std::string chroma_upsampling;
 std::string transparency_composition_mode = "checkerboard";
@@ -456,9 +459,11 @@ int decode_single_image(heif_image_handle* handle,
           if (option_with_xmp && contenttype == "application/rdf+xml") {
             // read XMP data to memory array
 
-            size_t xmpSize = heif_image_handle_get_metadata_size(handle, ids[n]);
-            std::vector<uint8_t> xmp(xmpSize);
-            err = heif_image_handle_get_metadata(handle, ids[n], xmp.data());
+            uint8_t* xmp = nullptr;
+            size_t xmpSize = 0;
+            err = heif_image_handle_get_metadata2(handle, ids[n],
+                                                  option_disable_limits ? SIZE_MAX : max_extracted_item_size,
+                                                  &xmp, &xmpSize);
             if (err.code) {
               std::cerr << "Could not read XMP metadata: " << err.message << "\n";
               return 1;
@@ -468,14 +473,17 @@ int decode_single_image(heif_image_handle* handle,
 
             std::string xmp_filename = filename_stem + ".xmp";
             std::ofstream ostr(xmp_filename.c_str());
-            ostr.write((char*) xmp.data(), xmpSize);
+            ostr.write((const char*) xmp, xmpSize);
+            heif_image_handle_release_metadata_data(&xmp);
           }
           else if (option_with_exif && itemtype == "Exif") {
             // read EXIF data to memory array
 
-            size_t exifSize = heif_image_handle_get_metadata_size(handle, ids[n]);
-            std::vector<uint8_t> exif(exifSize);
-            err = heif_image_handle_get_metadata(handle, ids[n], exif.data());
+            uint8_t* exif = nullptr;
+            size_t exifSize = 0;
+            err = heif_image_handle_get_metadata2(handle, ids[n],
+                                                  option_disable_limits ? SIZE_MAX : max_extracted_item_size,
+                                                  &exif, &exifSize);
             if (err.code) {
               std::cerr << "Could not read EXIF metadata: " << err.message << "\n";
               return 1;
@@ -485,6 +493,7 @@ int decode_single_image(heif_image_handle* handle,
             if (option_skip_exif_offset) {
               if (exifSize < 4) {
                 std::cerr << "Invalid EXIF metadata, it is too small.\n";
+                heif_image_handle_release_metadata_data(&exif);
                 return 1;
               }
 
@@ -493,6 +502,7 @@ int decode_single_image(heif_image_handle* handle,
 
               if (offset >= exifSize) {
                 std::cerr << "Invalid EXIF metadata, offset out of range.\n";
+                heif_image_handle_release_metadata_data(&exif);
                 return 1;
               }
             }
@@ -501,7 +511,8 @@ int decode_single_image(heif_image_handle* handle,
 
             std::string exif_filename = filename_stem + ".exif";
             std::ofstream ostr(exif_filename.c_str());
-            ostr.write((char*) exif.data() + offset, exifSize - offset);
+            ostr.write((const char*) exif + offset, exifSize - offset);
+            heif_image_handle_release_metadata_data(&exif);
           }
         }
       }
@@ -1125,11 +1136,18 @@ int main(int argc, char** argv)
           const char* mimeType = heif_item_get_mime_item_content_type(ctx, id);
           if (option_extract_mime_item_type == mimeType) {
             uint8_t* data = nullptr;
-            size_t data_size;
-            heif_item_get_item_data(ctx, id, nullptr, &data, &data_size);
+            size_t data_size = 0;
+            err = heif_item_get_item_data2(ctx, id, nullptr,
+                                           option_disable_limits ? SIZE_MAX : max_extracted_item_size,
+                                           &data, &data_size);
+            if (err.code != heif_error_Ok) {
+              std::cerr << "Could not read MIME item: " << err.message << "\n";
+              return 1;
+            }
             std::ofstream ostr("mime-item.data");
             ostr.write((const char*)data, data_size);
             heif_release_item_data(ctx, &data);
+            break;
           }
         }
       }

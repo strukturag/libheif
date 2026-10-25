@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 #include <libheif/heif_library.h>
+#include <stdint.h>
 
 
 typedef enum heif_metadata_compression
@@ -70,19 +71,40 @@ LIBHEIF_API
 const char* heif_image_handle_get_metadata_content_type(const heif_image_handle* handle,
                                                         heif_item_id metadata_id);
 
-// Get the size of the raw metadata, as stored in the HEIF file.
+// DEPRECATED: use heif_image_handle_get_metadata2() to read the item with
+// an explicit limit and an error return.
+// Get the size of the metadata content (decompressed for compressed MIME items).
+// This may read and decompress the item on first access. Returns 0 if the item
+// is missing or cannot be read.
 LIBHEIF_API
 size_t heif_image_handle_get_metadata_size(const heif_image_handle* handle,
                                            heif_item_id metadata_id);
 
+// DEPRECATED: use heif_image_handle_get_metadata2().
 // 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
-// The data is returned exactly as stored in the HEIF file.
+// Compressed MIME data is returned decompressed.
 // For Exif data, you probably have to skip the first four bytes of the data, since they
 // indicate the offset to the start of the TIFF header of the Exif data.
 LIBHEIF_API
 heif_error heif_image_handle_get_metadata(const heif_image_handle* handle,
                                           heif_item_id metadata_id,
                                           void* out_data);
+
+/**
+ * Read metadata on demand with an explicit maximum content size in bytes.
+ * On success, *out_data points to *out_data_size bytes. Release it with
+ * heif_image_handle_release_metadata_data(). Pass SIZE_MAX to impose no
+ * additional size limit.
+ */
+LIBHEIF_API
+heif_error heif_image_handle_get_metadata2(const heif_image_handle* handle,
+                                           heif_item_id metadata_id,
+                                           size_t max_output_size,
+                                           uint8_t** out_data,
+                                           size_t* out_data_size);
+
+LIBHEIF_API
+void heif_image_handle_release_metadata_data(uint8_t** data);
 
 // Only valid for item type == "uri ", an absolute URI
 LIBHEIF_API

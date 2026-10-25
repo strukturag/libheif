@@ -19,21 +19,55 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string>
 #include "text.h"
 #include "error.h"
-#include <iostream>
+#include "file.h"
+#include <utility>
 
 
 Result<std::vector<uint8_t>> TextItem::encode() const
 {
-  std::vector<uint8_t> data;
-  data.assign(m_text.begin(), m_text.end());
-  return data;
+  return m_data;
 }
 
-Error TextItem::parse(const std::vector<uint8_t> &data)
+Error TextItem::parse(std::vector<uint8_t>&& data, const heif_security_limits* limits)
 {
-  m_text.assign(reinterpret_cast<const char*>(data.data()), data.size());
+  // The decompressor's temporary MemoryHandle is released when it returns.
+  // Keep the charge with the object that retains its output vector.
+  MemoryHandle new_memory_handle;
+  if (Error err = new_memory_handle.alloc(data.capacity(), limits, "decompressed text item")) {
+    return err;
+  }
+
+  m_data = std::move(data);
+  m_memory_handle = std::move(new_memory_handle);
+  m_source.reset();
   return Error::Ok;
+}
+
+
+Result<std::string_view> TextItem::get_item_text(size_t max_output_size)
+{
+  std::lock_guard<std::mutex> lock(m_load_mutex);
+
+  if (m_source) {
+    auto data_result = m_source->get_uncompressed_item_data(m_item_id, max_output_size);
+    if (!data_result) {
+      return data_result.error();
+    }
+
+    if (Error err = parse(std::move(*data_result), m_source->get_security_limits())) {
+      return err;
+    }
+  }
+
+  if (m_data.size() > max_output_size) {
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                 "Text item exceeds the requested maximum output size");
+  }
+
+  if (m_data.empty()) {
+    return std::string_view{};
+  }
+  return std::string_view{reinterpret_cast<const char*>(m_data.data()), m_data.size()};
 }

@@ -24,23 +24,22 @@
   SOFTWARE.
 */
 
-// Regression test for GHSA-24wx-9w62-c96w: a compressed ('mime', content_encoding
-// "br") metadata item is a decompression bomb. Opening the file decompresses the
-// item in HeifContext::interpret_heif_file_images(), which used to grow an output
-// vector with no size accounting at all, bypassing the configured security limits
-// and allowing OOM from a few hundred bytes of input.
+// Regression tests for compressed MIME items: opening a file records associations
+// without expanding item contents, and explicit reads honor security/output limits.
 //
-// The test builds a tiny HEIF whose 'mime' item is a real brotli payload that
-// expands to tens of MB, then opens it once with a tight total-memory limit
-// (expecting a security-limit error) and once with the default limits (expecting
-// success, proving the file itself is valid and it is the limit that is enforced).
+// The test builds a tiny HEIF whose 'mime' item expands to tens of MB. Opening
+// succeeds even with a tight limit; reading the item then reports the limit
+// error. With default limits, the same item can be read.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
 #include "test_utils.h"
 #include "compression.h"
+#include "libheif/heif_items.h"
+#include "libheif/heif_text.h"
 
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -52,7 +51,9 @@ namespace {
 //           codec plugin is required and the file opens without decoding.
 //   item 2 ('mime', content_encoding "br"): a brotli-compressed metadata item,
 //           'cdsc'-referencing item 1, carrying the supplied bomb payload.
-std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& brotli_payload) {
+std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& brotli_payload,
+                                                 bool attach_to_image = true,
+                                                 const char* association_type = "cdsc") {
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "heic");
   put_u32_be(ftyp_payload, 0);
@@ -159,7 +160,7 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   put_u16_be(cdsc_payload, 2);          // from_item_ID
   put_u16_be(cdsc_payload, 1);          // reference_count
   put_u16_be(cdsc_payload, 1);          // to_item_ID
-  auto cdsc = make_box("cdsc", cdsc_payload);
+  auto cdsc = make_box(association_type, cdsc_payload);
   auto iref = make_box("iref", cdsc, /*full=*/true);
 
   std::vector<uint8_t> meta_payload;
@@ -168,7 +169,9 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   append(meta_payload, iinf);
   append(meta_payload, iprp);
   append(meta_payload, iloc);
-  append(meta_payload, iref);
+  if (attach_to_image) {
+    append(meta_payload, iref);
+  }
   append(meta_payload, idat);
   auto meta = make_box("meta", meta_payload, /*full=*/true);
 
@@ -178,8 +181,82 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   return file;
 }
 
+
 } // namespace
 
+
+TEST_CASE("unreferenced compressed mime item is not decompressed during file open") {
+#if HAVE_BROTLI
+  const size_t decompressed_size = 16u * 1024 * 1024;
+  std::vector<uint8_t> zeros(decompressed_size, 0);
+  std::vector<uint8_t> bomb = compress_brotli(zeros.data(), zeros.size());
+  std::vector<uint8_t> file = build_heif_with_brotli_mime(bomb, false);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_security_limits* limits = heif_context_get_security_limits(ctx);
+  REQUIRE(limits != nullptr);
+  limits->max_total_memory = 8u * 1024 * 1024;
+
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  uint8_t* item_data = nullptr;
+  size_t item_size = 0;
+  err = heif_item_get_item_data2(ctx, 2, nullptr, 8u * 1024 * 1024,
+                                 &item_data, &item_size);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(item_data == nullptr);
+  REQUIRE(item_size == 0);
+  heif_context_free(ctx);
+
+  ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_item_get_item_data2(ctx, 2, nullptr, decompressed_size, &item_data, &item_size);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(item_size == decompressed_size);
+  heif_release_item_data(ctx, &item_data);
+  REQUIRE(item_data == nullptr);
+  heif_context_free(ctx);
+#else
+  SUCCEED("brotli support not compiled in - skipping decompression bomb test");
+#endif
+}
+
+
+TEST_CASE("compressed text item is decompressed only on limited access") {
+#if HAVE_BROTLI
+  std::vector<uint8_t> content(1024 * 1024, 'x');
+  std::vector<uint8_t> compressed = compress_brotli(content.data(), content.size());
+  std::vector<uint8_t> file = build_heif_with_brotli_mime(compressed, true, "text");
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_text_item* text_item = nullptr;
+  err = heif_context_get_text_item(ctx, 2, &text_item);
+  REQUIRE(err.code == heif_error_Ok);
+
+  char* text_data = nullptr;
+  err = heif_text_item_get_content2(text_item, 512 * 1024, &text_data);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+  REQUIRE(text_data == nullptr);
+
+  err = heif_text_item_get_content2(text_item, content.size(), &text_data);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(text_data != nullptr);
+  REQUIRE(strlen(text_data) == content.size());
+  heif_string_release(text_data);
+  heif_text_item_release(text_item);
+  heif_context_free(ctx);
+#else
+  SUCCEED("brotli support not compiled in");
+#endif
+}
 
 TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits") {
 #if HAVE_BROTLI
@@ -192,8 +269,8 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
 
   std::vector<uint8_t> file = build_heif_with_brotli_mime(bomb);
 
-  // --- with a tight total-memory limit, opening must fail rather than allocate the
-  //     whole decompressed payload (previously it ignored the limit entirely).
+  // --- opening only records the metadata association. The limit is checked
+  //     when the application asks for its decompressed contents.
   {
     heif_context* ctx = heif_context_alloc();
     REQUIRE(ctx != nullptr);
@@ -203,8 +280,21 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
     limits->max_total_memory = 8u * 1024 * 1024; // 8 MB << 40 MB bomb
 
     heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
-    REQUIRE(err.code != heif_error_Ok);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* image = nullptr;
+    err = heif_context_get_primary_image_handle(ctx, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    uint8_t* data = nullptr;
+    size_t size = 0;
+    err = heif_image_handle_get_metadata2(image, 2, 8u * 1024 * 1024, &data, &size);
     REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+    REQUIRE(data == nullptr);
+    REQUIRE(size == 0);
+    REQUIRE(heif_image_handle_get_metadata_size(image, 2) == 0);
+    err = heif_image_handle_get_metadata(image, 2, nullptr);
+    REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+    heif_image_handle_release(image);
 
     heif_context_free(ctx);
   }
@@ -217,6 +307,23 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
 
     heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
     REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* image = nullptr;
+    err = heif_context_get_primary_image_handle(ctx, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    uint8_t* data = nullptr;
+    size_t size = 0;
+    err = heif_image_handle_get_metadata2(image, 2, decompressed_size, &data, &size);
+    REQUIRE(err.code == heif_error_Ok);
+    REQUIRE(size == decompressed_size);
+    REQUIRE(data != nullptr);
+    heif_image_handle_release_metadata_data(&data);
+    REQUIRE(data == nullptr);
+    err = heif_image_handle_get_metadata2(image, 2, 8u * 1024 * 1024, &data, &size);
+    REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+    REQUIRE(data == nullptr);
+    REQUIRE(heif_image_handle_get_metadata_size(image, 2) == decompressed_size);
+    heif_image_handle_release(image);
 
     heif_context_free(ctx);
   }

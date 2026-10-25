@@ -39,6 +39,7 @@
 
 
 class HeifContext;
+class HeifFile;
 
 class HeifPixelImage;
 
@@ -46,6 +47,10 @@ class HeifPixelImage;
 class ImageMetadata
 {
 public:
+  void set_source(std::shared_ptr<HeifFile> file) { m_source = std::move(file); }
+
+  Error ensure_loaded(size_t max_output_size = SIZE_MAX);
+
   heif_item_id item_id;
   std::string item_type;  // e.g. "Exif"
   std::string content_type;
@@ -59,6 +64,10 @@ public:
   // security limits (GHSA-24wx-9w62-c96w). MemoryHandle is move-only, which makes
   // ImageMetadata move-only; it is only ever held via shared_ptr, so that is fine.
   MemoryHandle m_memory_handle;
+
+private:
+  std::shared_ptr<HeifFile> m_source;
+  std::mutex m_load_mutex;
 };
 
 

@@ -1122,6 +1122,30 @@ Error HeifContext::interpret_heif_file_images()
       continue;
     }
 
+    // Items without a 'cdsc' association are not exposed as image metadata.
+    // In particular, do not decompress a MIME item merely because it is listed
+    // in iinf; an unreferenced item can be a decompression bomb.
+    if (!iref_box) {
+      continue;
+    }
+    std::vector<heif_item_id> references = iref_box->get_references(id, fourcc("cdsc"));
+    std::vector<std::shared_ptr<ImageItem>> target_images;
+    for (heif_item_id image_id : references) {
+      auto img_iter = m_all_images.find(image_id);
+      if (img_iter == m_all_images.end()) {
+        if (!m_heif_file->has_item_with_id(image_id)) {
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Nonexisting_item_referenced,
+                       "Metadata assigned to non-existing image");
+        }
+        continue;
+      }
+      target_images.push_back(img_iter->second);
+    }
+    if (target_images.empty()) {
+      continue;
+    }
+
     std::string item_uri_type = m_heif_file->get_item_uri_type(id);
 
     // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
@@ -1131,56 +1155,12 @@ Error HeifContext::interpret_heif_file_images()
     metadata->item_type = fourcc_to_string(item_type);
     metadata->content_type = content_type;
     metadata->item_uri_type = std::move(item_uri_type);
-
-    auto metadataResult = m_heif_file->get_uncompressed_item_data(id);
-    if (!metadataResult) {
-      if (metadataResult.error().error_code == heif_error_Unsupported_feature) {
-        // The item uses a content_encoding that we cannot decode (unknown coding, or the
-        // decompressor was not compiled in). That is a limitation of this one item, not of
-        // the file: skip it instead of refusing the whole file. Its raw data stays accessible
-        // through heif_item_get_item_data().
-        continue;
-      }
-
-      if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
-        // these item types should have data
-        return metadataResult.error();
-      }
-      else {
-        // anything else is probably something that we don't understand yet
-        continue;
-      }
-    }
-    else {
-      metadata->m_data = *metadataResult;
-
-      // Account the (possibly decompressed) metadata against the total-memory budget
-      // for the lifetime of the context. This bounds the cumulative memory of up to
-      // max_items metadata items, which would otherwise bypass the security limits
-      // (GHSA-24wx-9w62-c96w).
-      if (Error memErr = metadata->m_memory_handle.alloc(metadata->m_data.size(), &m_limits,
-                                                         "decompressed item metadata")) {
-        return memErr;
-      }
-    }
+    metadata->set_source(m_heif_file);
 
     // --- assign metadata to the image
 
-    if (iref_box) {
-      std::vector<heif_item_id> references = iref_box->get_references(id, fourcc("cdsc"));
-      for (heif_item_id exif_image_id : references) {
-        auto img_iter = m_all_images.find(exif_image_id);
-        if (img_iter == m_all_images.end()) {
-          if (!m_heif_file->has_item_with_id(exif_image_id)) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Metadata assigned to non-existing image");
-          }
-
-          continue;
-        }
-        img_iter->second->add_metadata(metadata);
-      }
+    for (const auto& image : target_images) {
+      image->add_metadata(metadata);
     }
   }
 
@@ -1291,40 +1271,30 @@ Error HeifContext::interpret_heif_file_images()
     if (item_type != fourcc("mime")) { // TODO: && content_type  starts with "text/" ?
       continue;
     }
-    std::shared_ptr<TextItem> text_item = std::make_shared<TextItem>();
-    text_item->set_item_id(id);
-
-    auto textDataResult = m_heif_file->get_uncompressed_item_data(id);
-    if (!textDataResult) {
-      if (textDataResult.error().error_code == heif_error_Unsupported_feature) {
-        // content_encoding that we cannot decode: this is not a text item we can use, but
-        // that is no reason to reject the file (see the metadata loop above)
-        continue;
-      }
-
-      return textDataResult.error();
+    if (!iref_box) {
+      continue;
     }
-
-    text_item->parse(*textDataResult);
-    if (iref_box) {
-      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
-      for (const auto& ref : references) {
-        if (ref.header.get_short_type() == fourcc("text")) {
-          std::vector<uint32_t> refs = ref.to_item_ID;
-          for (uint32_t ref : refs) {
-            uint32_t image_id = ref;
-            auto img_iter = m_all_images.find(image_id);
-            if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Text item assigned to non-existing image");
-            }
-            img_iter->second->add_text_item_id(id);
-            m_text_items.push_back(text_item);
-          }
-        }
+    std::vector<heif_item_id> target_image_ids;
+    for (const auto& ref : iref_box->get_references_from(id)) {
+      if (ref.header.get_short_type() == fourcc("text")) {
+        target_image_ids.insert(target_image_ids.end(), ref.to_item_ID.begin(), ref.to_item_ID.end());
       }
     }
+    if (target_image_ids.empty()) {
+      continue;
+    }
+
+    std::shared_ptr<TextItem> text_item = std::make_shared<TextItem>(id, m_heif_file);
+    for (heif_item_id image_id : target_image_ids) {
+      auto img_iter = m_all_images.find(image_id);
+      if (img_iter == m_all_images.end()) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Nonexisting_item_referenced,
+                     "Text item assigned to non-existing image");
+      }
+      img_iter->second->add_text_item_id(id);
+    }
+    m_text_items.push_back(std::move(text_item));
   }
 
   return Error::Ok;

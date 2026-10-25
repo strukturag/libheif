@@ -126,6 +126,9 @@ size_t heif_image_handle_get_metadata_size(const heif_image_handle* handle,
 {
   for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
+      if (metadata->ensure_loaded()) {
+        return 0;
+      }
       return metadata->m_data.size();
     }
   }
@@ -140,6 +143,9 @@ heif_error heif_image_handle_get_metadata(const heif_image_handle* handle,
 {
   for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
+      if (Error err = metadata->ensure_loaded()) {
+        return err.error_struct(handle->image.get());
+      }
       if (!metadata->m_data.empty()) {
         if (out_data == nullptr) {
           return heif_error_null_pointer_argument;
@@ -157,6 +163,53 @@ heif_error heif_image_handle_get_metadata(const heif_image_handle* handle,
   Error err(heif_error_Usage_error,
             heif_suberror_Nonexisting_item_referenced);
   return err.error_struct(handle->image.get());
+}
+
+
+heif_error heif_image_handle_get_metadata2(const heif_image_handle* handle,
+                                           heif_item_id metadata_id,
+                                           size_t max_output_size,
+                                           uint8_t** out_data,
+                                           size_t* out_data_size)
+{
+  if (!out_data || !out_data_size) {
+    return heif_error_null_pointer_argument;
+  }
+  *out_data = nullptr;
+  *out_data_size = 0;
+  if (!handle || !handle->image) {
+    return heif_error_null_pointer_argument;
+  }
+
+  return exception_guard([&]() -> heif_error {
+    for (const auto& metadata : handle->image->get_metadata()) {
+      if (metadata->item_id == metadata_id) {
+        if (Error err = metadata->ensure_loaded(max_output_size)) {
+          return err.error_struct(handle->image.get());
+        }
+
+        uint8_t* data = new uint8_t[metadata->m_data.size()];
+        if (!metadata->m_data.empty()) {
+          memcpy(data, metadata->m_data.data(), metadata->m_data.size());
+        }
+        *out_data = data;
+        *out_data_size = metadata->m_data.size();
+        return heif_error_success;
+      }
+    }
+
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(handle->image.get());
+  });
+}
+
+
+void heif_image_handle_release_metadata_data(uint8_t** data)
+{
+  if (data) {
+    delete[] *data;
+    *data = nullptr;
+  }
 }
 
 

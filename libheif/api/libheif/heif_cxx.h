@@ -271,7 +271,9 @@ namespace heif {
     std::string get_metadata_content_type(heif_item_id metadata_id) const noexcept;
 
     // throws error
+    // Use the overload with a size limit for untrusted metadata.
     std::vector<uint8_t> get_metadata(heif_item_id) const;
+    std::vector<uint8_t> get_metadata(heif_item_id, size_t max_output_size) const;
 
 
     class DecodingOptions
@@ -860,19 +862,28 @@ namespace heif {
 
   inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id) const
   {
-    size_t data_size = heif_image_handle_get_metadata_size(m_image_handle.get(),
-                                                           metadata_id);
+    return get_metadata(metadata_id, SIZE_MAX);
+  }
 
-    std::vector<uint8_t> data(data_size);
-
-    Error err = Error(heif_image_handle_get_metadata(m_image_handle.get(),
-                                                     metadata_id,
-                                                     data.data()));
+  inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id,
+                                                         size_t max_output_size) const
+  {
+    uint8_t* raw_data = nullptr;
+    size_t data_size = 0;
+    Error err = Error(heif_image_handle_get_metadata2(m_image_handle.get(), metadata_id,
+                                                       max_output_size, &raw_data, &data_size));
     if (err) {
       throw err;
     }
 
-    return data;
+    std::unique_ptr<uint8_t, void(*)(uint8_t*)> owned_data(raw_data, [](uint8_t* data) {
+      heif_image_handle_release_metadata_data(&data);
+    });
+
+    if (data_size == 0) {
+      return {};
+    }
+    return std::vector<uint8_t>(raw_data, raw_data + data_size);
   }
 
 

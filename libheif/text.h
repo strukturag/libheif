@@ -23,19 +23,30 @@
 #define LIBHEIF_TEXT_H
 
 #include <cstring>
-#include <string>
+#include <memory>
+#include <mutex>
+#include <string_view>
 #include <vector>
 #include "error.h"
 #include "libheif/heif_text.h"
+#include "security_limits.h"
+
+class HeifFile;
 
 class TextItem
 {
 public:
   TextItem() = default;
 
-  TextItem(heif_item_id itemId, const char *text) : m_item_id(itemId), m_text(text) {}
+  TextItem(heif_item_id itemId, const char *text) : m_item_id(itemId)
+  {
+    m_data.assign(text, text + std::strlen(text));
+  }
 
-  Error parse(const std::vector<uint8_t> &data);
+  TextItem(heif_item_id itemId, std::shared_ptr<HeifFile> file)
+      : m_item_id(itemId), m_source(std::move(file)) {}
+
+  Error parse(std::vector<uint8_t>&& data, const heif_security_limits* limits);
 
   Result<std::vector<uint8_t>> encode() const;
 
@@ -47,11 +58,14 @@ public:
     m_item_id = id;
   }
 
-  std::string get_item_text() const { return m_text; }
+  Result<std::string_view> get_item_text(size_t max_output_size = SIZE_MAX);
 
 private:
   heif_item_id m_item_id = 0;
-  std::string m_text;
+  MemoryHandle m_memory_handle;
+  std::vector<uint8_t> m_data;
+  std::shared_ptr<HeifFile> m_source;
+  std::mutex m_load_mutex;
 };
 
 #endif // LIBHEIF_TEXT_H

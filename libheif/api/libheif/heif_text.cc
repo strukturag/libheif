@@ -25,6 +25,7 @@
 #include "text.h"
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -107,18 +108,46 @@ heif_item_id heif_text_item_get_id(heif_text_item* text_item)
 
 const char* heif_text_item_get_content(heif_text_item* text_item)
 {
-  if (text_item == nullptr) {
+  char* content = nullptr;
+  if (heif_text_item_get_content2(text_item, SIZE_MAX, &content).code != heif_error_Ok) {
     return nullptr;
   }
+  return content;
+}
 
-  // return text as c-string
 
-  std::string txt = text_item->text_item->get_item_text();
+heif_error heif_text_item_get_content2(heif_text_item* text_item,
+                                       size_t max_output_size,
+                                       char** out_content)
+{
+  if (!out_content) {
+    return heif_error_null_pointer_argument;
+  }
+  *out_content = nullptr;
+  if (!text_item || !text_item->text_item) {
+    return heif_error_null_pointer_argument;
+  }
 
-  char* text_c = new char[txt.length() + 1];
-  strcpy(text_c, txt.c_str());
+  return exception_guard([&]() -> heif_error {
+    auto txt_result = text_item->text_item->get_item_text(max_output_size);
+    if (!txt_result) {
+      return txt_result.error_struct(text_item->context.get());
+    }
+    std::string_view txt = *txt_result;
+    if (txt.size() == std::numeric_limits<size_t>::max()) {
+      Error err(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                "Text item is too large for a terminated string");
+      return err.error_struct(text_item->context.get());
+    }
 
-  return text_c;
+    char* text_c = new char[txt.size() + 1];
+    if (!txt.empty()) {
+      memcpy(text_c, txt.data(), txt.size());
+    }
+    text_c[txt.size()] = '\0';
+    *out_content = text_c;
+    return heif_error_success;
+  });
 }
 
 

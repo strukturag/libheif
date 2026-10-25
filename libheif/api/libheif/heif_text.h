@@ -25,6 +25,7 @@
 #include "heif_image_handle.h"
 #include "heif_library.h"
 #include "heif_error.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,15 +96,27 @@ heif_item_id heif_text_item_get_id(heif_text_item* text_item);
 
 /**
  * Get the item content for a text item.
+ * DEPRECATED: use heif_text_item_get_content2() to set an explicit output
+ * limit and receive decompression errors.
  *
  * This is the payload text, in the format given by the associated content_type.
  *
  * @param text_item the text item to query
- * @return the text item content (or null if the text_item is null). The returned string shall be released
+ * @return the text item content (or null if the item is null or cannot be read). The returned string shall be released
  * with heif_string_release().
  */
 LIBHEIF_API
 const char* heif_text_item_get_content(heif_text_item* text_item);
+
+/**
+ * Read a text item on demand, allowing at most max_output_size content bytes.
+ * On success, release *out_content with heif_string_release().
+ * Pass SIZE_MAX to impose no additional size limit.
+ */
+LIBHEIF_API
+heif_error heif_text_item_get_content2(heif_text_item* text_item,
+                                       size_t max_output_size,
+                                       char** out_content);
 
 /**
  * This function is similar to heif_item_get_property_extended_language(), but
