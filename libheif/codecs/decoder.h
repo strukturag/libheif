@@ -57,6 +57,11 @@ struct ImageSize
 std::vector<std::pair<const uint8_t*, size_t>>
 split_nal_units_4byte_length_prefixed(const uint8_t* data, size_t size);
 
+// Scan the complete length-prefixed buffer that will be submitted to a NAL
+// decoder. Invalid framing is an error, not a partial picture count.
+Result<uint32_t> count_nal_coded_pictures(const std::vector<uint8_t>& data,
+                                          heif_compression_format codec);
+
 
 // Specifies the input data for decoding.
 // For images, this points to the iloc extents.
@@ -149,6 +154,16 @@ public:
                            size_t /*configuration_data_size*/) const
   {
     return get_max_coded_image_size(compressed_data);
+  }
+
+  // Count coded pictures in the exact buffer sent to the plugin, including
+  // configuration data. One call covers one image item (or grid tile) or one
+  // sequence sample. Codecs with no multi-picture bitstream return zero.
+  [[nodiscard]] virtual Result<uint32_t>
+  get_number_of_coded_pictures(const std::vector<uint8_t>& /*compressed_data*/,
+                               size_t /*configuration_data_size*/) const
+  {
+    return uint32_t{0};
   }
 
   // Normalize codec framing in the exact buffer that will be checked and sent

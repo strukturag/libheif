@@ -102,6 +102,13 @@ Result<std::optional<ImageSize>> Decoder_AVC::get_max_coded_image_size(const std
 }
 
 
+Result<uint32_t> Decoder_AVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                            size_t) const
+{
+  return count_nal_coded_pictures(compressed_data, heif_compression_AVC);
+}
+
+
 Error Decoder_AVC::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   *out_chroma = m_avcC->get_configuration().chroma_format;

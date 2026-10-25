@@ -181,6 +181,7 @@ Error normalize_av1_sample_data(std::vector<uint8_t>& data, size_t sample_offset
 // a complete scan is returned as an error so that a partial result cannot be
 // used as a security bound.
 Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
-                                               uint32_t* out_max_width, uint32_t* out_max_height);
+                                               uint32_t* out_max_width, uint32_t* out_max_height,
+                                               uint32_t* out_frame_count = nullptr);
 
 #endif

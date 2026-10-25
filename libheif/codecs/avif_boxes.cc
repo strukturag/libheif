@@ -785,13 +785,15 @@ Error normalize_av1_sample_data(std::vector<uint8_t>& data, size_t sample_offset
 
 
 Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
-                                               uint32_t* out_max_width, uint32_t* out_max_height)
+                                               uint32_t* out_max_width, uint32_t* out_max_height,
+                                               uint32_t* out_frame_count)
 {
   // Walk every OBU and keep the largest frame size found in any sequence header,
   // because that is the buffer a decoder will allocate, independent of the
   // (possibly much smaller) 'ispe' dimensions.
 
   if (dataSize == 0) {
+    if (out_frame_count) { *out_frame_count = 0; }
     return false;
   }
   if (data == nullptr || dataSize > (size_t) std::numeric_limits<int>::max()) {
@@ -805,6 +807,7 @@ Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataS
   bool found = false;
   uint32_t max_width = 0;
   uint32_t max_height = 0;
+  uint32_t frame_count = 0;
 
   while (reader.get_bits_remaining() >= 8) {
     obu_header_info header = read_obu_header_type(reader);
@@ -834,6 +837,13 @@ Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataS
 
     size_t payload_len = (size_t) header.size;
 
+    // FRAME contains its own header; FRAME_HEADER starts a frame whose tiles
+    // follow in separate OBUs. Redundant headers are conservatively counted as
+    // well: malformed streams may be interpreted differently by plugins.
+    if (header.type == 3 || header.type == 6 || header.type == 7) {
+      ++frame_count;
+    }
+
     if (header.type == HEIF_OBU_SEQUENCE_HEADER) {
       BitReader seq_reader(data + payload_start, (int) payload_len);
       uint32_t w = 0, h = 0;
@@ -861,6 +871,8 @@ Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataS
     *out_max_width = max_width;
     *out_max_height = max_height;
   }
+
+  if (out_frame_count) { *out_frame_count = frame_count; }
 
   return found;
 }

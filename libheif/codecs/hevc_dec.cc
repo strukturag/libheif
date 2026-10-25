@@ -102,6 +102,13 @@ Result<std::optional<ImageSize>> Decoder_HEVC::get_max_coded_image_size(const st
 }
 
 
+Result<uint32_t> Decoder_HEVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                             size_t) const
+{
+  return count_nal_coded_pictures(compressed_data, heif_compression_HEVC);
+}
+
+
 Error Decoder_HEVC::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   *out_chroma = (heif_chroma) (m_hvcC->get_configuration().chroma_format);

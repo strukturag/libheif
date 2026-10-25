@@ -228,6 +228,36 @@ TEST_CASE("terminal unsized AV1 sequence header remains scannable")
 }
 
 
+TEST_CASE("AV1 frame budget counts frame OBUs in both configuration and sample data")
+{
+  std::vector<uint8_t> config;
+  std::vector<uint8_t> sample;
+  for (int i = 0; i < 3; ++i) {
+    config.push_back(0x32); // OBU_FRAME
+    config.push_back(0x01);
+    config.push_back(0x00);
+  }
+  for (int i = 0; i < 6; ++i) {
+    sample.push_back(0x1a); // OBU_FRAME_HEADER
+    sample.push_back(0x01);
+    sample.push_back(0x00);
+    sample.push_back(0x22); // OBU_TILE_GROUP (not a frame)
+    sample.push_back(0x01);
+    sample.push_back(0x00);
+  }
+
+  uint32_t width = 0, height = 0, count = 0;
+  auto result = find_max_av1_frame_size_in_stream(config.data(), config.size(),
+                                                  &width, &height, &count);
+  REQUIRE(result);
+  CHECK(count == 3);
+  result = find_max_av1_frame_size_in_stream(sample.data(), sample.size(),
+                                             &width, &height, &count);
+  REQUIRE(result);
+  CHECK(count == 6); // nine total, exceeding the per-decode limit of eight
+}
+
+
 TEST_CASE("bytes after an unsized AV1 sample OBU remain in its payload")
 {
   std::vector<uint8_t> data;

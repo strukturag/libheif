@@ -360,6 +360,88 @@ split_nal_units_4byte_length_prefixed(const uint8_t* data, size_t size)
 }
 
 
+Result<uint32_t> count_nal_coded_pictures(const std::vector<uint8_t>& data,
+                                          heif_compression_format codec)
+{
+  size_t pos = 0;
+  uint32_t pictures = 0;
+  while (pos < data.size()) {
+    if (data.size() - pos < 4) {
+      return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                   "NAL stream was rejected because a length field is truncated."};
+    }
+    uint32_t length = (uint32_t(data[pos]) << 24) | (uint32_t(data[pos + 1]) << 16) |
+                      (uint32_t(data[pos + 2]) << 8) | data[pos + 3];
+    pos += 4;
+    if (length == 0 || length > data.size() - pos) {
+      return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                   "NAL stream was rejected because a NAL unit size is invalid."};
+    }
+    const uint8_t* nal = data.data() + pos;
+
+    // OpenH264 interprets these bytes as additional NAL boundaries even when
+    // they occur inside a length-prefixed unit. Reject them before any plugin
+    // sees the buffer, or the picture count could be bypassed.
+    if (codec == heif_compression_AVC) {
+      for (size_t i = 2; i < length; ++i) {
+        if (nal[i - 2] == 0 && nal[i - 1] == 0 && nal[i] <= 2) {
+          return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                       "AVC stream was rejected because a NAL unit contains a start-code prefix."};
+        }
+      }
+    }
+
+    if (codec == heif_compression_HEVC) {
+      if (length < 2) {
+        return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                     "HEVC stream was rejected because a NAL header is truncated."};
+      }
+      // Every layer counts. A first slice begins a coded picture; subsequent
+      // slices of that picture must not consume the picture budget again.
+      if (((nal[0] >> 1) & 0x3f) <= 31) {
+        if (length < 3) {
+          return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                       "HEVC stream was rejected because a slice header is truncated."};
+        }
+        pictures += (nal[2] & 0x80) != 0;
+      }
+    }
+    else if (codec == heif_compression_AVC) {
+      const int type = nal[0] & 0x1f;
+      const size_t header_size = type == 20 ? 4 : 1;
+      if (type == 1 || type == 2 || type == 5 || type == 20) {
+        if (length <= header_size) {
+          return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                       "AVC stream was rejected because a slice header is truncated."};
+        }
+        // first_mb_in_slice is ue(v); its value is zero iff its first bit is 1.
+        pictures += (nal[header_size] & 0x80) != 0;
+      }
+    }
+    else if (codec == heif_compression_VVC) {
+      if (length < 2) {
+        return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                     "VVC stream was rejected because a NAL header is truncated."};
+      }
+      const int type = (nal[1] >> 3) & 0x1f;
+      if (type == 19) { // PH_NUT
+        ++pictures;
+      }
+      else if (type <= 11) { // VCL; picture header may be in its slice header
+        if (length < 3) {
+          return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                       "VVC stream was rejected because a slice header is truncated."};
+        }
+        pictures += (nal[2] & 0x80) != 0;
+      }
+    }
+
+    pos += length;
+  }
+  return pictures;
+}
+
+
 
 void Decoder::release_decoder()
 {
@@ -518,6 +600,18 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
     if (sizeErr) {
       return sizeErr;
     }
+  }
+
+  auto pictureCount = get_number_of_coded_pictures(*dataResult, configuration_data_size);
+  if (!pictureCount) {
+    return pictureCount.error();
+  }
+  // v1.23.x cannot extend the public security-limits struct. Keep the bound
+  // local to this decode call, so tiles and sequence samples have independent
+  // budgets, rather than charging all of a grid against one global counter.
+  if (*pictureCount > 8) {
+    return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                 "Image data was rejected because it contains more than 8 coded pictures in one decode."};
   }
 
   // --- decode image with the plugin

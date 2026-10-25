@@ -109,6 +109,13 @@ Result<std::optional<ImageSize>> Decoder_VVC::get_max_coded_image_size(const std
 }
 
 
+Result<uint32_t> Decoder_VVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                            size_t) const
+{
+  return count_nal_coded_pictures(compressed_data, heif_compression_VVC);
+}
+
+
 Error Decoder_VVC::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   *out_chroma = (heif_chroma) (m_vvcC->get_configuration().chroma_format_idc);

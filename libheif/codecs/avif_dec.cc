@@ -113,6 +113,31 @@ Result<std::optional<ImageSize>> Decoder_AVIF::get_max_coded_image_size(const st
 }
 
 
+Result<uint32_t> Decoder_AVIF::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                             size_t configuration_data_size) const
+{
+  if (configuration_data_size > compressed_data.size()) {
+    return Error{heif_error_Invalid_input, heif_suberror_Unspecified,
+                 "AV1 stream was rejected because its configuration-data size is invalid."};
+  }
+  uint32_t total = 0;
+  auto scan_region = [&](size_t offset, size_t size) -> Error {
+    uint32_t width = 0, height = 0, count = 0;
+    auto result = find_max_av1_frame_size_in_stream(compressed_data.data() + offset, size,
+                                                    &width, &height, &count);
+    if (!result) { return result.error(); }
+    total += count;
+    return Error::Ok;
+  };
+  Error err = scan_region(0, configuration_data_size);
+  if (err) { return err; }
+  err = scan_region(configuration_data_size,
+                    compressed_data.size() - configuration_data_size);
+  if (err) { return err; }
+  return total;
+}
+
+
 int Decoder_AVIF::get_luma_bits_per_pixel() const
 {
   Box_av1C::configuration config = m_av1C->get_configuration();
