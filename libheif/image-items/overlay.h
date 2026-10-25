@@ -125,6 +125,8 @@ public:
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
                                                                   DecodeTraversalState decode_state) const override;
 
+  void get_coded_image_size(uint32_t& w, uint32_t& h) const override;
+
 
   // --- iovl specific
 

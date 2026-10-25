@@ -24,8 +24,10 @@
 #include <cinttypes>
 #include <cstddef>
 #include <set>
+#include <map>
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include "error.h"
 
 
@@ -73,6 +75,77 @@ static const uint32_t MAX_DERIVED_IMAGE_DECODE_FACTOR = 2;
 // items, so this bounds the total amount of repeated pixel processing.
 static const uint32_t MAX_TRANSFORMATIONS_PER_DECODE_PATH = 32;
 
+// How often the pixels of the items that take part in a single top-level decode
+// may be decoded on average. The number of decode operations alone does not
+// bound the work: an item that is referenced many times is decoded again for
+// each reference, and what a reference uses of it can be much smaller than the
+// item (e.g. a 'clap' crop). A grid of 660 1x1 tiles, each the same 'clap' of a
+// 16384x16384 overlay canvas, stays within the decode-operation budget but builds
+// the canvas 660 times. A well-formed file decodes each item a small number of
+// times, so the total size of the decoded images is capped at a modest multiple
+// of the summed size of the items taking part. A grid that uses one tile item for
+// many positions is covered by the size of the grid itself.
+// In a usual file, grid tiles are distinct items and overlays do not reuse their inputs,
+// so each item is decoded once (factor 1). A grid that repeats one tile item for all
+// of its positions comes close to 2.
+static const uint32_t MAX_DECODED_PIXELS_FACTOR = 2;
+
+// Small items are cheap to decode however often they are referenced (the number of
+// decode operations is bounded separately). The factor above is applied to at least
+// this number of pixels, so that it only restricts decodes that take noticeable time.
+static const uint64_t MIN_DECODED_PIXELS_BASE = 2048 * 2048;
+
+
+// Pixel budget of one top-level decode, shared by all copies of its DecodeTraversalState.
+// Each decode of an item uses up the size of the item. The budget is MAX_DECODED_PIXELS_FACTOR
+// times the summed size of the distinct items that take part in the decode. As many large
+// items can be cropped to a small image just like a single one that is used many times,
+// that sum counts only up to max_image_size_pixels.
+//
+// When a single tile of a tiled image is decoded (heif_image_handle_decode_image_tile()),
+// each call is a top-level decode of its own, so a budget computed as above would allow
+// each tile as much as the whole image. Decoding all tiles would then cost the number of
+// tiles times the budget of the whole image. For a tile decode, each item therefore adds
+// at most the size of one tile to the summed size of the distinct items, and the minimum
+// MIN_DECODED_PIXELS_BASE is divided among the tiles. A tile item that is much larger than
+// its tile (e.g. a 'clap' crop of a large image) is then refused, also when it is reached
+// through 'iden' items.
+class DecodePixelBudget
+{
+public:
+  // max_image_size_pixels is the size limit for a single image from the context's
+  // heif_security_limits. It caps the summed size of the distinct items, so
+  // the total budget is at most MAX_DECODED_PIXELS_FACTOR times this limit.
+  explicit DecodePixelBudget(uint64_t max_image_size_pixels);
+
+  // Budget for decoding one tile of an image that consists of num_tiles tiles of
+  // tile_pixels each. Use the constructor above for an image that is a single tile.
+  DecodePixelBudget(uint64_t max_image_size_pixels, uint64_t tile_pixels, uint64_t num_tiles);
+
+  // Count one decode of an item against the budget. Every call adds num_pixels to the
+  // pixels decoded so far. The item id is used for the allowance: each distinct item adds
+  // its (largest) size to it only once, however often it is decoded. A file that decodes
+  // each item about once stays far below the budget; one that decodes the same items again
+  // and again uses it up.
+  // To be called before the item is decoded, with the size of the image (or tile) that is
+  // going to be decoded. When that size is not known (0), it has to be called again after
+  // the decoding with the size of the decoded image.
+  // Returns false when the budget has been exhausted.
+  bool count_item_decode(heif_item_id id, uint64_t num_pixels);
+
+private:
+  std::mutex m_mutex;
+
+  // The allowance is MAX_DECODED_PIXELS_FACTOR * max(m_distinct_item_pixels, m_min_distinct_item_pixels).
+  uint64_t m_max_distinct_item_pixels;                    // cap of m_distinct_item_pixels and of a single decode
+  uint64_t m_max_item_pixels;                             // cap of what one item adds to m_distinct_item_pixels
+  uint64_t m_min_distinct_item_pixels;                    // floor of m_distinct_item_pixels in the allowance
+  std::map<heif_item_id, uint64_t> m_item_pixels_counted; // what each item has added to m_distinct_item_pixels
+  uint64_t m_distinct_item_pixels = 0;                    // summed (largest) sizes of the distinct items
+
+  uint64_t m_consumed_pixels = 0;                         // summed sizes of all decodes so far
+};
+
 
 // Traversal state threaded through the derived-image decode recursion for one
 // top-level decode. It is copied by value at every hop, which gives the two
@@ -86,7 +159,8 @@ static const uint32_t MAX_TRANSFORMATIONS_PER_DECODE_PATH = 32;
 //
 //   - decode_count is a shared_ptr to an atomic, so every copy (including the
 //     copies handed to parallel tile-decode threads) shares one global counter
-//     that bounds the total number of decode operations.
+//     that bounds the total number of decode operations. pixel_budget is shared
+//     in the same way and bounds the total size of what these operations decode.
 //
 // A default-constructed DecodeTraversalState (max_decodes == 0) imposes no limit; the
 // budget is seeded once at the top level in HeifContext::decode_image().
@@ -102,6 +176,8 @@ struct DecodeTraversalState
 
   std::shared_ptr<std::atomic<uint32_t>> decode_count;
   uint32_t max_decodes = 0;             // 0 == unlimited
+
+  std::shared_ptr<DecodePixelBudget> pixel_budget;  // null == unlimited
 
   // Count one sub-image decode against the shared budget.
   // Returns false when the budget has been exhausted.

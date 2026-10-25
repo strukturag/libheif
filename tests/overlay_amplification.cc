@@ -33,13 +33,19 @@
 // via nested overlays). These tests build the amplification structures out of
 // 'iovl' overlays over an 'mski' base (which needs no codec plugin) and check
 // that decoding is rejected quickly instead of blowing up.
+//
+// The number of decodes alone does not bound the work either: what a reference
+// uses of the decoded image can be much smaller than the image (a 'clap' crop).
+// The last tests check that the total size of the decoded images is bounded, too.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
 #include "test_utils.h"
 
 #include <cstdint>
+#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -61,19 +67,32 @@ std::vector<uint8_t> make_overlay_spec(uint16_t canvas_w, uint16_t canvas_h, siz
   return s;
 }
 
+// ImageGrid payload (ISO/IEC 23008-12) with 16-bit fields.
+std::vector<uint8_t> make_grid_spec(uint8_t rows, uint8_t columns, uint16_t width, uint16_t height) {
+  std::vector<uint8_t> s;
+  s.push_back(0);           // version
+  s.push_back(0);           // flags (16-bit fields)
+  s.push_back(static_cast<uint8_t>(rows - 1));
+  s.push_back(static_cast<uint8_t>(columns - 1));
+  put_u16_be(s, width);
+  put_u16_be(s, height);
+  return s;
+}
+
 struct Item {
   uint16_t id = 0;
-  std::string type;                 // "mski", "iovl", "iden"
-  std::vector<uint16_t> dimg;       // 'dimg' references (iovl/iden)
-  std::vector<uint8_t> data;        // idat payload (mski pixels / iovl spec); empty for iden
+  std::string type;                 // "mski", "iovl", "iden", "grid"
+  std::vector<uint16_t> dimg;       // 'dimg' references (iovl/iden/grid)
+  std::vector<uint8_t> data;        // idat payload (mski pixels / iovl or grid spec); empty for iden
+  uint32_t width = 8;               // 'ispe' size
+  uint32_t height = 8;
+  bool crop_to_1x1 = false;         // add a 'clap' that keeps a single pixel
 };
 
 // Assemble a minimal, self-contained HEIF file from an explicit item list. Every
-// item carries an 8x8 'ispe'; the single 'mski' base additionally carries a
+// item carries an 'ispe'; the single 'mski' base additionally carries a
 // 'mskC'. Items with data store it in 'idat' (construction_method 1).
 std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary_id) {
-  const uint32_t W = 8, H = 8;
-
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "heic");
   put_u32_be(ftyp_payload, 0);
@@ -107,34 +126,46 @@ std::vector<uint8_t> build_file(const std::vector<Item>& items, uint16_t primary
   }
   auto iinf = make_box("iinf", iinf_payload, /*full=*/true);
 
-  // iprp / ipco: one ispe(8x8) per item, plus one shared mskC for the base.
+  // iprp / ipco: one mskC for the base, one clap, plus one ispe per image size
+  // (shared by all items of that size).
   // Property indices are 1-based in the order boxes appear in ipco.
-  std::vector<uint8_t> ispe_payload;
-  put_u32_be(ispe_payload, W);
-  put_u32_be(ispe_payload, H);
-  auto ispe = make_box("ispe", ispe_payload, /*full=*/true);
-
   std::vector<uint8_t> mskC_payload;
   mskC_payload.push_back(8);  // bits_per_pixel
   auto mskC = make_box("mskC", mskC_payload, /*full=*/true);
 
+  std::vector<uint8_t> clap_payload;
+  for (uint32_t v : {1, 1, 1, 1, 0, 1, 0, 1}) {  // width 1/1, height 1/1, centered
+    put_u32_be(clap_payload, v);
+  }
+  auto clap = make_box("clap", clap_payload);
+
   std::vector<uint8_t> ipco_payload;
-  append(ipco_payload, ispe);   // property 1: ispe(8x8), shared by all items
-  append(ipco_payload, mskC);   // property 2: mskC, for the base
+  append(ipco_payload, mskC);   // property 1: mskC, for the base
+  append(ipco_payload, clap);   // property 2: clap
+
+  std::map<std::pair<uint32_t, uint32_t>, uint8_t> ispe_index;
+  for (const auto& it : items) {
+    if (ispe_index.emplace(std::make_pair(it.width, it.height),
+                           static_cast<uint8_t>(3 + ispe_index.size())).second) {
+      std::vector<uint8_t> ispe_payload;
+      put_u32_be(ispe_payload, it.width);
+      put_u32_be(ispe_payload, it.height);
+      append(ipco_payload, make_box("ispe", ispe_payload, /*full=*/true));
+    }
+  }
   auto ipco = make_box("ipco", ipco_payload);
 
   std::vector<uint8_t> ipma_payload;
   put_u32_be(ipma_payload, static_cast<uint32_t>(items.size()));  // entry_count
   for (const auto& it : items) {
     put_u16_be(ipma_payload, it.id);
+    ipma_payload.push_back(static_cast<uint8_t>(1 + (it.type == "mski") + it.crop_to_1x1));  // association_count
+    ipma_payload.push_back(0x80 | ispe_index[{it.width, it.height}]);  // essential, ispe
     if (it.type == "mski") {
-      ipma_payload.push_back(2);          // association_count
-      ipma_payload.push_back(0x80 | 1);   // essential, ispe
-      ipma_payload.push_back(0x80 | 2);   // essential, mskC
+      ipma_payload.push_back(0x80 | 1);   // essential, mskC
     }
-    else {
-      ipma_payload.push_back(1);
-      ipma_payload.push_back(0x80 | 1);   // essential, ispe
+    if (it.crop_to_1x1) {
+      ipma_payload.push_back(0x80 | 2);   // essential, clap
     }
   }
   auto ipma = make_box("ipma", ipma_payload, /*full=*/true);
@@ -227,7 +258,23 @@ std::vector<uint8_t> build_exponential_overlays(int depth) {
   return build_file(items, /*primary=*/2);
 }
 
-heif_error decode_primary(const std::vector<uint8_t>& data, bool& read_ok) {
+// Build a grid of 1x1 pixel tiles. Every tile is the same 'iden' item, whose 'clap'
+// crops one pixel out of an overlay with a canvas of source_size x source_size.
+// Without the fix, that canvas is built again for each of the tiles.
+std::vector<uint8_t> build_grid_of_cropped_tiles(uint8_t rows, uint8_t columns, uint16_t source_size) {
+  std::vector<Item> items;
+  items.push_back({1, "mski", {}, std::vector<uint8_t>(64, 0x7F)});
+  items.push_back({2, "grid", std::vector<uint16_t>(rows * columns, 3),
+                   make_grid_spec(rows, columns, columns, rows), columns, rows});
+  items.push_back({3, "iden", {4}, {}, source_size, source_size, /*crop_to_1x1=*/true});
+  items.push_back({4, "iovl", {1}, make_overlay_spec(source_size, source_size, 1), source_size, source_size});
+
+  return build_file(items, /*primary=*/2);
+}
+
+// Decodes the whole primary image, or only its tile (tile_x, tile_y) with tile_x >= 0.
+heif_error decode_primary(const std::vector<uint8_t>& data, bool& read_ok, bool strict = false,
+                          int tile_x = -1, int tile_y = -1) {
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
 
@@ -246,9 +293,21 @@ heif_error decode_primary(const std::vector<uint8_t>& data, bool& read_ok) {
     return err;
   }
 
-  heif_image* img = nullptr;
-  err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+  // Without strict decoding, a grid tile that cannot be decoded is only a warning
+  // (unless it exceeds a security limit).
+  heif_decoding_options* options = heif_decoding_options_alloc();
+  options->strict_decoding = strict;
 
+  heif_image* img = nullptr;
+  if (tile_x >= 0) {
+    err = heif_image_handle_decode_image_tile(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, options,
+                                              static_cast<uint32_t>(tile_x), static_cast<uint32_t>(tile_y));
+  }
+  else {
+    err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, options);
+  }
+
+  heif_decoding_options_free(options);
   if (img) { heif_image_release(img); }
   heif_image_handle_release(handle);
   heif_context_free(ctx);
@@ -311,6 +370,104 @@ TEST_CASE("overlay amplification: a shallow legitimate overlay still decodes") {
 
   bool read_ok = false;
   heif_error err = decode_primary(data, read_ok);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+// The number of decodes (3 per tile) is within the limit, but each tile decodes a
+// 2048x2048 image to use one pixel of it.
+TEST_CASE("overlay amplification: large image decoded again for each small grid tile is rejected") {
+  auto data = build_grid_of_cropped_tiles(/*rows=*/16, /*columns=*/16, /*source_size=*/2048);
+
+  // Also without strict decoding, where a broken grid tile is only a warning: an exceeded
+  // budget must not result in an image with blank tiles.
+  bool strict = GENERATE(true, false);
+  CAPTURE(strict);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, strict);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+}
+
+// Control: the same reference graph with a small source image is cheap and still decodes.
+TEST_CASE("overlay amplification: small image decoded again for each grid tile still decodes") {
+  auto data = build_grid_of_cropped_tiles(/*rows=*/16, /*columns=*/16, /*source_size=*/8);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/true);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+// Control: cropping a large image once is legitimate.
+TEST_CASE("overlay amplification: large image cropped to a single grid tile still decodes") {
+  auto data = build_grid_of_cropped_tiles(/*rows=*/1, /*columns=*/1, /*source_size=*/2048);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/true);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+// Control: a large grid that uses one tile item for all positions decodes that item many
+// times, but not more pixels than the grid has.
+TEST_CASE("overlay amplification: grid that repeats one tile still decodes") {
+  std::vector<Item> items;
+  items.push_back({1, "mski", {}, std::vector<uint8_t>(512 * 512, 0x7F), 512, 512});
+  items.push_back({2, "grid", std::vector<uint16_t>(16 * 16, 1), make_grid_spec(16, 16, 8192, 8192), 8192, 8192});
+
+  auto data = build_file(items, /*primary=*/2);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/true);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+
+// Each call of heif_image_handle_decode_image_tile() is a top-level decode of its own.
+// The tile item is a 2048x2048 image cropped to its 1x1 tile, which a budget that is
+// computed from the items alone would allow for each of the 256 tiles. A tile only gets
+// its share of the budget of the whole image, so the tile item is refused.
+TEST_CASE("overlay amplification: single tile cropped from a large image is rejected") {
+  auto data = build_grid_of_cropped_tiles(/*rows=*/16, /*columns=*/16, /*source_size=*/2048);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/false, /*tile_x=*/3, /*tile_y=*/5);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code != heif_error_Ok);
+  REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+}
+
+// Control: the same tile with a small source image still decodes.
+TEST_CASE("overlay amplification: single tile cropped from a small image still decodes") {
+  auto data = build_grid_of_cropped_tiles(/*rows=*/16, /*columns=*/16, /*source_size=*/8);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/true, /*tile_x=*/3, /*tile_y=*/5);
+
+  REQUIRE(read_ok);
+  REQUIRE(err.code == heif_error_Ok);
+}
+
+// Control: a single tile of a large grid of tiles of the cell size still decodes.
+TEST_CASE("overlay amplification: single tile of a large grid still decodes") {
+  std::vector<Item> items;
+  items.push_back({1, "mski", {}, std::vector<uint8_t>(512 * 512, 0x7F), 512, 512});
+  items.push_back({2, "grid", std::vector<uint16_t>(16 * 16, 1), make_grid_spec(16, 16, 8192, 8192), 8192, 8192});
+
+  auto data = build_file(items, /*primary=*/2);
+
+  bool read_ok = false;
+  heif_error err = decode_primary(data, read_ok, /*strict=*/true, /*tile_x=*/15, /*tile_y=*/15);
 
   REQUIRE(read_ok);
   REQUIRE(err.code == heif_error_Ok);

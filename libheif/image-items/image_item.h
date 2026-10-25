@@ -223,6 +223,12 @@ public:
 
   virtual void get_tile_size(uint32_t& w, uint32_t& h) const;
 
+  // The size of the image that decode_compressed_image() builds when it decodes the whole
+  // image (before the image transformations). The size is 0 when it is unknown.
+  // Default behavior: the 'ispe' size. Derived images that take the size of their canvas
+  // from their own header return that one.
+  virtual void get_coded_image_size(uint32_t& w, uint32_t& h) const;
+
   virtual Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
 
   Error postprocess_coded_image_colorspace(heif_colorspace* inout_colorspace, heif_chroma* inout_chroma) const;

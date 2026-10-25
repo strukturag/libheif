@@ -533,6 +533,13 @@ void ImageItem::get_tile_size(uint32_t& w, uint32_t& h) const
 }
 
 
+void ImageItem::get_coded_image_size(uint32_t& w, uint32_t& h) const
+{
+  w = get_ispe_width();
+  h = get_ispe_height();
+}
+
+
 Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_colorspace, heif_chroma* inout_chroma) const
 {
 #if 0
@@ -1262,6 +1269,32 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
   }
 
 
+  // --- bound the total size of the images decoded for this top-level decode
+
+  // The decode operations counted above are not equally expensive, and what the
+  // referencing item uses of the decoded image may be much smaller than the image
+  // (e.g. a 'clap' crop of a large overlay canvas, used as a 1x1 grid tile). This has
+  // to be checked with the size the item is about to produce, before the decoding,
+  // because a failed grid tile is only a warning in non-strict mode.
+
+  uint32_t coded_width, coded_height;
+  if (decode_coded_tile_only) {
+    get_tile_size(coded_width, coded_height);
+  }
+  else {
+    get_coded_image_size(coded_width, coded_height);
+  }
+
+  const uint64_t num_coded_pixels = static_cast<uint64_t>(coded_width) * coded_height;
+
+  if (decode_state.pixel_budget &&
+      !decode_state.pixel_budget->count_item_decode(m_id, num_coded_pixels)) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Security_limit_exceeded,
+                 "Too many pixels decoded for derived images (possible reference amplification)"};
+  }
+
+
   // --- transform tile position
 
   // The alpha image gets the requested tile position and converts it according to
@@ -1344,6 +1377,14 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     // Safety net: no known decoding path returns a null image without an error anymore.
     return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified,
                  "Decoding returned no image");
+  }
+
+  // Without an 'ispe', the size of the coded image is only known now.
+  if (decode_state.pixel_budget && num_coded_pixels == 0 &&
+      !decode_state.pixel_budget->count_item_decode(m_id, static_cast<uint64_t>(img->get_width()) * img->get_height())) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Security_limit_exceeded,
+                 "Too many pixels decoded for derived images (possible reference amplification)"};
   }
 
   // --- validate the decoded image against the signaled size (pre-transform)

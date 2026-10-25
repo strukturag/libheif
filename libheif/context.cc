@@ -1502,6 +1502,28 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     decode_state.max_overlay_nesting = MAX_OVERLAY_NESTING_LEVEL;
     decode_state.max_transformations = MAX_TRANSFORMATIONS_PER_DECODE_PATH;
     decode_state.decode_count = std::make_shared<std::atomic<uint32_t>>(0);
+
+    // Also bound the total size of the images decoded, because the decode operations
+    // are not equally expensive (a 'clap' can keep one pixel of a maximum-size image).
+    if (limits->max_image_size_pixels != 0) {
+      // A single tile only gets its share of the budget of the whole image. Otherwise,
+      // decoding all tiles one by one would cost the number of tiles times that budget.
+      // The tile position refers to this tiling (see ImageItem::decode_image()).
+      heif_image_tiling tiling{};
+      if (decode_only_tile) {
+        tiling = imgitem->get_image_tiling_with_alpha();
+      }
+
+      const uint64_t num_tiles = static_cast<uint64_t>(tiling.num_columns) * tiling.num_rows;
+      if (num_tiles > 1) {
+        decode_state.pixel_budget = std::make_shared<DecodePixelBudget>(limits->max_image_size_pixels,
+                                                                        static_cast<uint64_t>(tiling.tile_width) * tiling.tile_height,
+                                                                        num_tiles);
+      }
+      else {
+        decode_state.pixel_budget = std::make_shared<DecodePixelBudget>(limits->max_image_size_pixels);
+      }
+    }
   }
 
   auto decodingResult = imgitem->decode_image(options, decode_only_tile, tx, ty, decode_state);

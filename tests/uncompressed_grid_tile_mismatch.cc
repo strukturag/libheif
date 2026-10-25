@@ -491,6 +491,19 @@ TEST_CASE("grid with a tile completely outside of the image")
 }
 
 
+TEST_CASE("a grid tile completely outside of the image is not decoded")
+{
+  // That the third tile is not decoded shows in that its format is not compared with the other tiles.
+  auto file = build_grid_file({{{{MONO, 8}}, 0xAA}, {{{MONO, 8}}, 0xBB}, {{{MONO, 16}}, 0xCC}}, 2 * TILE_W);
+
+  Outcome outcome = decode_repeatedly(file);
+  INFO("decode: " << outcome.message);
+  REQUIRE(outcome.code == heif_error_Ok);
+  CHECK(outcome.bit_depth == 8);
+  CHECK(outcome.first_row == row_of({0xAA, 0xBB}));
+}
+
+
 TEST_CASE("decoding single grid tiles refuses a tile that does not have the format of the other tiles")
 {
   SECTION("tiles of the same format") {

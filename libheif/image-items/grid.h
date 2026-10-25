@@ -158,6 +158,8 @@ public:
 
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
+  void get_coded_image_size(uint32_t& w, uint32_t& h) const override;
+
 private:
   int get_luma_bits_per_pixel_unlocked() const override;
 

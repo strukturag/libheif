@@ -129,6 +129,59 @@ heif_security_limits tighten_image_size_limit_for_ispe(const heif_security_limit
 }
 
 
+DecodePixelBudget::DecodePixelBudget(uint64_t max_image_size_pixels)
+{
+  // Clamp a very high configured limit so that the sums below cannot overflow.
+  const uint64_t max_pixels = uint64_t{1} << 40;
+
+  m_max_distinct_item_pixels = std::min(max_image_size_pixels, max_pixels);
+  m_max_item_pixels = m_max_distinct_item_pixels;
+  m_min_distinct_item_pixels = MIN_DECODED_PIXELS_BASE;
+}
+
+
+DecodePixelBudget::DecodePixelBudget(uint64_t max_image_size_pixels, uint64_t tile_pixels, uint64_t num_tiles)
+    : DecodePixelBudget(max_image_size_pixels)
+{
+  // Each tile gets its share of the budget of the whole image.
+  m_max_item_pixels = std::min(tile_pixels, m_max_distinct_item_pixels);
+
+  if (num_tiles > 1) {
+    m_min_distinct_item_pixels = (MIN_DECODED_PIXELS_BASE + num_tiles - 1) / num_tiles;
+  }
+}
+
+
+bool DecodePixelBudget::count_item_decode(heif_item_id id, uint64_t num_pixels)
+{
+  std::lock_guard<std::mutex> lock(m_mutex);
+
+  // A larger image is going to be refused by the image size check.
+  num_pixels = std::min(num_pixels, m_max_distinct_item_pixels);
+
+  // Each distinct item adds its size to m_distinct_item_pixels only once. The sum saturates at the
+  // maximum image size: many large items, each cropped to a small image, must not
+  // raise the allowance as fast as they use it up. For a tile decode, an item adds at most
+  // the size of a tile.
+  const uint64_t item_contribution = std::min(num_pixels, m_max_item_pixels);
+  uint64_t& item_pixels = m_item_pixels_counted[id];
+  if (item_contribution > item_pixels) {
+    m_distinct_item_pixels = std::min(m_distinct_item_pixels + (item_contribution - item_pixels), m_max_distinct_item_pixels);
+    item_pixels = item_contribution;
+  }
+
+  // Every decode is consumed, also repeated decodes of the same item.
+  // Compared by subtraction, so that the check itself cannot overflow.
+  uint64_t allowance = std::max(m_distinct_item_pixels, m_min_distinct_item_pixels) * MAX_DECODED_PIXELS_FACTOR;
+  if (m_consumed_pixels > allowance || num_pixels > allowance - m_consumed_pixels) {
+    return false;
+  }
+
+  m_consumed_pixels += num_pixels;
+  return true;
+}
+
+
 Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height)
 {
   uint64_t maximum_image_size_limit = limits->max_image_size_pixels;
