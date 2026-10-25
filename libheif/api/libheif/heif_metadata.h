@@ -70,13 +70,15 @@ LIBHEIF_API
 const char* heif_image_handle_get_metadata_content_type(const heif_image_handle* handle,
                                                         heif_item_id metadata_id);
 
-// Get the size of the raw metadata, as stored in the HEIF file.
+// Get the size of the metadata content (decompressed for compressed MIME items).
+// This may read and decompress the item on first access. Returns 0 if the item
+// is missing or cannot be read.
 LIBHEIF_API
 size_t heif_image_handle_get_metadata_size(const heif_image_handle* handle,
                                            heif_item_id metadata_id);
 
 // 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
-// The data is returned exactly as stored in the HEIF file.
+// Compressed MIME data is returned decompressed.
 // For Exif data, you probably have to skip the first four bytes of the data, since they
 // indicate the offset to the start of the TIFF header of the Exif data.
 LIBHEIF_API

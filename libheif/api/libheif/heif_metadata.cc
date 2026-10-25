@@ -126,6 +126,9 @@ size_t heif_image_handle_get_metadata_size(const heif_image_handle* handle,
 {
   for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
+      if (metadata->ensure_loaded()) {
+        return 0;
+      }
       return metadata->m_data.size();
     }
   }
@@ -140,6 +143,9 @@ heif_error heif_image_handle_get_metadata(const heif_image_handle* handle,
 {
   for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
+      if (Error err = metadata->ensure_loaded()) {
+        return err.error_struct(handle->image.get());
+      }
       if (!metadata->m_data.empty()) {
         if (out_data == nullptr) {
           return heif_error_null_pointer_argument;

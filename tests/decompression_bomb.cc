@@ -24,16 +24,12 @@
   SOFTWARE.
 */
 
-// Regression test for GHSA-24wx-9w62-c96w: a compressed ('mime', content_encoding
-// "br") metadata item is a decompression bomb. Opening the file decompresses the
-// item in HeifContext::interpret_heif_file_images(), which used to grow an output
-// vector with no size accounting at all, bypassing the configured security limits
-// and allowing OOM from a few hundred bytes of input.
+// Regression tests for compressed MIME items: opening a file records associations
+// without expanding item contents, and explicit reads honor security limits.
 //
-// The test builds a tiny HEIF whose 'mime' item is a real brotli payload that
-// expands to tens of MB, then opens it once with a tight total-memory limit
-// (expecting a security-limit error) and once with the default limits (expecting
-// success, proving the file itself is valid and it is the limit that is enforced).
+// The test builds a tiny HEIF whose 'mime' item expands to tens of MB. Opening
+// succeeds even with a tight limit; reading the item then reports the limit
+// error. With default limits, the same item can be read.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
@@ -52,7 +48,8 @@ namespace {
 //           codec plugin is required and the file opens without decoding.
 //   item 2 ('mime', content_encoding "br"): a brotli-compressed metadata item,
 //           'cdsc'-referencing item 1, carrying the supplied bomb payload.
-std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& brotli_payload) {
+std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& brotli_payload,
+                                                 bool attach_to_image = true) {
   std::vector<uint8_t> ftyp_payload;
   append_fourcc(ftyp_payload, "heic");
   put_u32_be(ftyp_payload, 0);
@@ -168,7 +165,9 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   append(meta_payload, iinf);
   append(meta_payload, iprp);
   append(meta_payload, iloc);
-  append(meta_payload, iref);
+  if (attach_to_image) {
+    append(meta_payload, iref);
+  }
   append(meta_payload, idat);
   auto meta = make_box("meta", meta_payload, /*full=*/true);
 
@@ -178,8 +177,30 @@ std::vector<uint8_t> build_heif_with_brotli_mime(const std::vector<uint8_t>& bro
   return file;
 }
 
+
 } // namespace
 
+
+TEST_CASE("unreferenced compressed mime item is not decompressed during file open") {
+#if HAVE_BROTLI
+  const size_t decompressed_size = 16u * 1024 * 1024;
+  std::vector<uint8_t> zeros(decompressed_size, 0);
+  std::vector<uint8_t> bomb = compress_brotli(zeros.data(), zeros.size());
+  std::vector<uint8_t> file = build_heif_with_brotli_mime(bomb, false);
+
+  heif_context* ctx = heif_context_alloc();
+  REQUIRE(ctx != nullptr);
+  heif_security_limits* limits = heif_context_get_security_limits(ctx);
+  REQUIRE(limits != nullptr);
+  limits->max_total_memory = 8u * 1024 * 1024;
+
+  heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
+  REQUIRE(err.code == heif_error_Ok);
+  heif_context_free(ctx);
+#else
+  SUCCEED("brotli support not compiled in - skipping decompression bomb test");
+#endif
+}
 
 TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits") {
 #if HAVE_BROTLI
@@ -192,8 +213,8 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
 
   std::vector<uint8_t> file = build_heif_with_brotli_mime(bomb);
 
-  // --- with a tight total-memory limit, opening must fail rather than allocate the
-  //     whole decompressed payload (previously it ignored the limit entirely).
+  // --- opening only records the metadata association. The limit is checked
+  //     when the application asks for its decompressed contents.
   {
     heif_context* ctx = heif_context_alloc();
     REQUIRE(ctx != nullptr);
@@ -203,8 +224,15 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
     limits->max_total_memory = 8u * 1024 * 1024; // 8 MB << 40 MB bomb
 
     heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
-    REQUIRE(err.code != heif_error_Ok);
+    REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* image = nullptr;
+    err = heif_context_get_primary_image_handle(ctx, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    REQUIRE(heif_image_handle_get_metadata_size(image, 2) == 0);
+    err = heif_image_handle_get_metadata(image, 2, nullptr);
     REQUIRE(err.subcode == heif_suberror_Security_limit_exceeded);
+    heif_image_handle_release(image);
 
     heif_context_free(ctx);
   }
@@ -217,6 +245,12 @@ TEST_CASE("brotli mime metadata decompression bomb is bounded by security limits
 
     heif_error err = heif_context_read_from_memory_without_copy(ctx, file.data(), file.size(), nullptr);
     REQUIRE(err.code == heif_error_Ok);
+
+    heif_image_handle* image = nullptr;
+    err = heif_context_get_primary_image_handle(ctx, &image);
+    REQUIRE(err.code == heif_error_Ok);
+    REQUIRE(heif_image_handle_get_metadata_size(image, 2) == decompressed_size);
+    heif_image_handle_release(image);
 
     heif_context_free(ctx);
   }

@@ -123,7 +123,8 @@ public:
 
   std::string get_item_uri_type(heif_item_id ID) const;
 
-  Result<std::vector<uint8_t>> get_uncompressed_item_data(heif_item_id ID) const;
+  Result<std::vector<uint8_t>> get_uncompressed_item_data(heif_item_id ID,
+                                                          size_t max_output_size = SIZE_MAX) const;
 
   Error append_data_from_file_range(std::vector<uint8_t>& out_data, uint64_t offset, uint32_t size) const;
 
@@ -135,7 +136,8 @@ public:
 
   // If `out_compression` is not NULL, the compression method is returned there and the compressed data is returned.
   // If `out_compression` is NULL, the data is returned decompressed.
-  Result<std::vector<uint8_t>> get_item_data(heif_item_id ID, heif_metadata_compression* out_compression) const;
+  Result<std::vector<uint8_t>> get_item_data(heif_item_id ID, heif_metadata_compression* out_compression,
+                                              size_t max_output_size = SIZE_MAX) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
@@ -264,6 +266,8 @@ public:
   std::shared_ptr<Box_mvhd> get_mvhd_box() { return m_mvhd_box; }
 
 private:
+  Result<std::vector<uint8_t>> read_item_data_with_limit(heif_item_id ID,
+                                                          size_t max_output_size) const;
 #if ENABLE_PARALLEL_TILE_DECODING
   mutable std::mutex m_read_mutex;
 #endif

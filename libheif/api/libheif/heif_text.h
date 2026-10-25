@@ -99,7 +99,7 @@ heif_item_id heif_text_item_get_id(heif_text_item* text_item);
  * This is the payload text, in the format given by the associated content_type.
  *
  * @param text_item the text item to query
- * @return the text item content (or null if the text_item is null). The returned string shall be released
+ * @return the text item content (or null if the item is null or cannot be read). The returned string shall be released
  * with heif_string_release().
  */
 LIBHEIF_API

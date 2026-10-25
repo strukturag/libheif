@@ -713,7 +713,40 @@ Error HeifFile::get_properties(heif_item_id imageID,
 }
 
 
-Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id ID) const
+Result<std::vector<uint8_t>> HeifFile::read_item_data_with_limit(heif_item_id ID,
+                                                                  size_t max_output_size) const
+{
+  // The ranged iloc reader expects the requested number of bytes to exist,
+  // so check the declared extent lengths before reading the complete item.
+  for (const auto& item : m_iloc_box->get_items()) {
+    if (item.item_ID == ID) {
+      uint64_t declared_size = 0;
+      for (const auto& extent : item.extents) {
+        if (extent.length > static_cast<uint64_t>(max_output_size) - declared_size) {
+          return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                       "Item data exceeds the requested maximum output size");
+        }
+        declared_size += extent.length;
+      }
+      break;
+    }
+  }
+
+  std::vector<uint8_t> data;
+  Error err = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &data, m_limits);
+  if (err) {
+    return err;
+  }
+  if (data.size() > max_output_size) {
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                 "Item data exceeds the requested maximum output size");
+  }
+  return data;
+}
+
+
+Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id ID,
+                                                                   size_t max_output_size) const
 {
   assert(m_limits);
 
@@ -760,7 +793,7 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
           return error;
         }
 
-        return decompress_zlib(compressed_data, m_limits);
+        return decompress_zlib(compressed_data, m_limits, max_output_size);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -774,7 +807,7 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
         if (error) {
           return error;
         }
-        return decompress_deflate(compressed_data, m_limits);
+        return decompress_deflate(compressed_data, m_limits, max_output_size);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -788,7 +821,7 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
         if (error) {
           return error;
         }
-        return decompress_brotli(compressed_data, m_limits);
+        return decompress_brotli(compressed_data, m_limits, max_output_size);
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -804,14 +837,7 @@ Result<std::vector<uint8_t>> HeifFile::get_uncompressed_item_data(heif_item_id I
 
   // --- read uncompressed
 
-  std::vector<uint8_t> data;
-  error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &data, m_limits);
-  if (error) {
-    return error;
-  }
-  else {
-    return data;
-  }
+  return read_item_data_with_limit(ID, max_output_size);
 }
 
 
@@ -891,7 +917,8 @@ Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out
 }
 
 
-Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metadata_compression* out_compression) const
+Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metadata_compression* out_compression,
+                                                     size_t max_output_size) const
 {
   Error error;
 
@@ -917,14 +944,7 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
       *out_compression = heif_metadata_compression_off;
     }
 
-    std::vector<uint8_t> out_data;
-    Error err = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, m_limits);
-    if (err) {
-      return err;
-    }
-    else {
-      return out_data;
-    }
+    return read_item_data_with_limit(ID, max_output_size);
   }
 
 
@@ -941,14 +961,7 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
       *out_compression = heif_metadata_compression_off;
     }
 
-    std::vector<uint8_t> out_data;
-    Error err = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, m_limits);
-    if (err) {
-      return err;
-    }
-    else {
-      return out_data;
-    }
+    return read_item_data_with_limit(ID, max_output_size);
   }
   else if (encoding == "compress_zlib") {
     compression = heif_metadata_compression_zlib;
@@ -963,6 +976,17 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
     compression = heif_metadata_compression_unknown;
   }
 
+  // Return compressed bytes without decoding when the caller requests them.
+  // Their declared iloc size can be checked before allocating the buffer.
+  if (out_compression) {
+    auto raw_data = read_item_data_with_limit(ID, max_output_size);
+    if (!raw_data) {
+      return raw_data.error();
+    }
+    *out_compression = compression;
+    return raw_data;
+  }
+
   // read compressed data
 
   std::vector<uint8_t> compressed_data;
@@ -971,26 +995,18 @@ Result<std::vector<uint8_t>> HeifFile::get_item_data(heif_item_id ID, heif_metad
     return error;
   }
 
-  // return compressed data, if we do not want to have it uncompressed
-
-  const bool return_compressed = (out_compression != nullptr);
-  if (return_compressed) {
-    *out_compression = compression;
-    return compressed_data;
-  }
-
   // decompress the data
 
   switch (compression) {
 #if HAVE_ZLIB
     case heif_metadata_compression_zlib:
-      return decompress_zlib(compressed_data, m_limits);
+      return decompress_zlib(compressed_data, m_limits, max_output_size);
     case heif_metadata_compression_deflate:
-      return decompress_deflate(compressed_data, m_limits);
+      return decompress_deflate(compressed_data, m_limits, max_output_size);
 #endif
 #if HAVE_BROTLI
     case heif_metadata_compression_brotli:
-      return decompress_brotli(compressed_data, m_limits);
+      return decompress_brotli(compressed_data, m_limits, max_output_size);
 #endif
     default:
       return Error{heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};

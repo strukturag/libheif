@@ -25,6 +25,7 @@
 #include "text.h"
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -113,10 +114,20 @@ const char* heif_text_item_get_content(heif_text_item* text_item)
 
   // return text as c-string
 
-  std::string txt = text_item->text_item->get_item_text();
+  auto txt_result = text_item->text_item->get_item_text();
+  if (!txt_result) {
+    return nullptr;
+  }
+  std::string_view txt = *txt_result;
+  if (txt.size() == std::numeric_limits<size_t>::max()) {
+    return nullptr;
+  }
 
-  char* text_c = new char[txt.length() + 1];
-  strcpy(text_c, txt.c_str());
+  char* text_c = new char[txt.size() + 1];
+  if (!txt.empty()) {
+    memcpy(text_c, txt.data(), txt.size());
+  }
+  text_c[txt.size()] = '\0';
 
   return text_c;
 }
