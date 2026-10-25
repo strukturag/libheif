@@ -168,12 +168,20 @@ Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::
 
 bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
 
-// Scan a combined AV1 bitstream (av1C configOBUs + item/sample data) for every
-// OBU_SEQUENCE_HEADER and return the largest coded frame size (in luma samples)
-// declared by any of them. Returns false when no parseable sequence header was
-// found, in which case the size outputs are left untouched. Used to enforce the
-// security limits before the bitstream reaches any AV1 decoder plugin.
-bool find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
-                                       uint32_t* out_max_width, uint32_t* out_max_height);
+// In an AV1 ISOBMFF sample, make a terminal OBU without a size field explicit:
+// set obu_has_size_field and insert a LEB128 size covering the sample remainder.
+// This makes the framing passed to a decoder unambiguous. All preceding OBUs
+// must carry valid sizes. `sample_offset` skips any prepended av1C configOBUs.
+Error normalize_av1_sample_data(std::vector<uint8_t>& data, size_t sample_offset);
+
+// Scan an explicitly-sized AV1 OBU stream for every OBU_SEQUENCE_HEADER and
+// return the largest coded frame size (in luma samples) declared by any of them.
+// The bool result is false when a complete scan found no sequence header, in
+// which case the size outputs are left untouched. Malformed input that prevents
+// a complete scan is returned as an error so that a partial result cannot be
+// used as a security bound.
+Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataSize,
+                                               uint32_t* out_max_width, uint32_t* out_max_height,
+                                               uint32_t* out_frame_count = nullptr);
 
 #endif

@@ -89,9 +89,9 @@ Result<std::optional<ImageSize>> Decoder_VVC::get_max_coded_image_size(const std
     Error e = parse_sps_for_vvcC_configuration(nal_data, nal_size, &scratch,
                                                &cropped_w, &cropped_h, &coded);
     if (e) {
-      // A malformed SPS we cannot parse is skipped rather than failing the whole
-      // decode; the decoder plugin applies its own limits when it reaches it.
-      continue;
+      // An SPS we cannot parse has an unknown coded size, so it must not reach
+      // the decoder plugin.
+      return e;
     }
 
     found = true;
@@ -100,10 +100,19 @@ Result<std::optional<ImageSize>> Decoder_VVC::get_max_coded_image_size(const std
   }
 
   if (!found) {
+    // Later samples of a sequence reuse the parameter sets of earlier ones, and
+    // those were already checked when they were pushed.
     return std::optional<ImageSize>{};
   }
 
   return std::optional<ImageSize>{ImageSize{max_width, max_height}};
+}
+
+
+Result<uint32_t> Decoder_VVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                            size_t) const
+{
+  return count_nal_coded_pictures(compressed_data, heif_compression_VVC);
 }
 
 

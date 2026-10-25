@@ -101,6 +101,11 @@ typedef struct heif_security_limits
   // single image decode path, including transformations on derived inputs.
   // A value of 0 disables this limit. The default is 32.
   uint16_t max_transformations_per_decode_path;
+
+  // Maximum coded pictures in the data submitted for one image item (including
+  // a grid tile) or one sequence sample, counting configuration OBUs/NALs too.
+  // Zero disables this limit. The default is 8.
+  uint16_t max_coded_pictures_per_decode;
 } heif_security_limits;
 
 

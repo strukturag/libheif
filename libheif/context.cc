@@ -217,6 +217,7 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   if (src->version >= 5) {
     dst->always_apply_MIAF_derivation_constraints = src->always_apply_MIAF_derivation_constraints;
     dst->max_transformations_per_decode_path = src->max_transformations_per_decode_path;
+    dst->max_coded_pictures_per_decode = src->max_coded_pictures_per_decode;
   }
 
   // `parent` is an internal field; user-supplied limits are always treated as

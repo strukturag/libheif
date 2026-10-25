@@ -69,7 +69,10 @@ Result<std::optional<ImageSize>> Decoder_AVC::get_max_coded_image_size(const std
       continue;
     }
     int nal_type = nal_data[0] & 0x1F;
-    if (nal_type != AVC_NAL_UNIT_SPS_NUT) {
+    // A subset SPS (SVC, MVC) starts with the same seq_parameter_set_data() as
+    // an SPS and can replace the parameters used by the decoder.
+    if (nal_type != AVC_NAL_UNIT_SPS_NUT &&
+        nal_type != AVC_NAL_UNIT_SUBSET_SPS_NUT) {
       continue;
     }
 
@@ -79,9 +82,9 @@ Result<std::optional<ImageSize>> Decoder_AVC::get_max_coded_image_size(const std
     Error e = parse_sps_for_avcC_configuration(nal_data, nal_size, &scratch,
                                                &cropped_w, &cropped_h, &coded);
     if (e) {
-      // A malformed SPS we cannot parse is skipped rather than failing the whole
-      // decode; the decoder plugin applies its own limits when it reaches it.
-      continue;
+      // An SPS we cannot parse has an unknown coded size and unchecked cropping
+      // offsets, so it must not reach the decoder plugin.
+      return e;
     }
 
     found = true;
@@ -90,10 +93,19 @@ Result<std::optional<ImageSize>> Decoder_AVC::get_max_coded_image_size(const std
   }
 
   if (!found) {
+    // Later samples of a sequence reuse the parameter sets of earlier ones, and
+    // those were already checked when they were pushed.
     return std::optional<ImageSize>{};
   }
 
   return std::optional<ImageSize>{ImageSize{max_width, max_height}};
+}
+
+
+Result<uint32_t> Decoder_AVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
+                                                            size_t) const
+{
+  return count_nal_coded_pictures(compressed_data, heif_compression_AVC);
 }
 
 
