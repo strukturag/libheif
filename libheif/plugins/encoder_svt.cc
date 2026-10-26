@@ -1144,7 +1144,7 @@ static heif_error svt_encode_sequence_frame(void* encoder_raw, const heif_image*
       }
     }
 
-    input_buffer.n_filled_len += 2 * uvWidth * uvHeight;
+    input_buffer.n_filled_len += 2 * uvWidth * uvHeight * bytesPerPixel;
     input_picture_buffer->cb_stride = uvWidth;
     input_picture_buffer->cr_stride = uvWidth;
 
