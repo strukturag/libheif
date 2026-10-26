@@ -702,7 +702,20 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
 {
   auto* encoder = (encoder_struct_svt*) encoder_raw;
 
-  // SVT-AV1 (as of version 1.2.1) can only create image sizes matching the chroma format. Add padding if necessary.
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+  // SVT-AV1 >= 3.0.0 supports odd image sizes. Minimum size is 4 (1 since v4.2.0).
+
+#if SVT_AV1_CHECK_VERSION(4, 2, 0)
+  const uint32_t min_size = 1;
+#else
+  const uint32_t min_size = 4;
+#endif
+
+  (void) encoder;
+  *encoded_width = std::max(input_width, min_size);
+  *encoded_height = std::max(input_height, min_size);
+#else
+  // Older SVT-AV1 versions can only create image sizes matching the chroma format and at least 64 pixels. Add padding if necessary.
 
   if (input_width < 64) {
     *encoded_width = 64;
@@ -723,6 +736,7 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
   else {
     *encoded_height = input_height;
   }
+#endif
 }
 
 
