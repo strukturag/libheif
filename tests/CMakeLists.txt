@@ -233,6 +233,12 @@ else()
     message(INFO " Disabling the TIFF decoder test because libtiff was not found")
 endif ()
 
+if (PNG_FOUND)
+    add_heifio_test(pngdecode)
+else()
+    message(INFO " Disabling the PNG decoder test because libpng was not found")
+endif ()
+
 if (ENABLE_PLUGIN_LOADING)
     get_directory_property(ALL_TESTS TESTS)
     set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT "LIBHEIF_PLUGIN_PATH=${CMAKE_BINARY_DIR}/libheif/plugins")

@@ -382,7 +382,7 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
       }
     }
   }
-  else if (band == 1) {
+  else if (band == 1 || (band == 2 && bit_depth > 8)) {
     assert(bit_depth > 8);
 
     err = heif_image_create((int) width, (int) height,
@@ -418,7 +418,7 @@ heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input
           uint16_t va = (uint16_t) (((p[2] << 8) | p[3]) >> bdShift);
 
           py[x + y * y_stride] = vp;
-          pa[x + y * y_stride] = va;
+          pa[x + y * a_stride] = va;
 
           p += 4;
         }
