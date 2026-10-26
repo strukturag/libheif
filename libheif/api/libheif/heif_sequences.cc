@@ -238,6 +238,10 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(const heif_track* tra
 
 heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track* track, const char** out_uri)
 {
+  if (out_uri) {
+    *out_uri = nullptr;
+  }
+
   Result<std::string> uriResult = track->track->get_first_cluster_urim_uri();
 
   if (!uriResult) {

@@ -244,6 +244,7 @@ uint32_t heif_track_get_sample_entry_type_of_first_cluster(const heif_track*);
  * Only call this for tracks with 'urim' sample entry types. It will return an error otherwise.
  *
  * @param out_uri A string with the URI will be returned. Free this string with `heif_string_release()`.
+ *                On error, this is set to NULL.
  */
 LIBHEIF_API
 heif_error heif_track_get_urim_sample_entry_uri_of_first_cluster(const heif_track*,
