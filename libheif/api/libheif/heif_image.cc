@@ -242,6 +242,13 @@ heif_error heif_image_scale_image(const heif_image* input,
                                   int width, int height,
                                   const heif_scaling_options* options)
 {
+  if (output == nullptr || input == nullptr) {
+    return heif_error_null_pointer_argument;
+  }
+
+  // Callers that miss the error check get NULL instead of an uninitialised pointer.
+  *output = nullptr;
+
   std::shared_ptr<HeifPixelImage> out_img;
 
   Error err = input->image->scale_nearest_neighbor(out_img, width, height, nullptr);

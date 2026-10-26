@@ -130,6 +130,17 @@ static gboolean stop_load(gpointer context, GError** error)
   }
 
   if (requested_width > 0 && requested_height > 0 && (width != requested_width || height != requested_height)) {
+    // The scaler does not apply the security limits, and the requested size may be derived
+    // from the file's aspect ratio (e.g. when only the width is fixed). Bound it here.
+    const struct heif_security_limits* limits = heif_get_global_security_limits();
+    if (limits->max_image_size_pixels != 0 &&
+        (guint64) requested_width * (guint64) requested_height > limits->max_image_size_pixels) {
+      g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_INSUFFICIENT_MEMORY,
+                  "HEIF scaling failed: requested size %dx%d exceeds the security limit",
+                  requested_width, requested_height);
+      goto cleanup;
+    }
+
     struct heif_image* resized = NULL;
     err = heif_image_scale_image(img, &resized, requested_width, requested_height, NULL);
     if (err.code != heif_error_Ok) {

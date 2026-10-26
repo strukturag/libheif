@@ -290,6 +290,7 @@ uint8_t* heif_image_get_plane2(heif_image*,
 typedef struct heif_scaling_options heif_scaling_options;
 
 // Currently, heif_scaling_options is not defined yet. Pass a NULL pointer.
+// On error, '*output' is set to NULL. Always check the returned error.
 LIBHEIF_API
 heif_error heif_image_scale_image(const heif_image* input,
                                   heif_image** output,
