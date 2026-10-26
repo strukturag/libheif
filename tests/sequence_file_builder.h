@@ -114,6 +114,14 @@ struct SampleAuxInfo
                                  // to make 'saiz' cover fewer samples than the track has.
 };
 
+// One entry of the 'stsc' table.
+struct Stsc_entry
+{
+  uint32_t first_chunk;
+  uint32_t samples_per_chunk;
+  uint32_t sample_description_index;
+};
+
 struct SequenceFileParams
 {
   bool     mvhd_v1 = true;
@@ -137,6 +145,11 @@ struct SequenceFileParams
   uint32_t first_chunk_num_samples = 0; // nonzero -> split into two chunks
   std::vector<uint8_t> second_sample_entry;
   std::vector<uint8_t> second_sample_bytes; // same length as sample_bytes
+
+  // Nonempty -> write this 'stsc' table and 'num_chunks' chunks, all pointing to the start of
+  // the sample data. The samples per chunk must add up to num_samples.
+  std::vector<Stsc_entry> stsc_entries;
+  uint32_t num_chunks = 0;
 
   std::vector<SampleAuxInfo> aux_infos;
 };
@@ -260,17 +273,27 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   }
   std::vector<uint8_t> stts = box("stts", stts_payload);
 
-  // --- stsc: one or two chunks, each with its own sample description
+  // --- stsc: one or two chunks, each with its own sample description, or the given table
   std::vector<uint8_t> stsc_payload;
   put32(stsc_payload, 0x00000000); // version 0, flags 0
-  put32(stsc_payload, two_chunks ? 2 : 1); // entry_count
-  put32(stsc_payload, 1);          // first_chunk
-  put32(stsc_payload, two_chunks ? p.first_chunk_num_samples : p.num_samples); // samples_per_chunk
-  put32(stsc_payload, 1);          // sample_description_index
-  if (two_chunks) {
-    put32(stsc_payload, 2); // first_chunk
-    put32(stsc_payload, p.num_samples - p.first_chunk_num_samples);
-    put32(stsc_payload, 2); // sample_description_index
+  if (!p.stsc_entries.empty()) {
+    put32(stsc_payload, static_cast<uint32_t>(p.stsc_entries.size())); // entry_count
+    for (const auto& entry : p.stsc_entries) {
+      put32(stsc_payload, entry.first_chunk);
+      put32(stsc_payload, entry.samples_per_chunk);
+      put32(stsc_payload, entry.sample_description_index);
+    }
+  }
+  else {
+    put32(stsc_payload, two_chunks ? 2 : 1); // entry_count
+    put32(stsc_payload, 1);          // first_chunk
+    put32(stsc_payload, two_chunks ? p.first_chunk_num_samples : p.num_samples); // samples_per_chunk
+    put32(stsc_payload, 1);          // sample_description_index
+    if (two_chunks) {
+      put32(stsc_payload, 2); // first_chunk
+      put32(stsc_payload, p.num_samples - p.first_chunk_num_samples);
+      put32(stsc_payload, 2); // sample_description_index
+    }
   }
   std::vector<uint8_t> stsc = box("stsc", stsc_payload);
 
@@ -353,8 +376,8 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   for (const auto& aux : p.aux_infos) {
     saio_placeholders.push_back(make_saio(aux, 0));
   }
-  std::vector<uint8_t> moov0 = assemble(make_stco(two_chunks ? std::vector<uint32_t>{0, 0}
-                                                              : std::vector<uint32_t>{0}), saio_placeholders);
+  const size_t num_chunks = !p.stsc_entries.empty() ? p.num_chunks : (two_chunks ? 2 : 1);
+  std::vector<uint8_t> moov0 = assemble(make_stco(std::vector<uint32_t>(num_chunks, 0)), saio_placeholders);
   uint32_t mdat_payload_offset = static_cast<uint32_t>(ftyp.size() + moov0.size() + 8 /* mdat header */);
   uint32_t file_size = static_cast<uint32_t>(mdat_payload_offset + mdat_payload.size());
 
@@ -366,7 +389,8 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
     saio_boxes.push_back(make_saio(p.aux_infos[i], offset));
   }
   std::vector<uint32_t> chunk_offsets = {mdat_payload_offset};
-  if (two_chunks) chunk_offsets.push_back(mdat_payload_offset + p.first_chunk_num_samples * sample_size);
+  if (!p.stsc_entries.empty()) chunk_offsets.assign(num_chunks, mdat_payload_offset);
+  else if (two_chunks) chunk_offsets.push_back(mdat_payload_offset + p.first_chunk_num_samples * sample_size);
   std::vector<uint8_t> moov = assemble(make_stco(chunk_offsets), saio_boxes);
 
   std::vector<uint8_t> mdat = box("mdat", mdat_payload);

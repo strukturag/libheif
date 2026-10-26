@@ -975,6 +975,15 @@ Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
         "Number of chunk samples in `stsc` box exceeds security limits of maximum number of frames."};
     }
 
+    // Each entry starts a run of chunks, so decreasing values have no meaning (ISO/IEC 14496-12, 8.7.4).
+    // get_chunk() relies on this order for its binary search. Equal values (empty runs) are tolerated.
+    if (i > 0 && entry.first_chunk < m_entries[i - 1].first_chunk) {
+      return {
+        heif_error_Invalid_input,
+        heif_suberror_Unspecified,
+        "'first_chunk' values in 'stsc' box must not decrease."};
+    }
+
     m_entries[i] = entry;
   }
 
@@ -1017,13 +1026,20 @@ Error Box_stsc::write(StreamWriter& writer) const
 const Box_stsc::SampleToChunk* Box_stsc::get_chunk(uint32_t idx) const
 {
   assert(idx>=1);
-  for (size_t i = 0 ; i < m_entries.size();i++) {
-    if (idx >= m_entries[i].first_chunk && (i==m_entries.size()-1 || idx < m_entries[i+1].first_chunk)) {
-      return &m_entries[i];
-    }
+
+  // The entries are ordered by first_chunk (checked in parse()). The entry covering chunk 'idx'
+  // is the last one that does not start after it. A linear scan would make Track::load(), which
+  // looks up every chunk, quadratic in the file size.
+  auto it = std::upper_bound(m_entries.begin(), m_entries.end(), idx,
+                             [](uint32_t chunk_idx, const SampleToChunk& entry) {
+                               return chunk_idx < entry.first_chunk;
+                             });
+
+  if (it == m_entries.begin()) {
+    return nullptr;
   }
 
-  return nullptr;
+  return &*(it - 1);
 }
 
 
