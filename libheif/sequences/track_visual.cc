@@ -288,10 +288,6 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
     const std::shared_ptr<Chunk>& chunk = m_chunks[chunk_idx];
 
-    // TODO: A sample-description change can switch codecs (e.g. HEVC to JPEG 2000).
-    // Before using the new decoder, collect any pending output from the previous
-    // decoder in presentation order. Selecting a decoder by the next input sample
-    // alone does not poll the previous decoder after the switch.
     auto decoder = chunk->get_decoder();
     if (!decoder) {
       // Should not happen: Track_Visual::load() rejects any visual track that has a
@@ -328,7 +324,10 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
         // Credit the returned frame and one potentially non-displayed sample.
         // Do this at the decoder boundary, even if later image postprocessing fails.
-        decode_work_debt = (decode_work_debt > 2) ? decode_work_debt - 2 : 0;
+        // The frame comes from the active decoder, which can have a different format
+        // than the decoder of the next input sample when the sample description changes.
+        uint16_t& output_work_debt = m_decode_work_debt[m_active_decoder->get_compression_format()];
+        output_work_debt = (output_work_debt > 2) ? output_work_debt - 2 : 0;
 
         break;
       }
@@ -376,7 +375,10 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       m_next_sample_to_be_decoded++;
 
       // Send the decoder configuration when we send the first sample of the chunk.
-      // The configuration NALs might change for each chunk.
+      // The configuration NALs might change for each chunk. A decoder that is shared by
+      // consecutive chunks with the same sample description receives them again, which is
+      // harmless (repeated parameter sets / sequence headers), and a decoder that was released
+      // after draining needs them to start again.
       const bool is_first_sample = (sample_idx_in_chunk == chunk->first_sample_number());
 
       // --- Push data into the decoder.
@@ -392,6 +394,8 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       m_active_decoder = decoder;
     }
     else {
+      // Not reached: at end of input, there is always an active decoder (we pushed at least one sample)
+      // and the draining above either returns a frame or reports an error. Guard against endless looping anyway.
       return Error(heif_error_Decoder_plugin_error,
                    heif_suberror_Unspecified,
                    "Did not decode all frames");

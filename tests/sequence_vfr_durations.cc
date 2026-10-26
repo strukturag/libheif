@@ -184,92 +184,13 @@ std::vector<uint32_t> decode_durations(const std::vector<uint8_t>& file,
 
 } // namespace
 
-static uint32_t sequence_box_u32(const std::vector<uint8_t>& data, size_t offset)
-{
-  REQUIRE(offset + 4 <= data.size());
-  return (static_cast<uint32_t>(data[offset]) << 24) |
-         (static_cast<uint32_t>(data[offset + 1]) << 16) |
-         (static_cast<uint32_t>(data[offset + 2]) << 8) | data[offset + 3];
-}
-
-static std::vector<uint8_t> split_sequence_chunks(const std::vector<uint8_t>& data,
-                                                  bool different_descriptions,
-                                                  uint32_t& first_sample_size)
-{
-  std::vector<uint8_t> output;
-  for (size_t offset = 0; offset < data.size();) {
-    const uint32_t size = sequence_box_u32(data, offset);
-    REQUIRE(size >= 8);
-    REQUIRE(size <= data.size() - offset);
-    const std::string type(data.begin() + offset + 4, data.begin() + offset + 8);
-    std::vector<uint8_t> payload(data.begin() + offset + 8, data.begin() + offset + size);
-    if (type == "moov" || type == "trak" || type == "mdia" || type == "minf" || type == "stbl") {
-      // Read stsz before rewriting stco, regardless of their order in the file.
-      if (type == "stbl") {
-        for (size_t child = 0; child < payload.size();) {
-          const uint32_t child_size = sequence_box_u32(payload, child);
-          REQUIRE(child_size >= 8);
-          REQUIRE(child_size <= payload.size() - child);
-          if (std::string(payload.begin() + child + 4, payload.begin() + child + 8) == "stsz") {
-            REQUIRE(sequence_box_u32(payload, child + 16) == 3);
-            first_sample_size = sequence_box_u32(payload, child + 12);
-            if (first_sample_size == 0) {
-              first_sample_size = sequence_box_u32(payload, child + 20);
-            }
-          }
-          child += child_size;
-        }
-      }
-      payload = split_sequence_chunks(payload, different_descriptions, first_sample_size);
-    }
-    else if (type == "stsd" && different_descriptions) {
-      REQUIRE(sequence_box_u32(payload, 4) == 1);
-      const std::vector<uint8_t> entry(payload.begin() + 8, payload.end());
-      payload[7] = 2;
-      seqfile::append(payload, entry);
-    }
-    else if (type == "stsc") {
-      payload.clear();
-      for (uint32_t value : {0u, 2u, 1u, 1u, 1u, 2u, 2u, different_descriptions ? 2u : 1u}) {
-        seqfile::put32(payload, value);
-      }
-    }
-    else if (type == "stco") {
-      REQUIRE(sequence_box_u32(payload, 4) == 1);
-      REQUIRE(first_sample_size > 0);
-      const uint32_t first_offset = sequence_box_u32(payload, 8);
-      payload.clear();
-      for (uint32_t value : {0u, 2u, first_offset, first_offset + first_sample_size}) {
-        seqfile::put32(payload, value);
-      }
-    }
-    seqfile::append(output, seqfile::box(type.c_str(), payload));
-    offset += size;
-  }
-  return output;
-}
-
 static std::vector<uint8_t> make_two_chunk_sequence(std::vector<uint8_t> file,
                                                     bool different_descriptions)
 {
-  for (size_t offset = 0; offset < file.size();) {
-    const uint32_t size = sequence_box_u32(file, offset);
-    REQUIRE(size >= 8);
-    REQUIRE(size <= file.size() - offset);
-    if (std::string(file.begin() + offset + 4, file.begin() + offset + 8) == "moov") {
-      const std::vector<uint8_t> movie(file.begin() + offset, file.begin() + offset + size);
-      uint32_t first_sample_size = 0;
-      const auto replacement = split_sequence_chunks(movie, different_descriptions, first_sample_size);
-      // Keep media offsets unchanged by replacing the old movie with a free box.
-      std::copy_n("free", 4, file.begin() + offset + 4);
-      std::fill(file.begin() + offset + 8, file.begin() + offset + size, 0);
-      seqfile::append(file, replacement);
-      return file;
-    }
-    offset += size;
-  }
-  FAIL("Encoded sequence has no movie box");
-  return {};
+  REQUIRE(seqfile::rewrite_moov_keeping_offsets(file, [&](const std::vector<uint8_t>& moov) {
+    return seqfile::split_first_sample_into_own_chunk(moov, different_descriptions);
+  }));
+  return file;
 }
 
 

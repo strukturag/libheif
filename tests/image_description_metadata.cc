@@ -32,9 +32,12 @@
 #include "libheif/heif_uncompressed.h"
 #include "libheif/heif_sequences.h"
 #include "sequences/seq_boxes.h"
+#include "sequence_file_builder.h"
 #include <algorithm>
 #include <cstring>
 #include <memory>
+#include <optional>
+#include <utility>
 
 
 // Holds the non-default values for every ImageDescription metadata field so
@@ -345,22 +348,20 @@ static std::vector<uint8_t> encode_metadata_sequence()
 static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<uint8_t>& icc,
                                   bool multiple_descriptions = false)
 {
-  auto reader = std::make_shared<StreamReader_memory>(file.data(), file.size(), false);
-  BitstreamRange range(reader, file.size());
-  while (reader->get_position() < file.size()) {
-    const size_t start = reader->get_position();
-    BoxHeader header;
-    REQUIRE(header.parse_header(range) == Error::Ok);
-    REQUIRE(header.get_box_size() >= header.get_header_size());
-    REQUIRE(header.get_box_size() <= file.size() - start);
-    if (header.get_short_type() != fourcc("moov")) {
-      REQUIRE(reader->seek(start + header.get_box_size()));
-      continue;
+  REQUIRE(seqfile::rewrite_moov_keeping_offsets(file, [&](const std::vector<uint8_t>& encoded_moov) {
+    // With two descriptions, the first sample uses the first sample entry and the
+    // remaining samples use a copy of it, which gets a different 'clli' below.
+    std::vector<uint8_t> moov_data = encoded_moov;
+    if (multiple_descriptions) {
+      auto split = seqfile::split_first_sample_into_own_chunk(encoded_moov, true);
+      REQUIRE(split);
+      moov_data = std::move(*split);
     }
-    REQUIRE(reader->seek(start));
-    BitstreamRange movie_range(reader, header.get_box_size());
+
+    auto reader = std::make_shared<StreamReader_memory>(moov_data.data(), moov_data.size(), false);
+    BitstreamRange range(reader, moov_data.size());
     std::shared_ptr<Box> moov;
-    REQUIRE(Box::read(movie_range, &moov, heif_get_global_security_limits()) == Error::Ok);
+    REQUIRE(Box::read(range, &moov, heif_get_global_security_limits()) == Error::Ok);
     auto trak = moov->get_child_box<Box_trak>();
     REQUIRE(trak != nullptr);
     auto mdia = trak->get_child_box<Box_mdia>();
@@ -371,93 +372,39 @@ static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<
     REQUIRE(stbl != nullptr);
     auto stsd = stbl->get_child_box<Box_stsd>();
     REQUIRE(stsd != nullptr);
-    auto entry = std::const_pointer_cast<Box>(stsd->get_sample_entry(0));
-    REQUIRE(entry != nullptr);
-    nclx_profile profile;
-    profile.set_colour_primaries(9);
-    profile.set_transfer_characteristics(16);
-    profile.set_matrix_coefficients(9);
-    profile.set_full_range_flag(false);
-    auto colr = std::make_shared<Box_colr>();
-    colr->set_color_profile(std::make_shared<color_profile_nclx>(profile));
-    entry->replace_child_box(colr);
-    auto raw_colr = std::make_shared<Box_colr>();
-    raw_colr->set_color_profile(std::make_shared<color_profile_raw>(fourcc("prof"), icc));
-    entry->append_child_box(raw_colr);
-    auto clli = std::make_shared<Box_clli>();
-    clli->clli = {1000, 400};
-    entry->append_child_box(clli);
-    auto mdcv = std::make_shared<Box_mdcv>();
-    mdcv->mdcv.max_display_mastering_luminance = 10000000;
-    mdcv->mdcv.min_display_mastering_luminance = 50;
-    entry->append_child_box(mdcv);
-    auto pasp = std::make_shared<Box_pasp>();
-    pasp->hSpacing = 4;
-    pasp->vSpacing = 3;
-    entry->append_child_box(pasp);
-    if (multiple_descriptions) {
-      StreamWriter entry_writer;
-      REQUIRE(entry->write(entry_writer) == Error::Ok);
-      const auto entry_data = entry_writer.get_data();
-      auto entry_reader = std::make_shared<StreamReader_memory>(entry_data.data(), entry_data.size(), false);
-      BitstreamRange entry_range(entry_reader, entry_data.size());
-      std::shared_ptr<Box> second_entry;
-      REQUIRE(Box::read(entry_range, &second_entry, heif_get_global_security_limits()) == Error::Ok);
-      second_entry->get_child_box<Box_clli>()->clli = {2000, 800};
-      stsd->add_sample_entry(second_entry);
+    REQUIRE(stsd->get_num_sample_entries() == (multiple_descriptions ? 2 : 1));
 
-      auto stco = stbl->get_child_box<Box_stco>();
-      auto stsz = stbl->get_child_box<Box_stsz>();
-      REQUIRE(stco != nullptr);
-      REQUIRE(stsz != nullptr);
-      REQUIRE(stco->get_offsets().size() == 1);
-      REQUIRE(stsz->num_samples() == 3);
-      StreamWriter tables;
-      tables.write32(40);
-      tables.write32(fourcc("stsc"));
-      tables.write32(0);
-      tables.write32(2);
-      for (uint32_t value : {1u, 1u, 1u, 2u, 2u, 2u}) {
-        tables.write32(value);
-      }
-      tables.write32(24);
-      tables.write32(fourcc("stco"));
-      tables.write32(0);
-      tables.write32(2);
-      tables.write32(stco->get_offsets()[0]);
-      const uint32_t first_sample_size = stsz->has_fixed_sample_size() ?
-        stsz->get_fixed_sample_size() : stsz->get_sample_sizes()[0];
-      tables.write32(stco->get_offsets()[0] + first_sample_size);
-      const auto table_data = tables.get_data();
-      auto table_reader = std::make_shared<StreamReader_memory>(table_data.data(), table_data.size(), false);
-      BitstreamRange table_range(table_reader, table_data.size());
-      for (int i = 0; i < 2; ++i) {
-        std::shared_ptr<Box> table;
-        REQUIRE(Box::read(table_range, &table, heif_get_global_security_limits()) == Error::Ok);
-        if (i == 0) {
-          auto mapping = std::dynamic_pointer_cast<Box_stsc>(table);
-          REQUIRE(mapping != nullptr);
-          REQUIRE(stbl->replace_child_box(mapping));
-        }
-        else {
-          auto offsets = std::dynamic_pointer_cast<Box_stco>(table);
-          REQUIRE(offsets != nullptr);
-          REQUIRE(stbl->replace_child_box(offsets));
-        }
-      }
+    for (size_t i = 0; i < stsd->get_num_sample_entries(); i++) {
+      auto entry = std::const_pointer_cast<Box>(stsd->get_sample_entry(i));
+      REQUIRE(entry != nullptr);
+      nclx_profile profile;
+      profile.set_colour_primaries(9);
+      profile.set_transfer_characteristics(16);
+      profile.set_matrix_coefficients(9);
+      profile.set_full_range_flag(false);
+      auto colr = std::make_shared<Box_colr>();
+      colr->set_color_profile(std::make_shared<color_profile_nclx>(profile));
+      entry->replace_child_box(colr);
+      auto raw_colr = std::make_shared<Box_colr>();
+      raw_colr->set_color_profile(std::make_shared<color_profile_raw>(fourcc("prof"), icc));
+      entry->append_child_box(raw_colr);
+      auto clli = std::make_shared<Box_clli>();
+      clli->clli = (i == 0) ? heif_content_light_level{1000, 400} : heif_content_light_level{2000, 800};
+      entry->append_child_box(clli);
+      auto mdcv = std::make_shared<Box_mdcv>();
+      mdcv->mdcv.max_display_mastering_luminance = 10000000;
+      mdcv->mdcv.min_display_mastering_luminance = 50;
+      entry->append_child_box(mdcv);
+      auto pasp = std::make_shared<Box_pasp>();
+      pasp->hSpacing = 4;
+      pasp->vSpacing = 3;
+      entry->append_child_box(pasp);
     }
+
     StreamWriter output;
     REQUIRE(moov->write(output) == Error::Ok);
-    const auto data = output.get_data();
-    // Leave a same-sized free box in place and append the modified movie box,
-    // preserving the offsets of all encoded samples.
-    std::memcpy(file.data() + start + 4, "free", 4);
-    std::fill(file.begin() + start + header.get_header_size(),
-              file.begin() + start + header.get_box_size(), 0);
-    file.insert(file.end(), data.begin(), data.end());
-    return;
-  }
-  FAIL("Encoded sequence has no movie box");
+    return std::optional<std::vector<uint8_t>>(output.get_data());
+  }));
 }
 
 TEST_CASE("sequence sample-entry colour metadata is applied to every decoded frame")
@@ -491,10 +438,7 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
   options->ignore_sequence_editlist = 1;
   options->output_image_nclx_profile_passthrough = 1;
   options->autocorrect_broken_input = autocorrect;
-  // Check both descriptions across the chunk boundary. Final flushing with
-  // multiple decoder instances is not yet supported by the sequence decoder.
-  const int frames_to_check = with_metadata && multiple_descriptions ? 2 : 3;
-  for (int frame = 0; frame < frames_to_check; ++frame) {
+  for (int frame = 0; frame < 3; ++frame) {
     INFO("frame: " << frame);
     heif_image* image = nullptr;
     REQUIRE(heif_track_decode_next_image(track, &image,
@@ -548,7 +492,7 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
     }
     heif_image_release(image);
   }
-  if (!(with_metadata && multiple_descriptions)) {
+  {
     heif_image* image = nullptr;
     CHECK(heif_track_decode_next_image(track, &image, heif_colorspace_undefined,
                                        heif_chroma_undefined, options).code == heif_error_End_of_sequence);

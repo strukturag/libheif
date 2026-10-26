@@ -31,9 +31,13 @@
 #ifndef LIBHEIF_TESTS_SEQUENCE_FILE_BUILDER_H
 #define LIBHEIF_TESTS_SEQUENCE_FILE_BUILDER_H
 
+#include <algorithm>
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
+#include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace seqfile {
@@ -362,6 +366,162 @@ inline std::vector<uint8_t> build_sequence_file(const SequenceFileParams& p)
   std::vector<uint8_t> mdat = box("mdat", mdat_payload);
 
   return concat({ftyp, moov, mdat});
+}
+
+
+// --- Rewriting the 'moov' box of an encoded sequence
+
+inline uint32_t get32(const std::vector<uint8_t>& v, size_t offset)
+{
+  return (static_cast<uint32_t>(v[offset]) << 24) |
+         (static_cast<uint32_t>(v[offset + 1]) << 16) |
+         (static_cast<uint32_t>(v[offset + 2]) << 8) |
+         static_cast<uint32_t>(v[offset + 3]);
+}
+
+// Replace the top-level 'moov' box by a 'free' box of the same size and append the 'moov' box returned by
+// 'rewrite' (std::optional<std::vector<uint8_t>>(const std::vector<uint8_t>& moov)) at the end of the file.
+// This keeps the chunk offsets into 'mdat' valid. Returns false if there is no well-formed top-level 'moov'
+// box or if 'rewrite' returns no box.
+template <typename Rewrite>
+inline bool rewrite_moov_keeping_offsets(std::vector<uint8_t>& file, Rewrite rewrite)
+{
+  for (size_t offset = 0; file.size() - offset >= 8;) {
+    const uint32_t size = get32(file, offset);
+    if (size < 8 || size > file.size() - offset) {
+      return false;
+    }
+
+    if (std::string(file.begin() + offset + 4, file.begin() + offset + 8) == "moov") {
+      const std::vector<uint8_t> moov(file.begin() + offset, file.begin() + offset + size);
+      std::optional<std::vector<uint8_t>> replacement = rewrite(moov);
+      if (!replacement) {
+        return false;
+      }
+
+      std::copy_n("free", 4, file.begin() + offset + 4);
+      std::fill(file.begin() + offset + 8, file.begin() + offset + size, 0);
+      append(file, *replacement);
+      return true;
+    }
+
+    offset += size;
+  }
+
+  return false;
+}
+
+namespace detail {
+
+inline bool split_first_sample_into_own_chunk(const std::vector<uint8_t>& data, bool different_descriptions,
+                                              uint32_t& num_samples, uint32_t& first_sample_size,
+                                              std::vector<uint8_t>& output)
+{
+  for (size_t offset = 0; offset < data.size();) {
+    if (data.size() - offset < 8) {
+      return false;
+    }
+
+    const uint32_t size = get32(data, offset);
+    if (size < 8 || size > data.size() - offset) {
+      return false;
+    }
+
+    const std::string type(data.begin() + offset + 4, data.begin() + offset + 8);
+    std::vector<uint8_t> payload(data.begin() + offset + 8, data.begin() + offset + size);
+
+    if (type == "moov" || type == "trak" || type == "mdia" || type == "minf" || type == "stbl") {
+      // Read stsz before rewriting stco, regardless of their order in the file.
+      if (type == "stbl") {
+        for (size_t child = 0; payload.size() - child >= 8;) {
+          const uint32_t child_size = get32(payload, child);
+          if (child_size < 8 || child_size > payload.size() - child) {
+            return false;
+          }
+
+          if (std::string(payload.begin() + child + 4, payload.begin() + child + 8) == "stsz") {
+            if (child_size < 20) {
+              return false;
+            }
+
+            num_samples = get32(payload, child + 16);
+            first_sample_size = get32(payload, child + 12);
+            if (first_sample_size == 0) {
+              if (child_size < 24) {
+                return false;
+              }
+              first_sample_size = get32(payload, child + 20);
+            }
+          }
+
+          child += child_size;
+        }
+      }
+
+      std::vector<uint8_t> rewritten;
+      if (!split_first_sample_into_own_chunk(payload, different_descriptions, num_samples, first_sample_size,
+                                             rewritten)) {
+        return false;
+      }
+      payload = std::move(rewritten);
+    }
+    else if (type == "stsd" && different_descriptions) {
+      if (payload.size() < 8 || get32(payload, 4) != 1) {
+        return false;
+      }
+
+      const std::vector<uint8_t> entry(payload.begin() + 8, payload.end());
+      payload[7] = 2;
+      append(payload, entry);
+    }
+    else if (type == "stsc") {
+      if (num_samples < 2) {
+        return false;
+      }
+
+      payload.clear();
+      for (uint32_t value : {0u, 2u,
+                             1u, 1u, 1u,
+                             2u, num_samples - 1, different_descriptions ? 2u : 1u}) {
+        put32(payload, value);
+      }
+    }
+    else if (type == "stco") {
+      if (payload.size() < 12 || get32(payload, 4) != 1 || first_sample_size == 0) {
+        return false;
+      }
+
+      const uint32_t first_offset = get32(payload, 8);
+      payload.clear();
+      for (uint32_t value : {0u, 2u, first_offset, first_offset + first_sample_size}) {
+        put32(payload, value);
+      }
+    }
+
+    append(output, box(type.c_str(), payload));
+    offset += size;
+  }
+
+  return true;
+}
+
+} // namespace detail
+
+// Rewrite the 'moov' box of a single-track sequence that stores all samples in one chunk ('stco' with 32-bit
+// offsets), so that the first sample is in a chunk of its own and the remaining samples in a second chunk.
+// With 'different_descriptions', 'stsd' gets a copy of its sample entry and the second chunk uses it.
+inline std::optional<std::vector<uint8_t>> split_first_sample_into_own_chunk(const std::vector<uint8_t>& moov,
+                                                                             bool different_descriptions)
+{
+  uint32_t num_samples = 0;
+  uint32_t first_sample_size = 0;
+  std::vector<uint8_t> output;
+  if (!detail::split_first_sample_into_own_chunk(moov, different_descriptions, num_samples, first_sample_size,
+                                                 output)) {
+    return std::nullopt;
+  }
+
+  return output;
 }
 
 } // namespace seqfile
