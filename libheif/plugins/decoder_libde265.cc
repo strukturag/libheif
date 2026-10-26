@@ -357,6 +357,16 @@ static heif_error libde265_v1_push_data2(void* decoder_raw, const void* data, si
       };
     }
 
+    // de265_push_NAL() takes the length as 'int'. Larger sizes would turn negative,
+    // which libde265 < 1.1.3 does not reject before copying the data.
+    if (nal_size > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+      return {
+        heif_error_Decoder_plugin_error,
+        heif_suberror_Unspecified,
+        "NAL unit size exceeds 2 GB"
+      };
+    }
+
 #if 0
     FILE* fh = fopen("data.h265", "a");
     fputc(0, fh);
