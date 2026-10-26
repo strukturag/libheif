@@ -49,6 +49,7 @@ else()
     add_libheif_test(fraction)
     add_libheif_test(id_creator)
     add_libheif_test(conversion)
+    add_libheif_test(conversion_hevc)
     add_libheif_test(conversion_operator_contract)
     add_libheif_test(plane_layout)
     add_libheif_test(fill_channel)
@@ -65,6 +66,14 @@ add_libheif_test(sdtp_sample_limit)
     # Benchmark for HeifPixelImage::rotate_ccw(), not a test; see the comment in the source.
     add_executable(rotate_benchmark rotate_benchmark.cc)
     target_link_libraries(rotate_benchmark PRIVATE heif)
+
+    # Generated YUV and real-file conversion benchmark, not a test.
+    add_executable(color_conversion_benchmark color_conversion_benchmark.cc)
+    target_link_libraries(color_conversion_benchmark PRIVATE heif)
+
+    # Regenerate the small HEVC conversion fixtures, not a test.
+    add_executable(generate_color_conversion_fixtures generate_color_conversion_fixtures.cc)
+    target_link_libraries(generate_color_conversion_fixtures PRIVATE heif)
 
     add_libheif_test(pixelimage_overlay)
     add_libheif_test(overlay_spec_parse)

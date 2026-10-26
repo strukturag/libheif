@@ -597,6 +597,7 @@ option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
 option(WITH_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
+option(ENABLE_YUV_TO_RGB_SIMD "Enable SSE2 acceleration of 10-bit YCbCr to RGBA on x86-64" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
 
 if (WITH_REDUCED_VISIBILITY)

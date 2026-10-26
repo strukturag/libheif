@@ -24,6 +24,208 @@
 #include "nclx.h"
 #include "common_utils.h"
 
+// SSE2 is part of the x86-64 baseline. Other architectures use the portable loop.
+#if defined(ENABLE_YUV_TO_RGB_SIMD) && (defined(__x86_64__) || defined(_M_X64))
+#include <emmintrin.h>
+#define LIBHEIF_YUV_TO_RGB_SSE2 1
+#endif
+
+
+std::vector<ColorStateWithCost>
+Op_YCbCr10_to_RGBA8::state_after_conversion(const ColorState& input_state,
+                                            const ColorState& target_state,
+                                            const heif_color_conversion_options& options,
+                                            const heif_color_conversion_options_ext& options_ext) const
+{
+  if (input_state.colorspace != heif_colorspace_YCbCr ||
+      (input_state.chroma != heif_chroma_422 && input_state.chroma != heif_chroma_444) ||
+      input_state.get_uniform_color_bits_per_pixel() != 10 || input_state.has_alpha() ||
+      target_state.colorspace != heif_colorspace_RGB ||
+      target_state.chroma != heif_chroma_interleaved_RGBA ||
+      target_state.get_uniform_color_bits_per_pixel() != 8) {
+    return {};
+  }
+
+  // Forced bilinear paths can reduce to 8 bits before upsampling. Decline even
+  // 4:4:4 states in this mode so that an earlier upsampling step cannot reroute them.
+  if (options.preferred_chroma_upsampling_algorithm != heif_chroma_upsampling_nearest_neighbor &&
+      options.only_use_preferred_chroma_algorithm) {
+    return {};
+  }
+
+  // The Kr/Kb-based matrices. GBR, YCgCo and constant-luminance conversions retain their
+  // existing operators; their arithmetic cannot be replaced by this linear conversion.
+  switch (input_state.nclx.get_matrix_coefficients()) {
+    case 1:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 9:
+      break;
+    default:
+      return {};
+  }
+
+  ColorState output_state;
+  output_state.colorspace = heif_colorspace_RGB;
+  output_state.chroma = heif_chroma_interleaved_RGBA;
+  output_state.set_color_bits_per_pixel(8);
+  output_state.bits_per_pixel_alpha = 8;
+  // An upsampling operation followed by this one must cost more than the existing
+  // three-step planar RGB path. Otherwise 4:2:0 input can be upsampled just to use
+  // this operation, changing its chroma filtering and intermediate rounding. Direct
+  // 4:2:2/4:4:4 conversion still costs less than the three operations it replaces.
+  return {ColorStateWithCost(output_state, 2 * SpeedCosts_Unoptimized + SpeedCosts_Trivial)};
+}
+
+
+#if defined(LIBHEIF_YUV_TO_RGB_SSE2)
+static uint32_t ycbcr10_to_rgba8_sse2(const uint16_t* in_y, const uint16_t* in_cb,
+                                     const uint16_t* in_cr, uint8_t* out_p, uint32_t width,
+                                     int shift_h, bool full_range,
+                                     const YCbCr_to_RGB_coefficients& coeffs)
+{
+  const __m128 zero = _mm_setzero_ps();
+  const __m128 midpoint = _mm_set1_ps(512.0f);
+  const __m128 half = _mm_set1_ps(0.5f);
+  const __m128 maximum = _mm_set1_ps(1023.0f);
+  const __m128 r_cr = _mm_set1_ps(coeffs.r_cr);
+  const __m128 g_cb = _mm_set1_ps(coeffs.g_cb);
+  const __m128 g_cr = _mm_set1_ps(coeffs.g_cr);
+  const __m128 b_cb = _mm_set1_ps(coeffs.b_cb);
+  const __m128 offset = _mm_set1_ps(64.0f);
+  const __m128 y_scale = _mm_set1_ps(1.1689f);
+  const __m128 c_scale = _mm_set1_ps(1.1429f);
+  const __m128i alpha = _mm_set1_epi32(-16777216); // 0xff000000
+
+  uint32_t x = 0;
+  for (; width - x >= 4; x += 4) {
+    __m128i cb, cr;
+    if (shift_h) {
+      // Two 4:2:2 chroma samples supply four pixels. Read exactly four bytes, even at
+      // the right edge, and duplicate each sample before expanding it to 32 bits.
+      uint32_t cb_pair, cr_pair;
+      memcpy(&cb_pair, in_cb + x / 2, sizeof(cb_pair));
+      memcpy(&cr_pair, in_cr + x / 2, sizeof(cr_pair));
+      cb = _mm_cvtsi32_si128(static_cast<int32_t>(cb_pair));
+      cr = _mm_cvtsi32_si128(static_cast<int32_t>(cr_pair));
+      cb = _mm_unpacklo_epi16(cb, cb);
+      cr = _mm_unpacklo_epi16(cr, cr);
+    }
+    else {
+      cb = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_cb + x));
+      cr = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_cr + x));
+    }
+
+    __m128i y = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(in_y + x));
+    __m128 yv = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y, _mm_setzero_si128()));
+    __m128 cbv = _mm_sub_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(cb, _mm_setzero_si128())), midpoint);
+    __m128 crv = _mm_sub_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(cr, _mm_setzero_si128())), midpoint);
+    if (!full_range) {
+      yv = _mm_mul_ps(_mm_sub_ps(yv, offset), y_scale);
+      cbv = _mm_mul_ps(cbv, c_scale);
+      crv = _mm_mul_ps(crv, c_scale);
+    }
+
+    __m128 r = _mm_add_ps(yv, _mm_mul_ps(r_cr, crv));
+    __m128 g = _mm_add_ps(_mm_add_ps(yv, _mm_mul_ps(g_cb, cbv)), _mm_mul_ps(g_cr, crv));
+    __m128 b = _mm_add_ps(yv, _mm_mul_ps(b_cb, cbv));
+
+    // Match clip_f_u16() followed by Op_to_sdr_planes: round and clip at 10 bits,
+    // then discard two low bits. Scaling directly to 8 bits changes the rounding.
+    r = _mm_min_ps(_mm_max_ps(_mm_add_ps(r, half), zero), maximum);
+    g = _mm_min_ps(_mm_max_ps(_mm_add_ps(g, half), zero), maximum);
+    b = _mm_min_ps(_mm_max_ps(_mm_add_ps(b, half), zero), maximum);
+    __m128i ri = _mm_srli_epi32(_mm_cvttps_epi32(r), 2);
+    __m128i gi = _mm_srli_epi32(_mm_cvttps_epi32(g), 2);
+    __m128i bi = _mm_srli_epi32(_mm_cvttps_epi32(b), 2);
+    __m128i rgba = _mm_or_si128(_mm_or_si128(ri, _mm_slli_epi32(gi, 8)),
+                               _mm_or_si128(_mm_slli_epi32(bi, 16), alpha));
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(out_p + 4 * static_cast<size_t>(x)), rgba);
+  }
+
+  return x;
+}
+#endif
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+Op_YCbCr10_to_RGBA8::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                        const ColorState& input_state,
+                                        const ColorState& target_state,
+                                        const heif_color_conversion_options& options,
+                                        const heif_color_conversion_options_ext& options_ext,
+                                        const heif_security_limits* limits) const
+{
+  if (!input_state.has_same_planes(ColorState::from_image_planes(*input)) ||
+      state_after_conversion(input_state, target_state, options, options_ext).empty()) {
+    return Error::InternalError;
+  }
+
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
+  int shift_h = input->get_chroma_format() == heif_chroma_422 ? 1 : 0;
+  uint32_t chroma_width = (width >> shift_h) + ((width & 1) && shift_h);
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+    uint32_t plane_width = channel == heif_channel_Y ? width : chroma_width;
+    if (input->get_width(channel) < plane_width || input->get_height(channel) < height) {
+      return Error::InternalError;
+    }
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+  outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA);
+  if (auto err = outimg->add_channel(heif_channel_interleaved, width, height, 8, limits)) {
+    return err;
+  }
+
+  size_t in_y_stride, in_cb_stride, in_cr_stride, out_p_stride;
+  const uint16_t* in_y = reinterpret_cast<const uint16_t*>(input->get_channel_memory(heif_channel_Y, &in_y_stride));
+  const uint16_t* in_cb = reinterpret_cast<const uint16_t*>(input->get_channel_memory(heif_channel_Cb, &in_cb_stride));
+  const uint16_t* in_cr = reinterpret_cast<const uint16_t*>(input->get_channel_memory(heif_channel_Cr, &in_cr_stride));
+  uint8_t* out_p = outimg->get_channel_memory(heif_channel_interleaved, &out_p_stride);
+  in_y_stride /= sizeof(uint16_t);
+  in_cb_stride /= sizeof(uint16_t);
+  in_cr_stride /= sizeof(uint16_t);
+
+  bool full_range = true;
+  YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
+  if (input->has_nclx_color_profile()) {
+    nclx_profile profile = input->get_color_profile_nclx();
+    full_range = profile.get_full_range_flag();
+    coeffs = get_YCbCr_to_RGB_coefficients(profile.get_matrix_coefficients(), profile.get_colour_primaries());
+  }
+
+  for (uint32_t y = 0; y < height; y++) {
+    const uint16_t* row_y = in_y + y * in_y_stride;
+    const uint16_t* row_cb = in_cb + y * in_cb_stride;
+    const uint16_t* row_cr = in_cr + y * in_cr_stride;
+    uint8_t* row_out = out_p + y * out_p_stride;
+    uint32_t x = 0;
+#if defined(LIBHEIF_YUV_TO_RGB_SSE2)
+    x = ycbcr10_to_rgba8_sse2(row_y, row_cb, row_cr, row_out, width, shift_h, full_range, coeffs);
+#endif
+    for (; x < width; x++) {
+      float yv = static_cast<float>(row_y[x]);
+      float cb = static_cast<float>(row_cb[x >> shift_h] - 512);
+      float cr = static_cast<float>(row_cr[x >> shift_h] - 512);
+      if (!full_range) {
+        yv = (yv - 64.0f) * 1.1689f;
+        cb = cb * 1.1429f;
+        cr = cr * 1.1429f;
+      }
+
+      row_out[4 * static_cast<size_t>(x) + 0] = static_cast<uint8_t>(clip_f_u16(yv + coeffs.r_cr * cr, 1023) >> 2);
+      row_out[4 * static_cast<size_t>(x) + 1] = static_cast<uint8_t>(clip_f_u16(yv + coeffs.g_cb * cb + coeffs.g_cr * cr, 1023) >> 2);
+      row_out[4 * static_cast<size_t>(x) + 2] = static_cast<uint8_t>(clip_f_u16(yv + coeffs.b_cb * cb, 1023) >> 2);
+      row_out[4 * static_cast<size_t>(x) + 3] = 0xff;
+    }
+  }
+
+  return outimg;
+}
+
 
 template<class Pixel>
 std::vector<ColorStateWithCost>
