@@ -356,6 +356,55 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
+Error HeifContext::set_item_hidden(heif_item_id id, bool hidden)
+{
+  auto infe = m_heif_file->get_infe_box(id);
+  if (!infe) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Nonexisting_item_referenced,
+            "Item does not exist"};
+  }
+
+  if (hidden && id == m_heif_file->get_primary_image_ID()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+            "The primary image cannot be hidden"};
+  }
+
+  infe->set_hidden_item(hidden);
+
+  auto image = get_image(id, true);
+  if (!image) {
+    return Error::Ok;
+  }
+
+  if (hidden) {
+    remove_top_level_image(image);
+  }
+  else {
+    bool is_region_mask = false;
+    if (auto iref_box = m_heif_file->get_iref_box()) {
+      for (heif_item_id item_id : m_heif_file->get_item_IDs()) {
+        const auto mask_references = iref_box->get_references(item_id, fourcc("mask"));
+        if (std::find(mask_references.begin(), mask_references.end(), id) !=
+            mask_references.end()) {
+          is_region_mask = true;
+          break;
+        }
+      }
+    }
+
+    if (!image->is_thumbnail() && !image->is_alpha_channel() &&
+        !image->is_depth_channel() && !image->is_aux_image() &&
+        infe->get_item_type_4cc() != fourcc("mski") && !is_region_mask &&
+        std::find(m_top_level_images.begin(), m_top_level_images.end(), image) ==
+            m_top_level_images.end()) {
+      m_top_level_images.push_back(image);
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Result<std::shared_ptr<RegionItem>> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
   auto boxResult = m_heif_file->add_new_infe_box(fourcc("rgan"));
