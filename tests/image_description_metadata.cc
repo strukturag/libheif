@@ -387,6 +387,14 @@ static void add_sequence_metadata(std::vector<uint8_t>& file, const std::vector<
     auto clli = std::make_shared<Box_clli>();
     clli->clli = {1000, 400};
     entry->append_child_box(clli);
+    auto mdcv = std::make_shared<Box_mdcv>();
+    mdcv->mdcv.max_display_mastering_luminance = 10000000;
+    mdcv->mdcv.min_display_mastering_luminance = 50;
+    entry->append_child_box(mdcv);
+    auto pasp = std::make_shared<Box_pasp>();
+    pasp->hSpacing = 4;
+    pasp->vSpacing = 3;
+    entry->append_child_box(pasp);
     if (multiple_descriptions) {
       StreamWriter entry_writer;
       REQUIRE(entry->write(entry_writer) == Error::Ok);
@@ -458,12 +466,16 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
       !heif_have_decoder_for_format(heif_compression_AV1)) {
     SKIP("No AV1 encoder/decoder pair available");
   }
-  const bool with_metadata = GENERATE(false, true);
+  enum class SampleEntryMetadata { none, single_description, two_descriptions };
+  const auto metadata_mode = GENERATE(SampleEntryMetadata::none,
+                                      SampleEntryMetadata::single_description,
+                                      SampleEntryMetadata::two_descriptions);
+  const bool with_metadata = metadata_mode != SampleEntryMetadata::none;
+  const bool multiple_descriptions = metadata_mode == SampleEntryMetadata::two_descriptions;
   const bool convert_to_rgb = GENERATE(false, true);
   const bool autocorrect = GENERATE(false, true);
-  const bool multiple_descriptions = GENERATE(false, true);
-  INFO("sample-entry metadata: " << with_metadata << ", RGB conversion: " << convert_to_rgb);
-  INFO("autocorrect: " << autocorrect);
+  INFO("sample-entry metadata: " << with_metadata << ", two sample descriptions: " << multiple_descriptions);
+  INFO("RGB conversion: " << convert_to_rgb << ", autocorrect: " << autocorrect);
   auto file = encode_metadata_sequence();
   const std::vector<uint8_t> icc = {1, 2, 3, 4, 5};
   if (with_metadata) {
@@ -490,10 +502,13 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
                                          convert_to_rgb ? heif_chroma_444 : heif_chroma_undefined,
                                          options).code == heif_error_Ok);
     REQUIRE(image != nullptr);
-    if (with_metadata && autocorrect) {
-      heif_error warning{};
-      REQUIRE(heif_image_get_decoding_warnings(image, 0, &warning, 1) == 1);
-      CHECK(warning.subcode == heif_suberror_NCLX_colr_VUI_mismatch);
+    // With sample-entry metadata, the colr box disagrees with the bitstream (always reported)
+    // and its range is limited while the bitstream says full (autocorrected on request).
+    heif_error warnings[3]{};
+    const int num_warnings = heif_image_get_decoding_warnings(image, 0, warnings, 3);
+    CHECK(num_warnings == (with_metadata ? (autocorrect ? 2 : 1) : 0));
+    for (int i = 0; i < num_warnings; i++) {
+      CHECK(warnings[i].subcode == heif_suberror_NCLX_colr_VUI_mismatch);
     }
     if (with_metadata && convert_to_rgb) {
       size_t stride = 0;
@@ -513,6 +528,11 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
     }
     CHECK(heif_image_get_raw_color_profile_size(image) == (with_metadata ? icc.size() : 0));
     CHECK(heif_image_has_content_light_level(image) == (with_metadata ? 1 : 0));
+    CHECK(heif_image_has_mastering_display_colour_volume(image) == (with_metadata ? 1 : 0));
+    uint32_t pasp_h = 0, pasp_v = 0;
+    heif_image_get_pixel_aspect_ratio(image, &pasp_h, &pasp_v);
+    CHECK(pasp_h == (with_metadata ? 4 : 1));
+    CHECK(pasp_v == (with_metadata ? 3 : 1));
     if (with_metadata) {
       std::vector<uint8_t> actual(icc.size());
       REQUIRE(heif_image_get_raw_color_profile(image, actual.data()).code == heif_error_Ok);
@@ -521,6 +541,10 @@ TEST_CASE("sequence sample-entry colour metadata is applied to every decoded fra
       heif_image_get_content_light_level(image, &clli);
       CHECK(clli.max_content_light_level == (multiple_descriptions && frame > 0 ? 2000 : 1000));
       CHECK(clli.max_pic_average_light_level == (multiple_descriptions && frame > 0 ? 800 : 400));
+      heif_mastering_display_colour_volume mdcv{};
+      heif_image_get_mastering_display_colour_volume(image, &mdcv);
+      CHECK(mdcv.max_display_mastering_luminance == 10000000);
+      CHECK(mdcv.min_display_mastering_luminance == 50);
     }
     heif_image_release(image);
   }

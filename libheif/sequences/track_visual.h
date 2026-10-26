@@ -22,6 +22,7 @@
 #define LIBHEIF_TRACK_VISUAL_H
 
 #include "track.h"
+#include "image/image_description.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -89,6 +90,10 @@ private:
   std::map<uintptr_t, FrameUserData> m_frame_user_data;
 
   int m_sample_duration = 0; // TODO: pass this through encoder or handle it correctly with frame reordering
+
+  // Colour profiles and HDR metadata of each sample entry in 'stsd', indexed by sample description index - 1.
+  // Collected once in load() and attached to every decoded frame.
+  std::vector<ImageDescription> m_sample_description_metadata;
 
   // If there is an alpha-channel track associated with this color track, we reference it from here
   std::shared_ptr<Track_Visual> m_aux_alpha_track;

@@ -101,6 +101,38 @@ Error Track_Visual::load(const std::shared_ptr<Box_trak>& trak)
     }
   }
 
+  // Collect the colour profiles and HDR metadata of each sample entry, so that we can attach them to the decoded frames.
+  // As for image item properties, a later 'colr' box replaces an earlier one of the same kind.
+
+  for (size_t i = 0; i < m_stsd->get_num_sample_entries(); i++) {
+    auto sample_entry = m_stsd->get_sample_entry(i);
+    ImageDescription& metadata = m_sample_description_metadata.emplace_back();
+
+    for (const auto& colr : sample_entry->get_child_boxes<Box_colr>()) {
+      metadata.set_color_profile(colr->get_color_profile());
+    }
+
+    if (auto clli = sample_entry->get_child_box<Box_clli>()) {
+      metadata.set_clli(clli->clli);
+    }
+
+    if (auto mdcv = sample_entry->get_child_box<Box_mdcv>()) {
+      metadata.set_mdcv(mdcv->mdcv);
+    }
+
+    if (auto amve = sample_entry->get_child_box<Box_amve>()) {
+      metadata.set_amve(amve->amve);
+    }
+
+    if (auto ndwt = sample_entry->get_child_box<Box_ndwt>()) {
+      metadata.set_nominal_diffuse_white_luminance(ndwt->get_diffuse_white_luminance());
+    }
+
+    if (auto pasp = sample_entry->get_child_box<Box_pasp>()) {
+      metadata.set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
+    }
+  }
+
   const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
 
   // Find sequence resolution
@@ -367,32 +399,42 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
 
   const SampleTiming& outputTiming = m_presentation_timeline[m_next_sample_to_be_output % m_presentation_timeline.size()];
   const auto& chunk = m_chunks[outputTiming.chunkIdx];
-  auto sampleDescription = m_stsd->get_sample_entry(chunk->get_sample_description_index() - 1);
-  const auto bitstream_nclx = image->get_color_profile_nclx();
+  // Track::load() verified that the sample description index exists.
+  const ImageDescription& metadata = m_sample_description_metadata[chunk->get_sample_description_index() - 1];
 
   // Sample-entry colour information takes precedence over bitstream metadata.
-  for (const auto& colr : sampleDescription->get_child_boxes<Box_colr>()) {
-    auto profile = colr->get_color_profile();
-    if (auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile)) {
-      auto consolidated_nclx = nclx->get_nclx_color_profile();
-      if (options.version >= 9 && options.autocorrect_broken_input &&
-          bitstream_nclx.is_defined() && bitstream_nclx.get_full_range_flag() &&
-          !consolidated_nclx.get_full_range_flag()) {
-        image->add_warning({
-          heif_error_Invalid_input,
-          heif_suberror_NCLX_colr_VUI_mismatch,
-          "Autocorrecting full-range flag to ON (colr=limited, bitstream=full)"
-        });
-        consolidated_nclx.set_full_range_flag(true);
-      }
-      image->set_color_profile_nclx(consolidated_nclx);
-    }
-    else {
-      image->set_color_profile(profile);
-    }
+  const nclx_profile sample_entry_nclx = metadata.get_color_profile_nclx();
+  if (sample_entry_nclx.is_defined()) {
+    std::vector<Error> warnings;
+    image->set_color_profile_nclx(consolidate_colr_and_bitstream_nclx(sample_entry_nclx, image->get_color_profile_nclx(),
+                                                                      options, warnings));
+    image->add_warnings(warnings);
   }
-  if (auto clli = sampleDescription->get_child_box<Box_clli>()) {
-    image->set_clli(clli->clli);
+
+  if (metadata.has_icc_color_profile()) {
+    image->set_color_profile_icc(metadata.get_color_profile_icc());
+  }
+
+  if (metadata.has_clli()) {
+    image->set_clli(metadata.get_clli());
+  }
+
+  if (metadata.has_mdcv()) {
+    image->set_mdcv(metadata.get_mdcv());
+  }
+
+  if (metadata.has_amve()) {
+    image->set_amve(metadata.get_amve());
+  }
+
+  if (metadata.has_nominal_diffuse_white()) {
+    image->set_nominal_diffuse_white_luminance(metadata.get_nominal_diffuse_white_luminance());
+  }
+
+  if (metadata.has_nonsquare_pixel_ratio()) {
+    uint32_t h, v;
+    metadata.get_pixel_ratio(&h, &v);
+    image->set_pixel_ratio(h, v);
   }
 
   if (m_stts) {
