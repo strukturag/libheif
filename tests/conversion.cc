@@ -31,9 +31,11 @@
 #include "color-conversion/monochrome.h"
 #include "color-conversion/rgb2yuv.h"
 #include "color-conversion/yuv2rgb.h"
+#include "context.h"
 #include "image/pixelimage.h"
 #include <cmath>
 #include <algorithm>
+#include <memory>
 
 // Enable for more verbose test output.
 constexpr bool kEnableDebugOutput = false;
@@ -1878,4 +1880,99 @@ TEST_CASE("bytes_per_sample_for_bit_depth", "[heif_image]")
   CHECK(s.get_bytes_per_sample(heif_channel_R) == 2);
   CHECK(s.get_bytes_per_sample(heif_channel_Alpha) == 0);
   CHECK(s.get_max_bytes_per_sample() == 2);
+}
+
+
+TEST_CASE("NCLX passthrough survives packed RGB output", "[decode][nclx]")
+{
+  constexpr int width = 4;
+  constexpr int height = 4;
+  constexpr int bit_depth = 10;
+
+  nclx_profile source_profile;
+  source_profile.set_colour_primaries(static_cast<uint16_t>(heif_color_primaries_ITU_R_BT_2020_2_and_2100_0));
+  source_profile.set_transfer_characteristics(static_cast<uint16_t>(heif_transfer_characteristic_ITU_R_BT_2100_0_HLG));
+  source_profile.set_matrix_coefficients(static_cast<uint16_t>(heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance));
+  source_profile.set_full_range_flag(true);
+
+  auto input = std::make_shared<HeifPixelImage>();
+  input->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+  for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+    REQUIRE(!input->fill_new_channel(channel, 512, width, height, bit_depth, nullptr));
+  }
+  input->set_color_profile_nclx(source_profile);
+
+  HeifContext context;
+  std::unique_ptr<heif_decoding_options, decltype(&heif_decoding_options_free)> options(
+      heif_decoding_options_alloc(), heif_decoding_options_free);
+  REQUIRE(options != nullptr);
+  options->output_image_nclx_profile_passthrough = true;
+
+  SECTION("10-bit packed RGB")
+  {
+    auto result = context.convert_to_output_colorspace(input, heif_colorspace_RGB,
+                                                       heif_chroma_interleaved_RRGGBB_LE,
+                                                       *options);
+    REQUIRE(result);
+    const auto& output = **result;
+    REQUIRE(output.has_nclx_color_profile());
+    CHECK(output.get_color_profile_nclx() == source_profile);
+    CHECK(output.get_bits_per_pixel(heif_channel_interleaved) == 10);
+
+    size_t stride = 0;
+    const uint8_t* plane = output.get_channel_memory(heif_channel_interleaved, &stride);
+    REQUIRE(plane != nullptr);
+    REQUIRE(stride >= 3 * sizeof(uint16_t));
+    const auto* samples = reinterpret_cast<const uint16_t*>(plane);
+    CHECK(SwapBytesIfNeeded(samples[0], heif_chroma_interleaved_RRGGBB_LE) == 512);
+    CHECK(SwapBytesIfNeeded(samples[1], heif_chroma_interleaved_RRGGBB_LE) == 512);
+    CHECK(SwapBytesIfNeeded(samples[2], heif_chroma_interleaved_RRGGBB_LE) == 512);
+  }
+
+  SECTION("8-bit packed RGB")
+  {
+    options->convert_hdr_to_8bit = true;
+    auto result = context.convert_to_output_colorspace(input, heif_colorspace_RGB,
+                                                       heif_chroma_interleaved_RGBA,
+                                                       *options);
+    REQUIRE(result);
+    const auto& output = **result;
+    REQUIRE(output.has_nclx_color_profile());
+    CHECK(output.get_color_profile_nclx() == source_profile);
+    CHECK(output.get_bits_per_pixel(heif_channel_interleaved) == 8);
+
+    size_t stride = 0;
+    const uint8_t* plane = output.get_channel_memory(heif_channel_interleaved, &stride);
+    REQUIRE(plane != nullptr);
+    REQUIRE(stride >= 4);
+    CHECK(std::abs(static_cast<int>(plane[0]) - static_cast<int>(plane[1])) <= 1);
+    CHECK(std::abs(static_cast<int>(plane[1]) - static_cast<int>(plane[2])) <= 1);
+    CHECK(plane[3] == 255);
+  }
+
+  SECTION("default and explicit output profiles do not inherit the source profile")
+  {
+    options->output_image_nclx_profile_passthrough = false;
+    auto default_result = context.convert_to_output_colorspace(
+        input, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, *options);
+    REQUIRE(default_result);
+    const auto& default_output = **default_result;
+    CHECK_FALSE((default_output.has_nclx_color_profile() &&
+                 default_output.get_color_profile_nclx() == source_profile));
+
+    heif_color_profile_nclx explicit_profile{};
+    explicit_profile.version = 1;
+    explicit_profile.color_primaries = heif_color_primaries_ITU_R_BT_709_5;
+    explicit_profile.transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
+    explicit_profile.matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+    explicit_profile.full_range_flag = true;
+    options->output_image_nclx_profile = &explicit_profile;
+    options->output_image_nclx_profile_passthrough = true;
+    auto explicit_result = context.convert_to_output_colorspace(
+        input, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, *options);
+    REQUIRE(explicit_result);
+    const auto& explicit_output = **explicit_result;
+    CHECK_FALSE((explicit_output.has_nclx_color_profile() &&
+                 explicit_output.get_color_profile_nclx() == source_profile));
+  }
 }
