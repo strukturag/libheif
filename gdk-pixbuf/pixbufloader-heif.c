@@ -130,8 +130,16 @@ static gboolean stop_load(gpointer context, GError** error)
   }
 
   if (requested_width > 0 && requested_height > 0 && (width != requested_width || height != requested_height)) {
-    struct heif_image* resized;
-    heif_image_scale_image(img, &resized, requested_width, requested_height, NULL);
+    struct heif_image* resized = NULL;
+    err = heif_image_scale_image(img, &resized, requested_width, requested_height, NULL);
+    if (err.code != heif_error_Ok) {
+      g_set_error(error, GDK_PIXBUF_ERROR,
+                  err.code == heif_error_Memory_allocation_error ? GDK_PIXBUF_ERROR_INSUFFICIENT_MEMORY
+                                                                 : GDK_PIXBUF_ERROR_FAILED,
+                  "HEIF scaling failed: %s", err.message);
+      goto cleanup;
+    }
+
     heif_image_release(img);
     width = requested_width;
     height = requested_height;
@@ -139,9 +147,19 @@ static gboolean stop_load(gpointer context, GError** error)
   }
 
   data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+  if (!data) {
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_FAILED,
+                "HEIF decoding failed: cannot access image data");
+    goto cleanup;
+  }
 
   pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, has_alpha, 8, width, height, stride, release_heif_image,
                                     img);
+  if (!pixbuf) {
+    g_set_error(error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_INSUFFICIENT_MEMORY,
+                "cannot allocate pixbuf");
+    goto cleanup;
+  }
 
   size_t profile_size = heif_image_handle_get_raw_color_profile_size(hdl);
   if(profile_size) {
