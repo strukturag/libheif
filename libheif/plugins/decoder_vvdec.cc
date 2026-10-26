@@ -29,6 +29,7 @@
 #include <string>
 
 #include <vvdec/vvdec.h>
+#include <vvdec/version.h>
 #include <utility>
 
 #if 0
@@ -117,6 +118,16 @@ heif_error vvdec_new_decoder2(void** dec, const heif_decoder_plugin_options* opt
   if (options->num_threads) {
     params.threads = options->num_threads;
   }
+
+  // Bound the number of pictures that vvdec parses ahead before it outputs the first one.
+  // Its default grows with the number of threads (1.5 x threads since vvdec 2.2.0), so on
+  // machines with many cores the latency exceeded the sequence decoding work limit.
+#if VVDEC_VERSION_MAJOR > 2 || (VVDEC_VERSION_MAJOR == 2 && VVDEC_VERSION_MINOR >= 3)
+  params.parseDelay = 8;
+#else
+  params.parseThreads = 8; // renamed to 'parseDelay' in vvdec 2.3.0
+#endif
+
   decoder->decoder = vvdec_decoder_open(&params);
 
   const int MaxNaluSize = 256 * 1024;

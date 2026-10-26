@@ -47,6 +47,9 @@ uint16_t max_sequence_decode_work_debt(heif_compression_format format)
     case heif_compression_uncompressed:
     case heif_compression_mask:
       return 1;
+    case heif_compression_VVC:
+      // vvdec parses up to 8 pictures ahead, on top of the frame reordering of the stream.
+      return 64;
     default:
       return 32;
   }
