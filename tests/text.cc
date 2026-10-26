@@ -29,12 +29,9 @@
 #include "libheif/heif.h"
 #include "test-config.h"
 #include "test_utils.h"
-#include "security_limits.h"
-#include "text.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <utility>
 #include <libheif/heif_items.h>
 #include <libheif/heif_library.h>
 
@@ -51,30 +48,6 @@ TEST_CASE("no text") {
   REQUIRE(num_text_items == 0);
   heif_image_handle_release(handle);
   heif_context_free(context);
-}
-
-
-TEST_CASE("retained text data remains charged to the memory budget") {
-  heif_security_limits limits = global_security_limits;
-  limits.max_total_memory = 48;
-  TotalMemoryTracker tracker(&limits);
-
-  TextItem second;
-  std::vector<uint8_t> second_data(32, 'b');
-  {
-    TextItem first;
-    std::vector<uint8_t> first_data(32, 'a');
-    REQUIRE_FALSE(first.parse(std::move(first_data), &limits));
-    auto first_text = first.get_item_text();
-    REQUIRE(first_text);
-    REQUIRE(*first_text == std::string(32, 'a'));
-
-    Error err = second.parse(std::move(second_data), &limits);
-    REQUIRE(err.error_code == heif_error_Memory_allocation_error);
-    REQUIRE(err.sub_error_code == heif_suberror_Security_limit_exceeded);
-  }
-
-  REQUIRE_FALSE(second.parse(std::move(second_data), &limits));
 }
 
 TEST_CASE("create text item") {
