@@ -70,3 +70,90 @@ TEST_CASE("Grayscale+alpha 16 bit") {
       REQUIRE(*(const uint16_t*) (pa + y * a_stride + x * 2) == 0x2000 * x + 0x100 * y);
     }
 }
+
+
+// PNG files without an alpha channel can still carry transparency in a tRNS chunk:
+// a single transparent color for RGB and grayscale images, or per-entry alpha for
+// palette images. The PNG loader has to turn this into an alpha channel (#1947).
+// In the *_trns.png images, pixel (x,y) is transparent when (x+y)%3==0.
+
+static bool is_transparent(int x, int y)
+{
+  return (x + y) % 3 == 0;
+}
+
+TEST_CASE("RGB 8 bit with tRNS color key") {
+  InputImage input_image = load("rgb8_trns.png", 8);
+  const heif_image* image = input_image.image.get();
+  REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA);
+
+  size_t stride;
+  const uint8_t* p = heif_image_get_plane_readonly2(image, heif_channel_interleaved, &stride);
+  for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++) {
+      INFO("x=" << x << " y=" << y);
+      REQUIRE(p[y * stride + x * 4 + 3] == (is_transparent(x, y) ? 0 : 255));
+    }
+}
+
+TEST_CASE("RGB 16 bit with tRNS color key") {
+  InputImage input_image = load("rgb16_trns.png", 16);
+  const heif_image* image = input_image.image.get();
+  REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RRGGBBAA_LE);
+
+  size_t stride;
+  const uint8_t* p = heif_image_get_plane_readonly2(image, heif_channel_interleaved, &stride);
+  for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++) {
+      INFO("x=" << x << " y=" << y);
+      const uint8_t* a = p + y * stride + x * 8 + 6;
+      REQUIRE((a[0] | (a[1] << 8)) == (is_transparent(x, y) ? 0 : 0xFFFF));
+    }
+}
+
+TEST_CASE("Grayscale 8 bit with tRNS color key") {
+  InputImage input_image = load("gray8_trns.png", 8);
+  const heif_image* image = input_image.image.get();
+  REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Alpha));
+
+  size_t stride;
+  const uint8_t* p = heif_image_get_plane_readonly2(image, heif_channel_Alpha, &stride);
+  for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++) {
+      INFO("x=" << x << " y=" << y);
+      REQUIRE(p[y * stride + x] == (is_transparent(x, y) ? 0 : 255));
+    }
+}
+
+TEST_CASE("Grayscale 16 bit with tRNS color key") {
+  InputImage input_image = load("gray16_trns.png", 16);
+  const heif_image* image = input_image.image.get();
+  REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Alpha));
+
+  size_t stride;
+  const uint8_t* p = heif_image_get_plane_readonly2(image, heif_channel_Alpha, &stride);
+  for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++) {
+      INFO("x=" << x << " y=" << y);
+      const uint16_t a = *(const uint16_t*) (p + y * stride + x * 2);
+      REQUIRE(a == (is_transparent(x, y) ? 0 : 0xFFFF));
+    }
+}
+
+TEST_CASE("Palette with tRNS alpha entries") {
+  InputImage input_image = load("palette_trns.png", 8);
+  const heif_image* image = input_image.image.get();
+  REQUIRE(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA);
+
+  // palette index 0: alpha 0, index 1: alpha 128, index 2: no tRNS entry (opaque)
+  size_t stride;
+  const uint8_t* p = heif_image_get_plane_readonly2(image, heif_channel_interleaved, &stride);
+  for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++) {
+      INFO("x=" << x << " y=" << y);
+      int expected = is_transparent(x, y) ? 0 : (x % 2 == 0 ? 128 : 255);
+      REQUIRE(p[y * stride + x * 4 + 3] == expected);
+    }
+}
