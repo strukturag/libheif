@@ -1046,7 +1046,7 @@ const Box_stsc::SampleToChunk* Box_stsc::get_chunk(uint32_t idx) const
 void Box_stsc::add_chunk(uint32_t description_index)
 {
   SampleToChunk entry{};
-  entry.first_chunk = 1; // TODO
+  entry.first_chunk = static_cast<uint32_t>(m_entries.size() + 1); // each entry describes one chunk
   entry.samples_per_chunk = 0;
   entry.sample_description_index = description_index;
   m_entries.push_back(entry);
