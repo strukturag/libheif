@@ -882,13 +882,15 @@ int main(int argc, char** argv)
         uint32_t sample_entry_type = heif_track_get_sample_entry_type_of_first_cluster(track);
         std::cout << "\n  sample entry type: " << heif_examples::fourcc_to_string(sample_entry_type);
         if (sample_entry_type == heif_fourcc('u', 'r', 'i', 'm')) {
-          const char* uri;
+          const char* uri = nullptr;
           err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
           if (err.code) {
             std::cerr << "Cannot read 'urim'-track URI: " << err.message << "\n";
           }
-          std::cout << "\n  URI: " << uri;
-          heif_string_release(uri);
+          else {
+            std::cout << "\n  URI: " << uri;
+            heif_string_release(uri);
+          }
         }
 
         // get metadata track samples

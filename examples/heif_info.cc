@@ -1098,13 +1098,15 @@ int main(int argc, char** argv)
       std::cout << "  sample entry type: " << heif_examples::fourcc_to_string(sampleEntryType) << "\n";
 
       if (sampleEntryType == heif_fourcc('u', 'r', 'i', 'm')) {
-        const char* uri;
+        const char* uri = nullptr;
         err = heif_track_get_urim_sample_entry_uri_of_first_cluster(track, &uri);
         if (err.code) {
           std::cerr << "error reading urim-track uri: " << err.message << "\n";
         }
-        std::cout << "  uri: " << uri << "\n";
-        heif_string_release(uri);
+        else {
+          std::cout << "  uri: " << uri << "\n";
+          heif_string_release(uri);
+        }
       }
 
       std::cout << "  sample auxiliary information: ";
