@@ -16,7 +16,7 @@ libheif can be built with a subset of the supported codecs to keep the size and 
 Alternatively, the libheif codecs can also be built as separate plugins that can be installed and loaded dynamically when used.
 
 > **Project status (October 2026).** libheif and libde265 are maintained by a single independent developer with almost
-> no recurring funding, while 73 security advisories had to be investigated, fixed and released in 2026 alone.
+> no recurring funding, while 89 security advisories had to be investigated, fixed and released in 2026 alone.
 > If libheif is part of your product or service, please read [Funding](#funding) and [Commercial support](#commercial-support).
 > Security issues are reported as described in [SECURITY.md](SECURITY.md).
 
@@ -438,8 +438,8 @@ libheif and libde265 are developed and maintained by me, Dirk Farin, as an indep
 The libraries are used by practically every open-source application and service that handles HEIC or AVIF
 files (see [Software using libheif](#software-using-libheif)), but the maintenance work is almost entirely unfunded.
 
-From January to October 2026, 73 security advisories were published for libheif, most of them found with
-automated tools by organizations that use libheif in their products, and ten releases were made mainly to ship
+From January to October 2026, 89 security advisories were published for libheif, most of them found with
+automated tools by organizations that use libheif in their products, and eleven releases were made mainly to ship
 security fixes. Each fix means reproducing, fixing, testing, fuzzing and releasing, currently done in evenings and
 on weekends. Details are in [SECURITY.md](SECURITY.md).
 
