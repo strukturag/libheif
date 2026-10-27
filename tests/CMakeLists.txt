@@ -157,6 +157,7 @@ if (NOT WITH_REDUCED_VISIBILITY)
     add_libheif_test(text_internal)
 endif()
 add_libheif_test(cxx_wrapper)
+add_libheif_test(encoder_plugin_init_failure)
 add_libheif_test(component_descriptions)
 add_libheif_test(ffmpeg_decode_bitdepth)
 
