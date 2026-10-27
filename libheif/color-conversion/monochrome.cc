@@ -48,6 +48,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_420;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_Y);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_OptimizedSoftware);
 
@@ -202,6 +203,8 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_interleaved_RGB;
     output_state.set_color_bits_per_pixel(8);
     output_state.bits_per_pixel_alpha = 0;
+    output_state.nclx = input_state.nclx;
+    output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -213,6 +216,8 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGBA;
   output_state.set_color_bits_per_pixel(8);
   output_state.bits_per_pixel_alpha = 8;
+  output_state.nclx = input_state.nclx;
+  output_state.nclx.set_matrix_coefficients(heif_matrix_coefficients_RGB_GBR);
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 

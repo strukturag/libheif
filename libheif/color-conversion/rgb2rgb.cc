@@ -57,6 +57,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGBA;
   output_state.set_color_bits_per_pixel(8);
   output_state.bits_per_pixel_alpha = 8;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -66,6 +67,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RGB;
   output_state.set_color_bits_per_pixel(8);
   output_state.bits_per_pixel_alpha = 0;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -100,7 +102,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
-                 want_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
+                 want_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB);
 
   if (auto err = outimg->add_channel(heif_channel_interleaved, width, height, 8, limits)) {
     return err;
@@ -194,6 +196,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
     output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
     output_state.bits_per_pixel_alpha = 0;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -205,6 +208,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_R;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -348,6 +352,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
     output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
     output_state.bits_per_pixel_alpha = 0;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -359,6 +364,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
   output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_R;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -484,6 +490,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_444;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
   output_state.bits_per_pixel_alpha = target_state.has_alpha() ? input_state.bits_per_pixel_R : 0;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -600,6 +607,7 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
   output_state.chroma = heif_chroma_444;
   output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
   output_state.bits_per_pixel_alpha = target_state.has_alpha() ? input_state.bits_per_pixel_R : 0;
+  output_state.nclx = input_state.nclx;
 
   states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
@@ -714,6 +722,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
     output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
     output_state.bits_per_pixel_alpha = 0;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
@@ -734,6 +743,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
     output_state.set_color_bits_per_pixel(input_state.bits_per_pixel_R);
     output_state.bits_per_pixel_alpha = input_state.bits_per_pixel_alpha;
+    output_state.nclx = input_state.nclx;
 
     states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
