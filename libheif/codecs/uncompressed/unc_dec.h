@@ -87,7 +87,7 @@ public:
 
   Error flush_decoder() override { return {}; }
 
-  // Get a decoded frame from the decoder.
+  // Get a planar decoded frame, with alpha in a separate plane if present.
   // It may return NULL when there is buffering in the codec.
   Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
                                                              uintptr_t* out_user_data,

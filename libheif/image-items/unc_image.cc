@@ -186,6 +186,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
     return err;
   }
   else {
+    if (Error error = Decoder::validate_decoded_image(*img)) {
+      return error;
+    }
     return img;
   }
 }

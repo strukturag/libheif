@@ -180,7 +180,7 @@ public:
   // --- decoding
 
   // Decode a stream image that contains exactly one image. Decoder input is flushed and
-  // it always should return an image.
+  // it always should return a planar image, with alpha in a separate plane if present.
   virtual Result<std::shared_ptr<HeifPixelImage>>
   decode_single_frame_from_compressed_data(const heif_decoding_options& options,
                                            const heif_security_limits* limits);
@@ -194,7 +194,8 @@ public:
 
   virtual Error flush_decoder();
 
-  // Get a decoded frame from the decoder.
+  // Get a planar decoded frame from the decoder (no interleaved chroma or channel).
+  // Alpha, when present, must be a separate plane.
   // It may return NULL when there is buffering in the codec.
   virtual Result<std::shared_ptr<HeifPixelImage> > get_decoded_frame(const heif_decoding_options& options,
                                                                      uintptr_t* out_user_data,
@@ -203,6 +204,9 @@ public:
   // Release the codec plugin decoder context (frees worker threads).
   // Safe to call multiple times. The decoder will be re-created on next use.
   void release_decoder();
+
+  // Check the planar-output contract, including built-in decoders that bypass plugins.
+  static Error validate_decoded_image(const HeifPixelImage& image);
 
 private:
   DataExtent m_data_extent;
