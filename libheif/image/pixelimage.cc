@@ -1487,6 +1487,15 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
   bool source_channel_found = false;
   for (auto it = source->m_storage.begin(); it != source->m_storage.end(); ++it) {
     if (it->m_channel == src_channel) {
+      // Transferring a plane changes its channel, not its component layout.
+      if (dst_channel != heif_channel_unknown) {
+        int expected_components = dst_channel == heif_channel_interleaved
+                                  ? num_interleaved_components_per_plane(m_chroma) : 1;
+        if (it->m_num_interleaved_components != expected_components) {
+          return {heif_error_Invalid_input, heif_suberror_Unspecified,
+                  "Source plane component count does not match the destination channel"};
+        }
+      }
       plane = *it;
       source->m_storage.erase(it);
       source_channel_found = true;
@@ -1509,6 +1518,7 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
   // moved ids are dropped (the buffer is gone).
   std::vector<uint32_t> new_ids;
   new_ids.reserve(plane.m_component_ids.size());
+  auto types = map_channel_to_component_type(dst_channel, m_chroma);
   for (uint32_t old_id : plane.m_component_ids) {
     // Take the source description (snapshot; the source entry is removed below).
     ComponentDescription desc;
@@ -1522,9 +1532,8 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
     // transferred plane is described as e.g. "alpha" rather than carrying
     // over the source's "monochrome"/"Y" type. (The most common case is
     // moving an alpha aux item's Y plane onto a main image as Alpha.)
-    auto types = map_channel_to_component_type(dst_channel, heif_chroma_undefined);
     if (!types.empty()) {
-      desc.component_type = types[0];
+      desc.component_type = types[dst_channel == heif_channel_interleaved ? new_ids.size() : 0];
     }
     new_ids.push_back(desc.component_id);
     add_component_description(std::move(desc));
@@ -2503,6 +2512,11 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
       heif_channel channel = component.m_channel;
       const ComponentStorage& plane = component;
 
+      if (plane.m_num_interleaved_components != 1) {
+        return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+                "Scaling a planar channel with multiple components is not supported"};
+      }
+
       if (!out_img->has_channel(channel)) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
       }
@@ -2511,14 +2525,13 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
       uint32_t out_w = out_img->get_width(channel);
       uint32_t out_h = out_img->get_height(channel);
 
-      if (plane.m_bit_depth <= 8) {
-        // SDR planar
-
-        size_t in_stride = plane.stride;
-        const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+      auto resize = [&]<typename T>() {
+        size_t in_stride = plane.stride / sizeof(T);
+        const auto* in_data = static_cast<const T*>(plane.mem);
 
         size_t out_stride = 0;
-        auto* out_data = out_img->get_channel_memory(channel, &out_stride);
+        auto* out_data = out_img->get_channel_memory<T>(channel, &out_stride);
+        out_stride /= sizeof(T);
 
         for (uint32_t y = 0; y < out_h; y++) {
           uint32_t iy = static_cast<uint32_t>(static_cast<uint64_t>(y) * m_height / height);
@@ -2529,28 +2542,16 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
             out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
           }
         }
-      }
-      else {
-        // HDR planar
-
-        size_t in_stride = plane.stride;
-        const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
-
-        size_t out_stride = 0;
-        uint16_t* out_data = out_img->get_channel_memory<uint16_t>(channel, &out_stride);
-
-        in_stride /= 2;
-        out_stride /= 2;
-
-        for (uint32_t y = 0; y < out_h; y++) {
-          uint32_t iy = static_cast<uint32_t>(static_cast<uint64_t>(y) * m_height / height);
-
-          for (uint32_t x = 0; x < out_w; x++) {
-            uint32_t ix = static_cast<uint32_t>(static_cast<uint64_t>(x) * m_width / width);
-
-            out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
-          }
-        }
+      };
+      // Copy the complete stored sample, including float/complex representations.
+      switch (plane.get_bytes_per_pixel()) {
+        case 1: resize.operator()<uint8_t>(); break;
+        case 2: resize.operator()<uint16_t>(); break;
+        case 4: resize.operator()<uint32_t>(); break;
+        case 8: resize.operator()<uint64_t>(); break;
+        case 16: resize.operator()<heif_complex64>(); break;
+        default: return {heif_error_Unsupported_feature, heif_suberror_Unsupported_bit_depth,
+                         "Unsupported planar sample storage"};
       }
     }
   }

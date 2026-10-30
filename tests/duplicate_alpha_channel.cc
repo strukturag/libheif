@@ -64,6 +64,59 @@ TEST_CASE("transfer_channel_from_image_as rejects a duplicate destination channe
   REQUIRE(alpha2->has_channel(heif_channel_Y));
 }
 
+TEST_CASE("transfer_channel_from_image_as rejects a multicomponent plane for a planar channel")
+{
+  const auto chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA);
+  const auto channel = GENERATE(heif_channel_Y, heif_channel_Alpha);
+  auto* limits = heif_get_global_security_limits();
+  auto source = std::make_shared<HeifPixelImage>();
+  source->create(128, 64, heif_colorspace_RGB, chroma);
+  REQUIRE_FALSE(source->add_channel(heif_channel_interleaved, 128, 64, 8, limits));
+  size_t stride;
+  auto* data = source->get_channel_memory(heif_channel_interleaved, &stride);
+  data[0] = 0x5a;
+  const auto component_count = source->get_number_of_used_components();
+
+  auto destination = std::make_shared<HeifPixelImage>();
+  destination->create(128, 64, heif_colorspace_monochrome, heif_chroma_monochrome);
+  auto err = destination->transfer_channel_from_image_as(source, heif_channel_interleaved, channel);
+  REQUIRE(err.error_code == heif_error_Invalid_input);
+  REQUIRE_FALSE(destination->has_channel(channel));
+  REQUIRE(destination->get_number_of_used_components() == 0);
+  REQUIRE(source->get_number_of_used_components() == component_count);
+  REQUIRE(source->get_channel_memory(heif_channel_interleaved, &stride) == data);
+  REQUIRE(data[0] == 0x5a);
+}
+
+TEST_CASE("transfer_channel_from_image_as requires matching interleaved component counts")
+{
+  const auto destination_chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA);
+  auto* limits = heif_get_global_security_limits();
+  auto source = std::make_shared<HeifPixelImage>();
+  source->create(128, 64, heif_colorspace_RGB, heif_chroma_interleaved_RGBA);
+  REQUIRE_FALSE(source->add_channel(heif_channel_interleaved, 128, 64, 8, limits));
+  auto destination = std::make_shared<HeifPixelImage>();
+  destination->create(128, 64, heif_colorspace_RGB, destination_chroma);
+
+  auto err = destination->transfer_channel_from_image_as(source, heif_channel_interleaved, heif_channel_interleaved);
+  if (destination_chroma == heif_chroma_interleaved_RGBA) {
+    REQUIRE_FALSE(err);
+    REQUIRE_FALSE(source->has_channel(heif_channel_interleaved));
+    REQUIRE(destination->get_number_of_interleaved_components(heif_channel_interleaved) == 4);
+    const auto ids = destination->get_component_ids_interleaved();
+    REQUIRE(ids.size() == 4);
+    REQUIRE(destination->get_component_type(ids[0]) == heif_cmpd_component_type_red);
+    REQUIRE(destination->get_component_type(ids[1]) == heif_cmpd_component_type_green);
+    REQUIRE(destination->get_component_type(ids[2]) == heif_cmpd_component_type_blue);
+    REQUIRE(destination->get_component_type(ids[3]) == heif_cmpd_component_type_alpha);
+  }
+  else {
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(source->has_channel(heif_channel_interleaved));
+    REQUIRE_FALSE(destination->has_channel(heif_channel_interleaved));
+  }
+}
+
 TEST_CASE("overlay rejects an Alpha plane whose size does not match the other channels")
 {
   auto* limits = heif_get_global_security_limits();

@@ -48,6 +48,24 @@
 //    the loop would write every one of them into the single allocated
 //    destination plane, including whatever bit-depth mismatch it carries.
 
+TEST_CASE("scale_nearest_neighbor rejects a planar channel with multicomponent storage")
+{
+  const auto chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA);
+  auto* limits = heif_get_global_security_limits();
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(128, 64, heif_colorspace_RGB, chroma);
+  REQUIRE_FALSE(image->add_channel(heif_channel_Y, 128, 64, 8, limits));
+  // create() keeps existing storage, so construct an inconsistent planar image
+  // without relying on transfer_channel_from_image_as() accepting it.
+  image->create(128, 64, heif_colorspace_monochrome, heif_chroma_monochrome);
+  REQUIRE(image->has_standard_plane_sizes());
+  REQUIRE(image->get_number_of_interleaved_components(heif_channel_Y) > 1);
+
+  std::shared_ptr<HeifPixelImage> scaled;
+  auto err = image->scale_nearest_neighbor(scaled, 128, 64, limits);
+  REQUIRE(err.error_code == heif_error_Unsupported_feature);
+}
+
 TEST_CASE("scale_nearest_neighbor rejects a duplicate color channel") {
   auto* limits = heif_get_global_security_limits();
 
