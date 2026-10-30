@@ -386,6 +386,66 @@ void TestConversion(const std::string& test_name, ColorState input_state,
   }
 }
 
+TEST_CASE("wide nearest resize preserves every byte through crops and rotations")
+{
+  const int bits = GENERATE(32, 64, 128);
+  const int bytes = bytes_per_sample_for_bit_depth(bits);
+  const auto* limits = heif_get_global_security_limits();
+  auto source = std::make_shared<HeifPixelImage>();
+  source->create(3, 2, heif_colorspace_monochrome, heif_chroma_monochrome);
+  REQUIRE_FALSE(source->add_channel(heif_channel_Y, 3, 2, bits, limits));
+  size_t source_stride;
+  auto* input = source->get_channel_memory(heif_channel_Y, &source_stride);
+  for (uint32_t y = 0; y < 2; y++) {
+    for (uint32_t x = 0; x < 3; x++) {
+      for (int b = 0; b < bytes; b++) {
+        input[y * source_stride + x * bytes + b] = static_cast<uint8_t>(1 + (y * 3 + x) * 17 + b * 11);
+      }
+    }
+  }
+  // Explicit source sample indices, independent of the scaler under test.
+  const uint8_t enlarged[5][7] = {{0, 0, 0, 1, 1, 2, 2},
+                                  {0, 0, 0, 1, 1, 2, 2},
+                                  {0, 0, 0, 1, 1, 2, 2},
+                                  {3, 3, 3, 4, 4, 5, 5},
+                                  {3, 3, 3, 4, 4, 5, 5}};
+  auto check_sample = [&](const HeifPixelImage& image, uint32_t x, uint32_t y, uint8_t index) {
+    size_t stride;
+    const auto* output = image.get_channel_memory(heif_channel_Y, &stride);
+    for (int b = 0; b < bytes; b++) {
+      CHECK(output[y * stride + x * bytes + b] == static_cast<uint8_t>(1 + index * 17 + b * 11));
+    }
+  };
+  std::shared_ptr<HeifPixelImage> resized;
+  REQUIRE_FALSE(source->scale_nearest_neighbor(resized, 7, 5, limits));
+  for (uint32_t y = 0; y < 5; y++) {
+    for (uint32_t x = 0; x < 7; x++) { check_sample(*resized, x, y, enlarged[y][x]); }
+  }
+  auto cropped = resized->crop(1, 5, 1, 3, limits);
+  REQUIRE(cropped);
+  auto rotated = (*cropped)->rotate_ccw(90, limits);
+  REQUIRE(rotated);
+  for (uint32_t y = 0; y < 5; y++) {
+    for (uint32_t x = 0; x < 3; x++) { check_sample(**rotated, x, y, enlarged[1 + x][5 - y]); }
+  }
+  REQUIRE_FALSE(source->scale_nearest_neighbor(resized, 2, 1, limits));
+  check_sample(*resized, 0, 0, 0);
+  check_sample(*resized, 1, 0, 1);
+
+  auto input_rotated = source->rotate_ccw(90, limits);
+  REQUIRE(input_rotated);
+  REQUIRE_FALSE((*input_rotated)->scale_nearest_neighbor(resized, 7, 5, limits));
+  const uint8_t rotated_enlarged[5][7] = {{2, 2, 2, 2, 5, 5, 5},
+                                          {2, 2, 2, 2, 5, 5, 5},
+                                          {1, 1, 1, 1, 4, 4, 4},
+                                          {1, 1, 1, 1, 4, 4, 4},
+                                          {0, 0, 0, 0, 3, 3, 3}};
+  for (uint32_t y = 0; y < 5; y++) {
+    for (uint32_t x = 0; x < 7; x++) { check_sample(*resized, x, y, rotated_enlarged[y][x]); }
+  }
+}
+
+
 void TestFailingConversion(const std::string& test_name,
                            const ColorState& input_state,
                            const ColorState& target_state,

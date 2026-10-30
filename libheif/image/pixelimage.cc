@@ -2511,14 +2511,13 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
       uint32_t out_w = out_img->get_width(channel);
       uint32_t out_h = out_img->get_height(channel);
 
-      if (plane.m_bit_depth <= 8) {
-        // SDR planar
-
-        size_t in_stride = plane.stride;
-        const auto* in_data = static_cast<const uint8_t*>(plane.mem);
+      auto resize = [&]<typename T>() {
+        size_t in_stride = plane.stride / sizeof(T);
+        const auto* in_data = static_cast<const T*>(plane.mem);
 
         size_t out_stride = 0;
-        auto* out_data = out_img->get_channel_memory(channel, &out_stride);
+        auto* out_data = out_img->get_channel_memory<T>(channel, &out_stride);
+        out_stride /= sizeof(T);
 
         for (uint32_t y = 0; y < out_h; y++) {
           uint32_t iy = static_cast<uint32_t>(static_cast<uint64_t>(y) * m_height / height);
@@ -2529,28 +2528,16 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
             out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
           }
         }
-      }
-      else {
-        // HDR planar
-
-        size_t in_stride = plane.stride;
-        const uint16_t* in_data = static_cast<const uint16_t*>(plane.mem);
-
-        size_t out_stride = 0;
-        uint16_t* out_data = out_img->get_channel_memory<uint16_t>(channel, &out_stride);
-
-        in_stride /= 2;
-        out_stride /= 2;
-
-        for (uint32_t y = 0; y < out_h; y++) {
-          uint32_t iy = static_cast<uint32_t>(static_cast<uint64_t>(y) * m_height / height);
-
-          for (uint32_t x = 0; x < out_w; x++) {
-            uint32_t ix = static_cast<uint32_t>(static_cast<uint64_t>(x) * m_width / width);
-
-            out_data[y * out_stride + x] = in_data[iy * in_stride + ix];
-          }
-        }
+      };
+      // Copy the complete stored sample, including float/complex representations.
+      switch (plane.get_bytes_per_pixel()) {
+        case 1: resize.operator()<uint8_t>(); break;
+        case 2: resize.operator()<uint16_t>(); break;
+        case 4: resize.operator()<uint32_t>(); break;
+        case 8: resize.operator()<uint64_t>(); break;
+        case 16: resize.operator()<heif_complex64>(); break;
+        default: return {heif_error_Unsupported_feature, heif_suberror_Unsupported_bit_depth,
+                         "Unsupported planar sample storage"};
       }
     }
   }
