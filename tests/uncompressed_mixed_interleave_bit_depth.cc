@@ -157,8 +157,8 @@ void write_component_value(TestBitWriter& writer, const Component& c, uint32_t v
 
 std::vector<uint8_t> build_sample_data(const Layout& layout, bool padding_bit)
 {
-  uint32_t chroma_width = layout.width / 2;
-  uint32_t chroma_height = (layout.sampling_type == 2) ? layout.height / 2 : layout.height;
+  uint32_t chroma_width = (layout.width + 1) / 2;
+  uint32_t chroma_height = (layout.sampling_type == 2) ? (layout.height + 1) / 2 : layout.height;
 
   TestBitWriter writer(padding_bit);
   bool chroma_written = false;
@@ -350,8 +350,8 @@ void check_decoding(const Layout& layout, bool padding_bit)
   REQUIRE(err.code == heif_error_Ok);
   REQUIRE(img != nullptr);
 
-  uint32_t chroma_width = layout.width / 2;
-  uint32_t chroma_height = (layout.sampling_type == 2) ? layout.height / 2 : layout.height;
+  uint32_t chroma_width = (layout.width + 1) / 2;
+  uint32_t chroma_height = (layout.sampling_type == 2) ? (layout.height + 1) / 2 : layout.height;
 
   for (const Component& c : layout.components) {
     heif_channel channel = channel_of(c);
@@ -402,6 +402,9 @@ TEST_CASE("unci mixed interleave reads chroma samples with their component bit d
       {"12 bit 4:2:2", 16, 8, 1, {{Y, 12, 0}, {Cb, 12, 0}, {Cr, 12, 0}}, 0},
       {"12 bit 4:2:0", 16, 8, 2, {{Y, 12, 0}, {Cb, 12, 0}, {Cr, 12, 0}}, 0},
       {"10 bit 4:2:0", 16, 8, 2, {{Y, 10, 0}, {Cb, 10, 0}, {Cr, 10, 0}}, 0},
+      {"12 bit 4:2:2, odd width", 5, 3, 1, {{Y, 12, 0}, {Cb, 12, 0}, {Cr, 12, 0}}, 0},
+      {"10 bit 4:2:0, odd width and height", 5, 3, 2, {{Y, 10, 0}, {Cb, 10, 0}, {Cr, 10, 0}}, 0},
+      {"8 bit 4:2:0, one pixel", 1, 1, 2, {{Y, 8, 0}, {Cb, 8, 0}, {Cr, 8, 0}}, 0},
 
       // Rows that do not end on a byte boundary: 6 luma samples of 10 bits are 60 bits,
       // 3 chroma pairs of 2 x 10 bits are 60 bits.

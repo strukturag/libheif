@@ -43,23 +43,23 @@ Result<std::vector<uint64_t>> unc_decoder_component_interleave::get_tile_data_si
       if (m_uncC->get_pixel_size() != 0) {
         uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
         skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
-        if (bytes_per_pixel != 0 && m_tile_width > UINT32_MAX / bytes_per_pixel) {
+        if (bytes_per_pixel != 0 && entry.tile_width > UINT32_MAX / bytes_per_pixel) {
           return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
                        "uncompressed tile row size exceeds 32-bit range"};
         }
-        bytes_per_row = bytes_per_pixel * m_tile_width;
+        bytes_per_row = bytes_per_pixel * entry.tile_width;
       }
       else {
-        if (bits_per_pixel != 0 && m_tile_width > UINT32_MAX / bits_per_pixel) {
+        if (bits_per_pixel != 0 && entry.tile_width > UINT32_MAX / bits_per_pixel) {
           return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
                        "uncompressed tile row size exceeds 32-bit range"};
         }
-        bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
+        bytes_per_row = (bits_per_pixel * entry.tile_width + 7) / 8;
       }
 
       skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
-      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(entry.tile_height);
 
       if (m_uncC->get_tile_align_size() != 0) {
         skip_to_alignment(component_tile_size, m_uncC->get_tile_align_size());

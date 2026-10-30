@@ -148,11 +148,11 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
   entry.tile_height = m_tile_height;
   if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
     if (m_uncC->get_sampling_type() == sampling_mode_422) {
-      entry.tile_width /= 2;
+      entry.tile_width = entry.tile_width / 2 + (entry.tile_width & 1);
     }
     else if (m_uncC->get_sampling_type() == sampling_mode_420) {
-      entry.tile_width /= 2;
-      entry.tile_height /= 2;
+      entry.tile_width = entry.tile_width / 2 + (entry.tile_width & 1);
+      entry.tile_height = entry.tile_height / 2 + (entry.tile_height & 1);
     }
 
     // chroma[0] is this entry's own plane; chroma[1] is the paired plane

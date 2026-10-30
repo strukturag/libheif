@@ -108,8 +108,8 @@ constexpr uint16_t HEIGHT = 129; // odd -> floor chroma height 64, ceil 65
 
 // Build a minimal, structurally valid HEIF image sequence with a single 'pict'
 // track whose sole sample is a 128x129 YCbCr 4:2:0 uncompressed ('uncv') frame
-// in component-interleave layout (Y plane, then Cb plane, then Cr plane).
-std::vector<uint8_t> build_uncv_sequence_file()
+// in component or tile-component interleave (one tile: Y, then Cb, then Cr).
+std::vector<uint8_t> build_uncv_sequence_file(uint8_t interleave_type)
 {
   // --- ftyp
   std::vector<uint8_t> ftyp_p;
@@ -206,7 +206,7 @@ std::vector<uint8_t> build_uncv_sequence_file()
     uncC_p.push_back(0);         // component_align_size
   }
   uncC_p.push_back(2);           // sampling_type = 4:2:0
-  uncC_p.push_back(0);           // interleave_type = component
+  uncC_p.push_back(interleave_type);
   uncC_p.push_back(0);           // block_size
   uncC_p.push_back(0);           // flags
   put32(uncC_p, 0);              // pixel_size
@@ -260,7 +260,7 @@ std::vector<uint8_t> build_uncv_sequence_file()
 
   const uint32_t sample_size =
       static_cast<uint32_t>(WIDTH) * HEIGHT +               // Y
-      2u * (WIDTH / 2) * (HEIGHT / 2);                      // Cb + Cr (floor chroma in the stream)
+      2u * ((WIDTH + 1) / 2) * ((HEIGHT + 1) / 2);          // complete Cb and Cr planes
 
   // --- stsz (single fixed sample size)
   std::vector<uint8_t> stsz_p;
@@ -287,15 +287,15 @@ std::vector<uint8_t> build_uncv_sequence_file()
   uint32_t mdat_payload_off = static_cast<uint32_t>(ftyp.size() + moov0.size() + 8 /* mdat header */);
   std::vector<uint8_t> moov = assemble(mdat_payload_off);
 
-  // --- mdat: Y plane, then Cb plane, then Cr plane (floor-sized chroma)
+  // --- mdat: Y plane, then complete Cb and Cr planes
   std::vector<uint8_t> mdat_payload;
   mdat_payload.reserve(sample_size);
   for (uint32_t y = 0; y < HEIGHT; y++)
     for (uint32_t x = 0; x < WIDTH; x++)
       mdat_payload.push_back(static_cast<uint8_t>((x + y) & 0xFF));
   for (int plane = 0; plane < 2; plane++)
-    for (uint32_t y = 0; y < HEIGHT / 2u; y++)
-      for (uint32_t x = 0; x < WIDTH / 2u; x++)
+    for (uint32_t y = 0; y < (HEIGHT + 1u) / 2u; y++)
+      for (uint32_t x = 0; x < (WIDTH + 1u) / 2u; x++)
         mdat_payload.push_back(0x80);
   REQUIRE(mdat_payload.size() == sample_size);
   std::vector<uint8_t> mdat = box("mdat", mdat_payload);
@@ -306,9 +306,11 @@ std::vector<uint8_t> build_uncv_sequence_file()
 } // namespace
 
 
-TEST_CASE("uncv 4:2:0 sequence with odd luma height decodes without OOB")
+TEST_CASE("uncv 4:2:0 sequence with odd luma height decodes every row correctly")
 {
-  std::vector<uint8_t> file = build_uncv_sequence_file();
+  const uint8_t interleave_type = GENERATE(uint8_t{0}, uint8_t{4}); // component and tile-component
+  CAPTURE(interleave_type);
+  std::vector<uint8_t> file = build_uncv_sequence_file(interleave_type);
 
   heif_context* ctx = heif_context_alloc();
   REQUIRE(ctx != nullptr);
@@ -340,6 +342,19 @@ TEST_CASE("uncv 4:2:0 sequence with odd luma height decodes without OOB")
 
   REQUIRE(heif_image_get_width(img, heif_channel_interleaved) == WIDTH);
   REQUIRE(heif_image_get_height(img, heif_channel_interleaved) == HEIGHT);
+
+  int stride;
+  const uint8_t* pixels = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+  REQUIRE(pixels != nullptr);
+  for (uint32_t y = 0; y < HEIGHT; y++) {
+    for (uint32_t x = 0; x < WIDTH; x++) {
+      CAPTURE(x, y);
+      const uint8_t expected = static_cast<uint8_t>((x + y) & 0xFF);
+      for (int component = 0; component < 3; component++) {
+        REQUIRE(pixels[y * stride + 3 * x + component] == expected);
+      }
+    }
+  }
 
   heif_image_release(img);
   heif_track_release(track);
