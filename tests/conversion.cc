@@ -774,6 +774,59 @@ static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel chan
 }
 
 
+TEST_CASE("4:2:2 averaging fills the right border on every row", "[heif_image]")
+{
+  const int bit_depth = GENERATE(8, 10, 16);
+  const int width = GENERATE(1, 2, 3, 4, 5);
+  const int height = GENERATE(1, 2, 3);
+  CAPTURE(bit_depth, width, height);
+
+  const int scale = 1 << (bit_depth - 8);
+  std::vector<uint16_t> luma(width * height, static_cast<uint16_t>(128 * scale));
+  std::vector<uint16_t> cb;
+  std::vector<uint16_t> cr;
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      cb.push_back(static_cast<uint16_t>((31 + x * 17 + y * 29) * scale));
+      cr.push_back(static_cast<uint16_t>((200 - x * 13 - y * 19) * scale));
+    }
+  }
+
+  auto input = std::make_shared<HeifPixelImage>();
+  input->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+  fill_plane(input, heif_channel_Y, width, height, luma, bit_depth);
+  fill_plane(input, heif_channel_Cb, width, height, cb, bit_depth);
+  fill_plane(input, heif_channel_Cr, width, height, cr, bit_depth);
+
+  heif_color_conversion_options options{};
+  options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  options.only_use_preferred_chroma_algorithm = true;
+  auto result = convert_colorspace(input, heif_colorspace_YCbCr, heif_chroma_422,
+                                   nclx_profile::defaults(), bit_depth, options, nullptr,
+                                   heif_get_disabled_security_limits());
+  REQUIRE(result);
+  auto output = *result;
+  CHECK(output->get_chroma_format() == heif_chroma_422);
+  assert_plane(output, heif_channel_Y, luma);
+
+  for (heif_channel channel : {heif_channel_Cb, heif_channel_Cr}) {
+    const auto& source = channel == heif_channel_Cb ? cb : cr;
+    std::vector<uint16_t> expected;
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x += 2) {
+        const int left = source[y * width + x];
+        expected.push_back(static_cast<uint16_t>(x + 1 < width
+                                                 ? (left + source[y * width + x + 1] + 1) / 2
+                                                 : left));
+      }
+    }
+    REQUIRE(output->get_width(channel) == static_cast<uint32_t>((width + 1) / 2));
+    REQUIRE(output->get_height(channel) == static_cast<uint32_t>(height));
+    assert_plane(output, channel, expected);
+  }
+}
+
+
 TEST_CASE("Bilinear upsampling", "[heif_image]")
 {
   heif_color_conversion_options options = {

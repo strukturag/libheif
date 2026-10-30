@@ -380,16 +380,6 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   out_cb_stride /= sizeof(Pixel);
   out_cr_stride /= sizeof(Pixel);
 
-  // --- fill right border if the image size is odd
-
-  if (width & 1) {
-    for (uint32_t y = 0; y < height - 1; y++) {
-      out_cb[y * out_cb_stride + cwidth - 1] = (Pixel) in_cb[y * in_cb_stride + width - 1];
-      out_cr[y * out_cr_stride + cwidth - 1] = (Pixel) in_cr[y * in_cr_stride + width - 1];
-    }
-  }
-
-
   // --- averaging filter
 
   uint32_t x, y;
@@ -402,6 +392,11 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
 
       out_cb[y * out_cb_stride + x / 2] = (Pixel) ((cb00 + cb01 + 1) / 2);
       out_cr[y * out_cr_stride + x / 2] = (Pixel) ((cr00 + cr01 + 1) / 2);
+    }
+
+    if (width & 1) {
+      out_cb[y * out_cb_stride + cwidth - 1] = (Pixel) in_cb[y * in_cb_stride + width - 1];
+      out_cr[y * out_cr_stride + cwidth - 1] = (Pixel) in_cr[y * in_cr_stride + width - 1];
     }
   }
 
