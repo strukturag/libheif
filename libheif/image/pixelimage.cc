@@ -1487,6 +1487,15 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
   bool source_channel_found = false;
   for (auto it = source->m_storage.begin(); it != source->m_storage.end(); ++it) {
     if (it->m_channel == src_channel) {
+      // Transferring a plane changes its channel, not its component layout.
+      if (dst_channel != heif_channel_unknown) {
+        int expected_components = dst_channel == heif_channel_interleaved
+                                  ? num_interleaved_components_per_plane(m_chroma) : 1;
+        if (it->m_num_interleaved_components != expected_components) {
+          return {heif_error_Invalid_input, heif_suberror_Unspecified,
+                  "Source plane component count does not match the destination channel"};
+        }
+      }
       plane = *it;
       source->m_storage.erase(it);
       source_channel_found = true;
@@ -1509,6 +1518,7 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
   // moved ids are dropped (the buffer is gone).
   std::vector<uint32_t> new_ids;
   new_ids.reserve(plane.m_component_ids.size());
+  auto types = map_channel_to_component_type(dst_channel, m_chroma);
   for (uint32_t old_id : plane.m_component_ids) {
     // Take the source description (snapshot; the source entry is removed below).
     ComponentDescription desc;
@@ -1522,9 +1532,8 @@ Error HeifPixelImage::transfer_channel_from_image_as(const std::shared_ptr<HeifP
     // transferred plane is described as e.g. "alpha" rather than carrying
     // over the source's "monochrome"/"Y" type. (The most common case is
     // moving an alpha aux item's Y plane onto a main image as Alpha.)
-    auto types = map_channel_to_component_type(dst_channel, heif_chroma_undefined);
     if (!types.empty()) {
-      desc.component_type = types[0];
+      desc.component_type = types[dst_channel == heif_channel_interleaved ? new_ids.size() : 0];
     }
     new_ids.push_back(desc.component_id);
     add_component_description(std::move(desc));
@@ -2502,6 +2511,11 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     for (const auto& component : m_storage) {
       heif_channel channel = component.m_channel;
       const ComponentStorage& plane = component;
+
+      if (plane.m_num_interleaved_components != 1) {
+        return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
+                "Scaling a planar channel with multiple components is not supported"};
+      }
 
       if (!out_img->has_channel(channel)) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "scaling input has extra color plane"};
