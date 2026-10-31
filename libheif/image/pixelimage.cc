@@ -2673,8 +2673,10 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
       };
     }
 
-    uint32_t xs = channel_width(x0, chroma, channel);
-    uint32_t ys = channel_height(y0, chroma, channel);
+    // Coordinates round down to the sample covering the requested origin;
+    // plane dimensions still round up to cover every output pixel.
+    uint32_t xs = get_subsampled_size_h(x0, channel, chroma, scaling_mode::round_down);
+    uint32_t ys = get_subsampled_size_v(y0, channel, chroma, scaling_mode::round_down);
 
     // Clamp copy size to source plane bounds to avoid chroma rounding mismatch OOB read.
     uint32_t src_plane_h = channel_height(get_height(), chroma, channel);
