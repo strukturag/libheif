@@ -119,3 +119,71 @@ TEST_CASE("extract_image_area zero-pads a well-formed image when the requested r
   REQUIRE(out[1 * stride + 0] == 0);
   REQUIRE(out[3 * stride + 3] == 0);
 }
+
+TEST_CASE("extract_image_area copies covering chroma samples and preserves plane formats") {
+  auto* limits = heif_get_global_security_limits();
+  const auto chroma = GENERATE(heif_chroma_420, heif_chroma_422);
+  const uint32_t size = GENERATE(5U, 6U);
+  const uint32_t x0 = GENERATE(0U, 1U, 2U);
+  const uint32_t y0 = GENERATE(0U, 1U, 2U);
+  const int bit_depth = GENERATE(8, 10, 16);
+  const auto datatype = GENERATE(heif_component_datatype_unsigned_integer, heif_component_datatype_signed_integer);
+  const bool padded = GENERATE(false, true);
+  CAPTURE(chroma, size, x0, y0, bit_depth, datatype, padded);
+
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(size, size, heif_colorspace_YCbCr, chroma);
+  for (auto channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr, heif_channel_Alpha}) {
+    const uint32_t width = channel_width(size, chroma, channel);
+    const uint32_t height = channel_height(size, chroma, channel);
+    const int depth = channel == heif_channel_Alpha ? 16 : channel == heif_channel_Cb ? 10 : bit_depth;
+    REQUIRE(!image->add_channel(channel, width, height, depth, limits, datatype));
+    size_t stride;
+    uint8_t* data = image->get_channel_memory(channel, &stride);
+    for (uint32_t y = 0; y < height; y++) {
+      for (uint32_t x = 0; x < width; x++) {
+        const uint16_t value = static_cast<uint16_t>(((channel + 1) * 17 + x * 13 + y * 29) & ((1U << depth) - 1));
+        if (depth == 8) {
+          data[y * stride + x] = static_cast<uint8_t>(value);
+        }
+        else {
+          reinterpret_cast<uint16_t*>(data + y * stride)[x] = value;
+        }
+      }
+    }
+  }
+
+  const uint32_t width = size - x0 + (padded ? 2U : 0U);
+  const uint32_t height = size - y0 + (padded ? 2U : 0U);
+  auto extracted = image->extract_image_area(x0, y0, width, height, limits);
+  REQUIRE(extracted);
+  REQUIRE((*extracted)->get_chroma_format() == chroma);
+  REQUIRE((*extracted)->get_channel_set() == image->get_channel_set());
+
+  for (auto channel : image->get_channel_set()) {
+    CAPTURE(channel);
+    size_t expected_stride, actual_stride;
+    const uint8_t* expected = image->get_channel_memory(channel, &expected_stride);
+    const uint8_t* actual = (*extracted)->get_channel_memory(channel, &actual_stride);
+    const uint32_t copied_width = channel_width(size - x0, chroma, channel);
+    const uint32_t copied_height = channel_height(size - y0, chroma, channel);
+    const bool is_chroma = channel == heif_channel_Cb || channel == heif_channel_Cr;
+    const uint32_t source_x = is_chroma ? x0 / 2 : x0;
+    const uint32_t source_y = is_chroma && chroma == heif_chroma_420 ? y0 / 2 : y0;
+    const auto output_chroma = (*extracted)->get_chroma_format();
+    REQUIRE((*extracted)->get_width(channel) == channel_width(width, output_chroma, channel));
+    REQUIRE((*extracted)->get_height(channel) == channel_height(height, output_chroma, channel));
+    const int depth = image->get_bits_per_pixel(channel);
+    REQUIRE((*extracted)->get_bits_per_pixel(channel) == depth);
+    REQUIRE((*extracted)->get_datatype(channel) == datatype);
+    const uint32_t bytes_per_sample = depth == 8 ? 1 : 2;
+    for (uint32_t y = 0; y < (*extracted)->get_height(channel); y++) {
+      for (uint32_t x = 0; x < (*extracted)->get_width(channel) * bytes_per_sample; x++) {
+        const uint8_t value = y < copied_height && x < copied_width * bytes_per_sample
+                                  ? expected[(source_y + y) * expected_stride + source_x * bytes_per_sample + x]
+                                  : depth == 8 && is_chroma ? 128 : 0;
+        REQUIRE(actual[y * actual_stride + x] == value);
+      }
+    }
+  }
+}
