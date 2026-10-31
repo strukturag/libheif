@@ -2634,7 +2634,7 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
                  "extract_image_area: top-left position is outside the image"};
   }
 
-  // The per-channel copy below clamps against the chroma-mapped *declared*
+  // The per-plane copy below clamps against the chroma-mapped *declared*
   // image extent, not each plane's own actual extent, and xs/ys are also
   // derived from the declared geometry -- so a plane smaller than that implies
   // (same enabling condition as crop()/scale_nearest_neighbor()) both reads
@@ -2655,23 +2655,15 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
     return err;
   }
 
-  std::set<enum heif_channel> channels = get_channel_set();
   heif_chroma chroma = get_chroma_format();
 
-  for (heif_channel channel : channels) {
-
-    size_t src_stride;
-    const uint8_t* src_data = get_channel_memory(channel, &src_stride);
-
-    size_t out_stride;
-    uint8_t* out_data = areaImg->get_channel_memory(channel, &out_stride);
-
-    if (areaImg->get_bits_per_pixel(channel) != get_bits_per_pixel(channel)) {
-      return Error{
-        heif_error_Invalid_input,
-        heif_suberror_Wrong_tile_image_pixel_depth
-      };
-    }
+  // The clone preserves plane order and layouts, including repeated channels.
+  for (size_t i = 0; i < m_storage.size(); i++) {
+    const auto& src_plane = m_storage[i];
+    auto& out_plane = areaImg->m_storage[i];
+    heif_channel channel = src_plane.m_channel;
+    const auto* src_data = static_cast<const uint8_t*>(src_plane.mem);
+    auto* out_data = static_cast<uint8_t*>(out_plane.mem);
 
     uint32_t xs = channel_width(x0, chroma, channel);
     uint32_t ys = channel_height(y0, chroma, channel);
@@ -2682,13 +2674,13 @@ HeifPixelImage::extract_image_area(uint32_t x0, uint32_t y0, uint32_t w, uint32_
     uint32_t copy_width = std::min(channel_width(minW, chroma, channel), src_plane_w - xs);
     uint32_t copy_height = std::min(channel_height(minH, chroma, channel), src_plane_h - ys);
 
-    copy_width *= get_storage_bits_per_pixel(channel) / 8;
-    xs *= get_storage_bits_per_pixel(channel) / 8;
+    size_t bytes_per_pixel = src_plane.get_bytes_per_pixel();
+    size_t copy_bytes = static_cast<size_t>(copy_width) * bytes_per_pixel;
 
     for (uint32_t py = 0; py < copy_height; py++) {
-      memcpy(out_data + py * out_stride,
-             src_data + xs + (ys + py) * src_stride,
-             copy_width);
+      memcpy(out_data + py * out_plane.stride,
+             src_data + static_cast<size_t>(xs) * bytes_per_pixel + (ys + py) * src_plane.stride,
+             copy_bytes);
     }
   }
 

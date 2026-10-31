@@ -27,9 +27,75 @@
 #include "image/pixelimage.h"
 #include "catch_amalgamated.hpp"
 
+#include <string>
+
+TEST_CASE("extract_image_area preserves every component sharing a channel") {
+  const bool padded = GENERATE(false, true);
+  const auto type = GENERATE(heif_cmpd_component_type_monochrome, heif_cmpd_component_type_Y);
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(4, 4, heif_colorspace_custom, heif_chroma_planar);
+  struct Format {
+    int bits;
+    heif_component_datatype datatype;
+  };
+  const Format formats[] = {{8, heif_component_datatype_unsigned_integer},
+                            {16, heif_component_datatype_signed_integer},
+                            {32, heif_component_datatype_floating_point}};
+  for (const auto& format : formats) {
+    auto id = image->add_component(4, 4, type, format.datatype, format.bits, nullptr);
+    REQUIRE(id);
+    image->find_component_description(*id)->gimi_content_id = "band-" + std::to_string(*id);
+    size_t stride;
+    auto* data = image->get_component(*id, &stride);
+    const int bytes = format.bits / 8;
+    for (uint32_t y = 0; y < 4; y++) {
+      for (uint32_t x = 0; x < 4; x++) {
+        for (int b = 0; b < bytes; b++) {
+          data[y * stride + x * bytes + b] = static_cast<uint8_t>(*id * 41 + y * 13 + x * 3 + b);
+        }
+      }
+    }
+  }
+
+  const uint32_t width = padded ? 67 : 2;
+  const uint32_t height = padded ? 65 : 2;
+  auto result = image->extract_image_area(1, 1, width, height, nullptr);
+  REQUIRE(result);
+  auto area = *result;
+  REQUIRE(area->get_used_component_ids() == image->get_used_component_ids());
+  REQUIRE(area->get_colorspace() == image->get_colorspace());
+  REQUIRE(area->get_chroma_format() == image->get_chroma_format());
+  for (const auto& original : image->get_component_descriptions()) {
+    CAPTURE(original.component_id, padded);
+    const auto* desc = area->find_component_description(original.component_id);
+    REQUIRE(desc);
+    REQUIRE(desc->component_type == original.component_type);
+    REQUIRE(desc->channel == original.channel);
+    REQUIRE(desc->datatype == original.datatype);
+    REQUIRE(desc->bit_depth == original.bit_depth);
+    REQUIRE(desc->gimi_content_id == original.gimi_content_id);
+    REQUIRE(desc->width == width);
+    REQUIRE(desc->height == height);
+    size_t stride;
+    const auto* data = area->get_component(original.component_id, &stride);
+    REQUIRE(data);
+    const int bytes = original.bit_depth / 8;
+    for (uint32_t y = 0; y < height; y++) {
+      for (uint32_t x = 0; x < width; x++) {
+        for (int b = 0; b < bytes; b++) {
+          const uint8_t expected = x < 3 && y < 3
+                                     ? static_cast<uint8_t>(original.component_id * 41 + (y + 1) * 13 + (x + 1) * 3 + b)
+                                     : 0;
+          REQUIRE(data[y * stride + x * bytes + b] == expected);
+        }
+      }
+    }
+  }
+}
+
 // Regression tests for HeifPixelImage::extract_image_area().
 //
-// The per-channel copy window is clamped against the image's declared size
+// The per-plane copy window is clamped against the image's declared size
 // (chroma-mapped), not each plane's own actual stored size, and the offsets
 // (xs/ys) it subtracts from that clamp are themselves derived from the
 // declared size too. A plane smaller than the image's declared size implies
