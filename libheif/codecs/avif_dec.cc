@@ -113,6 +113,31 @@ Result<std::optional<ImageSize>> Decoder_AVIF::get_max_coded_image_size(const st
 }
 
 
+Error Decoder_AVIF::check_coded_image_format(const std::vector<uint8_t>& compressed_data,
+                                             size_t configuration_data_size) const
+{
+  // Every sequence header, in the av1C configOBUs and in the item data, has to code
+  // the chroma format and the bit depth of the av1C configuration. The two regions
+  // are scanned separately, as in get_max_coded_image_size().
+  if (configuration_data_size > compressed_data.size()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "AV1 stream was rejected because its configuration-data size is invalid."};
+  }
+
+  const Box_av1C::configuration& config = m_av1C->get_configuration();
+
+  Error err = check_av1_sequence_header_format(compressed_data.data(), configuration_data_size, config);
+  if (err) {
+    return err;
+  }
+
+  return check_av1_sequence_header_format(compressed_data.data() + configuration_data_size,
+                                          compressed_data.size() - configuration_data_size,
+                                          config);
+}
+
+
 Result<uint32_t> Decoder_AVIF::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
                                                              size_t configuration_data_size) const
 {

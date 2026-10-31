@@ -52,6 +52,9 @@ public:
   Result<std::optional<ImageSize>> get_max_coded_image_size(const std::vector<uint8_t>& compressed_data,
                                                             size_t configuration_data_size) const override;
 
+  Error check_coded_image_format(const std::vector<uint8_t>& compressed_data,
+                                 size_t configuration_data_size) const override;
+
   Result<uint32_t> get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
                                                 size_t configuration_data_size) const override;
 

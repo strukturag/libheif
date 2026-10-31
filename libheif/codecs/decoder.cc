@@ -602,6 +602,13 @@ Error Decoder::decode_sequence_frame_from_compressed_data(bool upload_configurat
     }
   }
 
+  // The decoder allocates its pictures in the chroma format and the bit depth of
+  // the bitstream, which have to be those that the image handle reports.
+  Error formatErr = check_coded_image_format(*dataResult, configuration_data_size);
+  if (formatErr) {
+    return formatErr;
+  }
+
   auto pictureCount = get_number_of_coded_pictures(*dataResult, configuration_data_size);
   if (!pictureCount) {
     return pictureCount.error();
