@@ -162,6 +162,8 @@ protected:
     heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane = nullptr;
     size_t dst_plane_stride;
+    uint32_t dst_plane_width;
+    uint32_t dst_plane_height;
     uint32_t tile_width;
     uint32_t tile_height;
     uint32_t bytes_per_component_sample;
@@ -199,13 +201,13 @@ protected:
   // Not valid for multi-Y pixel interleave
   void processComponentRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_row_offset, uint32_t tile_column);
 
-  void processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_offset, uint32_t tile_x);
+  void processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_x, uint64_t dst_y);
 
   // Handles the case where a row consists of a single component type
   // Not valid for Pixel interleave
   // Not valid for the Cb/Cr channels in Mixed Interleave
   // Not valid for multi-Y pixel interleave
-  void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset);
+  void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_x0, uint64_t dst_y);
 
 protected:
   void memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample);

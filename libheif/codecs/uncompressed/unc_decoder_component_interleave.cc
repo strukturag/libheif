@@ -43,23 +43,23 @@ Result<std::vector<uint64_t>> unc_decoder_component_interleave::get_tile_data_si
       if (m_uncC->get_pixel_size() != 0) {
         uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
         skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
-        if (bytes_per_pixel != 0 && m_tile_width > UINT32_MAX / bytes_per_pixel) {
+        if (bytes_per_pixel != 0 && entry.tile_width > UINT32_MAX / bytes_per_pixel) {
           return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
                        "uncompressed tile row size exceeds 32-bit range"};
         }
-        bytes_per_row = bytes_per_pixel * m_tile_width;
+        bytes_per_row = bytes_per_pixel * entry.tile_width;
       }
       else {
-        if (bits_per_pixel != 0 && m_tile_width > UINT32_MAX / bits_per_pixel) {
+        if (bits_per_pixel != 0 && entry.tile_width > UINT32_MAX / bits_per_pixel) {
           return Error{heif_error_Invalid_input, heif_suberror_Invalid_image_size,
                        "uncompressed tile row size exceeds 32-bit range"};
         }
-        bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
+        bytes_per_row = (bits_per_pixel * entry.tile_width + 7) / 8;
       }
 
       skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
-      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(entry.tile_height);
 
       if (m_uncC->get_tile_align_size() != 0) {
         skip_to_alignment(component_tile_size, m_uncC->get_tile_align_size());
@@ -108,23 +108,27 @@ Error unc_decoder_component_interleave::decode_tile(const std::vector<uint8_t>& 
 
   bool per_channel_tile_align = (m_uncC->get_interleave_type() == interleave_mode_tile_component);
 
-  // out_x0/out_y0 are in full-resolution image coordinates. For subsampled channels
-  // (Cb/Cr at 4:2:0 or 4:2:2), entry.tile_width/tile_height and entry.dst_plane_stride
-  // refer to the subsampled chroma plane, so the destination origin must be scaled
-  // to the channel's grid. Failing to do so wrote past the chroma plane on any
-  // non-first tile row/column — see GHSA-5x55-x5pf-9c6g.
-  uint32_t tile_col = out_x0 / m_tile_width;
-  uint32_t tile_row = out_y0 / m_tile_height;
-
+  // Scale the full-resolution origin to each channel's grid; using luma offsets
+  // directly caused out-of-bounds chroma writes (GHSA-5x55-x5pf-9c6g).
+  // Do not multiply the tile index by the rounded-up chroma tile dimensions:
+  // odd tile boundaries share a chroma sample. Keep those dimensions for reading
+  // the complete coded tile, but round its destination origin down.
   for (ChannelListEntry& entry : channelList) {
     srcBits.markTileStart();
-    uint64_t channel_x0 = uint64_t{tile_col} * entry.tile_width;
-    uint64_t channel_y0 = uint64_t{tile_row} * entry.tile_height;
+    uint64_t channel_x0 = out_x0;
+    uint64_t channel_y0 = out_y0;
+    if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
+      if (m_uncC->get_sampling_type() == sampling_mode_422 || m_uncC->get_sampling_type() == sampling_mode_420) {
+        channel_x0 /= 2;
+      }
+      if (m_uncC->get_sampling_type() == sampling_mode_420) {
+        channel_y0 /= 2;
+      }
+    }
     for (uint32_t y = 0; y < entry.tile_height; y++) {
       srcBits.markRowStart();
       if (entry.use_channel) {
-        uint64_t dst_row_offset = (channel_y0 + y) * entry.dst_plane_stride;
-        processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
+        processComponentTileRow(entry, srcBits, channel_x0, channel_y0 + y);
       }
       else {
         srcBits.skip_bytes(entry.bytes_per_tile_row_src);

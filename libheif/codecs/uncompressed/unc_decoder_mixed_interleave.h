@@ -40,6 +40,9 @@ public:
                     uint32_t out_x0, uint32_t out_y0) override;
 
   void processTile(UncompressedBitReader& srcBits, uint32_t out_x0, uint32_t out_y0);
+
+private:
+  static uint64_t get_chroma_bits_per_row(const ChannelListEntry& entry);
 };
 
 
