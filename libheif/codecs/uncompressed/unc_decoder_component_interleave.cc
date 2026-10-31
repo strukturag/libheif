@@ -123,8 +123,7 @@ Error unc_decoder_component_interleave::decode_tile(const std::vector<uint8_t>& 
     for (uint32_t y = 0; y < entry.tile_height; y++) {
       srcBits.markRowStart();
       if (entry.use_channel) {
-        uint64_t dst_row_offset = (channel_y0 + y) * entry.dst_plane_stride;
-        processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
+        processComponentTileRow(entry, srcBits, channel_x0, channel_y0 + y);
       }
       else {
         srcBits.skip_bytes(entry.bytes_per_tile_row_src);

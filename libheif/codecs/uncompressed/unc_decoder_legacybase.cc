@@ -112,18 +112,20 @@ void unc_decoder_legacybase::processComponentRow(ChannelListEntry& entry, Uncomp
   srcBits.skip_to_byte_boundary();
 }
 
-void unc_decoder_legacybase::processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_offset, uint32_t tile_x)
+void unc_decoder_legacybase::processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_x, uint64_t dst_y)
 {
-  uint64_t dst_sample_offset = uint64_t{tile_x} * entry.bytes_per_component_sample;
   int val = srcBits.get_bits(entry.bits_per_component_sample);
-  memcpy_to_native_endian(entry.dst_plane + dst_offset + dst_sample_offset, val, entry.bytes_per_component_sample);
+  if (dst_x < entry.dst_plane_width && dst_y < entry.dst_plane_height) {
+    uint64_t dst_offset = dst_y * entry.dst_plane_stride + dst_x * entry.bytes_per_component_sample;
+    memcpy_to_native_endian(entry.dst_plane + dst_offset, val, entry.bytes_per_component_sample);
+  }
 }
 
 // Handles the case where a row consists of a single component type
 // Not valid for Pixel interleave
 // Not valid for the Cb/Cr channels in Mixed Interleave
 // Not valid for multi-Y pixel interleave
-void unc_decoder_legacybase::processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset)
+void unc_decoder_legacybase::processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_x0, uint64_t dst_y)
 {
   for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
     if (entry.component_alignment != 0) {
@@ -131,7 +133,7 @@ void unc_decoder_legacybase::processComponentTileRow(ChannelListEntry& entry, Un
       int numPadBits = (entry.component_alignment * 8) - entry.bits_per_component_sample;
       srcBits.skip_bits(numPadBits);
     }
-    processComponentTileSample(srcBits, entry, dst_offset, tile_x);
+    processComponentTileSample(srcBits, entry, dst_x0 + tile_x, dst_y);
   }
   srcBits.skip_to_byte_boundary();
 }
@@ -144,9 +146,14 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
   ChannelListEntry entry;
   entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, component, &(entry.channel));
   entry.dst_plane = img->get_component(m_uncC_index_to_comp_ids[component_id], &(entry.dst_plane_stride));
+  entry.dst_plane_width = img->get_component_width(m_uncC_index_to_comp_ids[component_id]);
+  entry.dst_plane_height = img->get_component_height(m_uncC_index_to_comp_ids[component_id]);
   entry.tile_width = m_tile_width;
   entry.tile_height = m_tile_height;
   if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
+    // With odd internal tile boundaries, consecutive rounded chroma tiles can
+    // extend beyond the logical plane. Consume the complete input tiles, but
+    // clip writes to dst_plane_width/height.
     if (m_uncC->get_sampling_type() == sampling_mode_422) {
       entry.tile_width = entry.tile_width / 2 + (entry.tile_width & 1);
     }
@@ -189,6 +196,3 @@ unc_decoder_legacybase::ChannelListEntry unc_decoder_legacybase::buildChannelLis
   entry.bytes_per_tile_row_src = entry.tile_width * entry.bytes_per_component_sample;
   return entry;
 }
-
-
-

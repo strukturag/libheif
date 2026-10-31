@@ -30,8 +30,186 @@
 #include "libheif/heif.h"
 #include "codecs/uncompressed/unc_types.h"
 #include "codecs/uncompressed/unc_boxes.h"
+#include "codecs/uncompressed/unc_codec.h"
+#include "codecs/uncompressed/unc_decoder.h"
+#include "image/pixelimage.h"
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
+
+
+TEST_CASE("uncompressed odd-sized tiles do not write outside the logical planes")
+{
+    const auto interleave = GENERATE(interleave_mode_component, interleave_mode_tile_component, interleave_mode_mixed);
+    const auto sampling = GENERATE(sampling_mode_420, sampling_mode_422);
+    const bool horizontal = GENERATE(true, false);
+    const uint16_t bit_depth = GENERATE(uint16_t{8}, uint16_t{16});
+    CAPTURE(interleave, sampling, horizontal, bit_depth);
+    const uint32_t columns = horizontal ? 128 : 2;
+    const uint32_t rows = horizontal ? 2 : 128;
+    const uint32_t width = columns * 3;
+    const uint32_t height = rows * 3;
+    const uint32_t bytes_per_sample = bit_depth / 8;
+    auto cmpd = std::make_shared<Box_cmpd>();
+    auto uncC = std::make_shared<Box_uncC>();
+    for (uint16_t i = 0; i < 3; i++) {
+        cmpd->add_component({static_cast<uint16_t>(i + 1)});
+        Box_uncC::Component component;
+        component.component_index = i;
+        component.component_bit_depth = bit_depth;
+        component.component_format = component_format_unsigned;
+        component.component_align_size = 0;
+        uncC->add_component(component);
+    }
+    uncC->set_sampling_type(sampling);
+    uncC->set_interleave_type(interleave);
+    uncC->set_number_of_tile_columns(columns);
+    uncC->set_number_of_tile_rows(rows);
+    uncC->set_row_align_size(4);
+    UncompressedImageCodec::unci_properties properties;
+    properties.cmpd = cmpd;
+    properties.uncC = uncC;
+    std::vector<uint32_t> component_ids;
+    auto image_result = UncompressedImageCodec::create_image(properties, width, height, component_ids, nullptr);
+    REQUIRE(image_result);
+    auto image = *image_result;
+    // Reserve a guard region large enough to observe all excess tile writes
+    // without corrupting the heap when this test runs against the unfixed code.
+    REQUIRE(!image->extend_padding_to_size(width * 2, height * 2, false, nullptr));
+    for (auto channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+        size_t stride;
+        auto plane = image->get_channel_memory(channel, &stride);
+        for (uint32_t y = 0; y < image->get_height(channel) * 2; y++) {
+            std::fill_n(plane + y * stride, image->get_width(channel) * 2 * bytes_per_sample, 0xA5);
+        }
+    }
+
+    std::vector<uint8_t> tile_data;
+    for (uint32_t component = 0; component < 3; component++) {
+        if (interleave == interleave_mode_mixed && component == 2) {
+            continue;
+        }
+        const uint32_t tile_width = component == 0 ? 3 : 2;
+        const uint32_t tile_height = component == 0 || sampling == sampling_mode_422 ? 3 : 2;
+        for (uint32_t y = 0; y < tile_height; y++) {
+            size_t row_start = tile_data.size();
+            for (uint32_t x = 0; x < tile_width; x++) {
+                const uint32_t component_count = interleave == interleave_mode_mixed && component == 1 ? 2 : 1;
+                for (uint32_t c = component; c < component + component_count; c++) {
+                    for (uint32_t b = 0; b < bytes_per_sample; b++) {
+                        tile_data.push_back(static_cast<uint8_t>((c + 1) * 0x11));
+                    }
+                }
+            }
+            while ((tile_data.size() - row_start) % 4 != 0) {
+                tile_data.push_back(0xFF);
+            }
+        }
+    }
+    auto decoder_result = unc_decoder_factory::get_unc_decoder(width, height, cmpd, uncC, component_ids);
+    REQUIRE(decoder_result);
+    auto& decoder = *decoder_result;
+    decoder->ensure_channel_list(image);
+    for (uint32_t y = 0; y < rows; y++) {
+        for (uint32_t x = 0; x < columns; x++) {
+            REQUIRE(!decoder->decode_tile(tile_data, image, x * 3, y * 3));
+        }
+    }
+    uint8_t component_value = 0x11;
+    for (auto channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+        CAPTURE(channel);
+        size_t stride;
+        auto plane = image->get_channel_memory(channel, &stride);
+        const uint32_t plane_width = image->get_width(channel);
+        const uint32_t plane_height = image->get_height(channel);
+        for (uint32_t y = 0; y < plane_height * 2; y++) {
+            for (uint32_t x = 0; x < plane_width * 2 * bytes_per_sample; x++) {
+                const uint8_t expected = y < plane_height && x < plane_width * bytes_per_sample ? component_value : 0xA5;
+                REQUIRE(plane[y * stride + x] == expected);
+            }
+        }
+        component_value += 0x11;
+    }
+}
+
+
+TEST_CASE("uncompressed mixed interleave places odd-sized tiles on the global chroma grid")
+{
+    const auto sampling = GENERATE(sampling_mode_420, sampling_mode_422);
+    const uint16_t bit_depth = GENERATE(uint16_t{8}, uint16_t{12}, uint16_t{16});
+    const uint8_t alignment = GENERATE(uint8_t{0}, uint8_t{2});
+    CAPTURE(sampling, bit_depth, alignment);
+    auto cmpd = std::make_shared<Box_cmpd>();
+    auto uncC = std::make_shared<Box_uncC>();
+    // Put luma after chroma so incorrect chroma consumption also corrupts luma.
+    for (uint16_t type : {uint16_t{2}, uint16_t{3}, uint16_t{1}}) {
+        cmpd->add_component({type});
+        Box_uncC::Component component;
+        component.component_index = static_cast<uint32_t>(uncC->get_components().size());
+        component.component_bit_depth = bit_depth;
+        component.component_format = component_format_unsigned;
+        component.component_align_size = alignment;
+        uncC->add_component(component);
+    }
+    uncC->set_sampling_type(sampling);
+    uncC->set_interleave_type(interleave_mode_mixed);
+    uncC->set_number_of_tile_columns(2);
+    uncC->set_number_of_tile_rows(2);
+    uncC->set_row_align_size(4);
+    UncompressedImageCodec::unci_properties properties;
+    properties.cmpd = cmpd;
+    properties.uncC = uncC;
+    std::vector<uint32_t> component_ids;
+    auto image_result = UncompressedImageCodec::create_image(properties, 6, 6, component_ids, nullptr);
+    REQUIRE(image_result);
+    auto image = *image_result;
+    auto decoder_result = unc_decoder_factory::get_unc_decoder(6, 6, cmpd, uncC, component_ids);
+    REQUIRE(decoder_result);
+    auto& decoder = *decoder_result;
+    decoder->ensure_channel_list(image);
+    for (uint32_t tile_y = 0; tile_y < 2; tile_y++) {
+        for (uint32_t tile_x = 0; tile_x < 2; tile_x++) {
+            BitWriter writer;
+            for (bool chroma : {true, false}) {
+                const uint32_t x0 = chroma ? tile_x * 3 / 2 : tile_x * 3;
+                const uint32_t y0 = chroma && sampling == sampling_mode_420 ? tile_y * 3 / 2 : tile_y * 3;
+                const uint32_t width = chroma ? 2 : 3;
+                const uint32_t height = chroma && sampling == sampling_mode_420 ? 2 : 3;
+                for (uint32_t y = 0; y < height; y++) {
+                    const int row_start = writer.get_current_byte_index();
+                    for (uint32_t x = 0; x < width; x++) {
+                        for (uint32_t type = chroma ? 2 : 1; type <= (chroma ? 3 : 1); type++) {
+                            if (alignment != 0) {
+                                writer.skip_to_byte_boundary();
+                                writer.write_bits(0, alignment * 8 - bit_depth);
+                            }
+                            writer.write_bits(type * 32 + x0 + x + (y0 + y) * 8, bit_depth);
+                        }
+                    }
+                    writer.skip_to_byte_boundary();
+                    while ((writer.get_current_byte_index() - row_start) % 4 != 0) {
+                        writer.write_bits(0xFF, 8);
+                    }
+                }
+            }
+            REQUIRE(!decoder->decode_tile(writer.get_data(), image, tile_x * 3, tile_y * 3));
+        }
+    }
+    uint32_t type = 1;
+    for (auto channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr}) {
+        size_t stride;
+        const auto plane = image->get_channel_memory(channel, &stride);
+        for (uint32_t y = 0; y < image->get_height(channel); y++) {
+            for (uint32_t x = 0; x < image->get_width(channel); x++) {
+                CAPTURE(channel, x, y);
+                const uint32_t value = bit_depth <= 8 ? plane[y * stride + x]
+                    : reinterpret_cast<const uint16_t*>(plane + y * stride)[x];
+                REQUIRE(value == type * 32 + x + y * 8);
+            }
+        }
+        type++;
+    }
+}
 
 
 TEST_CASE( "cmpd" )

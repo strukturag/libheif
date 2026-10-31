@@ -22,8 +22,32 @@
 #include "context.h"
 #include "error.h"
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
+
+
+uint64_t unc_decoder_mixed_interleave::get_chroma_bits_per_row(const ChannelListEntry& entry)
+{
+  // Component alignment is relative to the byte containing the next sample.
+  auto end_of_pair = [&entry](uint64_t pos) {
+    for (int c = 0; c < 2; c++) {
+      if (entry.chroma_component_alignment[c] != 0) {
+        pos = (pos + 7) & ~uint64_t{7};
+        pos += entry.chroma_component_alignment[c] * 8;
+      }
+      else {
+        pos += entry.chroma_bits_per_component_sample[c];
+      }
+    }
+    return pos;
+  };
+
+  // After the first pair, every pair starts at the same position within a byte.
+  uint64_t first = end_of_pair(0);
+  uint64_t second = end_of_pair(first);
+  return entry.tile_width == 0 ? 0 : first + (second - first) * (entry.tile_width - 1);
+}
 
 
 Result<std::vector<uint64_t>> unc_decoder_mixed_interleave::get_tile_data_sizes() const
@@ -42,33 +66,7 @@ Result<std::vector<uint64_t>> unc_decoder_mixed_interleave::get_tile_data_sizes(
       }
       chroma_counted = true;
 
-      // Returns the bit position after one Cb/Cr pair that starts at bit position 'pos'.
-      // This mirrors how processTile() reads the pair: a byte-aligned component starts on a
-      // byte boundary and occupies component_align_size bytes, any other component
-      // occupies exactly its bit depth.
-      auto end_of_chroma_pair = [&entry](uint64_t pos) {
-        for (int c = 0; c < 2; c++) {
-          if (entry.chroma_component_alignment[c] != 0) {
-            pos = (pos + 7) & ~uint64_t{7};
-            pos += entry.chroma_component_alignment[c] * 8;
-          }
-          else {
-            pos += entry.chroma_bits_per_component_sample[c];
-          }
-        }
-        return pos;
-      };
-
-      // The first pair starts at the byte-aligned start of the row. All following pairs
-      // start at the same position within a byte as the second one, so they all have the
-      // size of the second pair.
-      uint64_t end_of_first_pair = end_of_chroma_pair(0);
-      uint64_t end_of_second_pair = end_of_chroma_pair(end_of_first_pair);
-
-      bits_per_row = 0;
-      if (entry.tile_width > 0) {
-        bits_per_row = end_of_first_pair + (end_of_second_pair - end_of_first_pair) * (entry.tile_width - 1);
-      }
+      bits_per_row = get_chroma_bits_per_row(entry);
     }
     else {
       uint32_t bits_per_component = entry.bits_per_component_sample;
@@ -129,15 +127,24 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
       uint64_t channel_y0 = uint64_t{tile_row} * entry.tile_height;
       if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
         if (!haveProcessedChromaForThisTile) {
-          for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
+          // Odd tile boundaries share a chroma sample with the preceding tile.
+          channel_x0 = out_x0 / 2;
+          channel_y0 = m_uncC->get_sampling_type() == sampling_mode_420 ? out_y0 / 2 : out_y0;
+          uint32_t write_width = channel_x0 < entry.dst_plane_width
+                                     ? static_cast<uint32_t>(std::min<uint64_t>(entry.tile_width, entry.dst_plane_width - channel_x0)) : 0;
+          uint32_t write_height = channel_y0 < entry.dst_plane_height
+                                      ? static_cast<uint32_t>(std::min<uint64_t>(entry.tile_height, entry.dst_plane_height - channel_y0)) : 0;
+          uint32_t bytes_per_row = static_cast<uint32_t>((get_chroma_bits_per_row(entry) + 7) / 8);
+          for (uint32_t tile_y = 0; tile_y < write_height; tile_y++) {
             srcBits.markRowStart();
+            size_t row_start = srcBits.get_current_byte_index();
             uint64_t dst_row_number = tile_y + channel_y0;
 
             uint64_t chroma_dst_row_offset[2];
             chroma_dst_row_offset[0] = dst_row_number * entry.chroma_dst_plane_stride[0];
             chroma_dst_row_offset[1] = dst_row_number * entry.chroma_dst_plane_stride[1];
 
-            for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
+            for (uint32_t tile_x = 0; tile_x < write_width; tile_x++) {
               uint64_t dst_column_number = channel_x0 + tile_x;
 
               // The two chroma samples for this pixel are read in the same order
@@ -165,16 +172,23 @@ void unc_decoder_mixed_interleave::processTile(UncompressedBitReader& srcBits, u
                 memcpy_to_native_endian(entry.chroma_dst_plane[c] + chroma_dst_row_offset[c] + dst_column_offset, val, bytes_per_sample);
               }
             }
+            // Consume the complete coded row, including samples outside the output plane.
+            srcBits.skip_to_byte_boundary();
+            srcBits.skip_bytes(bytes_per_row - static_cast<uint32_t>(srcBits.get_current_byte_index() - row_start));
             srcBits.handleRowAlignment(m_uncC->get_row_align_size());
-            haveProcessedChromaForThisTile = true;
           }
+          for (uint32_t tile_y = write_height; tile_y < entry.tile_height; tile_y++) {
+            srcBits.markRowStart();
+            srcBits.skip_bytes(bytes_per_row);
+            srcBits.handleRowAlignment(m_uncC->get_row_align_size());
+          }
+          haveProcessedChromaForThisTile = true;
         }
       }
       else {
         for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
           srcBits.markRowStart();
-          uint64_t dst_row_offset = (channel_y0 + tile_y) * entry.dst_plane_stride;
-          processComponentTileRow(entry, srcBits, dst_row_offset + channel_x0 * entry.bytes_per_component_sample);
+          processComponentTileRow(entry, srcBits, channel_x0, channel_y0 + tile_y);
           srcBits.handleRowAlignment(m_uncC->get_row_align_size());
         }
       }
