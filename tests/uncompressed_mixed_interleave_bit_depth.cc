@@ -46,6 +46,7 @@
 #include "libheif/heif.h"
 #include "test_utils.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -326,7 +327,7 @@ heif_channel channel_of(const Component& c)
 }
 
 
-void check_decoding(const Layout& layout, bool padding_bit)
+void check_decoding(const Layout& layout, bool padding_bit, const std::vector<Component>& expected_components)
 {
   INFO(layout.name << ", padding bits " << (padding_bit ? 1 : 0));
 
@@ -343,17 +344,27 @@ void check_decoding(const Layout& layout, bool padding_bit)
   err = heif_context_get_primary_image_handle(ctx, &handle);
   REQUIRE(err.code == heif_error_Ok);
 
+  int expected_chroma_bits = 0;
+  for (const Component& c : expected_components) {
+    if (is_chroma(c)) {
+      expected_chroma_bits = std::max(expected_chroma_bits, static_cast<int>(c.bit_depth));
+    }
+  }
+  REQUIRE(heif_image_handle_get_chroma_bits_per_pixel(handle) == expected_chroma_bits);
+  REQUIRE(heif_image_handle_get_number_of_components(handle) == expected_components.size());
+
   // Decode without any conversion, so that the planes come back as the decoder filled them.
   heif_image* img = nullptr;
   err = heif_decode_image(handle, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
   INFO("decode: " << err.message);
   REQUIRE(err.code == heif_error_Ok);
   REQUIRE(img != nullptr);
+  REQUIRE(heif_image_get_number_of_used_components(img) == expected_components.size());
 
   uint32_t chroma_width = layout.width / 2;
   uint32_t chroma_height = (layout.sampling_type == 2) ? layout.height / 2 : layout.height;
 
-  for (const Component& c : layout.components) {
+  for (const Component& c : expected_components) {
     heif_channel channel = channel_of(c);
     uint32_t w = is_chroma(c) ? chroma_width : layout.width;
     uint32_t h = is_chroma(c) ? chroma_height : layout.height;
@@ -434,7 +445,26 @@ TEST_CASE("unci mixed interleave reads chroma samples with their component bit d
 
   for (const Layout& layout : layouts) {
     for (bool padding_bit : {false, true}) {
-      check_decoding(layout, padding_bit);
+      check_decoding(layout, padding_bit, layout.components);
     }
   }
+}
+
+
+TEST_CASE("unci mixed interleave reports the bit depth of the first Cb and Cr")
+{
+  const bool cr_first = GENERATE(false, true);
+  const uint8_t sampling = GENERATE(uint8_t{1}, uint8_t{2});
+  const uint8_t cb_bits = GENERATE(uint8_t{8}, uint8_t{10});
+  const uint8_t cr_bits = GENERATE(uint8_t{8}, uint8_t{12});
+  CAPTURE(cr_first, sampling, cb_bits, cr_bits);
+  const Component cb = {2, cb_bits, 0};
+  const Component cr = {3, cr_bits, 0};
+  Layout layout = {"first chroma depths", 8, 4, sampling,
+                   {{1, 8, 0}, cr_first ? cr : cb, cr_first ? cb : cr}, 0};
+  const auto expected_components = layout.components;
+  // The existing first-wins input layout stores only the first chroma pair.
+  layout.components.push_back({2, 16, 0});
+  layout.components.push_back({3, 16, 0});
+  check_decoding(layout, false, expected_components);
 }

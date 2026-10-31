@@ -102,6 +102,8 @@ int Decoder_uncompressed::get_chroma_bits_per_pixel() const
 
   int chroma_bits = 0;
   int alternate_channel_bits = 0;
+  bool cb_seen = false;
+  bool cr_seen = false;
   for (Box_uncC::Component component : m_uncC->get_components()) {
     uint32_t component_index = component.component_index;
     if (component_index >= m_cmpd->get_components().size()) {
@@ -117,9 +119,16 @@ int Decoder_uncompressed::get_chroma_bits_per_pixel() const
         alternate_channel_bits = std::max(alternate_channel_bits, (int) component.component_bit_depth);
         break;
       case heif_cmpd_component_type_Cb:
-      case heif_cmpd_component_type_Cr:
+      case heif_cmpd_component_type_Cr: {
+        // Mixed interleave exposes only the first component of each chroma type.
+        bool& seen = component_type == heif_cmpd_component_type_Cb ? cb_seen : cr_seen;
+        if (m_uncC->get_interleave_type() == interleave_mode_mixed && seen) {
+          break;
+        }
+        seen = true;
         chroma_bits = std::max(chroma_bits, (int) component.component_bit_depth);
         break;
+      }
         // TODO: there are other things we'll need to handle eventually, like palette.
     }
   }

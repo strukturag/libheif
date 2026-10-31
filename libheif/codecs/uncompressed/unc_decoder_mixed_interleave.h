@@ -27,6 +27,8 @@
 #include <vector>
 
 
+// Mixed interleave uses the first Cb and Cr components. Later Cb/Cr entries
+// have no separate output planes and contribute no additional input data.
 class unc_decoder_mixed_interleave : public unc_decoder_legacybase
 {
 public:
