@@ -406,13 +406,15 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
     }
   }
 
-  // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
+  // Only the interleaved channel follows the chroma format's component count and bit-depth rules.
+  // Other channels store one component with their own bit depth.
+  // For backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas.
 
-  if (m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
+  if (channel == heif_channel_interleaved && m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
     bit_depth = 8;
   }
 
-  if (m_chroma == heif_chroma_interleaved_RGBA && bit_depth == 32) {
+  if (channel == heif_channel_interleaved && m_chroma == heif_chroma_interleaved_RGBA && bit_depth == 32) {
     bit_depth = 8;
   }
 
@@ -420,7 +422,8 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
   // of <= 8 would be self-inconsistent: the allocated plane would only hold one byte
   // per component while readers/writers access the samples as 16-bit values. A bit depth
   // above 16 is no RRGGBB(AA) format either: the components would not be 16-bit words.
-  if ((m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+  if (channel == heif_channel_interleaved &&
+      (m_chroma == heif_chroma_interleaved_RRGGBB_BE ||
        m_chroma == heif_chroma_interleaved_RRGGBB_LE ||
        m_chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
        m_chroma == heif_chroma_interleaved_RRGGBBAA_LE) &&
@@ -431,7 +434,8 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
   }
 
   // The interleaved RGB and RGBA formats have 8 bits per component.
-  if ((m_chroma == heif_chroma_interleaved_RGB ||
+  if (channel == heif_channel_interleaved &&
+      (m_chroma == heif_chroma_interleaved_RGB ||
        m_chroma == heif_chroma_interleaved_RGBA) &&
       bit_depth != 8) {
     return {heif_error_Usage_error,
@@ -439,7 +443,8 @@ Error HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t
             "The interleaved RGB and RGBA formats require a bit depth of 8"};
   }
 
-  int num_interleaved_pixels = num_interleaved_components_per_plane(m_chroma);
+  int num_interleaved_pixels = channel == heif_channel_interleaved
+                              ? num_interleaved_components_per_plane(m_chroma) : 1;
 
   ComponentStorage plane;
   plane.m_channel = channel;
@@ -659,7 +664,7 @@ Error HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bo
       newPlane.m_channel = component.m_channel;
       newPlane.m_component_ids = component.m_component_ids;
       if (auto err = newPlane.alloc(subsampled_width, subsampled_height, component.m_datatype, component.m_bit_depth,
-                                    num_interleaved_components_per_plane(m_chroma),
+                                    component.m_num_interleaved_components,
                                     limits, m_memory_handle))
       {
         return err;
@@ -793,7 +798,7 @@ Error HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height, 
       ComponentStorage newPlane;
       newPlane.m_channel = component.m_channel;
       newPlane.m_component_ids = component.m_component_ids;
-      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, component.m_datatype, component.m_bit_depth, num_interleaved_components_per_plane(m_chroma), limits, m_memory_handle)) {
+      if (auto err = newPlane.alloc(subsampled_width, subsampled_height, component.m_datatype, component.m_bit_depth, component.m_num_interleaved_components, limits, m_memory_handle)) {
         return err;
       }
 
@@ -1338,6 +1343,14 @@ Error HeifPixelImage::copy_new_channel_from(const std::shared_ptr<const HeifPixe
   const auto* src_plane_ptr = src_image->find_storage_for_channel(src_channel);
   assert(src_plane_ptr != nullptr);
   const auto& src_plane = *src_plane_ptr;
+
+  int expected_components = dst_channel == heif_channel_interleaved
+                            ? num_interleaved_components_per_plane(m_chroma) : 1;
+  if (src_plane.m_num_interleaved_components != expected_components ||
+      (dst_channel == heif_channel_interleaved && src_image->get_chroma_format() != m_chroma)) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+            "Source and destination channel layouts do not match"};
+  }
 
   auto err = add_channel(dst_channel, width, height,
                        src_image->get_bits_per_pixel(src_channel), limits,

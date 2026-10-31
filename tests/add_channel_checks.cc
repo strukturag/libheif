@@ -27,6 +27,81 @@
 #include "image/pixelimage.h"
 #include "catch_amalgamated.hpp"
 
+TEST_CASE("planar channels allocate one component regardless of image chroma") {
+  const auto chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA,
+                               heif_chroma_interleaved_RRGGBB_LE, heif_chroma_interleaved_RRGGBBAA_BE);
+  const auto channel = GENERATE(heif_channel_Y, heif_channel_R, heif_channel_G, heif_channel_B);
+  HeifPixelImage image;
+  image.create(4, 4, heif_colorspace_RGB, chroma);
+  REQUIRE(!image.add_channel(channel, 4, 4, 8, nullptr));
+  REQUIRE(image.get_number_of_interleaved_components(channel) == 1);
+  REQUIRE(image.get_storage_bits_per_pixel(channel) == 8);
+}
+
+TEST_CASE("copy_new_channel_from rejects incompatible interleaved layouts") {
+  const auto source_chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA,
+                                      heif_chroma_interleaved_RRGGBB_BE, heif_chroma_interleaved_RRGGBB_LE);
+  const auto destination_chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA,
+                                           heif_chroma_interleaved_RRGGBB_BE, heif_chroma_interleaved_RRGGBB_LE);
+  auto source = std::make_shared<HeifPixelImage>();
+  source->create(4, 4, heif_colorspace_RGB, source_chroma);
+  const int depth = source_chroma == heif_chroma_interleaved_RGB ||
+                    source_chroma == heif_chroma_interleaved_RGBA ? 8 : 10;
+  REQUIRE(!source->add_channel(heif_channel_interleaved, 4, 4, depth, nullptr));
+  size_t stride;
+  auto* data = source->get_channel_memory(heif_channel_interleaved, &stride);
+  data[0] = 37;
+  HeifPixelImage destination;
+  destination.create(4, 4, heif_colorspace_RGB, destination_chroma);
+  auto err = destination.copy_new_channel_from(source, heif_channel_interleaved, heif_channel_interleaved, nullptr);
+  if (source_chroma != destination_chroma) {
+    REQUIRE(err.error_code == heif_error_Usage_error);
+    REQUIRE_FALSE(destination.has_channel(heif_channel_interleaved));
+  }
+  else {
+    REQUIRE(!err);
+    REQUIRE(destination.get_number_of_interleaved_components(heif_channel_interleaved) ==
+            source->get_number_of_interleaved_components(heif_channel_interleaved));
+    REQUIRE(destination.get_channel_memory(heif_channel_interleaved, &stride)[0] == 37);
+  }
+  HeifPixelImage planar;
+  planar.create(4, 4, heif_colorspace_monochrome, heif_chroma_monochrome);
+  REQUIRE(planar.copy_new_channel_from(source, heif_channel_interleaved, heif_channel_Y, nullptr).error_code ==
+          heif_error_Usage_error);
+  REQUIRE_FALSE(planar.has_channel(heif_channel_Y));
+}
+
+TEST_CASE("alpha extraction and planar copying allocate only the copied component") {
+  const auto chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA,
+                               heif_chroma_interleaved_RRGGBB_LE, heif_chroma_interleaved_RRGGBBAA_BE);
+  const bool extract = GENERATE(false, true);
+  auto source = std::make_shared<HeifPixelImage>();
+  source->create(4, 4, heif_colorspace_RGB, heif_chroma_interleaved_RGBA);
+  REQUIRE(!source->add_channel(heif_channel_interleaved, 4, 4, 8, nullptr));
+  size_t stride;
+  auto* data = source->get_channel_memory(heif_channel_interleaved, &stride);
+  for (uint32_t y = 0; y < 4; y++) {
+    for (uint32_t x = 0; x < 4; x++) {
+      data[y * stride + x * 4 + 3] = static_cast<uint8_t>(x + y * 4);
+    }
+  }
+  auto alpha = std::make_shared<HeifPixelImage>();
+  alpha->create(4, 4, heif_colorspace_monochrome, heif_chroma_monochrome);
+  REQUIRE(!alpha->extract_alpha_from_RGBA(source, nullptr));
+  HeifPixelImage destination;
+  destination.create(4, 4, heif_colorspace_RGB, chroma);
+  REQUIRE(!(extract ? destination.extract_alpha_from_RGBA(source, nullptr) :
+                      destination.copy_new_channel_from(alpha, heif_channel_Y, heif_channel_Y, nullptr)));
+  REQUIRE(destination.get_number_of_interleaved_components(heif_channel_Y) == 1);
+  REQUIRE(destination.get_storage_bits_per_pixel(heif_channel_Y) == 8);
+  data = destination.get_channel_memory(heif_channel_Y, &stride);
+  for (uint32_t y = 0; y < 4; y++) {
+    for (uint32_t x = 0; x < 4; x++) {
+      REQUIRE(data[y * stride + x] == x + y * 4);
+    }
+  }
+}
+
 // Regression tests for the Cb/Cr size check in HeifPixelImage::add_channel().
 //
 // A Cb/Cr plane must have exactly the chroma-subsampled size of the logical image
