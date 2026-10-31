@@ -30,6 +30,38 @@
 
 #include <algorithm>
 
+TEST_CASE("image extension preserves each plane's component layout") {
+  const bool zero_fill = GENERATE(false, true);
+  const auto chroma = GENERATE(heif_chroma_interleaved_RGB, heif_chroma_interleaved_RGBA);
+  auto image = std::make_shared<HeifPixelImage>();
+  image->create(64, 64, heif_colorspace_RGB, chroma);
+  // Component API planes are planar even when the image has an interleaved chroma format.
+  auto id = image->add_component(64, 64, heif_cmpd_component_type_Y,
+                                 heif_component_datatype_unsigned_integer, 8, nullptr);
+  REQUIRE(id);
+  size_t stride;
+  auto* data = image->get_component(*id, &stride);
+  for (uint32_t y = 0; y < 64; y++) {
+    for (uint32_t x = 0; x < 64; x++) {
+      data[y * stride + x] = static_cast<uint8_t>(x + y + 1);
+    }
+  }
+  REQUIRE(!(zero_fill ? image->extend_to_size_with_zero(128, 128, nullptr) :
+                       image->extend_padding_to_size(128, 128, true, nullptr)));
+  REQUIRE(image->get_number_of_interleaved_components(heif_channel_Y) == 1);
+  REQUIRE(image->get_storage_bits_per_pixel(heif_channel_Y) == 8);
+  REQUIRE(image->get_width(heif_channel_Y) == 128);
+  REQUIRE(image->get_height(heif_channel_Y) == 128);
+  data = image->get_component(*id, &stride);
+  for (uint32_t y = 0; y < 128; y++) {
+    for (uint32_t x = 0; x < 128; x++) {
+      const uint8_t expected = zero_fill && (x >= 64 || y >= 64) ? 0 :
+                               static_cast<uint8_t>(std::min(x, 63U) + std::min(y, 63U) + 1);
+      REQUIRE(data[y * stride + x] == expected);
+    }
+  }
+}
+
 // Regression tests for HeifPixelImage::extend_to_size_with_zero().
 //
 // This function only grows an image. The per-row right-edge fill computes its
