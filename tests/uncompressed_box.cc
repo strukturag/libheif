@@ -31,6 +31,7 @@
 #include "codecs/uncompressed/unc_types.h"
 #include "codecs/uncompressed/unc_boxes.h"
 #include "codecs/uncompressed/unc_codec.h"
+#include "codecs/uncompressed/unc_dec.h"
 #include "codecs/uncompressed/unc_decoder_mixed_interleave.h"
 #include "image-items/unc_image.h"
 #include <cstdint>
@@ -63,6 +64,9 @@ TEST_CASE("mixed interleave exposes and fills only the first Cb and Cr component
     uncC->set_interleave_type(interleave);
     auto ispe = std::make_shared<Box_ispe>();
     ispe->set_size(4, 2);
+    Decoder_uncompressed metadata_decoder(uncC, cmpd, ispe);
+    REQUIRE(metadata_decoder.get_chroma_bits_per_pixel() ==
+            (interleave == interleave_mode_mixed ? 8 : 16));
     HeifContext context;
     ImageItem_uncompressed item(&context);
     item.set_properties({ispe, cmpd, uncC});
