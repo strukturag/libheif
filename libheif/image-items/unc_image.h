@@ -62,7 +62,8 @@ public:
 
   // Walk the cmpd / uncC / cpat property boxes and populate
   // ImageDescription::m_components with one ComponentDescription per uncC
-  // component plus one (has_data_plane=false) per extra cpat reference
+  // component (only the first Cb/Cr in mixed interleave), plus one
+  // (has_data_plane=false) per extra cpat reference
   // component. Called once from ImageItem::set_properties().
   void populate_component_descriptions() override;
 

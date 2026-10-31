@@ -251,6 +251,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
   // iteration and re-reference the Y component instead of creating Cb, so the
   // Cb plane was dropped entirely.
   const size_t num_prepopulated_descriptions = img->get_component_descriptions().size();
+  std::map<uint16_t, uint32_t> mixed_chroma_ids;
   uint32_t desc_idx = 0;
   for (Box_uncC::Component component : uncC->get_components()) {
     if (component.component_index >= components.size()) {
@@ -261,12 +262,26 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       };
     }
 
+    auto component_type = components[component.component_index].component_type;
+    const bool mixed_chroma = uncC->get_interleave_type() == interleave_mode_mixed &&
+                              (component_type == heif_cmpd_component_type_Cb ||
+                               component_type == heif_cmpd_component_type_Cr);
+    if (mixed_chroma) {
+      auto first = mixed_chroma_ids.find(component_type);
+      if (first != mixed_chroma_ids.end()) {
+        // Mixed interleave decodes only the first Cb/Cr pair. Reuse its IDs
+        // for ignored entries instead of allocating planes that stay unwritten.
+        cmpd_index_to_comp_ids[component.component_index].push_back(first->second);
+        uncC_index_to_comp_ids.push_back(first->second);
+        continue;
+      }
+    }
+
     if (desc_idx >= num_prepopulated_descriptions) {
       // Fallback: source did not populate descriptions. This is the path taken
       // by the sequence ('uncv') decoder, which builds the properties directly
       // from the sample-entry boxes and does not clone descriptions from an
       // ImageItem.
-      auto component_type = components[component.component_index].component_type;
       uint32_t plane_w = width;
       uint32_t plane_h = height;
       if (component_type == heif_cmpd_component_type_Cb ||
@@ -290,6 +305,9 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       }
       cmpd_index_to_comp_ids[component.component_index].push_back(*result);
       uncC_index_to_comp_ids.push_back(*result);
+      if (mixed_chroma) {
+        mixed_chroma_ids[component_type] = *result;
+      }
       continue;
     }
 
@@ -303,6 +321,9 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
 
     cmpd_index_to_comp_ids[component.component_index].push_back(comp_id);
     uncC_index_to_comp_ids.push_back(comp_id);
+    if (mixed_chroma) {
+      mixed_chroma_ids[component_type] = comp_id;
+    }
     desc_idx++;
   }
 

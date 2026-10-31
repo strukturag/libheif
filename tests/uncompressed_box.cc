@@ -30,8 +30,97 @@
 #include "libheif/heif.h"
 #include "codecs/uncompressed/unc_types.h"
 #include "codecs/uncompressed/unc_boxes.h"
+#include "codecs/uncompressed/unc_codec.h"
+#include "codecs/uncompressed/unc_decoder_mixed_interleave.h"
+#include "image-items/unc_image.h"
 #include <cstdint>
 #include <iostream>
+
+
+TEST_CASE("mixed interleave exposes and fills only the first Cb and Cr components")
+{
+    const bool prepopulated = GENERATE(false, true);
+    const bool cr_first = GENERATE(false, true);
+    const auto sampling = GENERATE(sampling_mode_420, sampling_mode_422);
+    const auto interleave = GENERATE(interleave_mode_mixed, interleave_mode_component);
+    CAPTURE(prepopulated, cr_first, sampling, interleave);
+    auto cmpd = std::make_shared<Box_cmpd>();
+    auto uncC = std::make_shared<Box_uncC>();
+    const uint16_t first = cr_first ? heif_cmpd_component_type_Cr : heif_cmpd_component_type_Cb;
+    const uint16_t second = cr_first ? heif_cmpd_component_type_Cb : heif_cmpd_component_type_Cr;
+    // The final Y also checks that filtering chroma does not shift later descriptions.
+    const uint16_t types[] = {heif_cmpd_component_type_Y, first, second, first, second, heif_cmpd_component_type_Y};
+    for (uint16_t i = 0; i < 6; i++) {
+        cmpd->add_component({types[i]});
+        Box_uncC::Component component;
+        component.component_index = i;
+        component.component_bit_depth = i == 3 || i == 4 ? 16 : 8;
+        component.component_format = component_format_unsigned;
+        component.component_align_size = 0;
+        uncC->add_component(component);
+    }
+    uncC->set_sampling_type(sampling);
+    uncC->set_interleave_type(interleave);
+    auto ispe = std::make_shared<Box_ispe>();
+    ispe->set_size(4, 2);
+    HeifContext context;
+    ImageItem_uncompressed item(&context);
+    item.set_properties({ispe, cmpd, uncC});
+    const bool mixed = interleave == interleave_mode_mixed;
+    REQUIRE(item.get_component_descriptions().size() == (mixed ? 4 : 6));
+
+    UncompressedImageCodec::unci_properties properties;
+    properties.cmpd = cmpd;
+    properties.uncC = uncC;
+    properties.source_extra_data = prepopulated ? &item : nullptr;
+    std::vector<uint32_t> ids;
+    auto result = UncompressedImageCodec::create_image(properties, 4, 2, ids, nullptr);
+    REQUIRE(result);
+    auto image = *result;
+    REQUIRE(image->get_number_of_used_components() == (mixed ? 4 : 6));
+    REQUIRE(ids.size() == 6);
+    REQUIRE((ids[1] == ids[3]) == mixed);
+    REQUIRE((ids[2] == ids[4]) == mixed);
+    REQUIRE(ids[0] != ids[5]);
+    if (prepopulated) {
+        const auto output_ids = image->get_used_component_ids();
+        for (size_t i = 0; i < output_ids.size(); i++) {
+            REQUIRE(output_ids[i] == item.get_component_descriptions()[i].component_id);
+        }
+    }
+    if (!mixed) {
+        return;
+    }
+
+    unc_decoder_mixed_interleave decoder(4, 2, cmpd, uncC, ids);
+    decoder.ensure_channel_list(image);
+    const uint32_t chroma_height = sampling == sampling_mode_420 ? 1 : 2;
+    std::vector<uint8_t> data(8, 17);
+    for (uint32_t i = 0; i < 2 * chroma_height; i++) {
+        data.push_back(static_cast<uint8_t>(31 + i));
+        data.push_back(static_cast<uint8_t>(91 + i));
+    }
+    data.insert(data.end(), 8, 211);
+    auto sizes = decoder.get_tile_data_sizes();
+    REQUIRE(sizes);
+    REQUIRE(*sizes == std::vector<uint64_t>{data.size()});
+    REQUIRE(!decoder.decode_tile(data, image, 0, 0));
+    for (uint32_t i : {0U, 1U, 2U, 5U}) {
+        size_t stride;
+        auto plane = image->get_component(ids[i], &stride);
+        REQUIRE(plane);
+        REQUIRE(image->get_component_bits_per_pixel(ids[i]) == 8);
+        const uint32_t width = i == 0 || i == 5 ? 4 : 2;
+        const uint32_t height = i == 0 || i == 5 ? 2 : chroma_height;
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
+                const uint8_t expected = i == 0 ? 17 : i == 5 ? 211 :
+                                         static_cast<uint8_t>((i == 1 ? 31 : 91) + y * width + x);
+                REQUIRE(plane[y * stride + x] == expected);
+            }
+        }
+    }
+}
 
 
 TEST_CASE( "cmpd" )

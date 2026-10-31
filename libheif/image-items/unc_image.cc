@@ -84,6 +84,7 @@ void ImageItem_uncompressed::populate_component_descriptions()
   // Track which cmpd indices already got a description from the uncC walk,
   // so we don't duplicate them when handling cpat.
   std::vector<bool> cmpd_index_has_description(cmpd_components.size(), false);
+  std::set<uint16_t> mixed_chroma_types;
 
   // 1. uncC components — these get real planes after decode.
   for (const auto& uc : uncC->get_components()) {
@@ -91,6 +92,13 @@ void ImageItem_uncompressed::populate_component_descriptions()
       continue; // malformed; skip
     }
     uint16_t component_type = cmpd_components[uc.component_index].component_type;
+
+    // Mixed interleave exposes only the first Cb and Cr, matching the decoder.
+    if (uncC->get_interleave_type() == interleave_mode_mixed &&
+        (component_type == heif_cmpd_component_type_Cb || component_type == heif_cmpd_component_type_Cr) &&
+        !mixed_chroma_types.insert(component_type).second) {
+      continue;
+    }
 
     heif_channel channel = map_uncompressed_component_to_channel(component_type);
     uint32_t plane_w = channel_width(img_width, chroma, channel);
