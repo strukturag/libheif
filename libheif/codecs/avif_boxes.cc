@@ -876,3 +876,69 @@ Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataS
 
   return found;
 }
+
+
+static int av1_bit_depth(const Box_av1C::configuration& config)
+{
+  if (!config.high_bitdepth) {
+    return 8;
+  }
+
+  return config.twelve_bit ? 12 : 10;
+}
+
+
+Error check_av1_sequence_header_format(const uint8_t* data, size_t dataSize,
+                                       const Box_av1C::configuration& config)
+{
+  // find_max_av1_frame_size_in_stream() has scanned the same stream before and
+  // refused malformed OBU framing, so this walk only has to find the sequence
+  // headers. Their color configuration is parsed here, apart from that scan, so
+  // that it cannot perturb it.
+
+  if (dataSize == 0) {
+    return Error::Ok;
+  }
+  if (data == nullptr || dataSize > (size_t) std::numeric_limits<int>::max()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "AV1 stream was rejected because it cannot be scanned completely."};
+  }
+
+  BitReader reader(data, (int) dataSize);
+
+  while (reader.get_bits_remaining() >= 8) {
+    size_t obu_start = reader.get_current_byte_index();
+    obu_header_info header = read_obu_header_type(reader);
+    size_t payload_start = reader.get_current_byte_index();
+
+    if (!header.valid || !header.has_size ||
+        payload_start > dataSize || header.size > dataSize - payload_start) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "AV1 stream was rejected because an OBU header or size is invalid."};
+    }
+
+    if (header.type == HEIF_OBU_SEQUENCE_HEADER) {
+      // Parse this sequence header OBU alone, from its OBU header on.
+      size_t obu_size = payload_start - obu_start + (size_t) header.size;
+      Box_av1C::configuration coded;
+      if (!fill_av1C_configuration_from_stream(&coded, data + obu_start, (int) obu_size)) {
+        return Error{heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "AV1 stream was rejected because a sequence header cannot be parsed."};
+      }
+
+      if (coded.get_heif_chroma() != config.get_heif_chroma() ||
+          av1_bit_depth(coded) != av1_bit_depth(config)) {
+        return Error{heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "AV1 stream was rejected because a sequence header codes another chroma format or bit depth than the av1C configuration."};
+      }
+    }
+
+    reader.skip_bytes((uint32_t) header.size);
+  }
+
+  return Error::Ok;
+}

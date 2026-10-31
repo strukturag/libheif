@@ -184,4 +184,10 @@ Result<bool> find_max_av1_frame_size_in_stream(const uint8_t* data, size_t dataS
                                                uint32_t* out_max_width, uint32_t* out_max_height,
                                                uint32_t* out_frame_count = nullptr);
 
+// Scan an explicitly-sized AV1 OBU stream for every OBU_SEQUENCE_HEADER and
+// return an error when one of them codes another chroma format or bit depth
+// than `config`, the av1C configuration, or cannot be parsed.
+Error check_av1_sequence_header_format(const uint8_t* data, size_t dataSize,
+                                       const Box_av1C::configuration& config);
+
 #endif

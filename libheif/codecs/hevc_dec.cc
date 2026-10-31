@@ -102,6 +102,44 @@ Result<std::optional<ImageSize>> Decoder_HEVC::get_max_coded_image_size(const st
 }
 
 
+Error Decoder_HEVC::check_coded_image_format(const std::vector<uint8_t>& compressed_data,
+                                             size_t /*configuration_data_size*/) const
+{
+  // Every SPS, in hvcC and in the item data, has to code the chroma format and the
+  // bit depths of the hvcC configuration. get_max_coded_image_size() has parsed each
+  // of them before. A monochrome stream has no chroma planes, so its chroma bit depth
+  // is not compared.
+  const HEVCDecoderConfigurationRecord& config = m_hvcC->get_configuration();
+
+  for (const auto& nal : split_nal_units_4byte_length_prefixed(compressed_data.data(), compressed_data.size())) {
+    const uint8_t* nal_data = nal.first;
+    size_t nal_size = nal.second;
+
+    if (nal_size < 2 || ((nal_data[0] >> 1) & 0x3F) != HEVC_NAL_UNIT_SPS_NUT) {
+      continue;
+    }
+
+    HEVCDecoderConfigurationRecord sps = config;
+    uint32_t cropped_w = 0, cropped_h = 0;
+    Error e = parse_sps_for_hvcC_configuration(nal_data, nal_size, &sps,
+                                               &cropped_w, &cropped_h, nullptr);
+    if (e) {
+      return e;
+    }
+
+    if (sps.chroma_format != config.chroma_format ||
+        sps.bit_depth_luma != config.bit_depth_luma ||
+        (sps.chroma_format != 0 && sps.bit_depth_chroma != config.bit_depth_chroma)) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "HEVC stream was rejected because an SPS codes another chroma format or bit depth than the hvcC configuration."};
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Result<uint32_t> Decoder_HEVC::get_number_of_coded_pictures(const std::vector<uint8_t>& compressed_data,
                                                              size_t) const
 {

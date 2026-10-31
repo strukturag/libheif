@@ -156,6 +156,22 @@ public:
     return get_max_coded_image_size(compressed_data);
   }
 
+  // Check that every parameter set in `compressed_data` (the SPS for HEVC, the
+  // Sequence Header OBU for AV1), in the configuration data and in the item data
+  // alike, codes the chroma format and the bit depths of the codec configuration
+  // record ('hvcC', 'av1C'). The image handle reports those of the configuration
+  // record, and get_max_coded_image_size() bounds only the picture size, but the
+  // decoder allocates its pictures in the chroma format and the bit depth of the
+  // bitstream: a 4:4:4 stream of more than 8 bits behind a record for 8-bit 4:2:0
+  // makes it allocate four times the sample storage that the file announces.
+  // Codecs that do not override this are not checked.
+  [[nodiscard]] virtual Error
+  check_coded_image_format(const std::vector<uint8_t>& /*compressed_data*/,
+                           size_t /*configuration_data_size*/) const
+  {
+    return Error::Ok;
+  }
+
   // Count coded pictures in the exact buffer sent to the plugin, including
   // configuration data. One call covers one image item (or grid tile) or one
   // sequence sample. Codecs with no multi-picture bitstream return zero.
