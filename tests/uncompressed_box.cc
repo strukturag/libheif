@@ -133,12 +133,14 @@ TEST_CASE("uncompressed odd-sized tiles do not write outside the logical planes"
 }
 
 
-TEST_CASE("uncompressed mixed interleave places odd-sized tiles on the global chroma grid")
+TEST_CASE("uncompressed interleave places odd-sized tiles on the global chroma grid")
 {
+    const auto interleave = GENERATE(interleave_mode_component, interleave_mode_tile_component, interleave_mode_mixed);
     const auto sampling = GENERATE(sampling_mode_420, sampling_mode_422);
+    const uint32_t tiles = GENERATE(2U, 3U);
     const uint16_t bit_depth = GENERATE(uint16_t{8}, uint16_t{12}, uint16_t{16});
     const uint8_t alignment = GENERATE(uint8_t{0}, uint8_t{2});
-    CAPTURE(sampling, bit_depth, alignment);
+    CAPTURE(interleave, sampling, tiles, bit_depth, alignment);
     auto cmpd = std::make_shared<Box_cmpd>();
     auto uncC = std::make_shared<Box_uncC>();
     // Put luma after chroma so incorrect chroma consumption also corrupts luma.
@@ -152,25 +154,30 @@ TEST_CASE("uncompressed mixed interleave places odd-sized tiles on the global ch
         uncC->add_component(component);
     }
     uncC->set_sampling_type(sampling);
-    uncC->set_interleave_type(interleave_mode_mixed);
-    uncC->set_number_of_tile_columns(2);
-    uncC->set_number_of_tile_rows(2);
+    uncC->set_interleave_type(interleave);
+    uncC->set_number_of_tile_columns(tiles);
+    uncC->set_number_of_tile_rows(tiles);
     uncC->set_row_align_size(4);
     UncompressedImageCodec::unci_properties properties;
     properties.cmpd = cmpd;
     properties.uncC = uncC;
     std::vector<uint32_t> component_ids;
-    auto image_result = UncompressedImageCodec::create_image(properties, 6, 6, component_ids, nullptr);
+    auto image_result = UncompressedImageCodec::create_image(properties, tiles * 3, tiles * 3, component_ids, nullptr);
     REQUIRE(image_result);
     auto image = *image_result;
-    auto decoder_result = unc_decoder_factory::get_unc_decoder(6, 6, cmpd, uncC, component_ids);
+    auto decoder_result = unc_decoder_factory::get_unc_decoder(tiles * 3, tiles * 3, cmpd, uncC, component_ids);
     REQUIRE(decoder_result);
     auto& decoder = *decoder_result;
     decoder->ensure_channel_list(image);
-    for (uint32_t tile_y = 0; tile_y < 2; tile_y++) {
-        for (uint32_t tile_x = 0; tile_x < 2; tile_x++) {
+    for (uint32_t tile_y = 0; tile_y < tiles; tile_y++) {
+        for (uint32_t tile_x = 0; tile_x < tiles; tile_x++) {
             BitWriter writer;
-            for (bool chroma : {true, false}) {
+            for (uint32_t component : {2U, 3U, 1U}) {
+                if (interleave == interleave_mode_mixed && component == 3) {
+                    continue;
+                }
+                const bool chroma = component != 1;
+                const uint32_t component_count = chroma && interleave == interleave_mode_mixed ? 2 : 1;
                 const uint32_t x0 = chroma ? tile_x * 3 / 2 : tile_x * 3;
                 const uint32_t y0 = chroma && sampling == sampling_mode_420 ? tile_y * 3 / 2 : tile_y * 3;
                 const uint32_t width = chroma ? 2 : 3;
@@ -178,7 +185,7 @@ TEST_CASE("uncompressed mixed interleave places odd-sized tiles on the global ch
                 for (uint32_t y = 0; y < height; y++) {
                     const int row_start = writer.get_current_byte_index();
                     for (uint32_t x = 0; x < width; x++) {
-                        for (uint32_t type = chroma ? 2 : 1; type <= (chroma ? 3 : 1); type++) {
+                        for (uint32_t type = component; type < component + component_count; type++) {
                             if (alignment != 0) {
                                 writer.skip_to_byte_boundary();
                                 writer.write_bits(0, alignment * 8 - bit_depth);
