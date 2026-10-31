@@ -85,7 +85,7 @@ EM_JS(emscripten::EM_VAL, decode_with_browser_hevc, (const char *codec_ptr, uint
         returnedError = true;
 
         console.error(err);
-        callback({'error': err.stack});
+        callback(Emval.toHandle({'error': err.stack || String(err)}));
       }
     }
 
@@ -517,12 +517,21 @@ static struct heif_error convert_nv12_to_heif_image(
 static std::string get_hevc_codec_string(const HEVCDecoderConfigurationRecord& config) {
   std::string codec_string = "hvc1.";
 
+  if (config.general_profile_space != 0) {
+    codec_string += char('A' + config.general_profile_space - 1);
+  }
+
   // Profile IDC
   codec_string += std::to_string(config.general_profile_idc);
   codec_string += ".";
 
   // Profile Compatibility Flags
-  uint32_t profile_compatibility_flags = config.general_profile_compatibility_flags;
+  uint32_t profile_compatibility_flags = 0;
+  for (int i = 0; i < 32; ++i) {
+    if (config.get_general_profile_compatibility_flag(i)) {
+      profile_compatibility_flags |= (uint32_t{1} << i);
+    }
+  }
   char buffer[9];
   snprintf(buffer, sizeof(buffer), "%X", profile_compatibility_flags);
   codec_string += buffer;
@@ -531,7 +540,6 @@ static std::string get_hevc_codec_string(const HEVCDecoderConfigurationRecord& c
   // Tier and Level
   codec_string += (config.general_tier_flag ? "H" : "L");
   codec_string += std::to_string(config.general_level_idc);
-  codec_string += ".";
 
   // Constraint Indicator Flags
   uint64_t constraint_flags = 0;
@@ -540,9 +548,13 @@ static std::string get_hevc_codec_string(const HEVCDecoderConfigurationRecord& c
       constraint_flags |= (1ULL << (47 - i));
     }
   }
-  snprintf(buffer, sizeof(buffer), "%06X",
-           (unsigned int)(constraint_flags >> 24));
-  codec_string += buffer;
+  for (int shift = 40; shift >= 0 && constraint_flags != 0; shift -= 8) {
+    snprintf(buffer, sizeof(buffer), "%02X",
+             (unsigned int)((constraint_flags >> shift) & 0xFF));
+    codec_string += ".";
+    codec_string += buffer;
+    constraint_flags &= ~(uint64_t{0xFF} << shift);
+  }
 
   return codec_string;
 }
@@ -834,25 +846,30 @@ static struct heif_error webcodecs_decode_image_with_limits(void* decoder_raw,
     err = heif_image_create(width,
                             height,
                             heif_colorspace_RGB,
-                            heif_chroma_interleaved_RGBA,
+                            heif_chroma_444,
                             out_img);
     if (err.code) {
       return err;
     }
 
-    err = heif_image_add_plane_safe(*out_img, heif_channel_interleaved, width, height, 8, limits);
-    if (err.code) {
-      heif_image_release(*out_img);
-      return err;
-    }
+    // Keep the decoder output planar; libheif may transform it before packing RGBA.
+    const heif_channel channels[] = {heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha};
+    for (int c = 0; c < 4; ++c) {
+      err = heif_image_add_plane_safe(*out_img, channels[c], width, height, 8, limits);
+      if (err.code) {
+        heif_image_release(*out_img);
+        *out_img = nullptr;
+        return err;
+      }
 
-    int stride;
-    uint8_t* dst = heif_image_get_plane(*out_img, heif_channel_interleaved, &stride);
-
-    for (int i = 0; i < height; ++i) {
-      memcpy(dst + i * stride,
-             buffer.get() + rgba_offset + i * rgba_src_stride,
-             width * 4);
+      size_t stride;
+      uint8_t* dst = heif_image_get_plane2(*out_img, channels[c], &stride);
+      for (int y = 0; y < height; ++y) {
+        const uint8_t* src = buffer.get() + rgba_offset + size_t(y) * rgba_src_stride;
+        for (int x = 0; x < width; ++x) {
+          dst[size_t(y) * stride + x] = src[size_t(x) * 4 + c];
+        }
+      }
     }
 
     return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};

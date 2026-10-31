@@ -192,6 +192,12 @@ Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif
   auto decodeResult = UncompressedImageCodec::decode_uncompressed_image(properties,
                                                           get_data_extent(),
                                                           limits);
+  if (!decodeResult) {
+    return decodeResult.error();
+  }
+  if (Error error = validate_decoded_image(**decodeResult)) {
+    return error;
+  }
   return decodeResult;
 }
 

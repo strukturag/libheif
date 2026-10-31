@@ -679,6 +679,18 @@ Error Decoder::flush_decoder()
   return {};
 }
 
+Error Decoder::validate_decoded_image(const HeifPixelImage& image)
+{
+  if (num_interleaved_components_per_plane(image.get_chroma_format()) > 1 ||
+      image.has_channel(heif_channel_interleaved)) {
+    return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified,
+            "Decoder returned an interleaved image; planar output is required"};
+  }
+
+  return Error::Ok;
+}
+
+
 Result<std::shared_ptr<HeifPixelImage> > Decoder::get_decoded_frame(const heif_decoding_options& options,
                                                                     uintptr_t* out_user_data,
                                                                     const heif_security_limits* limits)
@@ -731,6 +743,10 @@ Result<std::shared_ptr<HeifPixelImage> > Decoder::get_decoded_frame(const heif_d
 
   std::shared_ptr<HeifPixelImage> img = std::move(decoded_img->image);
   heif_image_release(decoded_img);
+
+  if (Error error = validate_decoded_image(*img)) {
+    return error;
+  }
 
   return img;
 }

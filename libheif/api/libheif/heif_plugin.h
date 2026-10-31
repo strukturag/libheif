@@ -117,6 +117,12 @@ typedef struct heif_decoder_plugin
 
   // --- After pushing the data into the decoder, the decode functions may be called only once.
 
+  // All decode callbacks (decode_image, decode_next_image and decode_next_image2) must
+  // return planar images on success: separate Y/Cb/Cr or R/G/B planes, or monochrome.
+  // Alpha, when present, must be a separate plane. Interleaved chroma formats and
+  // heif_channel_interleaved are not allowed, even when requested by the application;
+  // libheif converts to the requested output format after image transformations.
+
   heif_error (* decode_image)(void* decoder, heif_image** out_img);
 
 
@@ -142,6 +148,8 @@ typedef struct heif_decoder_plugin
 
   // --- version 4 functions ---
 
+  // The planar-output requirement above also applies here. A successful NULL output
+  // is allowed when the decoder has no frame ready.
   heif_error (* decode_next_image)(void* decoder, heif_image** out_img,
                                    const heif_security_limits* limits);
 
@@ -161,6 +169,7 @@ typedef struct heif_decoder_plugin
 
   heif_error (* flush_data)(void* decoder);
 
+  // Same planar-output and NULL-output requirements as decode_next_image.
   heif_error (* decode_next_image2)(void* decoder, heif_image** out_img,
                                     uintptr_t* out_user_data,
                                     const heif_security_limits* limits);
