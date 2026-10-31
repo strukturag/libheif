@@ -84,7 +84,6 @@ endif ()
 
 
 if (WITH_EXAMPLE_GIMI)
-    message(STATUS "Building example heif-gimi!!!")
     add_executable(heif-gimi ${getopt_sources}
             gimi.cc
             common.cc

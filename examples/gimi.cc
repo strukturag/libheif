@@ -38,16 +38,9 @@ heif_context* build_heif_context() {
   return ctx;
 }
 
-static void write_gimi_image(const char* output_name) {
-  // TODO
-}
+heif_track* build_heif_track(heif_context* ctx, heif_track_options* track_options) {
 
-static void read_gimi_image(const char* input_name) {
-  // TODO
-}
-
-void write_gimi_video(const char* output_name) {
-  heif_context* ctx = build_heif_context();
+  heif_error err;
   const uint16_t width = 640;
   const uint16_t height = 512;
   heif_compression_format compression_format = heif_compression_uncompressed;
@@ -55,56 +48,28 @@ void write_gimi_video(const char* output_name) {
   const int num_frames = 10;
   const float frame_rate = 30.0;
   const uint32_t track_timescale = 90000;
-
-  heif_encoder* encoder = nullptr;
-  heif_error err;
+  heif_track* track = nullptr;
+  heif_sequence_encoding_options* encoding_options = heif_sequence_encoding_options_alloc();
 
   // Verify Codec Support
   if (!heif_have_encoder_for_format(compression_format)) {
     std::string codec_name = "TODO";
     std::cerr << "Error: Support for the " << codec_name << " codec is not available."
               << std::endl;
-    return;
+    return nullptr;
   }
 
   // Get Encoder
+  heif_encoder* encoder = nullptr;
   err = heif_context_get_encoder_for_format(ctx, compression_format, &encoder);
   if (err.code != heif_error_Ok || !encoder) {
     std::cerr << "Error: Failed to get encoder for format." << std::endl;
     heif_context_free(ctx);
-    return;
+    return nullptr;
   }
   heif_encoder_set_lossless(encoder, true);
 
-  // Security Markings
-  // TODO
-
-  // Add Brands
-  heif_context_add_compatible_brand(ctx, heif_fourcc_to_brand("geo1"));
-  heif_context_add_compatible_brand(ctx, heif_fourcc_to_brand("sm01"));
-
-  // Setup Track/Track Options
-  heif_track_options* track_options = heif_track_options_alloc();
-  // heif_track_options_set_interleaved_sample_aux_infos(track_options,1);
-
-  const heif_sample_aux_info_presence aux_info_presence = heif_sample_aux_info_presence_mandatory;
-
-  // Timestamp
-  heif_tai_clock_info* tai_clock_info = heif_tai_clock_info_alloc();
-  heif_track_options_enable_sample_tai_timestamps(track_options, tai_clock_info, aux_info_presence);
-  heif_track_options_set_timescale(track_options, track_timescale);
-
-  // Content IDs
-  heif_track_options_enable_sample_gimi_content_ids(track_options, aux_info_presence);
-  const char* gimi_track_id = "TODO";
-  heif_track_options_set_gimi_track_id(track_options, gimi_track_id);
-
-  // Add video track to the HEIF context
-  heif_sequence_encoding_options* encoding_options = heif_sequence_encoding_options_alloc();
-  heif_track* track = nullptr;
-  err = heif_context_add_visual_sequence_track(
-      ctx, width, height, heif_track_type_video, track_options,
-      encoding_options, &track);
+  err = heif_context_add_visual_sequence_track(ctx, width, height, heif_track_type_video, track_options, encoding_options, &track);
   if (err.code != heif_error_Ok || !track) {
     std::cerr << "Error adding visual sequence track: " << err.message
               << std::endl;
@@ -112,8 +77,10 @@ void write_gimi_video(const char* output_name) {
     heif_sequence_encoding_options_release(encoding_options);
     heif_encoder_release(encoder);
     heif_context_free(ctx);
-    return;
+    return nullptr;
   }
+
+  heif_track_options_set_timescale(track_options, track_timescale);
 
   // Loop through and write frames to the file
   for (int i = 0; i < num_frames; i++) {
@@ -136,7 +103,7 @@ void write_gimi_video(const char* output_name) {
     }
 
     // 4. Add SAI Metadata
-    std::string content_id = "frame_" + std::to_string(i);
+    std::string content_id = "TODO";
 
     heif_image_set_gimi_sample_content_id(image, content_id.c_str());
 
@@ -158,6 +125,53 @@ void write_gimi_video(const char* output_name) {
   }
   heif_track_encode_end_of_sequence(track, encoder);
 
+  return track;
+}
+
+static void write_gimi_image(const char* output_name) {
+  // TODO
+}
+
+static void read_gimi_image(const char* input_name) {
+  // TODO
+}
+
+void write_gimi_video(const char* output_name) {
+  heif_context* ctx = build_heif_context();
+
+  // Security Markings
+  // TODO
+
+  // Add Brands
+  heif_context_add_compatible_brand(ctx, heif_fourcc_to_brand("geo1"));
+  heif_context_add_compatible_brand(ctx, heif_fourcc_to_brand("sm01"));
+
+  // Setup Track/Track Options
+  heif_track_options* track_options = heif_track_options_alloc();
+  // heif_track_options_set_interleaved_sample_aux_infos(track_options,1);
+
+  const heif_sample_aux_info_presence aux_info_presence = heif_sample_aux_info_presence_mandatory;
+
+  // Timestamp
+  heif_tai_clock_info* tai_clock_info = heif_tai_clock_info_alloc();
+  heif_track_options_enable_sample_tai_timestamps(track_options, tai_clock_info, aux_info_presence);
+
+  // Content IDs
+  heif_track_options_enable_sample_gimi_content_ids(track_options, aux_info_presence);
+  const char* gimi_track_id = "TODO";
+  heif_track_options_set_gimi_track_id(track_options, gimi_track_id);
+
+  heif_error err;
+
+  // Build Track
+  heif_track* track = build_heif_track(ctx, track_options);
+  if (!track) {
+    std::cerr << "Error: Failed to build HEIF track." << std::endl;
+    heif_track_options_release(track_options);
+    heif_context_free(ctx);
+    return;
+  }
+
   // Finalize
   err = heif_context_write_to_file(ctx, output_name);
   if (err.code != heif_error_Ok) {
@@ -168,8 +182,6 @@ void write_gimi_video(const char* output_name) {
   }
 
   heif_track_options_release(track_options);
-  heif_sequence_encoding_options_release(encoding_options);
-  heif_encoder_release(encoder);
   heif_context_free(ctx);
   return;
 }
