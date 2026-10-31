@@ -83,6 +83,16 @@ if (ENABLE_EXPERIMENTAL_FEATURES)
 endif ()
 
 
+if (WITH_EXAMPLE_GIMI)
+    message(STATUS "Building example heif-gimi!!!")
+    add_executable(heif-gimi ${getopt_sources}
+            gimi.cc
+            common.cc
+            common.h)
+    target_link_libraries(heif-gimi PRIVATE heif)
+endif()
+
+
 if (BUILD_DEVELOPMENT_TOOLS AND PNG_FOUND)
     add_executable(heif-gen-bayer
             heif_gen_bayer.cc)
