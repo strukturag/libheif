@@ -1924,7 +1924,10 @@ Error Box_iloc::read_data(heif_item_id item_id,
 
         std::stringstream sstr;
         sstr << "Extent in iloc box references data outside of file bounds "
-             << "(points to file position " << extent.offset + item->base_offset << ")\n";
+             << "(item " << item->item_ID
+             << " needs data up to file position " << extent.offset + item->base_offset + extent.length
+             << ", but only " << istr->get_available_size()
+             << " bytes are available; the file may be truncated or still being written)";
 
         return {heif_error_Invalid_input,
                 heif_suberror_End_of_data,
