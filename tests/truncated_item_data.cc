@@ -34,6 +34,7 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,12 +61,14 @@ std::vector<uint8_t> load_fixture()
 }
 
 
-std::string expected_message(heif_item_id item_id, uint64_t needed_end, uint64_t available)
+std::string expected_message(heif_item_id item_id, uint64_t needed_end, std::optional<uint64_t> available)
 {
-  return "Invalid input: Unexpected end of file: Extent in iloc box references data outside of file bounds (item " +
-         std::to_string(item_id) + " needs data up to file position " + std::to_string(needed_end) +
-         ", but only " + std::to_string(available) +
-         " bytes are available; the file may be truncated or still being written)";
+  std::string msg = "Invalid input: Unexpected end of file: Extent in iloc box references data outside of file bounds (item " +
+                    std::to_string(item_id) + " needs data up to file position " + std::to_string(needed_end);
+  if (available) {
+    msg += ", but only " + std::to_string(*available) + " bytes are available";
+  }
+  return msg + "; the file may be truncated or still being written)";
 }
 
 
@@ -90,7 +93,7 @@ ItemReadResult read_item(heif_context* ctx, heif_item_id id)
 }
 
 
-void check_truncation_error(const ItemReadResult& result, heif_item_id item_id, uint64_t needed_end, uint64_t available)
+void check_truncation_error(const ItemReadResult& result, heif_item_id item_id, uint64_t needed_end, std::optional<uint64_t> available)
 {
   INFO("message: " << result.message);
   CHECK(result.code == heif_error_Invalid_input);
@@ -101,12 +104,13 @@ void check_truncation_error(const ItemReadResult& result, heif_item_id item_id, 
 }
 
 
-// A version-2 heif_reader on a memory buffer that counts request_range() calls.
+// A version-2 heif_reader on a memory buffer that counts request_range() and wait_for_file_size() calls.
 struct CountingReader
 {
   const std::vector<uint8_t>* data = nullptr;
   int64_t position = 0;
   int request_range_calls = 0;
+  int wait_for_file_size_calls = 0;
 };
 
 int64_t reader_get_position(void* userdata)
@@ -141,6 +145,7 @@ int reader_seek(int64_t position, void* userdata)
 heif_reader_grow_status reader_wait_for_file_size(int64_t target_size, void* userdata)
 {
   auto* reader = static_cast<CountingReader*>(userdata);
+  reader->wait_for_file_size_calls++;
   return (target_size <= static_cast<int64_t>(reader->data->size()))
              ? heif_reader_grow_status_size_reached
              : heif_reader_grow_status_size_beyond_eof;
@@ -246,25 +251,11 @@ TEST_CASE("truncated file input reports item, needed end and available size")
 }
 
 
-TEST_CASE("truncated version-2 reader input matches memory input and fetches nothing")
+TEST_CASE("truncated version-2 reader input reports item and needed end without probing the size")
 {
   const std::vector<uint8_t> file = load_fixture();
   const size_t truncated_size = 5000;
   const std::vector<uint8_t> truncated(file.begin(), file.begin() + truncated_size);
-
-  std::string memory_message;
-  {
-    heif_context* ctx = heif_context_alloc();
-    REQUIRE(ctx != nullptr);
-    heif_error err = heif_context_read_from_memory_without_copy(ctx, truncated.data(), truncated.size(), nullptr);
-    REQUIRE(err.code == heif_error_Ok);
-
-    ItemReadResult result = read_item(ctx, mime_item);
-    check_truncation_error(result, mime_item, mime_item_end, truncated_size);
-    memory_message = result.message;
-
-    heif_context_free(ctx);
-  }
 
   heif_reader reader_api = make_counting_reader_api();
   CountingReader reader;
@@ -276,10 +267,11 @@ TEST_CASE("truncated version-2 reader input matches memory input and fetches not
   REQUIRE(err.code == heif_error_Ok);
 
   reader.request_range_calls = 0;
-  ItemReadResult result = read_item(ctx, mime_item);
-  check_truncation_error(result, mime_item, mime_item_end, truncated_size);
-  CHECK(result.message == memory_message);
+  reader.wait_for_file_size_calls = 0;
+  check_truncation_error(read_item(ctx, mime_item), mime_item, mime_item_end, std::nullopt);
   CHECK(reader.request_range_calls == 0);
+  // only the bounds check itself, no size probing for the message
+  CHECK(reader.wait_for_file_size_calls == 1);
 
   ItemReadResult hevc = read_item(ctx, hevc_item);
   CHECK(hevc.code == heif_error_Ok);
