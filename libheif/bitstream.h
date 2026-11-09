@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <limits>
+#include <optional>
 #include <istream>
 #include <string>
 #include <cassert>
@@ -52,6 +53,10 @@ public:
 
   // a StreamReader can maintain a timeout for waiting for new data
   virtual grow_status wait_for_file_size(uint64_t target_size) = 0;
+
+  // Number of input bytes available right now, or nullopt if the reader can't tell without fetching data.
+  // Must not fetch data or change the reader's error state.
+  virtual std::optional<uint64_t> get_available_size() = 0;
 
   // returns 'false' when we read out of the available file size
   virtual bool read(void* data, size_t size) = 0;
@@ -97,6 +102,8 @@ public:
 
   grow_status wait_for_file_size(uint64_t target_size) override;
 
+  std::optional<uint64_t> get_available_size() override { return m_length; }
+
   bool read(void* data, size_t size) override;
 
   bool seek(uint64_t position) override;
@@ -131,6 +138,8 @@ public:
 
   grow_status wait_for_file_size(uint64_t target_size) override;
 
+  std::optional<uint64_t> get_available_size() override { return m_length; }
+
   bool read(void* data, size_t size) override;
 
   bool seek(uint64_t position) override;
@@ -158,6 +167,9 @@ public:
   uint64_t get_position() const override { return m_func_table->get_position(m_userdata); }
 
   StreamReader::grow_status wait_for_file_size(uint64_t target_size) override;
+
+  // no size query in the reader API, and probing wait_for_file_size() can block on a download
+  std::optional<uint64_t> get_available_size() override { return std::nullopt; }
 
   bool read(void* data, size_t size) override
   {
