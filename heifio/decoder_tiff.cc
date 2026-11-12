@@ -354,6 +354,36 @@ static heif_chroma get_heif_chroma(uint16_t outSpp, int output_bit_depth)
 }
 
 
+
+// libtiff returns packed samples for bit depths that are not a multiple of 8.
+// TIFFScanlineSize() is ceil(width * bps / 8) and does not expand 9-15 bit
+// values to 16-bit words.
+static uint16_t packed_uint_sample(const uint8_t* buf, uint32_t index, uint16_t bps)
+{
+  if (bps == 16) {
+    uint16_t v;
+    memcpy(&v, buf + (size_t)index * 2, sizeof(v));
+    return v;
+  }
+  uint32_t bitpos = (uint32_t)index * bps;
+  uint32_t v = 0;
+  for (uint16_t i = 0; i < bps; i++) {
+    uint32_t pos = bitpos + i;
+    v = (v << 1) | ((buf[pos >> 3] >> (7 - (pos & 7))) & 1u);
+  }
+  return static_cast<uint16_t>(v);
+}
+
+static int16_t packed_int_sample(const uint8_t* buf, uint32_t index, uint16_t bps)
+{
+  uint16_t u = packed_uint_sample(buf, index, bps);
+  if (bps < 16 && (u & (uint16_t)(1u << (bps - 1)))) {
+    u |= (uint16_t)(0xFFFFu << bps);
+  }
+  return static_cast<int16_t>(u);
+}
+
+
 heif_error getImageWidthAndHeight(TIFF *tif, uint32_t &width, uint32_t &height)
 {
   if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width) ||
@@ -415,10 +445,10 @@ heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **
           *image = nullptr;
           return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
         }
-        uint16_t* src = static_cast<uint16_t*>(buf);
+        const uint8_t* src = static_cast<const uint8_t*>(buf);
         uint8_t* dst = py + row * y_stride;
         for (uint32_t x = 0; x < width; x++) {
-          dst[x] = static_cast<uint8_t>(src[x] >> (bps - 8));
+          dst[x] = static_cast<uint8_t>(packed_uint_sample(src, x, bps) >> (bps - 8));
         }
       }
     }
@@ -430,10 +460,10 @@ heif_error readMono(TIFF *tif, uint16_t bps, int output_bit_depth, heif_image **
           *image = nullptr;
           return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
         }
-        uint16_t* src = static_cast<uint16_t*>(buf);
+        const uint8_t* src = static_cast<const uint8_t*>(buf);
         uint16_t* dst = reinterpret_cast<uint16_t*>(py + row * y_stride);
         for (uint32_t x = 0; x < width; x++) {
-          dst[x] = static_cast<uint16_t>(src[x] >> bdShift);
+          dst[x] = static_cast<uint16_t>(packed_uint_sample(src, x, bps) >> bdShift);
         }
       }
     }
@@ -824,7 +854,16 @@ static heif_error readMonoSignedInt(TIFF* tif, uint16_t bps, heif_image** image)
       *image = nullptr;
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "Failed to read TIFF scanline"};
     }
-    memcpy(plane + row * row_bytes, buf, width * bytesPerSample);
+    if (bps % 8 == 0) {
+      memcpy(plane + row * row_bytes, buf, width * bytesPerSample);
+    }
+    else {
+      int16_t* dst = reinterpret_cast<int16_t*>(plane + row * row_bytes);
+      const uint8_t* src = static_cast<const uint8_t*>(buf);
+      for (uint32_t x = 0; x < width; x++) {
+        dst[x] = packed_int_sample(src, x, bps);
+      }
+    }
   }
   _TIFFfree(buf);
 
