@@ -24,6 +24,11 @@
 #include "nclx.h"
 #include "common_utils.h"
 
+#if defined(__aarch64__) || defined(_M_ARM64)
+#include <arm_neon.h>
+#define HEIF_YUV2RGB_NEON 1
+#endif
+
 
 template<class Pixel>
 std::vector<ColorStateWithCost>
@@ -541,7 +546,55 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   uint32_t x, y;
   for (y = 0; y < height; y++) {
-    for (x = 0; x < width; x++) {
+    x = 0;
+
+#if HEIF_YUV2RGB_NEON
+    // 16 pixels per step, bit-identical to the scalar loop below: vrshrq_n_s32(v, 8)
+    // is (v + 128) >> 8 and vqmovun_s16 is clip_int_u8. The scalar loop takes the tail.
+    {
+      const uint8_t* row_y = in_y + y * in_y_stride;
+      const uint8_t* row_cb = in_cb + y / 2 * in_cb_stride;
+      const uint8_t* row_cr = in_cr + y / 2 * in_cr_stride;
+      const uint8_t* row_a = with_alpha ? in_a + y * in_a_stride : nullptr;
+      uint8_t* row_out = out_p + y * out_p_stride;
+      const uint8x16_t opaque = vdupq_n_u8(0xFF);
+      const int16x8_t bias = vdupq_n_s16(128);
+
+      for (; x + 16 <= width; x += 16) {
+        const int16x8_t cb = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vld1_u8(row_cb + x / 2))), bias);
+        const int16x8_t cr = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vld1_u8(row_cr + x / 2))), bias);
+
+        const int16x8_t r_off = vcombine_s16(
+            vmovn_s32(vrshrq_n_s32(vmull_n_s16(vget_low_s16(cr), static_cast<int16_t>(r_cr)), 8)),
+            vmovn_s32(vrshrq_n_s32(vmull_n_s16(vget_high_s16(cr), static_cast<int16_t>(r_cr)), 8)));
+        const int16x8_t g_off = vcombine_s16(
+            vmovn_s32(vrshrq_n_s32(vmlal_n_s16(vmull_n_s16(vget_low_s16(cb), static_cast<int16_t>(g_cb)),
+                                               vget_low_s16(cr), static_cast<int16_t>(g_cr)), 8)),
+            vmovn_s32(vrshrq_n_s32(vmlal_n_s16(vmull_n_s16(vget_high_s16(cb), static_cast<int16_t>(g_cb)),
+                                               vget_high_s16(cr), static_cast<int16_t>(g_cr)), 8)));
+        const int16x8_t b_off = vcombine_s16(
+            vmovn_s32(vrshrq_n_s32(vmull_n_s16(vget_low_s16(cb), static_cast<int16_t>(b_cb)), 8)),
+            vmovn_s32(vrshrq_n_s32(vmull_n_s16(vget_high_s16(cb), static_cast<int16_t>(b_cb)), 8)));
+
+        // Each chroma sample covers two horizontal pixels.
+        const uint8x16_t yv = vld1q_u8(row_y + x);
+        const int16x8_t y_lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(yv)));
+        const int16x8_t y_hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(yv)));
+
+        uint8x16x4_t px;
+        px.val[0] = vcombine_u8(vqmovun_s16(vaddq_s16(y_lo, vzip1q_s16(r_off, r_off))),
+                                vqmovun_s16(vaddq_s16(y_hi, vzip2q_s16(r_off, r_off))));
+        px.val[1] = vcombine_u8(vqmovun_s16(vaddq_s16(y_lo, vzip1q_s16(g_off, g_off))),
+                                vqmovun_s16(vaddq_s16(y_hi, vzip2q_s16(g_off, g_off))));
+        px.val[2] = vcombine_u8(vqmovun_s16(vaddq_s16(y_lo, vzip1q_s16(b_off, b_off))),
+                                vqmovun_s16(vaddq_s16(y_hi, vzip2q_s16(b_off, b_off))));
+        px.val[3] = row_a ? vld1q_u8(row_a + x) : opaque;
+        vst4q_u8(row_out + 4 * x, px);
+      }
+    }
+#endif
+
+    for (; x < width; x++) {
 
       int yv = (in_y[y * in_y_stride + x]);
       int cb = (in_cb[y / 2 * in_cb_stride + x / 2] - 128);
