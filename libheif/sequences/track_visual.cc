@@ -20,6 +20,7 @@
 
 #include "track_visual.h"
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include "codecs/decoder.h"
@@ -312,6 +313,8 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
       // or finishing input. The next sample may belong to another decoder.
       const bool end_of_input = m_next_sample_to_be_decoded >= num_output_samples;
       const bool switching_decoder = decoder != m_active_decoder;
+      // Plugins that do not report per-frame user data leave this sentinel untouched.
+      decoded_sample_idx = UINTPTR_MAX;
       Result<std::shared_ptr<HeifPixelImage> > getFrameResult = m_active_decoder->get_decoded_frame(options,
                                                                                                     &decoded_sample_idx,
                                                                                                     m_heif_context->get_security_limits());
@@ -449,11 +452,17 @@ Result<std::shared_ptr<HeifPixelImage> > Track_Visual::decode_next_image_sample(
     image->set_pixel_ratio(h, v);
   }
 
+  // With frame reordering (e.g. HEVC B-frames), the output position in decoding order does
+  // not match the sample of the decoded frame. Prefer the sample index that the decoder
+  // passed through as user data and fall back to the output position if it is not available.
+  if (decoded_sample_idx >= m_num_samples) {
+    decoded_sample_idx = outputTiming.sampleIdx;
+  }
+
   if (m_stts) {
     // 'sample_idx_in_chunk' follows m_next_sample_to_be_decoded, which runs ahead of the output
-    // by the decoder latency. Look the duration up by the output position instead, like
-    // Track::get_next_sample_raw_data() does.
-    image->set_sample_duration(m_stts->get_sample_duration(outputTiming.sampleIdx));
+    // by the decoder latency. Look the duration up by the decoded sample instead.
+    image->set_sample_duration(m_stts->get_sample_duration(static_cast<uint32_t>(decoded_sample_idx)));
   }
 
   // --- assign alpha if we have an assigned alpha track
