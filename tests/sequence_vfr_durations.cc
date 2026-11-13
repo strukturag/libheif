@@ -91,6 +91,14 @@ std::vector<uint8_t> encode_vfr_sequence(const std::vector<uint32_t>& durations,
   REQUIRE(heif_context_get_encoder_for_format(ctx, format, &encoder).code == heif_error_Ok);
   REQUIRE(encoder != nullptr);
 
+  if (reordered && std::string(heif_encoder_get_name(encoder)).find("x265") != std::string::npos) {
+    // The test images change brightness a lot between frames, so x265 would insert a
+    // keyframe (scene cut) or choose a P-frame instead of a B-frame. Force a B-frame
+    // so that the decoder has to reorder the output.
+    REQUIRE(heif_encoder_set_parameter(encoder, "x265:b-adapt", "0").code == heif_error_Ok);
+    REQUIRE(heif_encoder_set_parameter(encoder, "x265:scenecut", "0").code == heif_error_Ok);
+  }
+
   heif_track* track = nullptr;
   heif_error err = heif_context_add_visual_sequence_track(ctx, (uint16_t) WIDTH, (uint16_t) HEIGHT,
                                                           heif_track_type_image_sequence,

@@ -46,6 +46,10 @@ struct NALUnit {
 struct webcodecs_decoder
 {
   std::queue<NALUnit> data_queue;
+
+  // User data of the last pushed sample. Only the last VCL NAL unit is decoded,
+  // so the decoded image always belongs to this sample.
+  uintptr_t user_data = 0;
 };
 
 static const char kEmptyString[] = "";
@@ -883,7 +887,11 @@ static struct heif_error webcodecs_new_decoder2(void** dec, const heif_decoder_p
 
 static struct heif_error webcodecs_push_data2(void* decoder_raw, const void* data, size_t size, uintptr_t user_data)
 {
-  return webcodecs_push_data(decoder_raw, data, size);
+  heif_error err = webcodecs_push_data(decoder_raw, data, size);
+  if (err.code == heif_error_Ok) {
+    ((struct webcodecs_decoder*) decoder_raw)->user_data = user_data;
+  }
+  return err;
 }
 
 
@@ -907,7 +915,7 @@ static struct heif_error webcodecs_decode_next_image2(void* decoder_raw,
                                                       const heif_security_limits* limits)
 {
   if (out_user_data) {
-    *out_user_data = 0;
+    *out_user_data = ((struct webcodecs_decoder*) decoder_raw)->user_data;
   }
   return webcodecs_decode_image_with_limits(decoder_raw, out_img, limits);
 }
