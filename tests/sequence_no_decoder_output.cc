@@ -387,6 +387,7 @@ TEST_CASE("decoder latency may exceed the length of the repeated segment")
   for (int i = 0; i < 200; i++) {
     heif_image* img = nullptr;
     err = heif_track_decode_next_image(track, &img, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+    REQUIRE(err.message != nullptr);
     INFO("error: " << err.message << ", subcode: " << err.subcode << ", pushed: " << mock_num_pushed);
     REQUIRE(err.code == heif_error_Ok);
     REQUIRE(img != nullptr);
