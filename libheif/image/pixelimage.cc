@@ -1668,7 +1668,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
     heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
-                                                     nclx_profile(), // default, undefined
+                                                     get_color_profile_nclx_with_fallback(), // keep range and coefficients: only upsample the chroma
                                                      get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
@@ -1927,7 +1927,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
     heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
-                                                     nclx_profile(), // default, undefined
+                                                     get_color_profile_nclx_with_fallback(), // keep range and coefficients: only upsample the chroma
                                                      get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
     if (!converted_image_result) {
       return converted_image_result.error();
@@ -2022,7 +2022,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444,
-                                                     nclx_profile(), // default, undefined
+                                                     get_color_profile_nclx_with_fallback(), // keep range and coefficients: only upsample the chroma
                                                      get_bits_per_pixel(heif_channel_Y), options, nullptr, limits);
 
     if (!converted_image_result) {
