@@ -189,6 +189,9 @@ public:
   // See m_num_repetitions for the meaning of the return value.
   uint32_t get_number_of_repetitions() const { return m_num_repetitions; }
 
+  // Number of frames in one repetition.
+  uint32_t get_number_of_frames() const { return m_num_samples; }
+
   // Compute some parameters after all frames have been encoded (for example: track duration).
   virtual Error finalize_track();
 
