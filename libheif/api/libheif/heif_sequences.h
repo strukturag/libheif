@@ -194,6 +194,20 @@ uint32_t heif_track_get_timescale(const heif_track*);
 LIBHEIF_API
 uint32_t heif_track_get_number_of_repetitions(const heif_track*);
 
+/**
+ * Get the number of frames in one repetition of the track.
+ *
+ * This is the number of frames `heif_track_decode_next_image()` returns before
+ * `heif_error_End_of_sequence` when `heif_decoding_options::ignore_sequence_editlist`
+ * is set.
+ *
+ * See also `heif_track_get_number_of_repetitions()`.
+ *
+ * @return Number of frames, or 0 if the track has no samples.
+ */
+LIBHEIF_API
+uint32_t heif_track_get_number_of_frames(const heif_track*);
+
 
 // --- reading visual tracks
 
