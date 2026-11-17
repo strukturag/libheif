@@ -219,7 +219,7 @@ heif_error heif_track_decode_next_image(heif_track* track_ptr,
     *out_img = new heif_image();
     (*out_img)->image = std::move(img);
 
-    return {};
+    return heif_error_success;
   });
 }
 
