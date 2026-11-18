@@ -1194,6 +1194,39 @@ Error ImageItem::verify_decodable() const
 }
 
 
+// Some encoders write an odd clean-aperture size into 'ispe' (and an identical
+// 'clap'), although a 4:2:0 HEVC conformance window can only crop in steps of
+// two luma samples. The decoded frame is then one row and/or column larger than
+// 'ispe', e.g. 900x720 for an 'ispe' of 900x719. Returns true only for exactly
+// that shape: a YCbCr frame whose size is 'ispe' rounded up to the chroma
+// subsampling grid on at least one subsampled axis, and equal to it otherwise.
+static bool decoded_frame_rounds_odd_ispe_up_to_chroma_grid(const HeifPixelImage& img,
+                                                            uint32_t ispe_width, uint32_t ispe_height)
+{
+  if (ispe_width == 0 || ispe_height == 0 ||
+      img.get_colorspace() != heif_colorspace_YCbCr) {
+    return false;
+  }
+
+  const heif_chroma chroma = img.get_chroma_format();
+  const bool subsampled_x = (chroma == heif_chroma_420 || chroma == heif_chroma_422);
+  const bool subsampled_y = (chroma == heif_chroma_420);
+
+  auto axis_matches = [](uint32_t decoded, uint32_t signaled, bool subsampled) {
+    return decoded == signaled ||
+           (subsampled && (signaled % 2) == 1 && decoded == signaled + 1);
+  };
+
+  const uint32_t width = img.get_width();
+  const uint32_t height = img.get_height();
+
+  return (width != ispe_width || height != ispe_height) &&
+         axis_matches(width, ispe_width, subsampled_x) &&
+         axis_matches(height, ispe_height, subsampled_y) &&
+         img.primary_planes_have_size(width, height);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0,
                                                                 DecodeTraversalState decode_state,
@@ -1385,6 +1418,31 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const heif_decod
     return Error{heif_error_Invalid_input,
                  heif_suberror_Security_limit_exceeded,
                  "Too many pixels decoded for derived images (possible reference amplification)"};
+  }
+
+  // --- autocorrect a decoded frame that rounds an odd 'ispe' up to the chroma grid
+
+  if (!decode_coded_tile_only &&
+      options.version >= 9 && options.autocorrect_broken_input &&
+      decoded_frame_rounds_odd_ispe_up_to_chroma_grid(*img, get_ispe_width(), get_ispe_height())) {
+    const uint32_t ispe_width = get_ispe_width();
+    const uint32_t ispe_height = get_ispe_height();
+
+    std::stringstream msg;
+    msg << "Autocorrecting decoded image size " << img->get_width() << "x" << img->get_height()
+        << " to the signaled 'ispe' size " << ispe_width << "x" << ispe_height
+        << " (odd 'ispe' rounded up to the chroma grid by the coded frame)";
+
+    // Keep the top-left 'ispe' area, i.e. drop the extra last row/column.
+    auto cropResult = img->crop(0, ispe_width - 1, 0, ispe_height - 1, m_heif_context->get_security_limits());
+    if (!cropResult) {
+      return cropResult.error();
+    }
+    img = *cropResult;
+
+    add_decoding_warning(Error{heif_error_Invalid_input,
+                               heif_suberror_Invalid_image_size,
+                               msg.str()});
   }
 
   // --- validate the decoded image against the signaled size (pre-transform)

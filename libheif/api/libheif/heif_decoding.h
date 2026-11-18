@@ -132,7 +132,9 @@ typedef struct heif_decoding_options
 
   // If enabled, libheif will attempt to work around known broken-input quirks
   // (e.g. Sony HIF files where the NCLX `colr` box disagrees with the HEVC VUI
-  // on the YCbCr range flag). Default: false (strict spec-conformant behavior).
+  // on the YCbCr range flag, or files whose odd `ispe` size is one row/column
+  // smaller than the 4:2:0/4:2:2 coded frame, which is then cropped to `ispe`).
+  // Default: false (strict spec-conformant behavior).
   uint8_t autocorrect_broken_input;
 
   // version 10 options
