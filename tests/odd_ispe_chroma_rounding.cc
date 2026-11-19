@@ -30,8 +30,9 @@
 // extra last row/column. With autocorrect_broken_input, libheif does the same.
 //
 // The test encodes an odd-size image (libheif writes the conformant form:
-// 'ispe' with the even coded size plus a 'clap' with the odd size) and then
-// rewrites 'ispe' and 'clap' into the broken form.
+// 'ispe' with the even, padded frame size plus a 'clap' with the odd size) and
+// then rewrites 'ispe' and 'clap' into the broken form, relative to the frame
+// size that the encoder chose.
 
 #include "catch_amalgamated.hpp"
 #include "libheif/heif.h"
@@ -213,23 +214,26 @@ TEST_CASE("odd 'ispe' one row/column smaller than the 4:2:0 coded frame")
     SKIP("no HEVC encoder and decoder");
   }
 
+  // The encoder decides how far it pads the frame (x265: to the 4:2:0 grid,
+  // Kvazaar: to a multiple of 8), and libheif writes that frame size into
+  // 'ispe'. Decoding without transformations gives the frame size.
+  const std::vector<uint8_t> original = encode_image(451, 461);
+  const Decoded coded = decode(original, false, true);
+  REQUIRE(coded.code == heif_error_Ok);
+  const int coded_w = coded.width;
+  const int coded_h = coded.height;
+  REQUIRE(coded_w % 2 == 0);
+  REQUIRE(coded_h % 2 == 0);
+
   struct Size {
     int w, h;
   };
 
-  for (Size size : {Size{451, 461}, Size{451, 462}, Size{452, 461}}) {
-    INFO("size: " << size.w << "x" << size.h);
+  // one row and one column, one column only, one row only
+  for (Size size : {Size{coded_w - 1, coded_h - 1}, Size{coded_w - 1, coded_h}, Size{coded_w, coded_h - 1}}) {
+    INFO("frame: " << coded_w << "x" << coded_h << ", ispe: " << size.w << "x" << size.h);
 
-    std::vector<uint8_t> file = encode_image(size.w, size.h);
-
-    // The coded frame (as written by libheif: 'ispe' = coded frame size).
-    Decoded coded = decode(file, false, true);
-    REQUIRE(coded.code == heif_error_Ok);
-    const int coded_w = coded.width;
-    const int coded_h = coded.height;
-    REQUIRE(coded_w == size.w + (size.w % 2));
-    REQUIRE(coded_h == size.h + (size.h % 2));
-
+    std::vector<uint8_t> file = original;
     write_broken_size(file, size.w, size.h);
 
     // Without autocorrection, the size mismatch is an error.
@@ -265,15 +269,19 @@ TEST_CASE("autocorrection does not accept other size mismatches")
     SKIP("no HEVC encoder and decoder");
   }
 
-  std::vector<uint8_t> file = encode_image(451, 461);  // coded frame 452x462
+  const std::vector<uint8_t> file = encode_image(451, 461);
+  const Decoded coded = decode(file, false, true);
+  REQUIRE(coded.code == heif_error_Ok);
+  const uint32_t fw = static_cast<uint32_t>(coded.width);
+  const uint32_t fh = static_cast<uint32_t>(coded.height);
 
   // even 'ispe' (frame is larger, but not by the chroma rounding of an odd size),
-  // two rows/columns smaller, and larger than the frame
+  // three columns smaller, and larger than the frame
   struct Size {
     uint32_t w, h;
   };
-  for (Size size : {Size{450, 462}, Size{452, 460}, Size{449, 461}, Size{453, 463}}) {
-    INFO("ispe: " << size.w << "x" << size.h);
+  for (Size size : {Size{fw - 2, fh}, Size{fw, fh - 2}, Size{fw - 3, fh - 1}, Size{fw + 1, fh + 1}}) {
+    INFO("frame: " << fw << "x" << fh << ", ispe: " << size.w << "x" << size.h);
     std::vector<uint8_t> broken = file;
     write_broken_size(broken, size.w, size.h);
 
