@@ -288,6 +288,17 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
                  static_cast<uint32_t>(parameters->image_height));
   unci_image->add_property(ispe, true);
 
+  // Add the colour profile ('colr': ICC profile of the prototype image and/or the requested NCLX profile),
+  // exactly as ImageItem::encode_to_item() does for images that are encoded in one go.
+
+  auto colr_boxes = add_color_profile(std::const_pointer_cast<HeifPixelImage>(prototype),
+                                      *encoding_options,
+                                      heif_image_input_class_normal,
+                                      encoding_options->output_nclx_profile);
+  for (const auto& colr : colr_boxes) {
+    unci_image->add_color_profile_property(colr);
+  }
+
   if (parameters->compression != heif_unci_compression_off) {
     auto cmpC = std::make_shared<Box_cmpC>();
     cmpC->set_compression_type(unci_compression_to_fourcc(parameters->compression));

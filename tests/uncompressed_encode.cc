@@ -30,6 +30,7 @@
 #include "libheif/heif_uncompressed.h"
 #include "libheif/heif_tiling.h"
 #include <cstdint>
+#include <vector>
 #include <string.h>
 #include "test_utils.h"
 
@@ -1308,4 +1309,151 @@ TEST_CASE("Encoder rejects images without pixel planes")
 
     heif_image_release(image);
   }
+}
+
+
+// heif_context_add_empty_unci_image() used to write no 'colr' property, so the ICC profile of the
+// prototype image and an NCLX profile requested through heif_encoding_options::output_nclx_profile
+// were silently dropped for tiled images, while heif_context_encode_image() kept them.
+namespace {
+struct MemoryWriter {
+  std::vector<uint8_t> data;
+  static heif_error write(heif_context*, const void* d, size_t n, void* user) {
+    auto* self = static_cast<MemoryWriter*>(user);
+    self->data.insert(self->data.end(), static_cast<const uint8_t*>(d), static_cast<const uint8_t*>(d) + n);
+    return {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+  }
+};
+
+heif_image_handle* encode_tiled_rgb_to_handle(heif_context* write_ctx, heif_image* prototype, const heif_encoding_options* options)
+{
+  const int W = 32, H = 32, TW = 16, TH = 16;
+
+  heif_unci_image_parameters params{};
+  params.version = 1;
+  params.image_width = W;
+  params.image_height = H;
+  params.tile_width = TW;
+  params.tile_height = TH;
+  params.compression = heif_unci_compression_off;
+
+  heif_encoder* encoder;
+  REQUIRE(heif_context_get_encoder_for_format(write_ctx, heif_compression_uncompressed, &encoder).code == heif_error_Ok);
+
+  heif_image_handle* tiled;
+  REQUIRE(heif_context_add_empty_unci_image(write_ctx, &params, options, prototype, &tiled).code == heif_error_Ok);
+
+  for (uint32_t ty = 0; ty < 2; ty++) {
+    for (uint32_t tx = 0; tx < 2; tx++) {
+      heif_image* tile;
+      REQUIRE(heif_image_create(TW, TH, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &tile).code == heif_error_Ok);
+      REQUIRE(heif_image_add_plane(tile, heif_channel_interleaved, TW, TH, 8).code == heif_error_Ok);
+      int stride;
+      uint8_t* p = heif_image_get_plane(tile, heif_channel_interleaved, &stride);
+      for (int y = 0; y < TH; y++) {
+        memset(p + y * stride, 40 * (ty * 2 + tx) + y, TW * 3);
+      }
+      REQUIRE(heif_context_add_image_tile(write_ctx, tiled, tx, ty, tile, encoder).code == heif_error_Ok);
+      heif_image_release(tile);
+    }
+  }
+
+  heif_encoder_release(encoder);
+  return tiled;
+}
+
+heif_image* create_rgb_prototype()
+{
+  heif_image* image;
+  REQUIRE(heif_image_create(32, 32, heif_colorspace_RGB, heif_chroma_interleaved_RGB, &image).code == heif_error_Ok);
+  REQUIRE(heif_image_add_plane(image, heif_channel_interleaved, 32, 32, 8).code == heif_error_Ok);
+  return image;
+}
+
+heif_image_handle* read_back_primary(heif_context* read_ctx, const MemoryWriter& file)
+{
+  REQUIRE(heif_context_read_from_memory_without_copy(read_ctx, file.data.data(), file.data.size(), nullptr).code == heif_error_Ok);
+  heif_image_handle* handle;
+  REQUIRE(heif_context_get_primary_image_handle(read_ctx, &handle).code == heif_error_Ok);
+  return handle;
+}
+}
+
+
+TEST_CASE("Tiled unci image keeps the ICC profile of the prototype image")
+{
+  static const uint8_t icc[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+  heif_image* prototype = create_rgb_prototype();
+  REQUIRE(heif_image_set_raw_color_profile(prototype, "prof", icc, sizeof(icc)).code == heif_error_Ok);
+
+  heif_context* write_ctx = heif_context_alloc();
+  heif_encoding_options* options = heif_encoding_options_alloc();
+  heif_image_handle* tiled = encode_tiled_rgb_to_handle(write_ctx, prototype, options);
+
+  MemoryWriter file;
+  heif_writer writer{};
+  writer.writer_api_version = 1;
+  writer.write = MemoryWriter::write;
+  REQUIRE(heif_context_write(write_ctx, &writer, &file).code == heif_error_Ok);
+
+  heif_context* read_ctx = heif_context_alloc();
+  heif_image_handle* handle = read_back_primary(read_ctx, file);
+
+  REQUIRE(heif_image_handle_get_color_profile_type(handle) == heif_color_profile_type_prof);
+  REQUIRE(heif_image_handle_get_raw_color_profile_size(handle) == sizeof(icc));
+  uint8_t got[sizeof(icc)];
+  REQUIRE(heif_image_handle_get_raw_color_profile(handle, got).code == heif_error_Ok);
+  REQUIRE(memcmp(got, icc, sizeof(icc)) == 0);
+
+  heif_image_handle_release(handle);
+  heif_context_free(read_ctx);
+  heif_image_handle_release(tiled);
+  heif_encoding_options_free(options);
+  heif_image_release(prototype);
+  heif_context_free(write_ctx);
+}
+
+
+TEST_CASE("Tiled unci image keeps the NCLX profile requested in the encoding options")
+{
+  heif_image* prototype = create_rgb_prototype();
+
+  heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+  REQUIRE(heif_nclx_color_profile_set_color_primaries(nclx, heif_color_primaries_ITU_R_BT_2020_2_and_2100_0).code == heif_error_Ok);
+  REQUIRE(heif_nclx_color_profile_set_transfer_characteristics(nclx, heif_transfer_characteristic_ITU_R_BT_2100_0_PQ).code == heif_error_Ok);
+  REQUIRE(heif_nclx_color_profile_set_matrix_coefficients(nclx, heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance).code == heif_error_Ok);
+  nclx->full_range_flag = 1;
+
+  heif_context* write_ctx = heif_context_alloc();
+  heif_encoding_options* options = heif_encoding_options_alloc();
+  options->output_nclx_profile = nclx;
+  heif_image_handle* tiled = encode_tiled_rgb_to_handle(write_ctx, prototype, options);
+
+  MemoryWriter file;
+  heif_writer writer{};
+  writer.writer_api_version = 1;
+  writer.write = MemoryWriter::write;
+  REQUIRE(heif_context_write(write_ctx, &writer, &file).code == heif_error_Ok);
+
+  heif_context* read_ctx = heif_context_alloc();
+  heif_image_handle* handle = read_back_primary(read_ctx, file);
+
+  heif_color_profile_nclx* got = nullptr;
+  REQUIRE(heif_image_handle_get_nclx_color_profile(handle, &got).code == heif_error_Ok);
+  REQUIRE(got != nullptr);
+  CHECK(got->color_primaries == heif_color_primaries_ITU_R_BT_2020_2_and_2100_0);
+  CHECK(got->transfer_characteristics == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ);
+  CHECK(got->matrix_coefficients == heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance);
+  CHECK(got->full_range_flag == 1);
+  heif_nclx_color_profile_free(got);
+
+  heif_image_handle_release(handle);
+  heif_context_free(read_ctx);
+  heif_image_handle_release(tiled);
+  heif_nclx_color_profile_free(nclx);
+  options->output_nclx_profile = nullptr;
+  heif_encoding_options_free(options);
+  heif_image_release(prototype);
+  heif_context_free(write_ctx);
 }
