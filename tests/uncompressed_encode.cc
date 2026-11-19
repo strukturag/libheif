@@ -1457,3 +1457,74 @@ TEST_CASE("Tiled unci image keeps the NCLX profile requested in the encoding opt
   heif_image_release(prototype);
   heif_context_free(write_ctx);
 }
+
+
+// heif_context_add_image_tile() stores the tiles without colour conversion, so for a YCbCr image an NCLX profile
+// from the encoding options is only written when its matrix coefficients and range match the samples.
+TEST_CASE("Tiled unci image with a YCbCr prototype only writes an NCLX profile that matches the samples")
+{
+  auto encode_and_read_primaries = [](heif_matrix_coefficients matrix, int full_range) -> int {
+    heif_image* prototype = createImage_YCbCr_420_tiled_pattern(32, 32);
+
+    heif_color_profile_nclx* data_nclx = heif_nclx_color_profile_alloc();
+    REQUIRE(heif_nclx_color_profile_set_matrix_coefficients(data_nclx, heif_matrix_coefficients_ITU_R_BT_601_6).code == heif_error_Ok);
+    data_nclx->full_range_flag = 1;
+    REQUIRE(heif_image_set_nclx_color_profile(prototype, data_nclx).code == heif_error_Ok);
+
+    heif_color_profile_nclx* requested = heif_nclx_color_profile_alloc();
+    REQUIRE(heif_nclx_color_profile_set_color_primaries(requested, heif_color_primaries_ITU_R_BT_2020_2_and_2100_0).code == heif_error_Ok);
+    REQUIRE(heif_nclx_color_profile_set_matrix_coefficients(requested, matrix).code == heif_error_Ok);
+    requested->full_range_flag = (uint8_t) full_range;
+
+    heif_context* write_ctx = heif_context_alloc();
+    heif_encoding_options* options = heif_encoding_options_alloc();
+    options->output_nclx_profile = requested;
+
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = 32;
+    params.image_height = 32;
+    params.tile_width = 32;
+    params.tile_height = 32;
+    params.compression = heif_unci_compression_off;
+
+    heif_encoder* encoder;
+    REQUIRE(heif_context_get_encoder_for_format(write_ctx, heif_compression_uncompressed, &encoder).code == heif_error_Ok);
+    heif_image_handle* tiled;
+    REQUIRE(heif_context_add_empty_unci_image(write_ctx, &params, options, prototype, &tiled).code == heif_error_Ok);
+    REQUIRE(heif_context_add_image_tile(write_ctx, tiled, 0, 0, prototype, encoder).code == heif_error_Ok);
+
+    MemoryWriter file;
+    heif_writer writer{};
+    writer.writer_api_version = 1;
+    writer.write = MemoryWriter::write;
+    REQUIRE(heif_context_write(write_ctx, &writer, &file).code == heif_error_Ok);
+
+    heif_context* read_ctx = heif_context_alloc();
+    heif_image_handle* handle = read_back_primary(read_ctx, file);
+    int primaries = -1;
+    heif_color_profile_nclx* got = nullptr;
+    if (heif_image_handle_get_nclx_color_profile(handle, &got).code == heif_error_Ok && got != nullptr) {
+      primaries = got->color_primaries;
+      heif_nclx_color_profile_free(got);
+    }
+
+    heif_image_handle_release(handle);
+    heif_context_free(read_ctx);
+    heif_image_handle_release(tiled);
+    heif_encoder_release(encoder);
+    options->output_nclx_profile = nullptr;
+    heif_encoding_options_free(options);
+    heif_nclx_color_profile_free(requested);
+    heif_nclx_color_profile_free(data_nclx);
+    heif_image_release(prototype);
+    heif_context_free(write_ctx);
+    return primaries;
+  };
+
+  // same matrix and range as the samples: written
+  CHECK(encode_and_read_primaries(heif_matrix_coefficients_ITU_R_BT_601_6, 1) == heif_color_primaries_ITU_R_BT_2020_2_and_2100_0);
+  // different matrix coefficients or different range: not written (it would mislabel the samples)
+  CHECK(encode_and_read_primaries(heif_matrix_coefficients_ITU_R_BT_709_5, 1) == -1);
+  CHECK(encode_and_read_primaries(heif_matrix_coefficients_ITU_R_BT_601_6, 0) == -1);
+}

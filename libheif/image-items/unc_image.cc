@@ -291,10 +291,23 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   // Add the colour profile ('colr': ICC profile of the prototype image and/or the requested NCLX profile),
   // exactly as ImageItem::encode_to_item() does for images that are encoded in one go.
 
+  // The tiles are stored as they are passed to heif_context_add_image_tile(): unlike heif_context_encode_image(),
+  // no colour conversion is done. For a YCbCr image, an NCLX profile whose matrix coefficients or range differ from
+  // the samples would mislabel them, so only a matching profile is written.
+
+  heif_encoding_options colr_options = *encoding_options;
+  if (colr_options.output_nclx_profile != nullptr && prototype->get_colorspace() == heif_colorspace_YCbCr) {
+    const nclx_profile data_profile = prototype->get_color_profile_nclx();
+    if (colr_options.output_nclx_profile->matrix_coefficients != static_cast<heif_matrix_coefficients>(data_profile.get_matrix_coefficients()) ||
+        (colr_options.output_nclx_profile->full_range_flag != 0) != data_profile.get_full_range_flag()) {
+      colr_options.output_nclx_profile = nullptr;
+    }
+  }
+
   auto colr_boxes = add_color_profile(std::const_pointer_cast<HeifPixelImage>(prototype),
-                                      *encoding_options,
+                                      colr_options,
                                       heif_image_input_class_normal,
-                                      encoding_options->output_nclx_profile);
+                                      colr_options.output_nclx_profile);
   for (const auto& colr : colr_boxes) {
     unci_image->add_color_profile_property(colr);
   }
