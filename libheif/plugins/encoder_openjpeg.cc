@@ -467,6 +467,21 @@ heif_error opj_encode_image(void* encoder_raw, const heif_image* image, heif_ima
   int width = heif_image_get_primary_width(image);
   int height = heif_image_get_primary_height(image);
 
+  const int minimal_dimension = (width < height) ? width : height;
+  if (minimal_dimension >= 512) {
+    encoder->parameters.numresolution = 6;
+  } else if (minimal_dimension >= 256) {
+    encoder->parameters.numresolution = 5;
+  } else if (minimal_dimension >= 128) {
+    encoder->parameters.numresolution = 4;
+  } else if (minimal_dimension >= 64) {
+    encoder->parameters.numresolution = 3;
+  } else if (minimal_dimension >= 32) {
+    encoder->parameters.numresolution = 2;
+  } else {
+    encoder->parameters.numresolution = 1;
+  }
+
   std::vector<heif_channel> channels;
   OPJ_COLOR_SPACE opj_colorspace;
 
