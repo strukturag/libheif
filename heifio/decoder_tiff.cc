@@ -885,9 +885,13 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
     }
   }
   else if (sampleFormat == SAMPLEFORMAT_INT) {
-    if (bps < 8 || bps > 16) {
+    // The scanline/tile readers assume one byte per sample for bps <= 8 and
+    // two bytes per sample otherwise.  libtiff returns packed samples for
+    // non-byte-aligned depths, so 9..15 bps would over-read the scanline
+    // buffer.  Reject those depths until a packed-sample unpacker exists.
+    if (bps != 8 && bps != 16) {
       return {heif_error_Invalid_input, heif_suberror_Unspecified,
-              "Only 8 to 16 bits per sample are supported for signed integer TIFF."};
+              "Only 8- and 16-bit signed integer TIFF is supported."};
     }
     if (samplesPerPixel != 1) {
       return {heif_error_Unsupported_feature, heif_suberror_Unspecified,
@@ -895,9 +899,11 @@ static heif_error validateTiffFormat(TIFF* tif, uint16_t& samplesPerPixel, uint1
     }
   }
   else if (sampleFormat == SAMPLEFORMAT_UINT) {
-    if (bps < 8 || bps > 16) {
+    // See the signed-integer check above: 9..15 bps are packed by libtiff but
+    // read as 16-bit samples, which over-reads the scanline/tile buffer.
+    if (bps != 8 && bps != 16) {
       return {heif_error_Invalid_input, heif_suberror_Unspecified,
-              "Only 8 to 16 bits per sample are supported."};
+              "Only 8- and 16-bit integer TIFF is supported."};
     }
   }
   else {

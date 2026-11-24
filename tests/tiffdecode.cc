@@ -138,3 +138,25 @@ TEST_CASE("rgba_planar") {
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
 }
+
+TEST_CASE("mono12_rejected") {
+  // libtiff returns 12-bit samples packed, but the reader used to treat every
+  // bps > 8 as a 16-bit sample and over-read the scanline buffer.  Such depths
+  // must be rejected instead.
+  for (const char* name : {"mono12_signed.tif", "mono12_unsigned.tif"}) {
+    InputImage input_image;
+    std::string path = get_path_for_heifio_test_file(name);
+    heif_error err = loadTIFF(path.c_str(), 10, &input_image);
+    REQUIRE(err.code == heif_error_Invalid_input);
+    REQUIRE(input_image.image == nullptr);
+  }
+}
+
+TEST_CASE("mono16_supported") {
+  // 16 bps is byte-aligned and still supported after rejecting 9-15 bps.
+  InputImage input_image;
+  std::string path = get_path_for_heifio_test_file("mono16.tif");
+  heif_error err = loadTIFF(path.c_str(), 10, &input_image);
+  REQUIRE(err.code == heif_error_Ok);
+  REQUIRE(input_image.image != nullptr);
+}
