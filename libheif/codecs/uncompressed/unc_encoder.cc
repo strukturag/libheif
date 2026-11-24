@@ -367,10 +367,10 @@ Result<Encoder::CodedImageData> unc_encoder::encode(const std::shared_ptr<const 
   uncC->derive_box_version();
 
   Encoder::CodedImageData codedImageData;
-  codedImageData.properties.push_back(uncC);
   if (!uncC->is_minimized()) {
     codedImageData.properties.push_back(this->get_cmpd());
   }
+  codedImageData.properties.push_back(uncC);
 
   if (m_cpat) {
     codedImageData.properties.push_back(m_cpat);
