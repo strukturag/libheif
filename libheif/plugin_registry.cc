@@ -33,6 +33,10 @@
 #include "plugins/decoder_libde265.h"
 #endif
 
+#if HAVE_MEDIACODEC
+#include "plugins/decoder_mediacodec.h"
+#endif
+
 #if HAVE_X265
 #include "plugins/encoder_x265.h"
 #endif
@@ -153,6 +157,10 @@ void register_default_plugins()
 
 #if HAVE_LIBDE265
   register_decoder(get_decoder_plugin_libde265());
+#endif
+
+#if HAVE_MEDIACODEC
+  register_decoder(get_decoder_plugin_mediacodec());
 #endif
 
 #if HAVE_X265

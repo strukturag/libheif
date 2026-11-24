@@ -142,4 +142,22 @@ if (WITH_WEBCODECS)
    target_compile_definitions(heif PRIVATE HAVE_WEBCODECS=1)
 endif()
 
+# --- Android MediaCodec hardware-accelerated HEVC decoder (built-in only) ---
+# Uses internal libheif headers (SPS parsing), so it cannot be built as a
+# dynamic plugin.
+if (ANDROID)
+    option(WITH_MEDIACODEC_DECODER "Use Android MediaCodec for hardware-accelerated HEVC decoding" ON)
+    if (WITH_MEDIACODEC_DECODER)
+        target_sources(heif PRIVATE
+                decoder_mediacodec.h
+                decoder_mediacodec.cc)
+        target_compile_definitions(heif PRIVATE HAVE_MEDIACODEC=1)
+        target_link_libraries(heif PRIVATE mediandk android dl)
+        # Avoid clashing with Android's internal /system/lib64/libheif.so
+        # (used by libhwui). A name collision would shadow the system library
+        # and break symbol resolution for anything linking libhwui.
+        set_target_properties(heif PROPERTIES OUTPUT_NAME "heif_ndk")
+    endif ()
+endif ()
+
 
