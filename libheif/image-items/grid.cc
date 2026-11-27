@@ -24,8 +24,11 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
-#include <future>
+#include <exception>
 #include <mutex>
+#include <system_error>
+#include <thread>
+#include <vector>
 #include <optional>
 #include <set>
 #include <algorithm>
@@ -237,19 +240,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(
 // would be tautological. The base default checks the composed image against 'ispe',
 // which is the meaningful cross-check (grid-header size vs signaled size).
 
-#if ENABLE_PARALLEL_TILE_DECODING
-static void wait_for_jobs(std::deque<std::future<Error> >* jobs) {
-  if (jobs->empty()) {
-    return;
-  }
-
-  while (!jobs->empty()) {
-    jobs->front().get();
-    jobs->pop_front();
-  }
-}
-#endif
-
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(const heif_decoding_options& options, const DecodeTraversalState& decode_state) const
 {
   std::shared_ptr<HeifPixelImage> img; // the decoded image
@@ -298,8 +288,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   std::deque<tile_data> tiles;
   if (get_context()->get_max_decoding_threads() > 0)
     tiles.resize(static_cast<size_t>(grid.get_rows()) * static_cast<size_t>(grid.get_columns()));
-
-  std::deque<std::future<Error> > errs;
 #endif
 
   uint32_t tile_width = 0;
@@ -409,56 +397,91 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
 #if ENABLE_PARALLEL_TILE_DECODING
   if (get_context()->get_max_decoding_threads() > 0) {
-    // Process all tiles in a set of background threads.
-    // Do not start more than the maximum number of threads.
+    // Decode the tiles on at most the maximum number of threads, started once for the image:
+    // the calling thread and its helpers each take the next tile from the queue until it is
+    // empty. A thread per tile would start as many threads as the grid has tiles.
+    // The error of the first failing tile in grid order is returned, and an exception thrown
+    // while decoding a tile is rethrown here, as a std::async future would have done.
 
-    while (!tiles.empty() && !cancelled) {
+    std::mutex queue_mutex;
+    size_t next_index = 0;
+    size_t error_index = SIZE_MAX;
+    Error first_error = Error::Ok;
+    std::exception_ptr exception;
 
-      // If maximum number of threads running, wait until first thread finishes
-
-      if (errs.size() >= (size_t) get_context()->get_max_decoding_threads()) {
-        Error e = errs.front().get();
-        errs.pop_front();
-        if (e) {
-          wait_for_jobs(&errs);
-          return e;
-        }
-      }
-
-
-      if (options.cancel_decoding) {
-        if (options.cancel_decoding(options.progress_user_data)) {
+    auto decode_tiles = [&](bool calling_thread) {
+      for (;;) {
+        // The application's cancel callback is only called on the calling thread.
+        if (calling_thread && options.cancel_decoding &&
+            options.cancel_decoding(options.progress_user_data)) {
+          std::lock_guard<std::mutex> lock(queue_mutex);
           cancelled = true;
+          return;
+        }
+
+        tile_data data;
+        size_t index;
+        {
+          std::lock_guard<std::mutex> lock(queue_mutex);
+          if (tiles.empty() || cancelled || error_index != SIZE_MAX) {
+            return;
+          }
+          data = tiles.front();
+          tiles.pop_front();
+          index = next_index++;
+        }
+
+        // Skipped tiles leave empty queue entries. Do not decode an unrelated
+        // item (in particular item 0) for such an entry.
+        if (!data.tileID) {
+          continue;
+        }
+
+        Error e = Error::Ok;
+        try {
+          e = decode_and_paste_tile_image(*data.tileID, data.x_origin, data.y_origin, img, options,
+                                          progress_counter, warnings, decode_state);
+        }
+        catch (...) {
+          std::lock_guard<std::mutex> lock(queue_mutex);
+          if (!exception) {
+            exception = std::current_exception();
+          }
+          error_index = std::min(error_index, index);
+          return;
+        }
+
+        if (e) {
+          std::lock_guard<std::mutex> lock(queue_mutex);
+          if (index < error_index) {
+            error_index = index;
+            first_error = e;
+          }
+          return;
         }
       }
+    };
 
-
-      // Start a new decoding thread
-
-      tile_data data = tiles.front();
-      tiles.pop_front();
-
-      // Skipped tiles leave empty queue entries. Do not decode an unrelated
-      // item (in particular item 0) or start a job for such an entry.
-      if (!data.tileID) {
-        continue;
+    size_t threads = std::min(static_cast<size_t>(get_context()->get_max_decoding_threads()), tiles.size());
+    std::vector<std::thread> helpers;
+    for (size_t i = 1; i < threads; i++) {
+      try {
+        helpers.emplace_back(decode_tiles, false);
       }
-
-      errs.push_back(std::async(std::launch::async,
-                                &ImageItem_Grid::decode_and_paste_tile_image, this,
-                                *data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
-                                std::ref(progress_counter), warnings, decode_state));
+      catch (const std::system_error&) {
+        break; // decode on the threads that did start
+      }
+    }
+    decode_tiles(true);
+    for (auto& helper : helpers) {
+      helper.join();
     }
 
-    // check for decoding errors in remaining tiles
-
-    while (!errs.empty()) {
-      Error e = errs.front().get();
-      errs.pop_front();
-      if (e) {
-        wait_for_jobs(&errs);
-        return e;
-      }
+    if (exception) {
+      std::rethrow_exception(exception);
+    }
+    if (error_index != SIZE_MAX) {
+      return first_error;
     }
   }
 #endif
