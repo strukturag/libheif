@@ -23,3 +23,6 @@ target_link_libraries(api_fuzzer PRIVATE heif)
 
 add_executable(sequence_fuzzer sequence_fuzzer.cc)
 target_link_libraries(sequence_fuzzer PRIVATE heif)
+
+add_executable(mini_write_fuzzer mini_write_fuzzer.cc)
+target_link_libraries(mini_write_fuzzer PRIVATE heif)
