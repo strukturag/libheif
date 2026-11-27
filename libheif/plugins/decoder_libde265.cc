@@ -214,10 +214,13 @@ heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options* 
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_DEBLOCKING, 1);
   de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_SAO, 1);
 #else
-  int nThreads = (options->num_threads ? options->num_threads : 1);
-
   // Worker threads are not supported when running on Emscripten.
-  de265_start_worker_threads(decoder->ctx, nThreads);
+  // Without worker threads, libde265 decodes on the calling thread; a single worker would only
+  // take the decode over while the calling thread waits for it, and is started and joined for
+  // every image, every grid tile included.
+  if (options->num_threads > 1) {
+    de265_start_worker_threads(decoder->ctx, options->num_threads);
+  }
 #endif
 
   decoder->strict_decoding = options->strict_decoding;
