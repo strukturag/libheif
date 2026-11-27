@@ -133,6 +133,7 @@ add_libheif_test(encode_handle_queries)
 add_libheif_test(decoded_bit_depth_mismatch)
 add_libheif_test(write_to_file)
 add_libheif_test(parallel_grid_deadlock)
+add_libheif_test(grid_tile_threads)
 # The deadlock regression tests decode on a worker thread guarded by a timeout.
 find_package(Threads REQUIRED)
 target_link_libraries(alpha_cycle_deadlock PRIVATE Threads::Threads)
